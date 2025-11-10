@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:mysql://prod-db-server:3306/admin_db?useSSL=true&serverTimezone=Asia/Taipei&characterEncoding=UTF-8
+    username: admin_user
+    password: ${DB_PASSWORD}   # ✅ 用環境變數注入
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none           # ❌ 正式環境不要自動建表
+    show-sql: false
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+  file:
+    name: logs/admin-prod.log
+
+
+# application-prod.yml
+jwt:
+  secret: ${JWT_SECRET}  # 從環境變數注入

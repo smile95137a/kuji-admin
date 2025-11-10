@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: admin
+
+  # 預設 Profile
+  profiles:
+    active: dev
+
+  jackson:
+    time-zone: Asia/Taipei
+    date-format: yyyy-MM-dd HH:mm:ss
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    root: INFO
+    com.group: DEBUG
