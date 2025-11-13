@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN" "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+<generatorConfiguration>
+    <!-- 這裡只有一個 context，代表一次生成一組 -->
+    <context id="MySQLTables" targetRuntime="MyBatis3">
+
+        <!-- 自動註解控制 -->
+        <commentGenerator>
+            <!-- 不生成日期註解 -->
+            <property name="suppressDate" value="true" />
+            <!-- 不生成任何註解（乾淨） -->
+            <property name="suppressAllComments" value="true" />
+        </commentGenerator>
+
+        <!-- 資料庫連線設定 -->
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+            connectionURL="jdbc:mysql://localhost:3306/kuji?useSSL=false&amp;serverTimezone=Asia/Taipei"
+            userId="root"
+            password="123456" />
+
+        <!-- 實體類別輸出位置 -->
+        <javaModelGenerator targetPackage="com.group.admin.entity"
+            targetProject="src/main/java/com/group/admin/entity" />
+
+        <!-- XML Mapper 輸出位置 -->
+        <sqlMapGenerator targetPackage="mapper"
+            targetProject="src/main/resources/mapper" />
+
+        <!-- Mapper Interface 輸出位置 -->
+        <javaClientGenerator type="XMLMAPPER"
+            targetPackage="com.group.admin.mapper"
+            targetProject="src/main/java/com/group/admin/mapper" />
+
+        <!-- 掃描整個資料庫中所有 table，自動生成 -->
+        <table tableName="%" />
+    </context>
+</generatorConfiguration>

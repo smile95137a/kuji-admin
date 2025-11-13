@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.AdminUserRoleMapper">
+
+  <resultMap id="AdminUserRoleMap" type="com.group.admin.entity.AdminUserRole">
+    <result column="adminId" property="adminId" />
+    <result column="roleId" property="roleId" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="AdminUserRoleMap" parameterType="com.group.admin.entity.example.AdminUserRoleExample">
+    SELECT * FROM admin_user_role
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <foreach collection="criteria.conditions.entrySet()" item="entry">
+          ${entry.key} = #{entry.value} AND
+        </foreach>
+      </foreach>
+    </where>
+  </select>
+</mapper>

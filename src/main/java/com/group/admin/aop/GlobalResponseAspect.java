@@ -1,13 +1,15 @@
 package com.group.admin.aop;
 
-import com.group.admin.result.ApiResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+
+import com.group.admin.result.ApiResponse;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Aspect
@@ -16,7 +18,8 @@ public class GlobalResponseAspect {
 
     // 攔截所有 controller public 方法
     @Pointcut("execution(public * com.group..controller..*(..))")
-    public void controllerMethods() {}
+    public void controllerMethods() {
+    }
 
     @Around("controllerMethods()")
     public Object wrapResponse(ProceedingJoinPoint joinPoint) throws Throwable {

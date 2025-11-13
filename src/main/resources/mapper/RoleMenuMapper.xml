@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.RoleMenuMapper">
+
+  <resultMap id="RoleMenuMap" type="com.group.admin.entity.RoleMenu">
+    <result column="roleId" property="roleId" />
+    <result column="menuId" property="menuId" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="RoleMenuMap" parameterType="com.group.admin.entity.example.RoleMenuExample">
+    SELECT * FROM role_menu
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <foreach collection="criteria.conditions.entrySet()" item="entry">
+          ${entry.key} = #{entry.value} AND
+        </foreach>
+      </foreach>
+    </where>
+  </select>
+</mapper>

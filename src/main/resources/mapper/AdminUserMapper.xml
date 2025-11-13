@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.AdminUserMapper">
+
+  <resultMap id="AdminUserMap" type="com.group.admin.entity.AdminUser">
+    <result column="id" property="id" />
+    <result column="username" property="username" />
+    <result column="password" property="password" />
+    <result column="status" property="status" />
+    <result column="lastLogin" property="lastLogin" />
+    <result column="createDate" property="createDate" />
+    <result column="updateDate" property="updateDate" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="AdminUserMap" parameterType="com.group.admin.entity.example.AdminUserExample">
+    SELECT * FROM admin_user
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <foreach collection="criteria.conditions.entrySet()" item="entry">
+          ${entry.key} = #{entry.value} AND
+        </foreach>
+      </foreach>
+    </where>
+  </select>
+</mapper>

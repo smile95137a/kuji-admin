@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.RoleMapper">
+
+  <resultMap id="RoleMap" type="com.group.admin.entity.Role">
+    <result column="id" property="id" />
+    <result column="name" property="name" />
+    <result column="description" property="description" />
+    <result column="createDate" property="createDate" />
+    <result column="updateDate" property="updateDate" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="RoleMap" parameterType="com.group.admin.entity.example.RoleExample">
+    SELECT * FROM role
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <foreach collection="criteria.conditions.entrySet()" item="entry">
+          ${entry.key} = #{entry.value} AND
+        </foreach>
+      </foreach>
+    </where>
+  </select>
+</mapper>
