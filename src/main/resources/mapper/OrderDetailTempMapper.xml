@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.OrderDetailTempMapper">
+
+  <resultMap id="OrderDetailTempMap" type="com.group.admin.entity.OrderDetailTemp">
+    <result column="id" property="id" />
+    <result column="bonusPointsEarned" property="bonusPointsEarned" />
+    <result column="orderId" property="orderId" />
+    <result column="productDetailId" property="productDetailId" />
+    <result column="quantity" property="quantity" />
+    <result column="resultItemId" property="resultItemId" />
+    <result column="storeProductId" property="storeProductId" />
+    <result column="totalPrice" property="totalPrice" />
+    <result column="unitPrice" property="unitPrice" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="OrderDetailTempMap" parameterType="com.group.admin.example.OrderDetailTempExample">
+    SELECT * FROM order_detail_temp
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.OrderDetailTempExample">
+    SELECT COUNT(*) FROM order_detail_temp
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.OrderDetailTempExample">
+    DELETE FROM order_detail_temp
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

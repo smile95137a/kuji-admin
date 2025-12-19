@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.UserTransactionMapper">
+
+  <resultMap id="UserTransactionMap" type="com.group.admin.entity.UserTransaction">
+    <result column="id" property="id" />
+    <result column="amount" property="amount" />
+    <result column="createdAt" property="createdAt" />
+    <result column="transactionDate" property="transactionDate" />
+    <result column="transactionType" property="transactionType" />
+    <result column="updatedAt" property="updatedAt" />
+    <result column="userId" property="userId" />
+    <result column="userUuid" property="userUuid" />
+    <result column="orderId" property="orderId" />
+    <result column="orderNumber" property="orderNumber" />
+    <result column="status" property="status" />
+    <result column="payMethod" property="payMethod" />
+    <result column="type" property="type" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="UserTransactionMap" parameterType="com.group.admin.example.UserTransactionExample">
+    SELECT * FROM user_transaction
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.UserTransactionExample">
+    SELECT COUNT(*) FROM user_transaction
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.UserTransactionExample">
+    DELETE FROM user_transaction
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

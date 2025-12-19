@@ -9,14 +9,49 @@
     <result column="setBy" property="setBy" />
   </resultMap>
 
-  <select id="selectByExample" resultMap="SysConfigMap" parameterType="com.group.admin.entity.example.SysConfigExample">
+  <select id="selectByExample" resultMap="SysConfigMap" parameterType="com.group.admin.example.SysConfigExample">
     SELECT * FROM sys_config
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <foreach collection="criteria.conditions.entrySet()" item="entry">
-          ${entry.key} = #{entry.value} AND
-        </foreach>
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
       </foreach>
     </where>
   </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.SysConfigExample">
+    SELECT COUNT(*) FROM sys_config
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.SysConfigExample">
+    DELETE FROM sys_config
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
 </mapper>

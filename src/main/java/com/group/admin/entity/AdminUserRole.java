@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class AdminUserRole {
-    private String adminId;
+    private String id;
+    private String adminUserId;
     private String roleId;
+    private java.time.LocalDateTime createdAt;
 }

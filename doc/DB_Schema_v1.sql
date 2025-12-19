@@ -1,0 +1,20 @@
+-- DB Schema v1 - Overview
+-- Tables included:
+-- 1) admin_user, role, menu, role_menu, admin_user_role  (Existing)
+-- 2) user (frontend players)
+-- 3) point_logs (player coin movements)
+-- 4) store (stores owned by admin users)
+-- 5) lottery (one event per store)
+-- 6) lottery_prize (fixed prize pool for each lottery)
+-- 7) lottery_draw_record (draw history per user)
+-- 8) order (payments / top-up / draw purchases)
+
+-- Relations (simplified):
+-- user (1) --- (M) point_logs
+-- admin_user (1) --- (M) store
+-- store (1) --- (M) lottery
+-- lottery (1) --- (M) lottery_prize
+-- lottery (1) --- (M) lottery_draw_record
+-- lottery_prize (1) --- (M) lottery_draw_record (via prize_id)
+-- user (1) --- (M) lottery_draw_record
+-- user (1) --- (M) order

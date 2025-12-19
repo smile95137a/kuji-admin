@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.AdminOperationLogMapper">
+
+  <resultMap id="AdminOperationLogMap" type="com.group.admin.entity.AdminOperationLog">
+    <result column="id" property="id" />
+    <result column="adminId" property="adminId" />
+    <result column="operationType" property="operationType" />
+    <result column="targetType" property="targetType" />
+    <result column="targetId" property="targetId" />
+    <result column="description" property="description" />
+    <result column="ipAddress" property="ipAddress" />
+    <result column="userAgent" property="userAgent" />
+    <result column="createdAt" property="createdAt" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="AdminOperationLogMap" parameterType="com.group.admin.example.AdminOperationLogExample">
+    SELECT * FROM admin_operation_log
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.AdminOperationLogExample">
+    SELECT COUNT(*) FROM admin_operation_log
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.AdminOperationLogExample">
+    DELETE FROM admin_operation_log
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

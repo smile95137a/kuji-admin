@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.ProductDetailMapper">
+
+  <resultMap id="ProductDetailMap" type="com.group.admin.entity.ProductDetail">
+    <result column="productDetailId" property="productDetailId" />
+    <result column="createDate" property="createDate" />
+    <result column="description" property="description" />
+    <result column="drawnNumbers" property="drawnNumbers" />
+    <result column="grade" property="grade" />
+    <result column="height" property="height" />
+    <result column="imageUrls" property="imageUrls" />
+    <result column="length" property="length" />
+    <result column="material" property="material" />
+    <result column="note" property="note" />
+    <result column="price" property="price" />
+    <result column="prizeNumber" property="prizeNumber" />
+    <result column="productId" property="productId" />
+    <result column="productName" property="productName" />
+    <result column="quantity" property="quantity" />
+    <result column="rarity" property="rarity" />
+    <result column="size" property="size" />
+    <result column="sliverPrice" property="sliverPrice" />
+    <result column="specification" property="specification" />
+    <result column="stockQuantity" property="stockQuantity" />
+    <result column="updateDate" property="updateDate" />
+    <result column="width" property="width" />
+    <result column="probability" property="probability" />
+    <result column="isPrize" property="isPrize" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="ProductDetailMap" parameterType="com.group.admin.example.ProductDetailExample">
+    SELECT * FROM product_detail
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.ProductDetailExample">
+    SELECT COUNT(*) FROM product_detail
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.ProductDetailExample">
+    DELETE FROM product_detail
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

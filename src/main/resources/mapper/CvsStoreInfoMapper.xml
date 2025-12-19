@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.CvsStoreInfoMapper">
+
+  <resultMap id="CvsStoreInfoMap" type="com.group.admin.entity.CvsStoreInfo">
+    <result column="uuid" property="uuid" />
+    <result column="cvsAddress" property="cvsAddress" />
+    <result column="cvsOutside" property="cvsOutside" />
+    <result column="cvsStoreId" property="cvsStoreId" />
+    <result column="cvsStoreName" property="cvsStoreName" />
+    <result column="cvsTelephone" property="cvsTelephone" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="CvsStoreInfoMap" parameterType="com.group.admin.example.CvsStoreInfoExample">
+    SELECT * FROM cvs_store_info
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.CvsStoreInfoExample">
+    SELECT COUNT(*) FROM cvs_store_info
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.CvsStoreInfoExample">
+    DELETE FROM cvs_store_info
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.PaymentResponseMapper">
+
+  <resultMap id="PaymentResponseMap" type="com.group.admin.entity.PaymentResponse">
+    <result column="orderId" property="orderId" />
+    <result column="amount" property="amount" />
+    <result column="avCode" property="avCode" />
+    <result column="bankName" property="bankName" />
+    <result column="checkString" property="checkString" />
+    <result column="currency" property="currency" />
+    <result column="date" property="date" />
+    <result column="ePayAccount" property="ePayAccount" />
+    <result column="invoiceNo" property="invoiceNo" />
+    <result column="number" property="number" />
+    <result column="orderNo" property="orderNo" />
+    <result column="outlay" property="outlay" />
+    <result column="result" property="result" />
+    <result column="retMsg" property="retMsg" />
+    <result column="sendType" property="sendType" />
+    <result column="time" property="time" />
+    <result column="userId" property="userId" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="PaymentResponseMap" parameterType="com.group.admin.example.PaymentResponseExample">
+    SELECT * FROM payment_response
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.PaymentResponseExample">
+    SELECT COUNT(*) FROM payment_response
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.PaymentResponseExample">
+    DELETE FROM payment_response
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

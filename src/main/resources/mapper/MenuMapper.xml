@@ -3,24 +3,104 @@
 <mapper namespace="com.group.admin.mapper.MenuMapper">
 
   <resultMap id="MenuMap" type="com.group.admin.entity.Menu">
-    <result column="id" property="id" />
-    <result column="name" property="name" />
-    <result column="path" property="path" />
-    <result column="parentId" property="parentId" />
-    <result column="icon" property="icon" />
-    <result column="orderNum" property="orderNum" />
-    <result column="createDate" property="createDate" />
-    <result column="updateDate" property="updateDate" />
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="name" property="name" jdbcType="VARCHAR"/>
+    <result column="code" property="code" jdbcType="VARCHAR"/>
+    <result column="path" property="path" jdbcType="VARCHAR"/>
+    <result column="parent_id" property="parentId" jdbcType="VARCHAR"/>
+    <result column="icon" property="icon" jdbcType="VARCHAR"/>
+    <result column="order_num" property="orderNum" jdbcType="INTEGER"/>
+    <result column="is_visible" property="isVisible" jdbcType="TINYINT"/>
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
   </resultMap>
 
-  <select id="selectByExample" resultMap="MenuMap" parameterType="com.group.admin.entity.example.MenuExample">
-    SELECT * FROM menu
+  <sql id="Base_Column_List">
+    id, name, code, path, parent_id, icon, order_num, is_visible, created_at, updated_at
+  </sql>
+
+  <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <foreach collection="criteria.conditions.entrySet()" item="entry">
-          ${entry.key} = #{entry.value} AND
-        </foreach>
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
       </foreach>
     </where>
+  </sql>
+
+  <select id="selectByPrimaryKey" resultMap="MenuMap" parameterType="java.lang.String">
+    SELECT <include refid="Base_Column_List"/>
+    FROM menu
+    WHERE id = #{id,jdbcType=VARCHAR}
   </select>
+
+  <select id="selectAll" resultMap="MenuMap">
+    SELECT <include refid="Base_Column_List"/>
+    FROM menu
+    ORDER BY order_num ASC
+  </select>
+
+  <select id="selectByExample" resultMap="MenuMap" parameterType="com.group.admin.example.MenuExample">
+    SELECT <include refid="Base_Column_List"/>
+    FROM menu
+    <include refid="Example_Where_Clause"/>
+    ORDER BY order_num ASC
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.MenuExample">
+    SELECT COUNT(*) FROM menu
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    DELETE FROM menu WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.MenuExample">
+    DELETE FROM menu
+    <include refid="Example_Where_Clause"/>
+  </delete>
+
+  <insert id="insert" parameterType="com.group.admin.entity.Menu">
+    INSERT INTO menu (id, name, code, path, parent_id, icon, order_num, is_visible, created_at, updated_at)
+    VALUES (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR},
+            #{path,jdbcType=VARCHAR}, #{parentId,jdbcType=VARCHAR}, #{icon,jdbcType=VARCHAR},
+            #{orderNum,jdbcType=INTEGER}, #{isVisible,jdbcType=TINYINT},
+            #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Menu">
+    UPDATE menu
+    SET name = #{name,jdbcType=VARCHAR},
+        code = #{code,jdbcType=VARCHAR},
+        path = #{path,jdbcType=VARCHAR},
+        parent_id = #{parentId,jdbcType=VARCHAR},
+        icon = #{icon,jdbcType=VARCHAR},
+        order_num = #{orderNum,jdbcType=INTEGER},
+        is_visible = #{isVisible,jdbcType=TINYINT},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
 </mapper>

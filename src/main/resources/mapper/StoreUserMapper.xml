@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.StoreUserMapper">
+
+  <resultMap id="StoreUserMap" type="com.group.admin.entity.StoreUser">
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="store_id" property="storeId" jdbcType="VARCHAR"/>
+    <result column="admin_user_id" property="adminUserId" jdbcType="VARCHAR"/>
+    <result column="role_type" property="roleType" jdbcType="VARCHAR"/>
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, store_id, admin_user_id, role_type, created_at
+  </sql>
+
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+
+  <select id="selectByPrimaryKey" resultMap="StoreUserMap" parameterType="java.lang.String">
+    SELECT <include refid="Base_Column_List"/>
+    FROM store_user
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectAll" resultMap="StoreUserMap">
+    SELECT <include refid="Base_Column_List"/>
+    FROM store_user
+  </select>
+
+  <select id="selectByExample" resultMap="StoreUserMap" parameterType="com.group.admin.example.StoreUserExample">
+    SELECT <include refid="Base_Column_List"/>
+    FROM store_user
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.StoreUserExample">
+    SELECT COUNT(*) FROM store_user
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    DELETE FROM store_user WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.StoreUserExample">
+    DELETE FROM store_user
+    <include refid="Example_Where_Clause"/>
+  </delete>
+
+  <insert id="insert" parameterType="com.group.admin.entity.StoreUser">
+    INSERT INTO store_user (id, store_id, admin_user_id, role_type, created_at)
+    VALUES (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, 
+            #{adminUserId,jdbcType=VARCHAR}, #{roleType,jdbcType=VARCHAR},
+            #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.StoreUser">
+    UPDATE store_user
+    SET store_id = #{storeId,jdbcType=VARCHAR},
+        admin_user_id = #{adminUserId,jdbcType=VARCHAR},
+        role_type = #{roleType,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+</mapper>

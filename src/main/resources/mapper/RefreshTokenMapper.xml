@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.RefreshTokenMapper">
+
+  <resultMap id="RefreshTokenMap" type="com.group.admin.entity.RefreshToken">
+    <result column="id" property="id" />
+    <result column="userType" property="userType" />
+    <result column="userId" property="userId" />
+    <result column="token" property="token" />
+    <result column="deviceInfo" property="deviceInfo" />
+    <result column="ipAddress" property="ipAddress" />
+    <result column="expiresAt" property="expiresAt" />
+    <result column="isRevoked" property="isRevoked" />
+    <result column="createdAt" property="createdAt" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="RefreshTokenMap" parameterType="com.group.admin.example.RefreshTokenExample">
+    SELECT * FROM refresh_token
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.RefreshTokenExample">
+    SELECT COUNT(*) FROM refresh_token
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RefreshTokenExample">
+    DELETE FROM refresh_token
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.UserMapper">
+
+  <!-- 基礎欄位對應 (依照 DDL_UUID.sql user 表) -->
+  <resultMap id="UserMap" type="com.group.admin.entity.User">
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="email" property="email" jdbcType="VARCHAR" />
+    <result column="nickname" property="nickname" jdbcType="VARCHAR" />
+    <result column="password" property="password" jdbcType="VARCHAR" />
+    <result column="avatar" property="avatar" jdbcType="VARCHAR" />
+    <result column="provider" property="provider" jdbcType="VARCHAR" />
+    <result column="provider_id" property="providerId" jdbcType="VARCHAR" />
+    <result column="gold_coins" property="goldCoins" jdbcType="BIGINT" />
+    <result column="bonus_coins" property="bonusCoins" jdbcType="BIGINT" />
+    <result column="status" property="status" jdbcType="VARCHAR" />
+    <result column="email_verified" property="emailVerified" jdbcType="TINYINT" />
+    <result column="phone_number" property="phoneNumber" jdbcType="VARCHAR" />
+    <result column="last_login_at" property="lastLoginAt" jdbcType="TIMESTAMP" />
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP" />
+    <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP" />
+  </resultMap>
+
+  <!-- 基礎欄位 SQL 片段 -->
+  <sql id="Base_Column_List">
+    id, email, nickname, password, avatar, provider, provider_id, 
+    gold_coins, bonus_coins, status, email_verified, phone_number,
+    last_login_at, created_at, updated_at
+  </sql>
+
+  <!-- 依主鍵查詢 -->
+  <select id="selectByPrimaryKey" resultMap="UserMap" parameterType="string">
+    SELECT <include refid="Base_Column_List" />
+    FROM `user`
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <!-- 查詢全部 -->
+  <select id="selectAll" resultMap="UserMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `user`
+    ORDER BY created_at DESC
+  </select>
+
+  <!-- 依 Example 查詢 -->
+  <select id="selectByExample" resultMap="UserMap" parameterType="com.group.admin.example.UserExample">
+    SELECT <include refid="Base_Column_List" />
+    FROM `user`
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+    <if test="orderByClause != null">
+      ORDER BY ${orderByClause}
+    </if>
+    <if test="limit != null">
+      LIMIT #{limit}
+      <if test="offset != null">
+        OFFSET #{offset}
+      </if>
+    </if>
+  </select>
+
+  <!-- 依 Example 計數 -->
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.UserExample">
+    SELECT COUNT(*) FROM `user`
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <!-- 新增 -->
+  <insert id="insert" parameterType="com.group.admin.entity.User">
+    INSERT INTO `user` (
+      id, email, nickname, password, avatar, provider, provider_id,
+      gold_coins, bonus_coins, status, email_verified, phone_number,
+      last_login_at, created_at, updated_at
+    ) VALUES (
+      #{id,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR}, #{nickname,jdbcType=VARCHAR},
+      #{password,jdbcType=VARCHAR}, #{avatar,jdbcType=VARCHAR}, #{provider,jdbcType=VARCHAR},
+      #{providerId,jdbcType=VARCHAR}, #{goldCoins,jdbcType=BIGINT}, #{bonusCoins,jdbcType=BIGINT},
+      #{status,jdbcType=VARCHAR}, #{emailVerified,jdbcType=TINYINT}, #{phoneNumber,jdbcType=VARCHAR},
+      #{lastLoginAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <!-- 依主鍵刪除 -->
+  <delete id="deleteByPrimaryKey" parameterType="string">
+    DELETE FROM `user` WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <!-- 依 Example 刪除 -->
+  <delete id="deleteByExample" parameterType="com.group.admin.example.UserExample">
+    DELETE FROM `user`
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+  <!-- 依主鍵更新（全欄位） -->
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.User">
+    UPDATE `user`
+    SET email = #{email,jdbcType=VARCHAR},
+        nickname = #{nickname,jdbcType=VARCHAR},
+        password = #{password,jdbcType=VARCHAR},
+        avatar = #{avatar,jdbcType=VARCHAR},
+        provider = #{provider,jdbcType=VARCHAR},
+        provider_id = #{providerId,jdbcType=VARCHAR},
+        gold_coins = #{goldCoins,jdbcType=BIGINT},
+        bonus_coins = #{bonusCoins,jdbcType=BIGINT},
+        status = #{status,jdbcType=VARCHAR},
+        email_verified = #{emailVerified,jdbcType=TINYINT},
+        phone_number = #{phoneNumber,jdbcType=VARCHAR},
+        last_login_at = #{lastLoginAt,jdbcType=TIMESTAMP},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <!-- 依主鍵更新（僅非空欄位） -->
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.User">
+    UPDATE `user`
+    <set>
+      <if test="email != null">email = #{email,jdbcType=VARCHAR},</if>
+      <if test="nickname != null">nickname = #{nickname,jdbcType=VARCHAR},</if>
+      <if test="password != null">password = #{password,jdbcType=VARCHAR},</if>
+      <if test="avatar != null">avatar = #{avatar,jdbcType=VARCHAR},</if>
+      <if test="provider != null">provider = #{provider,jdbcType=VARCHAR},</if>
+      <if test="providerId != null">provider_id = #{providerId,jdbcType=VARCHAR},</if>
+      <if test="goldCoins != null">gold_coins = #{goldCoins,jdbcType=BIGINT},</if>
+      <if test="bonusCoins != null">bonus_coins = #{bonusCoins,jdbcType=BIGINT},</if>
+      <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+      <if test="emailVerified != null">email_verified = #{emailVerified,jdbcType=TINYINT},</if>
+      <if test="phoneNumber != null">phone_number = #{phoneNumber,jdbcType=VARCHAR},</if>
+      <if test="lastLoginAt != null">last_login_at = #{lastLoginAt,jdbcType=TIMESTAMP},</if>
+      updated_at = NOW()
+    </set>
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+</mapper>

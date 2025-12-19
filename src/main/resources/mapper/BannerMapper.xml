@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.BannerMapper">
+
+  <resultMap id="BannerMap" type="com.group.admin.entity.Banner">
+    <result column="id" property="id" />
+    <result column="storeId" property="storeId" />
+    <result column="title" property="title" />
+    <result column="imageUrl" property="imageUrl" />
+    <result column="linkUrl" property="linkUrl" />
+    <result column="orderNum" property="orderNum" />
+    <result column="status" property="status" />
+    <result column="startTime" property="startTime" />
+    <result column="endTime" property="endTime" />
+    <result column="createdAt" property="createdAt" />
+    <result column="updatedAt" property="updatedAt" />
+    <result column="bannerId" property="bannerId" />
+    <result column="bannerUid" property="bannerUid" />
+    <result column="bannerImageUrls" property="bannerImageUrls" />
+    <result column="productId" property="productId" />
+    <result column="productType" property="productType" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="BannerMap" parameterType="com.group.admin.example.BannerExample">
+    SELECT * FROM banner
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.BannerExample">
+    SELECT COUNT(*) FROM banner
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.BannerExample">
+    DELETE FROM banner
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

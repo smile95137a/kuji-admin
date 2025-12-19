@@ -6,20 +6,62 @@
     <result column="id" property="id" />
     <result column="username" property="username" />
     <result column="password" property="password" />
+    <result column="email" property="email" />
+    <result column="displayName" property="displayName" />
+    <result column="phone" property="phone" />
     <result column="status" property="status" />
-    <result column="lastLogin" property="lastLogin" />
-    <result column="createDate" property="createDate" />
-    <result column="updateDate" property="updateDate" />
+    <result column="forceChangePassword" property="forceChangePassword" />
+    <result column="lastLoginAt" property="lastLoginAt" />
+    <result column="createdBy" property="createdBy" />
+    <result column="createdAt" property="createdAt" />
+    <result column="updatedBy" property="updatedBy" />
+    <result column="updatedAt" property="updatedAt" />
+    <result column="remark" property="remark" />
   </resultMap>
 
-  <select id="selectByExample" resultMap="AdminUserMap" parameterType="com.group.admin.entity.example.AdminUserExample">
+  <select id="selectByExample" resultMap="AdminUserMap" parameterType="com.group.admin.example.AdminUserExample">
     SELECT * FROM admin_user
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <foreach collection="criteria.conditions.entrySet()" item="entry">
-          ${entry.key} = #{entry.value} AND
-        </foreach>
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
       </foreach>
     </where>
   </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.AdminUserExample">
+    SELECT COUNT(*) FROM admin_user
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.AdminUserExample">
+    DELETE FROM admin_user
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
 </mapper>

@@ -9,10 +9,11 @@ public class FullSchemaExampleGenerator {
     private static final String URL = "jdbc:mysql://localhost:3306/kuji?useSSL=false&serverTimezone=Asia/Taipei";
     private static final String USER = "root";
     private static final String PASSWORD = "123456";
-    private static final String SCHEMA = "dream";
+    private static final String SCHEMA = "kuji";  // ⚠️ 修正：與 URL 中的資料庫名稱一致
 
     private static final String ENTITY_DIR = "src/main/java/com/group/admin/entity/";
     private static final String MAPPER_DIR = "src/main/resources/mapper/";
+    private static final String MAPPER_INTERFACE_DIR = "src/main/java/com/group/admin/mapper/";
     private static final String EXAMPLE_DIR = "src/main/java/com/group/admin/example/";
 
     public static void main(String[] args) throws Exception {
@@ -34,15 +35,25 @@ public class FullSchemaExampleGenerator {
         String entityFilePath = ENTITY_DIR + className + ".java";
         String exampleFilePath = EXAMPLE_DIR + className + "Example.java";
         String mapperFilePath = MAPPER_DIR + className + "Mapper.xml";
+        String mapperInterfaceFilePath = MAPPER_INTERFACE_DIR + className + "Mapper.java";
 
         // 取得 DB 欄位
         DatabaseMetaData metaData = conn.getMetaData();
         ResultSet columns = metaData.getColumns(null, SCHEMA, tableName, "%");
         Map<String, String> dbColumns = new LinkedHashMap<>();
+        String idFieldType = "String"; // 預設 ID 為 String (UUID)
+        
         while (columns.next()) {
             String columnName = columns.getString("COLUMN_NAME");
             String typeName = columns.getString("TYPE_NAME");
-            dbColumns.put(toCamelCase(columnName, false), sqlTypeToJavaType(typeName));
+            String javaType = sqlTypeToJavaType(typeName);
+            String camelName = toCamelCase(columnName, false);
+            dbColumns.put(camelName, javaType);
+            
+            // 記錄 ID 欄位的型別
+            if ("id".equalsIgnoreCase(columnName)) {
+                idFieldType = javaType;
+            }
         }
 
         // -------- 生成 Entity --------
@@ -60,7 +71,7 @@ public class FullSchemaExampleGenerator {
         // -------- 生成 Example --------
         new File(EXAMPLE_DIR).mkdirs();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(exampleFilePath))) {
-            writer.write("package com.group.admin.entity.example;\n\n");
+            writer.write("package com.group.admin.example;\n\n");
             writer.write("import java.util.*;\n");
             writer.write("import com.group.admin.entity." + className + ";\n\n");
             writer.write("public class " + className + "Example {\n");
@@ -101,32 +112,95 @@ public class FullSchemaExampleGenerator {
 
             // select by Example
             writer.write("  <select id=\"selectByExample\" resultMap=\"" + className
-                    + "Map\" parameterType=\"com.group.admin.entity.example." + className + "Example\">\n");
+                    + "Map\" parameterType=\"com.group.admin.example." + className + "Example\">\n");
             writer.write("    SELECT * FROM " + tableName + "\n");
             writer.write("    <where>\n");
             writer.write("      <foreach collection=\"oredCriteria\" item=\"criteria\" separator=\"or\">\n");
-            writer.write("        <foreach collection=\"criteria.conditions.entrySet()\" item=\"entry\">\n");
-            writer.write("          ${entry.key} = #{entry.value} AND\n");
-            writer.write("        </foreach>\n");
+            writer.write("        <if test=\"criteria.conditions.size() > 0\">\n");
+            writer.write("          <trim prefix=\"(\" suffix=\")\" prefixOverrides=\"and\">\n");
+            writer.write("            <foreach collection=\"criteria.conditions.entrySet()\" item=\"entry\" index=\"key\">\n");
+            writer.write("              and ${key} = #{entry.value}\n");
+            writer.write("            </foreach>\n");
+            writer.write("          </trim>\n");
+            writer.write("        </if>\n");
             writer.write("      </foreach>\n");
             writer.write("    </where>\n");
-            writer.write("  </select>\n");
+            writer.write("  </select>\n\n");
+
+            // count by Example
+            writer.write("  <select id=\"countByExample\" resultType=\"long\" parameterType=\"com.group.admin.example." + className + "Example\">\n");
+            writer.write("    SELECT COUNT(*) FROM " + tableName + "\n");
+            writer.write("    <where>\n");
+            writer.write("      <foreach collection=\"oredCriteria\" item=\"criteria\" separator=\"or\">\n");
+            writer.write("        <if test=\"criteria.conditions.size() > 0\">\n");
+            writer.write("          <trim prefix=\"(\" suffix=\")\" prefixOverrides=\"and\">\n");
+            writer.write("            <foreach collection=\"criteria.conditions.entrySet()\" item=\"entry\" index=\"key\">\n");
+            writer.write("              and ${key} = #{entry.value}\n");
+            writer.write("            </foreach>\n");
+            writer.write("          </trim>\n");
+            writer.write("        </if>\n");
+            writer.write("      </foreach>\n");
+            writer.write("    </where>\n");
+            writer.write("  </select>\n\n");
+
+            // delete by Example
+            writer.write("  <delete id=\"deleteByExample\" parameterType=\"com.group.admin.example." + className + "Example\">\n");
+            writer.write("    DELETE FROM " + tableName + "\n");
+            writer.write("    <where>\n");
+            writer.write("      <foreach collection=\"oredCriteria\" item=\"criteria\" separator=\"or\">\n");
+            writer.write("        <if test=\"criteria.conditions.size() > 0\">\n");
+            writer.write("          <trim prefix=\"(\" suffix=\")\" prefixOverrides=\"and\">\n");
+            writer.write("            <foreach collection=\"criteria.conditions.entrySet()\" item=\"entry\" index=\"key\">\n");
+            writer.write("              and ${key} = #{entry.value}\n");
+            writer.write("            </foreach>\n");
+            writer.write("          </trim>\n");
+            writer.write("        </if>\n");
+            writer.write("      </foreach>\n");
+            writer.write("    </where>\n");
+            writer.write("  </delete>\n\n");
 
             writer.write("</mapper>\n");
         }
 
-        System.out.println("生成完成: " + className + " + Example + Mapper");
+        // -------- 生成 Mapper Interface --------
+        new File(MAPPER_INTERFACE_DIR).mkdirs();
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(mapperInterfaceFilePath))) {
+            writer.write("package com.group.admin.mapper;\n\n");
+            writer.write("import com.group.admin.entity." + className + ";\n");
+            writer.write("import com.group.admin.example." + className + "Example;\n");
+            writer.write("import org.apache.ibatis.annotations.Mapper;\n");
+            writer.write("import org.apache.ibatis.annotations.Param;\n");
+            writer.write("import java.util.List;\n\n");
+            writer.write("@Mapper\n");
+            writer.write("public interface " + className + "Mapper {\n\n");
+            
+            // 基本 CRUD 方法
+            writer.write("    int deleteByPrimaryKey(@Param(\"id\") " + idFieldType + " id);\n\n");
+            writer.write("    int insert(" + className + " row);\n\n");
+            writer.write("    " + className + " selectByPrimaryKey(@Param(\"id\") " + idFieldType + " id);\n\n");
+            writer.write("    List<" + className + "> selectAll();\n\n");
+            writer.write("    int updateByPrimaryKey(" + className + " row);\n\n");
+            
+            // Example 相關方法
+            writer.write("    List<" + className + "> selectByExample(" + className + "Example example);\n\n");
+            writer.write("    long countByExample(" + className + "Example example);\n\n");
+            writer.write("    int deleteByExample(" + className + "Example example);\n\n");
+            
+            writer.write("}\n");
+        }
+
+        System.out.println("生成完成: " + className + " (Entity + Example + Mapper XML + Mapper Interface)");
     }
 
     private static String sqlTypeToJavaType(String sqlType) {
         sqlType = sqlType.toUpperCase();
         return switch (sqlType) {
-            case "VARCHAR", "CHAR", "TEXT" -> "String";
+            case "VARCHAR", "CHAR", "TEXT", "LONGTEXT", "MEDIUMTEXT" -> "String";
             case "INT", "INTEGER", "SMALLINT", "TINYINT" -> "Integer";
             case "BIGINT" -> "Long";
             case "DECIMAL", "NUMERIC" -> "java.math.BigDecimal";
             case "DATE", "DATETIME", "TIMESTAMP" -> "java.time.LocalDateTime";
-            case "BIT" -> "Boolean";
+            case "BIT", "BOOLEAN" -> "Boolean";
             case "DOUBLE", "FLOAT" -> "Double";
             default -> "String";
         };

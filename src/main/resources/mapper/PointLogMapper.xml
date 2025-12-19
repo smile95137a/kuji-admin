@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.PointLogMapper">
+
+  <resultMap id="PointLogMap" type="com.group.admin.entity.PointLog">
+    <result column="id" property="id" />
+    <result column="userId" property="userId" />
+    <result column="pointType" property="pointType" />
+    <result column="operationType" property="operationType" />
+    <result column="amount" property="amount" />
+    <result column="beforeBalance" property="beforeBalance" />
+    <result column="afterBalance" property="afterBalance" />
+    <result column="referenceType" property="referenceType" />
+    <result column="referenceId" property="referenceId" />
+    <result column="remark" property="remark" />
+    <result column="expireAt" property="expireAt" />
+    <result column="createdAt" property="createdAt" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="PointLogMap" parameterType="com.group.admin.example.PointLogExample">
+    SELECT * FROM point_log
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.PointLogExample">
+    SELECT COUNT(*) FROM point_log
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.PointLogExample">
+    DELETE FROM point_log
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

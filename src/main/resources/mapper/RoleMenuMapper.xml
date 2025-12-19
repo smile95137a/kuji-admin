@@ -3,18 +3,95 @@
 <mapper namespace="com.group.admin.mapper.RoleMenuMapper">
 
   <resultMap id="RoleMenuMap" type="com.group.admin.entity.RoleMenu">
-    <result column="roleId" property="roleId" />
-    <result column="menuId" property="menuId" />
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="role_id" property="roleId" jdbcType="VARCHAR"/>
+    <result column="menu_id" property="menuId" jdbcType="VARCHAR"/>
+    <result column="can_view" property="canView" jdbcType="TINYINT"/>
+    <result column="can_edit" property="canEdit" jdbcType="TINYINT"/>
+    <result column="can_delete" property="canDelete" jdbcType="TINYINT"/>
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
   </resultMap>
 
-  <select id="selectByExample" resultMap="RoleMenuMap" parameterType="com.group.admin.entity.example.RoleMenuExample">
-    SELECT * FROM role_menu
+  <sql id="Base_Column_List">
+    id, role_id, menu_id, can_view, can_edit, can_delete, created_at
+  </sql>
+
+  <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <foreach collection="criteria.conditions.entrySet()" item="entry">
-          ${entry.key} = #{entry.value} AND
-        </foreach>
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
       </foreach>
     </where>
+  </sql>
+
+  <select id="selectByPrimaryKey" resultMap="RoleMenuMap" parameterType="java.lang.String">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role_menu
+    WHERE id = #{id,jdbcType=VARCHAR}
   </select>
+
+  <select id="selectAll" resultMap="RoleMenuMap">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role_menu
+  </select>
+
+  <select id="selectByExample" resultMap="RoleMenuMap" parameterType="com.group.admin.example.RoleMenuExample">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role_menu
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.RoleMenuExample">
+    SELECT COUNT(*) FROM role_menu
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    DELETE FROM role_menu WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RoleMenuExample">
+    DELETE FROM role_menu
+    <include refid="Example_Where_Clause"/>
+  </delete>
+
+  <insert id="insert" parameterType="com.group.admin.entity.RoleMenu">
+    INSERT INTO role_menu (id, role_id, menu_id, can_view, can_edit, can_delete, created_at)
+    VALUES (#{id,jdbcType=VARCHAR}, #{roleId,jdbcType=VARCHAR}, #{menuId,jdbcType=VARCHAR},
+            #{canView,jdbcType=TINYINT}, #{canEdit,jdbcType=TINYINT}, #{canDelete,jdbcType=TINYINT},
+            #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RoleMenu">
+    UPDATE role_menu
+    SET role_id = #{roleId,jdbcType=VARCHAR},
+        menu_id = #{menuId,jdbcType=VARCHAR},
+        can_view = #{canView,jdbcType=TINYINT},
+        can_edit = #{canEdit,jdbcType=TINYINT},
+        can_delete = #{canDelete,jdbcType=TINYINT}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
 </mapper>

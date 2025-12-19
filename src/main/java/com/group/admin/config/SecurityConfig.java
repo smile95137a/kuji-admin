@@ -1,38 +1,109 @@
-// package com.group.admin.config;
+package com.group.admin.config;
 
-// import org.springframework.context.annotation.Bean;
-// import org.springframework.context.annotation.Configuration;
-// import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-// import org.springframework.security.config.http.SessionCreationPolicy;
-// import org.springframework.security.web.SecurityFilterChain;
-// import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.group.admin.security.AdminJwtAuthenticationFilter;
+import com.group.admin.security.ApiJwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-// import com.group.admin.filter.JwtAuthenticationFilter;
-// import com.group.admin.filter.JwtAuthenticationFilterSkipApi;
+/**
+ * Spring Security 配置
+ * 分離前台（/api/**）和後台（/admin/**）的認證機制
+ * 
+ * 前台：支援 Email + Google OAuth2
+ * 後台：僅支援 Email + 密碼
+ */
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
 
-// @Configuration
-// public class SecurityConfig {
+    private final AdminJwtAuthenticationFilter adminJwtFilter;
+    private final ApiJwtAuthenticationFilter apiJwtFilter;
 
-//     private final JwtAuthenticationFilter jwtFilter;
+    /**
+     * 密碼加密器（使用 BCrypt）
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-//     public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
-//         this.jwtFilter = jwtFilter;
-//     }
+    /**
+     * 後台安全配置（/admin/**）
+     * Order(1) 表示優先處理
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/admin/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> {})
+                .authorizeHttpRequests(auth -> auth
+                        // 登入相關 API 不需要認證
+                        .requestMatchers("/admin/auth/**").permitAll()
+                        // 其他 /admin/** 需要後台角色
+                        .requestMatchers("/admin/**").hasAnyRole("Admin", "StoreOwner", "StoreEditor")
+                )
+                .addFilterBefore(adminJwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                );
 
-//     @Bean
-//     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//         http
-//                 .csrf(csrf -> csrf.disable())
-//                 .cors(cors -> {
-//                 }) // CorsFilter 已經註冊了，這裡空著即可
-//                 .authorizeHttpRequests(auth -> auth
-//                         .requestMatchers("/**").permitAll() // 放行所有 /api
-//                         .anyRequest().authenticated() // 其他請求需要驗證
-//                 )
-//                 // 不把 jwtFilter 加在 /api/** 上，避免攔截全放行路徑
-//                 .addFilterBefore(new JwtAuthenticationFilterSkipApi(jwtFilter),
-//                         UsernamePasswordAuthenticationFilter.class)
-//                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//         return http.build();
-//     }
-// }
+        return http.build();
+    }
+
+    /**
+     * 前台安全配置（/api/**）
+     * Order(2) 表示次要處理
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> {})
+                .authorizeHttpRequests(auth -> auth
+                        // 登入、註冊、OAuth 不需要認證
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // 其他 /api/** 需要 USER 角色
+                        .requestMatchers("/api/**").hasRole("USER")
+                )
+                .addFilterBefore(apiJwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                );
+
+        return http.build();
+    }
+
+    /**
+     * 預設安全配置（處理其他路徑）
+     */
+    @Bean
+    @Order(3)
+    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        // Swagger 相關路徑
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        .anyRequest().permitAll()
+                );
+
+        return http.build();
+    }
+}

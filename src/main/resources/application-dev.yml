@@ -25,3 +25,6 @@ logging:
 # application-dev.yml
 jwt:
   secret: myDevSecret123
+
+google:
+  client-id: ""

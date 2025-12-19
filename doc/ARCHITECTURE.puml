@@ -1,0 +1,19 @@
+@startuml
+title KUJI-Admin - Simple architecture
+actor User
+actor Admin
+rectangle "Frontend Client" as FE
+rectangle "Backend API (Spring Boot)" as API
+rectangle "Database (MySQL)" as DB
+User -down-> FE
+Admin -down-> FE
+FE -down-> API
+API -down-> DB
+note right of API
+	- Spring Boot 3
+	- JWT Authentication
+	- MyBatis for DB access
+	- RBAC for Admin
+end note
+@enduml
+

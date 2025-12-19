@@ -1,0 +1,47 @@
+@startuml
+entity "user" as user {
+	* id : char(36)
+	* email
+	* nickname
+	* password
+	* gold_coins
+	* bonus_coins
+}
+
+entity "store" as store {
+	* id : char(36)
+	* name
+	* owner_admin_id
+}
+
+entity "lottery" as lottery {
+	* id : char(36)
+	* store_id
+	* title
+	* price_per_draw
+}
+
+entity "lottery_prize" as prize {
+	* id : char(36)
+	* lottery_id
+	* name
+	* quantity
+	* remaining
+	* weight
+}
+
+entity "lottery_draw_record" as record {
+	* id : char(36)
+	* lottery_id
+	* user_id
+	* prize_id
+	* create_date
+}
+
+user }--|| record
+store }--|| lottery
+lottery }--|| prize
+lottery }--|| record
+
+@enduml
+

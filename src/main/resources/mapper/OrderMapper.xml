@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.OrderMapper">
+
+  <resultMap id="OrderMap" type="com.group.admin.entity.Order">
+    <result column="id" property="id" />
+    <result column="orderNo" property="orderNo" />
+    <result column="userId" property="userId" />
+    <result column="amount" property="amount" />
+    <result column="orderType" property="orderType" />
+    <result column="paymentProvider" property="paymentProvider" />
+    <result column="providerTradeNo" property="providerTradeNo" />
+    <result column="status" property="status" />
+    <result column="remark" property="remark" />
+    <result column="paidAt" property="paidAt" />
+    <result column="createdAt" property="createdAt" />
+    <result column="updatedAt" property="updatedAt" />
+    <result column="billingAddress" property="billingAddress" />
+    <result column="billingArea" property="billingArea" />
+    <result column="billingCity" property="billingCity" />
+    <result column="billingEmail" property="billingEmail" />
+    <result column="billingName" property="billingName" />
+    <result column="billingPhone" property="billingPhone" />
+    <result column="billingZipCode" property="billingZipCode" />
+    <result column="bonusPointsEarned" property="bonusPointsEarned" />
+    <result column="bonusPointsUsed" property="bonusPointsUsed" />
+    <result column="cartItemId" property="cartItemId" />
+    <result column="invoice" property="invoice" />
+    <result column="isFreeShipping" property="isFreeShipping" />
+    <result column="orderNumber" property="orderNumber" />
+    <result column="paymentMethod" property="paymentMethod" />
+    <result column="resultStatus" property="resultStatus" />
+    <result column="shippingAddress" property="shippingAddress" />
+    <result column="shippingArea" property="shippingArea" />
+    <result column="shippingCity" property="shippingCity" />
+    <result column="shippingCost" property="shippingCost" />
+    <result column="shippingEmail" property="shippingEmail" />
+    <result column="shippingMethod" property="shippingMethod" />
+    <result column="shippingName" property="shippingName" />
+    <result column="shippingPhone" property="shippingPhone" />
+    <result column="shippingZipCode" property="shippingZipCode" />
+    <result column="totalAmount" property="totalAmount" />
+    <result column="trackingNumber" property="trackingNumber" />
+    <result column="opmode" property="opmode" />
+    <result column="express" property="express" />
+    <result column="shopId" property="shopId" />
+    <result column="billNumber" property="billNumber" />
+    <result column="ePayaccount" property="ePayaccount" />
+    <result column="donationCode" property="donationCode" />
+    <result column="state" property="state" />
+    <result column="type" property="type" />
+    <result column="shippingMethodId" property="shippingMethodId" />
+    <result column="shippingMehtodId" property="shippingMehtodId" />
+    <result column="shopAddress" property="shopAddress" />
+    <result column="shopName" property="shopName" />
+    <result column="vehicle" property="vehicle" />
+    <result column="uncode" property="uncode" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="OrderMap" parameterType="com.group.admin.example.OrderExample">
+    SELECT * FROM order
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.OrderExample">
+    SELECT COUNT(*) FROM order
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.OrderExample">
+    DELETE FROM order
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

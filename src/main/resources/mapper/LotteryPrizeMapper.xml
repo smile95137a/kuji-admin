@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LotteryPrizeMapper">
+
+  <resultMap id="LotteryPrizeMap" type="com.group.admin.entity.LotteryPrize">
+    <result column="id" property="id" />
+    <result column="lotteryId" property="lotteryId" />
+    <result column="name" property="name" />
+    <result column="description" property="description" />
+    <result column="imageUrl" property="imageUrl" />
+    <result column="level" property="level" />
+    <result column="prizeNumber" property="prizeNumber" />
+    <result column="quantity" property="quantity" />
+    <result column="remaining" property="remaining" />
+    <result column="weight" property="weight" />
+    <result column="prizeType" property="prizeType" />
+    <result column="pointValue" property="pointValue" />
+    <result column="isLastPrize" property="isLastPrize" />
+    <result column="isGrandPrize" property="isGrandPrize" />
+    <result column="orderNum" property="orderNum" />
+    <result column="createdAt" property="createdAt" />
+    <result column="updatedAt" property="updatedAt" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="LotteryPrizeMap" parameterType="com.group.admin.example.LotteryPrizeExample">
+    SELECT * FROM lottery_prize
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.LotteryPrizeExample">
+    SELECT COUNT(*) FROM lottery_prize
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryPrizeExample">
+    DELETE FROM lottery_prize
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

@@ -24,3 +24,6 @@ logging:
 # application-prod.yml
 jwt:
   secret: ${JWT_SECRET}  # 從環境變數注入
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}

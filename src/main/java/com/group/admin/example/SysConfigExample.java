@@ -1,9 +1,7 @@
 package com.group.admin.example;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import com.group.admin.entity.SysConfig;
 
 public class SysConfigExample {
     private List<Criteria> oredCriteria = new ArrayList<>();

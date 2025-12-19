@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LotteryDrawRecordMapper">
+
+  <resultMap id="LotteryDrawRecordMap" type="com.group.admin.entity.LotteryDrawRecord">
+    <result column="id" property="id" />
+    <result column="lotteryId" property="lotteryId" />
+    <result column="userId" property="userId" />
+    <result column="prizeId" property="prizeId" />
+    <result column="selectedNumber" property="selectedNumber" />
+    <result column="costType" property="costType" />
+    <result column="costAmount" property="costAmount" />
+    <result column="status" property="status" />
+    <result column="createdAt" property="createdAt" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="LotteryDrawRecordMap" parameterType="com.group.admin.example.LotteryDrawRecordExample">
+    SELECT * FROM lottery_draw_record
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.LotteryDrawRecordExample">
+    SELECT COUNT(*) FROM lottery_draw_record
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryDrawRecordExample">
+    DELETE FROM lottery_draw_record
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

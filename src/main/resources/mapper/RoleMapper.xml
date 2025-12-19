@@ -3,21 +3,146 @@
 <mapper namespace="com.group.admin.mapper.RoleMapper">
 
   <resultMap id="RoleMap" type="com.group.admin.entity.Role">
-    <result column="id" property="id" />
-    <result column="name" property="name" />
-    <result column="description" property="description" />
-    <result column="createDate" property="createDate" />
-    <result column="updateDate" property="updateDate" />
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="name" property="name" jdbcType="VARCHAR"/>
+    <result column="code" property="code" jdbcType="VARCHAR"/>
+    <result column="description" property="description" jdbcType="VARCHAR"/>
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
   </resultMap>
 
-  <select id="selectByExample" resultMap="RoleMap" parameterType="com.group.admin.entity.example.RoleExample">
-    SELECT * FROM role
+  <sql id="Base_Column_List">
+    id, name, code, description, created_at, updated_at
+  </sql>
+
+  <select id="selectByPrimaryKey" resultMap="RoleMap" parameterType="java.lang.String">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectAll" resultMap="RoleMap">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role
+  </select>
+
+  <select id="selectByCode" resultMap="RoleMap" parameterType="java.lang.String">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role
+    WHERE code = #{code,jdbcType=VARCHAR}
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    DELETE FROM role WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <insert id="insert" parameterType="com.group.admin.entity.Role">
+    INSERT INTO role (id, name, code, description, created_at, updated_at)
+    VALUES (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR},
+            #{description,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Role">
+    UPDATE role
+    SET name = #{name,jdbcType=VARCHAR},
+        code = #{code,jdbcType=VARCHAR},
+        description = #{description,jdbcType=VARCHAR},
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <select id="selectByExample" resultMap="RoleMap" parameterType="com.group.admin.example.RoleExample">
+    SELECT <include refid="Base_Column_List"/>
+    FROM role
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <foreach collection="criteria.conditions.entrySet()" item="entry">
-          ${entry.key} = #{entry.value} AND
-        </foreach>
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
       </foreach>
     </where>
   </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.RoleExample">
+    SELECT COUNT(*) FROM role
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RoleExample">
+    DELETE FROM role
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
 </mapper>

@@ -3,18 +3,88 @@
 <mapper namespace="com.group.admin.mapper.AdminUserRoleMapper">
 
   <resultMap id="AdminUserRoleMap" type="com.group.admin.entity.AdminUserRole">
-    <result column="adminId" property="adminId" />
-    <result column="roleId" property="roleId" />
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="admin_user_id" property="adminUserId" jdbcType="VARCHAR"/>
+    <result column="role_id" property="roleId" jdbcType="VARCHAR"/>
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
   </resultMap>
 
-  <select id="selectByExample" resultMap="AdminUserRoleMap" parameterType="com.group.admin.entity.example.AdminUserRoleExample">
-    SELECT * FROM admin_user_role
+  <sql id="Base_Column_List">
+    id, admin_user_id, role_id, created_at
+  </sql>
+
+  <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <foreach collection="criteria.conditions.entrySet()" item="entry">
-          ${entry.key} = #{entry.value} AND
-        </foreach>
+        <if test="criteria.valid">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
       </foreach>
     </where>
+  </sql>
+
+  <select id="selectByPrimaryKey" resultMap="AdminUserRoleMap" parameterType="java.lang.String">
+    SELECT <include refid="Base_Column_List"/>
+    FROM admin_user_role
+    WHERE id = #{id,jdbcType=VARCHAR}
   </select>
+
+  <select id="selectAll" resultMap="AdminUserRoleMap">
+    SELECT <include refid="Base_Column_List"/>
+    FROM admin_user_role
+  </select>
+
+  <select id="selectByExample" resultMap="AdminUserRoleMap" parameterType="com.group.admin.example.AdminUserRoleExample">
+    SELECT <include refid="Base_Column_List"/>
+    FROM admin_user_role
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.AdminUserRoleExample">
+    SELECT COUNT(*) FROM admin_user_role
+    <include refid="Example_Where_Clause"/>
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    DELETE FROM admin_user_role WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.AdminUserRoleExample">
+    DELETE FROM admin_user_role
+    <include refid="Example_Where_Clause"/>
+  </delete>
+
+  <insert id="insert" parameterType="com.group.admin.entity.AdminUserRole">
+    INSERT INTO admin_user_role (id, admin_user_id, role_id, created_at)
+    VALUES (#{id,jdbcType=VARCHAR}, #{adminUserId,jdbcType=VARCHAR}, 
+            #{roleId,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.AdminUserRole">
+    UPDATE admin_user_role
+    SET admin_user_id = #{adminUserId,jdbcType=VARCHAR},
+        role_id = #{roleId,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
 </mapper>

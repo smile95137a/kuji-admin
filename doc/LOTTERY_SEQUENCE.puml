@@ -1,0 +1,28 @@
+@startuml
+title Lottery Draw Sequence
+actor User
+participant "Frontend (Client)" as Client
+participant "Backend API" as API
+participant "LotteryService" as Service
+participant "Database" as DB
+
+User -> Client: Click draw
+Client -> API: POST /api/lottery/{id}/draw (Bearer token)
+API -> Service: draw(lotteryId, userId, costType)
+Service -> DB: SELECT lottery, prizes, user
+DB --> Service: lottery, prize list, user
+Service -> Service: compute weight & select prize
+Service -> DB: UPDATE lottery_prize SET remaining = remaining - 1
+DB --> Service: updatedRows
+Service -> DB: UPDATE user SET balance = balance - cost
+DB --> Service: updated
+Service -> DB: INSERT lottery_draw_record
+DB --> Service: success
+Service -> DB: INSERT point_log, order
+DB --> Service: success
+Service -> API: return draw record
+API --> Client: 200 OK {draw record}
+Client -> User: show prize
+
+@enduml
+

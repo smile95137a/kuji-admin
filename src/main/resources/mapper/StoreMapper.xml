@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.StoreMapper">
+
+  <resultMap id="StoreMap" type="com.group.admin.entity.Store">
+    <result column="id" property="id" />
+    <result column="ownerId" property="ownerId" />
+    <result column="storeName" property="storeName" />
+    <result column="shortDescription" property="shortDescription" />
+    <result column="longDescription" property="longDescription" />
+    <result column="logoUrl" property="logoUrl" />
+    <result column="coverImageUrl" property="coverImageUrl" />
+    <result column="email" property="email" />
+    <result column="phone" property="phone" />
+    <result column="address" property="address" />
+    <result column="facebookUrl" property="facebookUrl" />
+    <result column="instagramUrl" property="instagramUrl" />
+    <result column="lineId" property="lineId" />
+    <result column="businessHours" property="businessHours" />
+    <result column="status" property="status" />
+    <result column="remark" property="remark" />
+    <result column="createdAt" property="createdAt" />
+    <result column="updatedAt" property="updatedAt" />
+    <result column="updatedBy" property="updatedBy" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="StoreMap" parameterType="com.group.admin.example.StoreExample">
+    SELECT * FROM store
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.StoreExample">
+    SELECT COUNT(*) FROM store
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.StoreExample">
+    DELETE FROM store
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

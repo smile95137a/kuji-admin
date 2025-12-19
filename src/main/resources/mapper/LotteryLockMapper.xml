@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LotteryLockMapper">
+
+  <resultMap id="LotteryLockMap" type="com.group.admin.entity.LotteryLock">
+    <result column="id" property="id" />
+    <result column="lotteryId" property="lotteryId" />
+    <result column="userId" property="userId" />
+    <result column="lockStartTime" property="lockStartTime" />
+    <result column="lockEndTime" property="lockEndTime" />
+    <result column="isActive" property="isActive" />
+    <result column="createdAt" property="createdAt" />
+  </resultMap>
+
+  <select id="selectByExample" resultMap="LotteryLockMap" parameterType="com.group.admin.example.LotteryLockExample">
+    SELECT * FROM lottery_lock
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.LotteryLockExample">
+    SELECT COUNT(*) FROM lottery_lock
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </select>
+
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryLockExample">
+    DELETE FROM lottery_lock
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.conditions.size() > 0">
+          <trim prefix="(" suffix=")" prefixOverrides="and">
+            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
+              and ${key} = #{entry.value}
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </delete>
+
+</mapper>

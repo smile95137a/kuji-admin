@@ -6,7 +6,8 @@ import lombok.Data;
 public class Role {
     private String id;
     private String name;
+    private String code;
     private String description;
-    private java.time.LocalDateTime createDate;
-    private java.time.LocalDateTime updateDate;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime updatedAt;
 }
