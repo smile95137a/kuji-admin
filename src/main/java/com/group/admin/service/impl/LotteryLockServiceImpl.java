@@ -1,18 +1,20 @@
 package com.group.admin.service.impl;
 
-import com.group.admin.entity.LotteryLock;
-import com.group.admin.example.LotteryLockExample;
-import com.group.admin.mapper.LotteryLockMapper;
-import com.group.admin.service.LotteryLockService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.group.admin.entity.LotteryLock;
+import com.group.admin.example.LotteryLockExample;
+import com.group.admin.mapper.LotteryLockMapper;
+import com.group.admin.service.LotteryLockService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 抽獎鎖定服務實作（保護時間機制）
@@ -93,7 +95,7 @@ public class LotteryLockServiceImpl implements LotteryLockService {
         lock.setUserId(userId);
         lock.setLockStartTime(LocalDateTime.now());
         lock.setLockEndTime(LocalDateTime.now().plusMinutes(DEFAULT_LOCK_MINUTES));
-        lock.setIsActive(1);
+        lock.setIsActive((Byte.valueOf("1")));
         lock.setCreatedAt(LocalDateTime.now());
         
         lotteryLockMapper.insert(lock);
@@ -112,11 +114,11 @@ public class LotteryLockServiceImpl implements LotteryLockService {
         example.createCriteria()
                 .andLotteryIdEqualTo(lotteryId)
                 .andUserIdEqualTo(userId)
-                .andIsActiveEqualTo(1);
+                .andIsActiveEqualTo((Byte.valueOf("1")));
         
         List<LotteryLock> locks = lotteryLockMapper.selectByExample(example);
         for (LotteryLock lock : locks) {
-            lock.setIsActive(0);
+            lock.setIsActive((Byte.valueOf("0")));
             lotteryLockMapper.updateByPrimaryKey(lock);
         }
     }
@@ -128,7 +130,7 @@ public class LotteryLockServiceImpl implements LotteryLockService {
         
         // 查詢所有活躍但已過期的鎖定
         LotteryLockExample example = new LotteryLockExample();
-        example.createCriteria().andIsActiveEqualTo(1);
+        example.createCriteria().andIsActiveEqualTo((Byte.valueOf("1")));
         
         List<LotteryLock> locks = lotteryLockMapper.selectByExample(example);
         int count = 0;
@@ -136,7 +138,7 @@ public class LotteryLockServiceImpl implements LotteryLockService {
         
         for (LotteryLock lock : locks) {
             if (lock.getLockEndTime().isBefore(now)) {
-                lock.setIsActive(0);
+                lock.setIsActive((Byte.valueOf("0")));
                 lotteryLockMapper.updateByPrimaryKey(lock);
                 count++;
             }
@@ -150,7 +152,7 @@ public class LotteryLockServiceImpl implements LotteryLockService {
         LotteryLockExample example = new LotteryLockExample();
         example.createCriteria()
                 .andLotteryIdEqualTo(lotteryId)
-                .andIsActiveEqualTo(1);
+                .andIsActiveEqualTo((Byte.valueOf("1")));
         
         List<LotteryLock> locks = lotteryLockMapper.selectByExample(example);
         return locks.isEmpty() ? null : locks.get(0);

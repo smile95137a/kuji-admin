@@ -2,27 +2,29 @@ package com.group.admin.mapper;
 
 import com.group.admin.entity.LotteryLock;
 import com.group.admin.example.LotteryLockExample;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 
-@Mapper
 public interface LotteryLockMapper {
-
-    int deleteByPrimaryKey(@Param("id") String id);
-
-    int insert(LotteryLock row);
-
-    LotteryLock selectByPrimaryKey(@Param("id") String id);
-
-    List<LotteryLock> selectAll();
-
-    int updateByPrimaryKey(LotteryLock row);
-
-    List<LotteryLock> selectByExample(LotteryLockExample example);
-
     long countByExample(LotteryLockExample example);
 
     int deleteByExample(LotteryLockExample example);
 
+    int deleteByPrimaryKey(String id);
+
+    int insert(LotteryLock row);
+
+    int insertSelective(LotteryLock row);
+
+    List<LotteryLock> selectByExample(LotteryLockExample example);
+
+    LotteryLock selectByPrimaryKey(String id);
+
+    int updateByExampleSelective(@Param("row") LotteryLock row, @Param("example") LotteryLockExample example);
+
+    int updateByExample(@Param("row") LotteryLock row, @Param("example") LotteryLockExample example);
+
+    int updateByPrimaryKeySelective(LotteryLock row);
+
+    int updateByPrimaryKey(LotteryLock row);
 }

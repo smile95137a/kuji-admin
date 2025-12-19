@@ -1,86 +1,155 @@
 package com.group.admin.entity;
 
-import lombok.Data;
 import java.time.LocalDateTime;
 
-/**
- * 前台玩家實體
- * 對應 DDL_UUID.sql 中的 user 表
- */
-@Data
 public class User {
-    /**
-     * 使用者 ID (UUID)
-     */
     private String id;
-    
-    /**
-     * Email
-     */
+
     private String email;
-    
-    /**
-     * 暱稱
-     */
+
     private String nickname;
-    
-    /**
-     * 密碼（BCrypt 加密，OAuth 用戶可為空）
-     */
+
     private String password;
-    
-    /**
-     * 頭像網址
-     */
+
     private String avatar;
-    
-    /**
-     * 登入來源：EMAIL/GOOGLE
-     */
+
     private String provider;
-    
-    /**
-     * OAuth Provider 的用戶 ID
-     */
+
     private String providerId;
-    
-    /**
-     * 儲值金（付費購買）
-     */
+
     private Long goldCoins;
-    
-    /**
-     * 紅利金（系統贈送）
-     */
+
     private Long bonusCoins;
-    
-    /**
-     * 狀態：ACTIVE/INACTIVE
-     */
+
     private String status;
-    
-    /**
-     * Email 是否驗證：0=否, 1=是
-     */
-    private Integer emailVerified;
-    
-    /**
-     * 手機號碼
-     */
+
+    private Byte emailVerified;
+
     private String phoneNumber;
-    
-    /**
-     * 最後登入時間
-     */
+
     private LocalDateTime lastLoginAt;
-    
-    /**
-     * 建立時間
-     */
+
     private LocalDateTime createdAt;
-    
-    /**
-     * 更新時間
-     */
+
     private LocalDateTime updatedAt;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id == null ? null : id.trim();
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.trim();
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname == null ? null : nickname.trim();
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password == null ? null : password.trim();
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar == null ? null : avatar.trim();
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider == null ? null : provider.trim();
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId == null ? null : providerId.trim();
+    }
+
+    public Long getGoldCoins() {
+        return goldCoins;
+    }
+
+    public void setGoldCoins(Long goldCoins) {
+        this.goldCoins = goldCoins;
+    }
+
+    public Long getBonusCoins() {
+        return bonusCoins;
+    }
+
+    public void setBonusCoins(Long bonusCoins) {
+        this.bonusCoins = bonusCoins;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status == null ? null : status.trim();
+    }
+
+    public Byte getEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(Byte emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber == null ? null : phoneNumber.trim();
+    }
+
+    public LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

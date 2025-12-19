@@ -44,6 +44,13 @@
 			<version>${mybatis.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.mybatis.generator</groupId>
+			<artifactId>mybatis-generator-core</artifactId>
+			<version>1.4.2</version>
+		</dependency>
+
+
 		<!-- Validation -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -62,19 +69,11 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<!-- OAuth2 client (for Google OAuth) -->
+		<!-- OAuth2 Client (for Google/Facebook/etc OAuth) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-client</artifactId>
-		</dependency>
-
-		<!-- Password encoder (BCrypt) -->
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-crypto</artifactId>
-		</dependency>
-
-		<!-- MySQL -->
+		</dependency>		<!-- MySQL -->
 		<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
@@ -128,6 +127,18 @@
 
 	<!-- ✅ 編譯與打包 -->
 	<build>
+		<!-- 資源檔案配置：確保 mapper XML 被複製到 target -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.yml</include>
+					<include>**/*.properties</include>
+				</includes>
+			</resource>
+		</resources>
+
 		<plugins>
 			<!-- Java 編譯 -->
 			<plugin>
@@ -153,6 +164,10 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<version>${spring.boot.version}</version>
+				<configuration>
+					<mainClass>com.group.admin.AdminApplication</mainClass>
+					<addResources>true</addResources>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
@@ -176,13 +191,12 @@
 				<configuration>
 					<verbose>true</verbose>
 					<overwrite>true</overwrite>
-					<configurationFile>src/main/resources/mapper/generatorConfig.xml</configurationFile>
+					<configurationFile>generatorConfig.xml</configurationFile>
 				</configuration>
 			</plugin>
 		</plugins>
-	</build>
-
-	<!-- ✅ Profiles：開發 & 正式 環境 -->
+	</build>	<!--
+	✅ Profiles：開發 & 正式 環境 -->
 	<profiles>
 		<profile>
 			<id>dev</id>

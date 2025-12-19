@@ -2,27 +2,35 @@ package com.group.admin.mapper;
 
 import com.group.admin.entity.LotteryPrize;
 import com.group.admin.example.LotteryPrizeExample;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 
-@Mapper
 public interface LotteryPrizeMapper {
-
-    int deleteByPrimaryKey(@Param("id") String id);
-
-    int insert(LotteryPrize row);
-
-    LotteryPrize selectByPrimaryKey(@Param("id") String id);
-
-    List<LotteryPrize> selectAll();
-
-    int updateByPrimaryKey(LotteryPrize row);
-
-    List<LotteryPrize> selectByExample(LotteryPrizeExample example);
-
     long countByExample(LotteryPrizeExample example);
 
     int deleteByExample(LotteryPrizeExample example);
 
+    int deleteByPrimaryKey(String id);
+
+    int insert(LotteryPrize row);
+
+    int insertSelective(LotteryPrize row);
+
+    List<LotteryPrize> selectByExampleWithBLOBs(LotteryPrizeExample example);
+
+    List<LotteryPrize> selectByExample(LotteryPrizeExample example);
+
+    LotteryPrize selectByPrimaryKey(String id);
+
+    int updateByExampleSelective(@Param("row") LotteryPrize row, @Param("example") LotteryPrizeExample example);
+
+    int updateByExampleWithBLOBs(@Param("row") LotteryPrize row, @Param("example") LotteryPrizeExample example);
+
+    int updateByExample(@Param("row") LotteryPrize row, @Param("example") LotteryPrizeExample example);
+
+    int updateByPrimaryKeySelective(LotteryPrize row);
+
+    int updateByPrimaryKeyWithBLOBs(LotteryPrize row);
+
+    int updateByPrimaryKey(LotteryPrize row);
 }

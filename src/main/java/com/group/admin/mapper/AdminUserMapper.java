@@ -2,27 +2,35 @@ package com.group.admin.mapper;
 
 import com.group.admin.entity.AdminUser;
 import com.group.admin.example.AdminUserExample;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 
-@Mapper
 public interface AdminUserMapper {
-
-    int deleteByPrimaryKey(@Param("id") String id);
-
-    int insert(AdminUser row);
-
-    AdminUser selectByPrimaryKey(@Param("id") String id);
-
-    List<AdminUser> selectAll();
-
-    int updateByPrimaryKey(AdminUser row);
-
-    List<AdminUser> selectByExample(AdminUserExample example);
-
     long countByExample(AdminUserExample example);
 
     int deleteByExample(AdminUserExample example);
 
+    int deleteByPrimaryKey(String id);
+
+    int insert(AdminUser row);
+
+    int insertSelective(AdminUser row);
+
+    List<AdminUser> selectByExampleWithBLOBs(AdminUserExample example);
+
+    List<AdminUser> selectByExample(AdminUserExample example);
+
+    AdminUser selectByPrimaryKey(String id);
+
+    int updateByExampleSelective(@Param("row") AdminUser row, @Param("example") AdminUserExample example);
+
+    int updateByExampleWithBLOBs(@Param("row") AdminUser row, @Param("example") AdminUserExample example);
+
+    int updateByExample(@Param("row") AdminUser row, @Param("example") AdminUserExample example);
+
+    int updateByPrimaryKeySelective(AdminUser row);
+
+    int updateByPrimaryKeyWithBLOBs(AdminUser row);
+
+    int updateByPrimaryKey(AdminUser row);
 }

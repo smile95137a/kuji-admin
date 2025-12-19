@@ -1,77 +1,1178 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.group.admin.mapper.LotteryMapper">
-
-  <resultMap id="LotteryMap" type="com.group.admin.entity.Lottery">
-    <result column="id" property="id" />
-    <result column="storeId" property="storeId" />
-    <result column="title" property="title" />
-    <result column="description" property="description" />
-    <result column="imageUrl" property="imageUrl" />
-    <result column="category" property="category" />
-    <result column="subCategory" property="subCategory" />
-    <result column="pricePerDraw" property="pricePerDraw" />
-    <result column="discountedPrice" property="discountedPrice" />
-    <result column="autoDiscountEnabled" property="autoDiscountEnabled" />
-    <result column="allowMultiDraw" property="allowMultiDraw" />
-    <result column="multiDrawOptions" property="multiDrawOptions" />
-    <result column="scheduledAt" property="scheduledAt" />
-    <result column="startTime" property="startTime" />
-    <result column="endTime" property="endTime" />
-    <result column="totalDraws" property="totalDraws" />
-    <result column="maxDraws" property="maxDraws" />
-    <result column="status" property="status" />
-    <result column="orderNum" property="orderNum" />
-    <result column="weight" property="weight" />
-    <result column="createdBy" property="createdBy" />
-    <result column="createdAt" property="createdAt" />
-    <result column="updatedAt" property="updatedAt" />
-    <result column="remark" property="remark" />
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.Lottery">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="image_url" jdbcType="VARCHAR" property="imageUrl" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="sub_category" jdbcType="VARCHAR" property="subCategory" />
+    <result column="price_per_draw" jdbcType="BIGINT" property="pricePerDraw" />
+    <result column="discounted_price" jdbcType="BIGINT" property="discountedPrice" />
+    <result column="auto_discount_enabled" jdbcType="TINYINT" property="autoDiscountEnabled" />
+    <result column="allow_multi_draw" jdbcType="TINYINT" property="allowMultiDraw" />
+    <result column="multi_draw_options" jdbcType="VARCHAR" property="multiDrawOptions" />
+    <result column="scheduled_at" jdbcType="TIMESTAMP" property="scheduledAt" />
+    <result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+    <result column="end_time" jdbcType="TIMESTAMP" property="endTime" />
+    <result column="total_draws" jdbcType="INTEGER" property="totalDraws" />
+    <result column="max_draws" jdbcType="INTEGER" property="maxDraws" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="order_num" jdbcType="INTEGER" property="orderNum" />
+    <result column="weight" jdbcType="INTEGER" property="weight" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
   </resultMap>
-
-  <select id="selectByExample" resultMap="LotteryMap" parameterType="com.group.admin.example.LotteryExample">
-    SELECT * FROM lottery
+  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.Lottery">
+    <result column="description" jdbcType="LONGVARCHAR" property="description" />
+    <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <if test="criteria.conditions.size() > 0">
-          <trim prefix="(" suffix=")" prefixOverrides="and">
-            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
-              and ${key} = #{entry.value}
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
             </foreach>
           </trim>
         </if>
       </foreach>
     </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, store_id, title, image_url, category, sub_category, price_per_draw, discounted_price, 
+    auto_discount_enabled, allow_multi_draw, multi_draw_options, scheduled_at, start_time, 
+    end_time, total_draws, max_draws, status, order_num, weight, created_by, created_at, 
+    updated_at
+  </sql>
+  <sql id="Blob_Column_List">
+    description, remark
+  </sql>
+  <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.LotteryExample" resultMap="ResultMapWithBLOBs">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
   </select>
-
-  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.LotteryExample">
-    SELECT COUNT(*) FROM lottery
-    <where>
-      <foreach collection="oredCriteria" item="criteria" separator="or">
-        <if test="criteria.conditions.size() > 0">
-          <trim prefix="(" suffix=")" prefixOverrides="and">
-            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
-              and ${key} = #{entry.value}
-            </foreach>
-          </trim>
-        </if>
-      </foreach>
-    </where>
+  <select id="selectByExample" parameterType="com.group.admin.example.LotteryExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
   </select>
-
-  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryExample">
-    DELETE FROM lottery
-    <where>
-      <foreach collection="oredCriteria" item="criteria" separator="or">
-        <if test="criteria.conditions.size() > 0">
-          <trim prefix="(" suffix=")" prefixOverrides="and">
-            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
-              and ${key} = #{entry.value}
-            </foreach>
-          </trim>
-        </if>
-      </foreach>
-    </where>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from lottery
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from lottery
+    where id = #{id,jdbcType=VARCHAR}
   </delete>
-
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryExample">
+    delete from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.Lottery">
+    insert into lottery (id, store_id, title, 
+      image_url, category, sub_category, 
+      price_per_draw, discounted_price, auto_discount_enabled, 
+      allow_multi_draw, multi_draw_options, scheduled_at, 
+      start_time, end_time, total_draws, 
+      max_draws, status, order_num, 
+      weight, created_by, created_at, 
+      updated_at, description, remark
+      )
+    values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
+      #{imageUrl,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{subCategory,jdbcType=VARCHAR}, 
+      #{pricePerDraw,jdbcType=BIGINT}, #{discountedPrice,jdbcType=BIGINT}, #{autoDiscountEnabled,jdbcType=TINYINT}, 
+      #{allowMultiDraw,jdbcType=TINYINT}, #{multiDrawOptions,jdbcType=VARCHAR}, #{scheduledAt,jdbcType=TIMESTAMP}, 
+      #{startTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, #{totalDraws,jdbcType=INTEGER}, 
+      #{maxDraws,jdbcType=INTEGER}, #{status,jdbcType=VARCHAR}, #{orderNum,jdbcType=INTEGER}, 
+      #{weight,jdbcType=INTEGER}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
+      #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR}, #{remark,jdbcType=LONGVARCHAR}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.Lottery">
+    insert into lottery
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="title != null">
+        title,
+      </if>
+      <if test="imageUrl != null">
+        image_url,
+      </if>
+      <if test="category != null">
+        category,
+      </if>
+      <if test="subCategory != null">
+        sub_category,
+      </if>
+      <if test="pricePerDraw != null">
+        price_per_draw,
+      </if>
+      <if test="discountedPrice != null">
+        discounted_price,
+      </if>
+      <if test="autoDiscountEnabled != null">
+        auto_discount_enabled,
+      </if>
+      <if test="allowMultiDraw != null">
+        allow_multi_draw,
+      </if>
+      <if test="multiDrawOptions != null">
+        multi_draw_options,
+      </if>
+      <if test="scheduledAt != null">
+        scheduled_at,
+      </if>
+      <if test="startTime != null">
+        start_time,
+      </if>
+      <if test="endTime != null">
+        end_time,
+      </if>
+      <if test="totalDraws != null">
+        total_draws,
+      </if>
+      <if test="maxDraws != null">
+        max_draws,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="orderNum != null">
+        order_num,
+      </if>
+      <if test="weight != null">
+        weight,
+      </if>
+      <if test="createdBy != null">
+        created_by,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="remark != null">
+        remark,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="title != null">
+        #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="imageUrl != null">
+        #{imageUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="category != null">
+        #{category,jdbcType=VARCHAR},
+      </if>
+      <if test="subCategory != null">
+        #{subCategory,jdbcType=VARCHAR},
+      </if>
+      <if test="pricePerDraw != null">
+        #{pricePerDraw,jdbcType=BIGINT},
+      </if>
+      <if test="discountedPrice != null">
+        #{discountedPrice,jdbcType=BIGINT},
+      </if>
+      <if test="autoDiscountEnabled != null">
+        #{autoDiscountEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="allowMultiDraw != null">
+        #{allowMultiDraw,jdbcType=TINYINT},
+      </if>
+      <if test="multiDrawOptions != null">
+        #{multiDrawOptions,jdbcType=VARCHAR},
+      </if>
+      <if test="scheduledAt != null">
+        #{scheduledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="startTime != null">
+        #{startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endTime != null">
+        #{endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="totalDraws != null">
+        #{totalDraws,jdbcType=INTEGER},
+      </if>
+      <if test="maxDraws != null">
+        #{maxDraws,jdbcType=INTEGER},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNum != null">
+        #{orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="weight != null">
+        #{weight,jdbcType=INTEGER},
+      </if>
+      <if test="createdBy != null">
+        #{createdBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="remark != null">
+        #{remark,jdbcType=LONGVARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
+    select count(*) from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update lottery
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.title != null">
+        title = #{row.title,jdbcType=VARCHAR},
+      </if>
+      <if test="row.imageUrl != null">
+        image_url = #{row.imageUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="row.category != null">
+        category = #{row.category,jdbcType=VARCHAR},
+      </if>
+      <if test="row.subCategory != null">
+        sub_category = #{row.subCategory,jdbcType=VARCHAR},
+      </if>
+      <if test="row.pricePerDraw != null">
+        price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
+      </if>
+      <if test="row.discountedPrice != null">
+        discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
+      </if>
+      <if test="row.autoDiscountEnabled != null">
+        auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="row.allowMultiDraw != null">
+        allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
+      </if>
+      <if test="row.multiDrawOptions != null">
+        multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
+      </if>
+      <if test="row.scheduledAt != null">
+        scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.startTime != null">
+        start_time = #{row.startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.endTime != null">
+        end_time = #{row.endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.totalDraws != null">
+        total_draws = #{row.totalDraws,jdbcType=INTEGER},
+      </if>
+      <if test="row.maxDraws != null">
+        max_draws = #{row.maxDraws,jdbcType=INTEGER},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.orderNum != null">
+        order_num = #{row.orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="row.weight != null">
+        weight = #{row.weight,jdbcType=INTEGER},
+      </if>
+      <if test="row.createdBy != null">
+        created_by = #{row.createdBy,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.description != null">
+        description = #{row.description,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="row.remark != null">
+        remark = #{row.remark,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExampleWithBLOBs" parameterType="map">
+    update lottery
+    set id = #{row.id,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      title = #{row.title,jdbcType=VARCHAR},
+      image_url = #{row.imageUrl,jdbcType=VARCHAR},
+      category = #{row.category,jdbcType=VARCHAR},
+      sub_category = #{row.subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{row.startTime,jdbcType=TIMESTAMP},
+      end_time = #{row.endTime,jdbcType=TIMESTAMP},
+      total_draws = #{row.totalDraws,jdbcType=INTEGER},
+      max_draws = #{row.maxDraws,jdbcType=INTEGER},
+      status = #{row.status,jdbcType=VARCHAR},
+      order_num = #{row.orderNum,jdbcType=INTEGER},
+      weight = #{row.weight,jdbcType=INTEGER},
+      created_by = #{row.createdBy,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      description = #{row.description,jdbcType=LONGVARCHAR},
+      remark = #{row.remark,jdbcType=LONGVARCHAR}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update lottery
+    set id = #{row.id,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      title = #{row.title,jdbcType=VARCHAR},
+      image_url = #{row.imageUrl,jdbcType=VARCHAR},
+      category = #{row.category,jdbcType=VARCHAR},
+      sub_category = #{row.subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{row.startTime,jdbcType=TIMESTAMP},
+      end_time = #{row.endTime,jdbcType=TIMESTAMP},
+      total_draws = #{row.totalDraws,jdbcType=INTEGER},
+      max_draws = #{row.maxDraws,jdbcType=INTEGER},
+      status = #{row.status,jdbcType=VARCHAR},
+      order_num = #{row.orderNum,jdbcType=INTEGER},
+      weight = #{row.weight,jdbcType=INTEGER},
+      created_by = #{row.createdBy,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Lottery">
+    update lottery
+    <set>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="title != null">
+        title = #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="imageUrl != null">
+        image_url = #{imageUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="category != null">
+        category = #{category,jdbcType=VARCHAR},
+      </if>
+      <if test="subCategory != null">
+        sub_category = #{subCategory,jdbcType=VARCHAR},
+      </if>
+      <if test="pricePerDraw != null">
+        price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
+      </if>
+      <if test="discountedPrice != null">
+        discounted_price = #{discountedPrice,jdbcType=BIGINT},
+      </if>
+      <if test="autoDiscountEnabled != null">
+        auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="allowMultiDraw != null">
+        allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
+      </if>
+      <if test="multiDrawOptions != null">
+        multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
+      </if>
+      <if test="scheduledAt != null">
+        scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="startTime != null">
+        start_time = #{startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endTime != null">
+        end_time = #{endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="totalDraws != null">
+        total_draws = #{totalDraws,jdbcType=INTEGER},
+      </if>
+      <if test="maxDraws != null">
+        max_draws = #{maxDraws,jdbcType=INTEGER},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNum != null">
+        order_num = #{orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="weight != null">
+        weight = #{weight,jdbcType=INTEGER},
+      </if>
+      <if test="createdBy != null">
+        created_by = #{createdBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="remark != null">
+        remark = #{remark,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.Lottery">
+    update lottery
+    set store_id = #{storeId,jdbcType=VARCHAR},
+      title = #{title,jdbcType=VARCHAR},
+      image_url = #{imageUrl,jdbcType=VARCHAR},
+      category = #{category,jdbcType=VARCHAR},
+      sub_category = #{subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{startTime,jdbcType=TIMESTAMP},
+      end_time = #{endTime,jdbcType=TIMESTAMP},
+      total_draws = #{totalDraws,jdbcType=INTEGER},
+      max_draws = #{maxDraws,jdbcType=INTEGER},
+      status = #{status,jdbcType=VARCHAR},
+      order_num = #{orderNum,jdbcType=INTEGER},
+      weight = #{weight,jdbcType=INTEGER},
+      created_by = #{createdBy,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      description = #{description,jdbcType=LONGVARCHAR},
+      remark = #{remark,jdbcType=LONGVARCHAR}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Lottery">
+    update lottery
+    set store_id = #{storeId,jdbcType=VARCHAR},
+      title = #{title,jdbcType=VARCHAR},
+      image_url = #{imageUrl,jdbcType=VARCHAR},
+      category = #{category,jdbcType=VARCHAR},
+      sub_category = #{subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{startTime,jdbcType=TIMESTAMP},
+      end_time = #{endTime,jdbcType=TIMESTAMP},
+      total_draws = #{totalDraws,jdbcType=INTEGER},
+      max_draws = #{maxDraws,jdbcType=INTEGER},
+      status = #{status,jdbcType=VARCHAR},
+      order_num = #{orderNum,jdbcType=INTEGER},
+      weight = #{weight,jdbcType=INTEGER},
+      created_by = #{createdBy,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.Lottery">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="image_url" jdbcType="VARCHAR" property="imageUrl" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="sub_category" jdbcType="VARCHAR" property="subCategory" />
+    <result column="price_per_draw" jdbcType="BIGINT" property="pricePerDraw" />
+    <result column="discounted_price" jdbcType="BIGINT" property="discountedPrice" />
+    <result column="auto_discount_enabled" jdbcType="TINYINT" property="autoDiscountEnabled" />
+    <result column="allow_multi_draw" jdbcType="TINYINT" property="allowMultiDraw" />
+    <result column="multi_draw_options" jdbcType="VARCHAR" property="multiDrawOptions" />
+    <result column="scheduled_at" jdbcType="TIMESTAMP" property="scheduledAt" />
+    <result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+    <result column="end_time" jdbcType="TIMESTAMP" property="endTime" />
+    <result column="total_draws" jdbcType="INTEGER" property="totalDraws" />
+    <result column="max_draws" jdbcType="INTEGER" property="maxDraws" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="order_num" jdbcType="INTEGER" property="orderNum" />
+    <result column="weight" jdbcType="INTEGER" property="weight" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.LotteryWithBLOBs">
+    <result column="description" jdbcType="LONGVARCHAR" property="description" />
+    <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, store_id, title, image_url, category, sub_category, price_per_draw, discounted_price, 
+    auto_discount_enabled, allow_multi_draw, multi_draw_options, scheduled_at, start_time, 
+    end_time, total_draws, max_draws, status, order_num, weight, created_by, created_at, 
+    updated_at
+  </sql>
+  <sql id="Blob_Column_List">
+    description, remark
+  </sql>
+  <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.LotteryExample" resultMap="ResultMapWithBLOBs">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByExample" parameterType="com.group.admin.example.LotteryExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from lottery
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from lottery
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryExample">
+    delete from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.LotteryWithBLOBs">
+    insert into lottery (id, store_id, title, 
+      image_url, category, sub_category, 
+      price_per_draw, discounted_price, auto_discount_enabled, 
+      allow_multi_draw, multi_draw_options, scheduled_at, 
+      start_time, end_time, total_draws, 
+      max_draws, status, order_num, 
+      weight, created_by, created_at, 
+      updated_at, description, remark
+      )
+    values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
+      #{imageUrl,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{subCategory,jdbcType=VARCHAR}, 
+      #{pricePerDraw,jdbcType=BIGINT}, #{discountedPrice,jdbcType=BIGINT}, #{autoDiscountEnabled,jdbcType=TINYINT}, 
+      #{allowMultiDraw,jdbcType=TINYINT}, #{multiDrawOptions,jdbcType=VARCHAR}, #{scheduledAt,jdbcType=TIMESTAMP}, 
+      #{startTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, #{totalDraws,jdbcType=INTEGER}, 
+      #{maxDraws,jdbcType=INTEGER}, #{status,jdbcType=VARCHAR}, #{orderNum,jdbcType=INTEGER}, 
+      #{weight,jdbcType=INTEGER}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
+      #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR}, #{remark,jdbcType=LONGVARCHAR}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryWithBLOBs">
+    insert into lottery
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="title != null">
+        title,
+      </if>
+      <if test="imageUrl != null">
+        image_url,
+      </if>
+      <if test="category != null">
+        category,
+      </if>
+      <if test="subCategory != null">
+        sub_category,
+      </if>
+      <if test="pricePerDraw != null">
+        price_per_draw,
+      </if>
+      <if test="discountedPrice != null">
+        discounted_price,
+      </if>
+      <if test="autoDiscountEnabled != null">
+        auto_discount_enabled,
+      </if>
+      <if test="allowMultiDraw != null">
+        allow_multi_draw,
+      </if>
+      <if test="multiDrawOptions != null">
+        multi_draw_options,
+      </if>
+      <if test="scheduledAt != null">
+        scheduled_at,
+      </if>
+      <if test="startTime != null">
+        start_time,
+      </if>
+      <if test="endTime != null">
+        end_time,
+      </if>
+      <if test="totalDraws != null">
+        total_draws,
+      </if>
+      <if test="maxDraws != null">
+        max_draws,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="orderNum != null">
+        order_num,
+      </if>
+      <if test="weight != null">
+        weight,
+      </if>
+      <if test="createdBy != null">
+        created_by,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="remark != null">
+        remark,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="title != null">
+        #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="imageUrl != null">
+        #{imageUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="category != null">
+        #{category,jdbcType=VARCHAR},
+      </if>
+      <if test="subCategory != null">
+        #{subCategory,jdbcType=VARCHAR},
+      </if>
+      <if test="pricePerDraw != null">
+        #{pricePerDraw,jdbcType=BIGINT},
+      </if>
+      <if test="discountedPrice != null">
+        #{discountedPrice,jdbcType=BIGINT},
+      </if>
+      <if test="autoDiscountEnabled != null">
+        #{autoDiscountEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="allowMultiDraw != null">
+        #{allowMultiDraw,jdbcType=TINYINT},
+      </if>
+      <if test="multiDrawOptions != null">
+        #{multiDrawOptions,jdbcType=VARCHAR},
+      </if>
+      <if test="scheduledAt != null">
+        #{scheduledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="startTime != null">
+        #{startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endTime != null">
+        #{endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="totalDraws != null">
+        #{totalDraws,jdbcType=INTEGER},
+      </if>
+      <if test="maxDraws != null">
+        #{maxDraws,jdbcType=INTEGER},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNum != null">
+        #{orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="weight != null">
+        #{weight,jdbcType=INTEGER},
+      </if>
+      <if test="createdBy != null">
+        #{createdBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="remark != null">
+        #{remark,jdbcType=LONGVARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
+    select count(*) from lottery
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update lottery
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.title != null">
+        title = #{row.title,jdbcType=VARCHAR},
+      </if>
+      <if test="row.imageUrl != null">
+        image_url = #{row.imageUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="row.category != null">
+        category = #{row.category,jdbcType=VARCHAR},
+      </if>
+      <if test="row.subCategory != null">
+        sub_category = #{row.subCategory,jdbcType=VARCHAR},
+      </if>
+      <if test="row.pricePerDraw != null">
+        price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
+      </if>
+      <if test="row.discountedPrice != null">
+        discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
+      </if>
+      <if test="row.autoDiscountEnabled != null">
+        auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="row.allowMultiDraw != null">
+        allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
+      </if>
+      <if test="row.multiDrawOptions != null">
+        multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
+      </if>
+      <if test="row.scheduledAt != null">
+        scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.startTime != null">
+        start_time = #{row.startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.endTime != null">
+        end_time = #{row.endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.totalDraws != null">
+        total_draws = #{row.totalDraws,jdbcType=INTEGER},
+      </if>
+      <if test="row.maxDraws != null">
+        max_draws = #{row.maxDraws,jdbcType=INTEGER},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.orderNum != null">
+        order_num = #{row.orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="row.weight != null">
+        weight = #{row.weight,jdbcType=INTEGER},
+      </if>
+      <if test="row.createdBy != null">
+        created_by = #{row.createdBy,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.description != null">
+        description = #{row.description,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="row.remark != null">
+        remark = #{row.remark,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExampleWithBLOBs" parameterType="map">
+    update lottery
+    set id = #{row.id,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      title = #{row.title,jdbcType=VARCHAR},
+      image_url = #{row.imageUrl,jdbcType=VARCHAR},
+      category = #{row.category,jdbcType=VARCHAR},
+      sub_category = #{row.subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{row.startTime,jdbcType=TIMESTAMP},
+      end_time = #{row.endTime,jdbcType=TIMESTAMP},
+      total_draws = #{row.totalDraws,jdbcType=INTEGER},
+      max_draws = #{row.maxDraws,jdbcType=INTEGER},
+      status = #{row.status,jdbcType=VARCHAR},
+      order_num = #{row.orderNum,jdbcType=INTEGER},
+      weight = #{row.weight,jdbcType=INTEGER},
+      created_by = #{row.createdBy,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      description = #{row.description,jdbcType=LONGVARCHAR},
+      remark = #{row.remark,jdbcType=LONGVARCHAR}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update lottery
+    set id = #{row.id,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      title = #{row.title,jdbcType=VARCHAR},
+      image_url = #{row.imageUrl,jdbcType=VARCHAR},
+      category = #{row.category,jdbcType=VARCHAR},
+      sub_category = #{row.subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{row.startTime,jdbcType=TIMESTAMP},
+      end_time = #{row.endTime,jdbcType=TIMESTAMP},
+      total_draws = #{row.totalDraws,jdbcType=INTEGER},
+      max_draws = #{row.maxDraws,jdbcType=INTEGER},
+      status = #{row.status,jdbcType=VARCHAR},
+      order_num = #{row.orderNum,jdbcType=INTEGER},
+      weight = #{row.weight,jdbcType=INTEGER},
+      created_by = #{row.createdBy,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryWithBLOBs">
+    update lottery
+    <set>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="title != null">
+        title = #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="imageUrl != null">
+        image_url = #{imageUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="category != null">
+        category = #{category,jdbcType=VARCHAR},
+      </if>
+      <if test="subCategory != null">
+        sub_category = #{subCategory,jdbcType=VARCHAR},
+      </if>
+      <if test="pricePerDraw != null">
+        price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
+      </if>
+      <if test="discountedPrice != null">
+        discounted_price = #{discountedPrice,jdbcType=BIGINT},
+      </if>
+      <if test="autoDiscountEnabled != null">
+        auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="allowMultiDraw != null">
+        allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
+      </if>
+      <if test="multiDrawOptions != null">
+        multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
+      </if>
+      <if test="scheduledAt != null">
+        scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="startTime != null">
+        start_time = #{startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endTime != null">
+        end_time = #{endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="totalDraws != null">
+        total_draws = #{totalDraws,jdbcType=INTEGER},
+      </if>
+      <if test="maxDraws != null">
+        max_draws = #{maxDraws,jdbcType=INTEGER},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNum != null">
+        order_num = #{orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="weight != null">
+        weight = #{weight,jdbcType=INTEGER},
+      </if>
+      <if test="createdBy != null">
+        created_by = #{createdBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="remark != null">
+        remark = #{remark,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.LotteryWithBLOBs">
+    update lottery
+    set store_id = #{storeId,jdbcType=VARCHAR},
+      title = #{title,jdbcType=VARCHAR},
+      image_url = #{imageUrl,jdbcType=VARCHAR},
+      category = #{category,jdbcType=VARCHAR},
+      sub_category = #{subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{startTime,jdbcType=TIMESTAMP},
+      end_time = #{endTime,jdbcType=TIMESTAMP},
+      total_draws = #{totalDraws,jdbcType=INTEGER},
+      max_draws = #{maxDraws,jdbcType=INTEGER},
+      status = #{status,jdbcType=VARCHAR},
+      order_num = #{orderNum,jdbcType=INTEGER},
+      weight = #{weight,jdbcType=INTEGER},
+      created_by = #{createdBy,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      description = #{description,jdbcType=LONGVARCHAR},
+      remark = #{remark,jdbcType=LONGVARCHAR}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Lottery">
+    update lottery
+    set store_id = #{storeId,jdbcType=VARCHAR},
+      title = #{title,jdbcType=VARCHAR},
+      image_url = #{imageUrl,jdbcType=VARCHAR},
+      category = #{category,jdbcType=VARCHAR},
+      sub_category = #{subCategory,jdbcType=VARCHAR},
+      price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
+      discounted_price = #{discountedPrice,jdbcType=BIGINT},
+      auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
+      allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
+      multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
+      scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
+      start_time = #{startTime,jdbcType=TIMESTAMP},
+      end_time = #{endTime,jdbcType=TIMESTAMP},
+      total_draws = #{totalDraws,jdbcType=INTEGER},
+      max_draws = #{maxDraws,jdbcType=INTEGER},
+      status = #{status,jdbcType=VARCHAR},
+      order_num = #{orderNum,jdbcType=INTEGER},
+      weight = #{weight,jdbcType=INTEGER},
+      created_by = #{createdBy,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
 </mapper>

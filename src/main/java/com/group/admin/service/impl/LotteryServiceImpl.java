@@ -1,15 +1,34 @@
 package com.group.admin.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.group.admin.entity.*;
+import com.group.admin.entity.Lottery;
+import com.group.admin.entity.LotteryDrawRecord;
+import com.group.admin.entity.LotteryExample;
+import com.group.admin.entity.LotteryPrize;
+import com.group.admin.entity.LotteryPrizeExample;
+import com.group.admin.entity.PointLog;
+import com.group.admin.entity.User;
 import com.group.admin.enums.LotteryCategoryEnum;
 import com.group.admin.enums.LotteryStatusEnum;
-import com.group.admin.example.LotteryExample;
-import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.exception.BusinessException;
-import com.group.admin.mapper.*;
+import com.group.admin.mapper.LotteryDrawRecordMapper;
+import com.group.admin.mapper.LotteryMapper;
+import com.group.admin.mapper.LotteryPrizeMapper;
+import com.group.admin.mapper.PointLogMapper;
+import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.lottery.LotteryCreateReq;
 import com.group.admin.req.lottery.LotteryQueryReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
@@ -17,13 +36,9 @@ import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryListRes;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.*;
 
 /**
  * 抽獎商品服務實作

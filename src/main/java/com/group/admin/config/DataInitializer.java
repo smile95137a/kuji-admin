@@ -48,7 +48,7 @@ import lombok.extern.slf4j.Slf4j;
  * @since 2025-12-18
  */
 @Slf4j
-@Component
+@Component 
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 

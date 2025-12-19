@@ -68,6 +68,7 @@ public class SecurityConfig {
     /**
      * 前台安全配置（/api/**）
      * Order(2) 表示次要處理
+     * 支援 OAuth2 登入
      */
     @Bean
     @Order(2)
@@ -78,10 +79,16 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         // 登入、註冊、OAuth 不需要認證
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/login/oauth2/**").permitAll()
                         // 其他 /api/** 需要 USER 角色
                         .requestMatchers("/api/**").hasRole("USER")
                 )
+                // ⚠️ 暫時停用 OAuth2 登入（需要先配置 OAuth2 Provider）
+                // .oauth2Login(oauth2 -> oauth2
+                //         .loginPage("/api/auth/login")
+                //         .defaultSuccessUrl("/api/auth/oauth2/success", true)
+                //         .failureUrl("/api/auth/oauth2/failure")
+                // )
                 .addFilterBefore(apiJwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

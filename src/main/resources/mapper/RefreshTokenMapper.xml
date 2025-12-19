@@ -1,62 +1,548 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.group.admin.mapper.RefreshTokenMapper">
-
-  <resultMap id="RefreshTokenMap" type="com.group.admin.entity.RefreshToken">
-    <result column="id" property="id" />
-    <result column="userType" property="userType" />
-    <result column="userId" property="userId" />
-    <result column="token" property="token" />
-    <result column="deviceInfo" property="deviceInfo" />
-    <result column="ipAddress" property="ipAddress" />
-    <result column="expiresAt" property="expiresAt" />
-    <result column="isRevoked" property="isRevoked" />
-    <result column="createdAt" property="createdAt" />
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.RefreshToken">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_type" jdbcType="VARCHAR" property="userType" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="token" jdbcType="VARCHAR" property="token" />
+    <result column="device_info" jdbcType="VARCHAR" property="deviceInfo" />
+    <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
+    <result column="expires_at" jdbcType="TIMESTAMP" property="expiresAt" />
+    <result column="is_revoked" jdbcType="TINYINT" property="isRevoked" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
   </resultMap>
-
-  <select id="selectByExample" resultMap="RefreshTokenMap" parameterType="com.group.admin.example.RefreshTokenExample">
-    SELECT * FROM refresh_token
+  <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
-        <if test="criteria.conditions.size() > 0">
-          <trim prefix="(" suffix=")" prefixOverrides="and">
-            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
-              and ${key} = #{entry.value}
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
             </foreach>
           </trim>
         </if>
       </foreach>
     </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_type, user_id, token, device_info, ip_address, expires_at, is_revoked, created_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.RefreshTokenExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from refresh_token
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
   </select>
-
-  <select id="countByExample" resultType="long" parameterType="com.group.admin.example.RefreshTokenExample">
-    SELECT COUNT(*) FROM refresh_token
-    <where>
-      <foreach collection="oredCriteria" item="criteria" separator="or">
-        <if test="criteria.conditions.size() > 0">
-          <trim prefix="(" suffix=")" prefixOverrides="and">
-            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
-              and ${key} = #{entry.value}
-            </foreach>
-          </trim>
-        </if>
-      </foreach>
-    </where>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from refresh_token
+    where id = #{id,jdbcType=VARCHAR}
   </select>
-
-  <delete id="deleteByExample" parameterType="com.group.admin.example.RefreshTokenExample">
-    DELETE FROM refresh_token
-    <where>
-      <foreach collection="oredCriteria" item="criteria" separator="or">
-        <if test="criteria.conditions.size() > 0">
-          <trim prefix="(" suffix=")" prefixOverrides="and">
-            <foreach collection="criteria.conditions.entrySet()" item="entry" index="key">
-              and ${key} = #{entry.value}
-            </foreach>
-          </trim>
-        </if>
-      </foreach>
-    </where>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from refresh_token
+    where id = #{id,jdbcType=VARCHAR}
   </delete>
-
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RefreshTokenExample">
+    delete from refresh_token
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.RefreshToken">
+    insert into refresh_token (id, user_type, user_id, 
+      token, device_info, ip_address, 
+      expires_at, is_revoked, created_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{userType,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, 
+      #{token,jdbcType=VARCHAR}, #{deviceInfo,jdbcType=VARCHAR}, #{ipAddress,jdbcType=VARCHAR}, 
+      #{expiresAt,jdbcType=TIMESTAMP}, #{isRevoked,jdbcType=TINYINT}, #{createdAt,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.RefreshToken">
+    insert into refresh_token
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userType != null">
+        user_type,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="token != null">
+        token,
+      </if>
+      <if test="deviceInfo != null">
+        device_info,
+      </if>
+      <if test="ipAddress != null">
+        ip_address,
+      </if>
+      <if test="expiresAt != null">
+        expires_at,
+      </if>
+      <if test="isRevoked != null">
+        is_revoked,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userType != null">
+        #{userType,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="token != null">
+        #{token,jdbcType=VARCHAR},
+      </if>
+      <if test="deviceInfo != null">
+        #{deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="expiresAt != null">
+        #{expiresAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isRevoked != null">
+        #{isRevoked,jdbcType=TINYINT},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.RefreshTokenExample" resultType="java.lang.Long">
+    select count(*) from refresh_token
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update refresh_token
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userType != null">
+        user_type = #{row.userType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.token != null">
+        token = #{row.token,jdbcType=VARCHAR},
+      </if>
+      <if test="row.deviceInfo != null">
+        device_info = #{row.deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="row.ipAddress != null">
+        ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="row.expiresAt != null">
+        expires_at = #{row.expiresAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.isRevoked != null">
+        is_revoked = #{row.isRevoked,jdbcType=TINYINT},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update refresh_token
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_type = #{row.userType,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      token = #{row.token,jdbcType=VARCHAR},
+      device_info = #{row.deviceInfo,jdbcType=VARCHAR},
+      ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      expires_at = #{row.expiresAt,jdbcType=TIMESTAMP},
+      is_revoked = #{row.isRevoked,jdbcType=TINYINT},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RefreshToken">
+    update refresh_token
+    <set>
+      <if test="userType != null">
+        user_type = #{userType,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="token != null">
+        token = #{token,jdbcType=VARCHAR},
+      </if>
+      <if test="deviceInfo != null">
+        device_info = #{deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        ip_address = #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="expiresAt != null">
+        expires_at = #{expiresAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isRevoked != null">
+        is_revoked = #{isRevoked,jdbcType=TINYINT},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RefreshToken">
+    update refresh_token
+    set user_type = #{userType,jdbcType=VARCHAR},
+      user_id = #{userId,jdbcType=VARCHAR},
+      token = #{token,jdbcType=VARCHAR},
+      device_info = #{deviceInfo,jdbcType=VARCHAR},
+      ip_address = #{ipAddress,jdbcType=VARCHAR},
+      expires_at = #{expiresAt,jdbcType=TIMESTAMP},
+      is_revoked = #{isRevoked,jdbcType=TINYINT},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.RefreshToken">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_type" jdbcType="VARCHAR" property="userType" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="token" jdbcType="VARCHAR" property="token" />
+    <result column="device_info" jdbcType="VARCHAR" property="deviceInfo" />
+    <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
+    <result column="expires_at" jdbcType="TIMESTAMP" property="expiresAt" />
+    <result column="is_revoked" jdbcType="TINYINT" property="isRevoked" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_type, user_id, token, device_info, ip_address, expires_at, is_revoked, created_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.RefreshTokenExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from refresh_token
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from refresh_token
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from refresh_token
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RefreshTokenExample">
+    delete from refresh_token
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.RefreshToken">
+    insert into refresh_token (id, user_type, user_id, 
+      token, device_info, ip_address, 
+      expires_at, is_revoked, created_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{userType,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, 
+      #{token,jdbcType=VARCHAR}, #{deviceInfo,jdbcType=VARCHAR}, #{ipAddress,jdbcType=VARCHAR}, 
+      #{expiresAt,jdbcType=TIMESTAMP}, #{isRevoked,jdbcType=TINYINT}, #{createdAt,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.RefreshToken">
+    insert into refresh_token
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userType != null">
+        user_type,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="token != null">
+        token,
+      </if>
+      <if test="deviceInfo != null">
+        device_info,
+      </if>
+      <if test="ipAddress != null">
+        ip_address,
+      </if>
+      <if test="expiresAt != null">
+        expires_at,
+      </if>
+      <if test="isRevoked != null">
+        is_revoked,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userType != null">
+        #{userType,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="token != null">
+        #{token,jdbcType=VARCHAR},
+      </if>
+      <if test="deviceInfo != null">
+        #{deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="expiresAt != null">
+        #{expiresAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isRevoked != null">
+        #{isRevoked,jdbcType=TINYINT},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.RefreshTokenExample" resultType="java.lang.Long">
+    select count(*) from refresh_token
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update refresh_token
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userType != null">
+        user_type = #{row.userType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.token != null">
+        token = #{row.token,jdbcType=VARCHAR},
+      </if>
+      <if test="row.deviceInfo != null">
+        device_info = #{row.deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="row.ipAddress != null">
+        ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="row.expiresAt != null">
+        expires_at = #{row.expiresAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.isRevoked != null">
+        is_revoked = #{row.isRevoked,jdbcType=TINYINT},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update refresh_token
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_type = #{row.userType,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      token = #{row.token,jdbcType=VARCHAR},
+      device_info = #{row.deviceInfo,jdbcType=VARCHAR},
+      ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      expires_at = #{row.expiresAt,jdbcType=TIMESTAMP},
+      is_revoked = #{row.isRevoked,jdbcType=TINYINT},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RefreshToken">
+    update refresh_token
+    <set>
+      <if test="userType != null">
+        user_type = #{userType,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="token != null">
+        token = #{token,jdbcType=VARCHAR},
+      </if>
+      <if test="deviceInfo != null">
+        device_info = #{deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        ip_address = #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="expiresAt != null">
+        expires_at = #{expiresAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isRevoked != null">
+        is_revoked = #{isRevoked,jdbcType=TINYINT},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RefreshToken">
+    update refresh_token
+    set user_type = #{userType,jdbcType=VARCHAR},
+      user_id = #{userId,jdbcType=VARCHAR},
+      token = #{token,jdbcType=VARCHAR},
+      device_info = #{deviceInfo,jdbcType=VARCHAR},
+      ip_address = #{ipAddress,jdbcType=VARCHAR},
+      expires_at = #{expiresAt,jdbcType=TIMESTAMP},
+      is_revoked = #{isRevoked,jdbcType=TINYINT},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
 </mapper>

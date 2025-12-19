@@ -2,27 +2,29 @@ package com.group.admin.mapper;
 
 import com.group.admin.entity.Menu;
 import com.group.admin.example.MenuExample;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 
-@Mapper
 public interface MenuMapper {
-
-    int deleteByPrimaryKey(@Param("id") String id);
-
-    int insert(Menu row);
-
-    Menu selectByPrimaryKey(@Param("id") String id);
-
-    List<Menu> selectAll();
-
-    int updateByPrimaryKey(Menu row);
-
-    List<Menu> selectByExample(MenuExample example);
-
     long countByExample(MenuExample example);
 
     int deleteByExample(MenuExample example);
 
+    int deleteByPrimaryKey(String id);
+
+    int insert(Menu row);
+
+    int insertSelective(Menu row);
+
+    List<Menu> selectByExample(MenuExample example);
+
+    Menu selectByPrimaryKey(String id);
+
+    int updateByExampleSelective(@Param("row") Menu row, @Param("example") MenuExample example);
+
+    int updateByExample(@Param("row") Menu row, @Param("example") MenuExample example);
+
+    int updateByPrimaryKeySelective(Menu row);
+
+    int updateByPrimaryKey(Menu row);
 }
