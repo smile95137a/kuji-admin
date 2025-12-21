@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN" "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+    <context id="MySQLTables" targetRuntime="MyBatis3">
+
+        <!-- 註解生成器：不生成日期與註解 -->
+        <commentGenerator>
+            <property name="suppressDate" value="true" />
+            <property name="suppressAllComments" value="true" />
+        </commentGenerator>
+
+        <!-- JDBC 連線設定 -->
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+            connectionURL="jdbc:mysql://localhost:3306/kuji?useSSL=false&amp;serverTimezone=Asia/Taipei"
+            userId="root"
+            password="123456">
+            <!-- 避免讀取到其他 schema 的同名表格 -->
+            <property name="nullCatalogMeansCurrent" value="true" />
+        </jdbcConnection>
+
+        <!-- Java 型別解析器 -->
+        <javaTypeResolver>
+            <!-- 小數不強制使用 BigDecimal -->
+            <property name="forceBigDecimals" value="false" />
+            <!-- 使用 JSR310 日期時間型別（LocalDateTime 等）-->
+            <property name="useJSR310Types" value="true" />
+            <!-- LONGVARBINARY 不對應 Blob -->
+            <property name="mapLongVarbinaryAsBlob" value="false" />
+            <!-- BLOB 不對應 byte[] -->
+            <property name="mapBlobAsBytes" value="false" />
+        </javaTypeResolver>
+
+        <!-- Entity 與 Example 生成設定 -->
+        <javaModelGenerator targetPackage="com.group.admin.entity" targetProject="src/main/java">
+            <property name="enableSubPackages" value="false" />
+            <property name="trimStrings" value="true" />
+            <property name="exampleTargetPackage" value="com.group.admin.example" />
+        </javaModelGenerator>
+
+        <!-- Mapper XML 生成設定 -->
+        <sqlMapGenerator targetPackage="mapper" targetProject="src/main/resources">
+            <property name="enableSubPackages" value="false" />
+        </sqlMapGenerator>
+
+        <!-- Mapper 介面生成設定 -->
+        <javaClientGenerator type="XMLMAPPER" targetPackage="com.group.admin.mapper" targetProject="src/main/java">
+            <property name="enableSubPackages" value="false" />
+        </javaClientGenerator>
+
+        <!-- 資料表設定 -->
+        <table tableName="admin_operation_log" domainObjectName="AdminOperationLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="admin_user" domainObjectName="AdminUser" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="admin_user_role" domainObjectName="AdminUserRole" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="banner" domainObjectName="Banner" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="lottery" domainObjectName="Lottery" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="lottery_draw_record" domainObjectName="LotteryDrawRecord" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="lottery_lock" domainObjectName="LotteryLock" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="lottery_prize" domainObjectName="LotteryPrize" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="menu" domainObjectName="Menu" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="order" domainObjectName="Order" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="point_log" domainObjectName="PointLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="refresh_token" domainObjectName="RefreshToken" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="role" domainObjectName="Role" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="role_menu" domainObjectName="RoleMenu" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="store" domainObjectName="Store" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="store_user" domainObjectName="StoreUser" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="user" domainObjectName="User" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+
+    </context>
+</generatorConfiguration>

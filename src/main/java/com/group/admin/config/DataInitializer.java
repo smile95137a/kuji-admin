@@ -550,8 +550,8 @@ public class DataInitializer implements CommandLineRunner {
         lottery1.setStatus("ON_SHELF");
         lottery1.setPricePerDraw(80L);
         lottery1.setDiscountedPrice(720L);
-        lottery1.setAutoDiscountEnabled(0);
-        lottery1.setAllowMultiDraw(1);
+        lottery1.setAutoDiscountEnabled((byte) 0);
+        lottery1.setAllowMultiDraw((byte) 1);
         lottery1.setMultiDrawOptions("5,10");
         lottery1.setScheduledAt(LocalDateTime.now());
         lottery1.setStartTime(LocalDateTime.now());
@@ -588,8 +588,8 @@ public class DataInitializer implements CommandLineRunner {
         lottery2.setStatus("ON_SHELF");
         lottery2.setPricePerDraw(60L);
         lottery2.setDiscountedPrice(540L);
-        lottery2.setAutoDiscountEnabled(0);
-        lottery2.setAllowMultiDraw(1);
+        lottery2.setAutoDiscountEnabled((byte) 0);
+        lottery2.setAllowMultiDraw((byte) 1);
         lottery2.setMultiDrawOptions("5,10");
         lottery2.setScheduledAt(LocalDateTime.now());
         lottery2.setStartTime(LocalDateTime.now());
@@ -629,8 +629,8 @@ public class DataInitializer implements CommandLineRunner {
         prize.setImageUrl("https://via.placeholder.com/200");
         prize.setPrizeType(prizeType);
         prize.setOrderNum(orderNum);
-        prize.setIsLastPrize(isLastPrize);
-        prize.setIsGrandPrize(isGrandPrize);
+        prize.setIsLastPrize((byte) isLastPrize);
+        prize.setIsGrandPrize((byte) isGrandPrize);
         prize.setCreatedAt(LocalDateTime.now());
         prize.setUpdatedAt(LocalDateTime.now());
         lotteryPrizeMapper.insert(prize);

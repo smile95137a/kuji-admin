@@ -88,13 +88,15 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- DevTools（只在開發用） -->
+		<!-- DevTools（只在開發用）- 暫時停用以避免 MyBatis Mapper XML 重複載入問題 -->
+		<!--
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+		-->
 
 		<!-- 測試 -->
 		<dependency>

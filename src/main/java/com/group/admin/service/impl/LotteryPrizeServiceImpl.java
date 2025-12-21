@@ -70,8 +70,8 @@ public class LotteryPrizeServiceImpl implements LotteryPrizeService {
         prize.setWeight(req.getWeight() != null ? req.getWeight() : 1);
         prize.setPrizeType(req.getPrizeType() != null ? req.getPrizeType() : "physical");
         prize.setPointValue(req.getPointValue());
-        prize.setIsLastPrize(req.getIsLastPrize() != null && req.getIsLastPrize() ? 1 : 0);
-        prize.setIsGrandPrize(req.getIsGrandPrize() != null && req.getIsGrandPrize() ? 1 : 0);
+        prize.setIsLastPrize(req.getIsLastPrize() != null && req.getIsLastPrize() ? (byte) 1 : (byte) 0);
+        prize.setIsGrandPrize(req.getIsGrandPrize() != null && req.getIsGrandPrize() ? (byte) 1 : (byte) 0);
         prize.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
         prize.setCreatedAt(LocalDateTime.now());
         prize.setUpdatedAt(LocalDateTime.now());
@@ -138,12 +138,12 @@ public class LotteryPrizeServiceImpl implements LotteryPrizeService {
         if (req.getPrizeType() != null) prize.setPrizeType(req.getPrizeType());
         if (req.getPointValue() != null) prize.setPointValue(req.getPointValue());
         if (req.getIsLastPrize() != null) {
-            prize.setIsLastPrize(req.getIsLastPrize() ? 1 : 0);
+            prize.setIsLastPrize(req.getIsLastPrize() ? (byte) 1 : (byte) 0);
             if (req.getIsLastPrize()) {
                 prize.setWeight(0);
             }
         }
-        if (req.getIsGrandPrize() != null) prize.setIsGrandPrize(req.getIsGrandPrize() ? 1 : 0);
+        if (req.getIsGrandPrize() != null) prize.setIsGrandPrize(req.getIsGrandPrize() ? (byte) 1 : (byte) 0);
         if (req.getOrderNum() != null) prize.setOrderNum(req.getOrderNum());
         
         prize.setUpdatedAt(LocalDateTime.now());

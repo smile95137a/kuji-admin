@@ -6,6 +6,14 @@ spring:
   profiles:
     active: dev
 
+  # 完全關閉 DevTools
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false
+    add-properties: false
+
   jackson:
     time-zone: Asia/Taipei
     date-format: yyyy-MM-dd HH:mm:ss

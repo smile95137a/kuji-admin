@@ -48,9 +48,11 @@ public class RoleServiceImpl implements RoleService {
     public RoleRes createRole(RoleCreateReq req) {
         log.info("建立角色: {}", req.getName());
 
-        // 使用 selectByCode 檢查代碼是否重複
-        Role existingRole = roleMapper.selectByCode(req.getCode());
-        if (existingRole != null) {
+        // 使用 Example 檢查代碼是否重複
+        RoleExample example = new RoleExample();
+        example.createCriteria().andCodeEqualTo(req.getCode());
+        List<Role> existingRoles = roleMapper.selectByExample(example);
+        if (!existingRoles.isEmpty()) {
             throw new BusinessException("角色代碼已存在: " + req.getCode());
         }
 
@@ -80,8 +82,10 @@ public class RoleServiceImpl implements RoleService {
 
         // 如果修改了代碼，檢查是否重複
         if (req.getCode() != null && !req.getCode().equals(role.getCode())) {
-            Role existingRole = roleMapper.selectByCode(req.getCode());
-            if (existingRole != null) {
+            RoleExample checkExample = new RoleExample();
+            checkExample.createCriteria().andCodeEqualTo(req.getCode());
+            List<Role> existingRoles = roleMapper.selectByExample(checkExample);
+            if (!existingRoles.isEmpty()) {
                 throw new BusinessException("角色代碼已存在: " + req.getCode());
             }
             role.setCode(req.getCode());
@@ -179,7 +183,8 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public List<RoleRes> getAllRoles() {
-        List<Role> roles = roleMapper.selectAll();
+        RoleExample example = new RoleExample();
+        List<Role> roles = roleMapper.selectByExample(example);
         return roles.stream()
                 .map(this::convertToRes)
                 .collect(Collectors.toList());
@@ -230,11 +235,13 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public RoleRes getRoleByCode(String code) {
-        Role role = roleMapper.selectByCode(code);
-        if (role == null) {
+        RoleExample example = new RoleExample();
+        example.createCriteria().andCodeEqualTo(code);
+        List<Role> roles = roleMapper.selectByExample(example);
+        if (roles.isEmpty()) {
             throw new BusinessException("角色不存在: " + code);
         }
-        return convertToRes(role);
+        return convertToRes(roles.get(0));
     }
 
     /**

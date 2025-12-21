@@ -177,7 +177,8 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuRes> getAllMenus() {
-        List<Menu> menus = menuMapper.selectAll();
+        MenuExample example = new MenuExample();
+        List<Menu> menus = menuMapper.selectByExample(example);
         return menus.stream()
                 .map(this::convertToRes)
                 .collect(Collectors.toList());
@@ -185,7 +186,8 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuTreeRes> getMenuTree() {
-        List<Menu> allMenus = menuMapper.selectAll();
+        MenuExample example = new MenuExample();
+        List<Menu> allMenus = menuMapper.selectByExample(example);
         return buildMenuTree(allMenus, null);
     }
 

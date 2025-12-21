@@ -210,7 +210,8 @@ public class AdminUserServiceImpl implements AdminUserService {
      */
     @Override
     public List<AdminUserRes> getAllAdminUsers() {
-        List<AdminUser> users = adminUserMapper.selectAll();
+        AdminUserExample example = new AdminUserExample();
+        List<AdminUser> users = adminUserMapper.selectByExample(example);
         return users.stream()
                 .map(this::toAdminUserRes)
                 .collect(Collectors.toList());

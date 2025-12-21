@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService {
         user.setGoldCoins(0L);
         user.setBonusCoins(0L);
         user.setStatus("ACTIVE");
-        user.setEmailVerified(0);
+        user.setEmailVerified((byte) 0);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -140,7 +140,7 @@ public class UserServiceImpl implements UserService {
                 user.setGoldCoins(0L);
                 user.setBonusCoins(0L);
                 user.setStatus("ACTIVE");
-                user.setEmailVerified(1); // Google 已驗證 Email
+                user.setEmailVerified((byte) 1); // Google 已驗證 Email
                 user.setLastLoginAt(LocalDateTime.now());
                 user.setCreatedAt(LocalDateTime.now());
                 user.setUpdatedAt(LocalDateTime.now());

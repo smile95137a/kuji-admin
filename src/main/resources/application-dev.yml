@@ -20,11 +20,8 @@ logging:
   level:
     root: DEBUG
     org.hibernate.SQL: DEBUG
-
-# MyBatis 配置
-mybatis:
-  mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.group.admin.entity
+    # MyBatis SQL 日誌
+    com.group.admin.mapper: DEBUG
 
 # application-dev.yml
 jwt:

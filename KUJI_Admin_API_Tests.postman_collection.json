@@ -1,0 +1,245 @@
+{
+  "info": {
+    "name": "KUJI Admin API Tests",
+    "description": "KUJI Admin System 完整 API 測試集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "測試端點",
+      "item": [
+        {
+          "name": "健康檢查",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "health"]
+            },
+            "description": "檢查系統是否正常運行"
+          }
+        },
+        {
+          "name": "資料庫連接測試",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/db-check",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "db-check"]
+            },
+            "description": "檢查資料庫連接並返回統計資料"
+          }
+        },
+        {
+          "name": "系統資訊",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/system-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "system-info"]
+            },
+            "description": "返回系統版本與環境資訊"
+          }
+        },
+        {
+          "name": "預設測試帳號",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/default-accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "default-accounts"]
+            },
+            "description": "返回所有預設測試帳號資訊"
+          }
+        }
+      ]
+    },
+    {
+      "name": "資料查詢",
+      "item": [
+        {
+          "name": "查詢所有角色",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "roles"]
+            }
+          }
+        },
+        {
+          "name": "查詢所有選單",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/menus",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "menus"]
+            }
+          }
+        },
+        {
+          "name": "查詢所有管理員",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/admin-users",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "admin-users"]
+            }
+          }
+        },
+        {
+          "name": "查詢所有店家",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/stores",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "stores"]
+            }
+          }
+        },
+        {
+          "name": "查詢所有會員",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "users"]
+            }
+          }
+        },
+        {
+          "name": "查詢所有商品",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/lotteries",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "lotteries"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "登入測試",
+      "item": [
+        {
+          "name": "管理員登入 - Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.status === 'SUCCESS' && jsonData.data && jsonData.data.accessToken) {",
+                  "        pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "        pm.test('登入成功並保存 Token', function() {",
+                  "            pm.expect(jsonData.status).to.equal('SUCCESS');",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin@kuji.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/admin-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "admin-login"]
+            },
+            "description": "使用系統管理員帳號登入"
+          }
+        },
+        {
+          "name": "管理員登入 - 店家負責人",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner@teststore.com\",\n  \"password\": \"Test1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/admin-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "admin-login"]
+            },
+            "description": "使用店家負責人帳號登入"
+          }
+        },
+        {
+          "name": "管理員登入 - 店家編輯",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"editor@teststore.com\",\n  \"password\": \"Test1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/admin-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "admin-login"]
+            },
+            "description": "使用店家編輯帳號登入"
+          }
+        }
+      ]
+    }
+  ]
+}

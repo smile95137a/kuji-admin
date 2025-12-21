@@ -16,13 +16,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryDrawRecord;
-import com.group.admin.entity.LotteryExample;
 import com.group.admin.entity.LotteryPrize;
-import com.group.admin.entity.LotteryPrizeExample;
 import com.group.admin.entity.PointLog;
 import com.group.admin.entity.User;
 import com.group.admin.enums.LotteryCategoryEnum;
 import com.group.admin.enums.LotteryStatusEnum;
+import com.group.admin.example.LotteryExample;
+import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.LotteryDrawRecordMapper;
 import com.group.admin.mapper.LotteryMapper;
@@ -78,8 +78,8 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setSubCategory(req.getSubCategory());
         lottery.setPricePerDraw(req.getPricePerDraw());
         lottery.setDiscountedPrice(req.getDiscountedPrice());
-        lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? 1 : 0);
-        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? 1 : 0);
+        lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
         
         if (req.getMultiDrawOptions() != null) {
             try {
@@ -132,8 +132,8 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getSubCategory() != null) lottery.setSubCategory(req.getSubCategory());
         if (req.getPricePerDraw() != null) lottery.setPricePerDraw(req.getPricePerDraw());
         if (req.getDiscountedPrice() != null) lottery.setDiscountedPrice(req.getDiscountedPrice());
-        if (req.getAutoDiscountEnabled() != null) lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? 1 : 0);
-        if (req.getAllowMultiDraw() != null) lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? 1 : 0);
+        if (req.getAutoDiscountEnabled() != null) lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        if (req.getAllowMultiDraw() != null) lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
         
         if (req.getMultiDrawOptions() != null) {
             try {
@@ -221,12 +221,16 @@ public class LotteryServiceImpl implements LotteryService {
         // 獲取總數
         long total = lotteryMapper.countByExample(example);
         
-        // 設置分頁
-        int offset = (req.getPage() - 1) * req.getSize();
-        example.setOffset(offset);
-        example.setLimit(req.getSize());
+        // MyBatis Example 不支援直接設置分頁，需使用 RowBounds 或直接查詢後手動分頁
+        // 這裡先查詢全部，然後手動分頁（小資料量可行，大資料量建議使用 PageHelper）
+        List<Lottery> allLotteries = lotteryMapper.selectByExampleWithBLOBs(example);
         
-        List<Lottery> lotteries = lotteryMapper.selectByExample(example);
+        // 手動分頁
+        int offset = (req.getPage() - 1) * req.getSize();
+        int endIndex = Math.min(offset + req.getSize(), allLotteries.size());
+        List<Lottery> lotteries = offset < allLotteries.size() 
+            ? allLotteries.subList(offset, endIndex) 
+            : new ArrayList<>();
         
         List<LotteryListRes> list = lotteries.stream()
                 .map(this::convertToListRes)
@@ -551,7 +555,7 @@ public class LotteryServiceImpl implements LotteryService {
         LotteryPrizeExample example = new LotteryPrizeExample();
         example.createCriteria()
                 .andLotteryIdEqualTo(lotteryId)
-                .andIsGrandPrizeEqualTo(1)
+                .andIsGrandPrizeEqualTo((byte) 1)
                 .andRemainingGreaterThan(0);
         List<LotteryPrize> grandPrizes = lotteryPrizeMapper.selectByExample(example);
         return grandPrizes.stream()
