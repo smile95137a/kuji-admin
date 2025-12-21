@@ -112,6 +112,30 @@
 			<version>${jwt.version}</version>
 		</dependency>
 
+		<!-- JAXB (for jjwt on Java 9+ where javax.xml.bind is removed) -->
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+			<version>4.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jaxb</groupId>
+			<artifactId>jaxb-runtime</artifactId>
+			<version>4.0.2</version>
+		</dependency>
+
+		<!-- Legacy JAXB API + RI to provide javax.xml.bind.DatatypeConverter for older libs (jjwt 0.9.1) -->
+		<dependency>
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-impl</artifactId>
+			<version>2.3.3</version>
+		</dependency>
+
 		<!-- Swagger 3 / OpenAPI -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
