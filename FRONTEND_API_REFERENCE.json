@@ -1,0 +1,1577 @@
+{
+  "baseUrl": "http://localhost:8080",
+  "apis": {
+    "authentication": {
+      "login": {
+        "name": "後台登入",
+        "method": "POST",
+        "path": "/admin/auth/login",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "username": "admin@kuji.com",
+            "password": "Admin123"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "登入成功",
+              "data": {
+                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "tokenType": "Bearer",
+                "expiresIn": 86400,
+                "forceChangePassword": false,
+                "user": {
+                  "id": "550e8400-e29b-41d4-a716-446655440000",
+                  "username": "admin@kuji.com",
+                  "displayName": "系統管理員",
+                  "roles": ["ROLE_ADMIN"]
+                }
+              }
+            }
+          },
+          "error_401": {
+            "httpCode": 401,
+            "body": {
+              "success": false,
+              "message": "帳號或密碼錯誤",
+              "data": null
+            }
+          },
+          "error_403": {
+            "httpCode": 403,
+            "body": {
+              "success": false,
+              "message": "帳號已停用",
+              "data": null
+            }
+          }
+        }
+      },
+      "refreshToken": {
+        "name": "刷新 Token",
+        "method": "POST",
+        "path": "/admin/auth/refresh-token",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "Token 刷新成功",
+              "data": {
+                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "tokenType": "Bearer",
+                "expiresIn": 86400
+              }
+            }
+          },
+          "error_401": {
+            "httpCode": 401,
+            "body": {
+              "success": false,
+              "message": "Refresh Token 無效或已過期",
+              "data": null
+            }
+          }
+        }
+      },
+      "changePassword": {
+        "name": "修改密碼",
+        "method": "POST",
+        "path": "/admin/auth/change-password",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "oldPassword": "Admin123",
+            "newPassword": "NewAdmin456",
+            "confirmPassword": "NewAdmin456"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "密碼修改成功",
+              "data": null
+            }
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "舊密碼錯誤",
+              "data": null
+            }
+          },
+          "error_401": {
+            "httpCode": 401,
+            "body": {
+              "success": false,
+              "message": "未認證",
+              "data": null
+            }
+          }
+        }
+      },
+      "firstLoginChangePassword": {
+        "name": "首次登入修改密碼",
+        "method": "POST",
+        "path": "/admin/auth/first-login/change-password",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "oldPassword": "TempPassword123",
+            "newPassword": "NewPassword456",
+            "confirmPassword": "NewPassword456"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "密碼修改成功",
+              "data": {
+                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "tokenType": "Bearer",
+                "expiresIn": 86400,
+                "forceChangePassword": false,
+                "user": {
+                  "id": "550e8400-e29b-41d4-a716-446655440001",
+                  "username": "owner@store.com",
+                  "displayName": "店家負責人",
+                  "roles": ["ROLE_STORE_OWNER"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "logout": {
+        "name": "登出",
+        "method": "POST",
+        "path": "/admin/auth/logout",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "登出成功",
+              "data": null
+            }
+          }
+        }
+      }
+    },
+    "adminUser": {
+      "createStoreOwner": {
+        "name": "建立店家負責人",
+        "method": "POST",
+        "path": "/admin/users/store-owner",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "email": "owner@store.com",
+            "displayName": "王小明",
+            "storeName": "玩具公仔專賣店",
+            "storeAddress": "台北市信義區信義路五段7號",
+            "storePhone": "02-12345678"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "建立成功",
+              "data": {
+                "id": "550e8400-e29b-41d4-a716-446655440001",
+                "email": "owner@store.com",
+                "displayName": "王小明",
+                "roles": ["ROLE_STORE_OWNER"],
+                "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                "storeName": "玩具公仔專賣店",
+                "enabled": true,
+                "forceChangePassword": true,
+                "createdAt": "2025-12-23T10:30:00"
+              }
+            }
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "Email 已存在",
+              "data": null
+            }
+          },
+          "error_403": {
+            "httpCode": 403,
+            "body": {
+              "success": false,
+              "message": "無權限",
+              "data": null
+            }
+          }
+        }
+      },
+      "createStoreEditor": {
+        "name": "建立店家編輯人員",
+        "method": "POST",
+        "path": "/admin/users/store-editor",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "email": "editor@store.com",
+            "displayName": "李小華",
+            "storeId": "650e8400-e29b-41d4-a716-446655440002"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "建立成功",
+              "data": {
+                "id": "550e8400-e29b-41d4-a716-446655440003",
+                "email": "editor@store.com",
+                "displayName": "李小華",
+                "roles": ["ROLE_STORE_EDITOR"],
+                "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                "storeName": "玩具公仔專賣店",
+                "enabled": true,
+                "forceChangePassword": true,
+                "createdAt": "2025-12-23T10:35:00"
+              }
+            }
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "店家不存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "getAdminUser": {
+        "name": "取得帳號詳情",
+        "method": "GET",
+        "path": "/admin/users/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "550e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "550e8400-e29b-41d4-a716-446655440001",
+                "email": "owner@store.com",
+                "displayName": "王小明",
+                "roles": ["ROLE_STORE_OWNER"],
+                "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                "storeName": "玩具公仔專賣店",
+                "enabled": true,
+                "forceChangePassword": false,
+                "createdAt": "2025-12-23T10:30:00",
+                "updatedAt": "2025-12-23T11:00:00"
+              }
+            }
+          },
+          "error_404": {
+            "httpCode": 404,
+            "body": {
+              "success": false,
+              "message": "帳號不存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "getAllAdminUsers": {
+        "name": "取得所有帳號列表",
+        "method": "GET",
+        "path": "/admin/users",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "550e8400-e29b-41d4-a716-446655440000",
+                  "email": "admin@kuji.com",
+                  "displayName": "系統管理員",
+                  "roles": ["ROLE_ADMIN"],
+                  "storeId": null,
+                  "storeName": null,
+                  "enabled": true,
+                  "forceChangePassword": false,
+                  "createdAt": "2025-01-01T00:00:00"
+                },
+                {
+                  "id": "550e8400-e29b-41d4-a716-446655440001",
+                  "email": "owner@store.com",
+                  "displayName": "王小明",
+                  "roles": ["ROLE_STORE_OWNER"],
+                  "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                  "storeName": "玩具公仔專賣店",
+                  "enabled": true,
+                  "forceChangePassword": false,
+                  "createdAt": "2025-12-23T10:30:00"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "getAdminUsersByStore": {
+        "name": "取得店家帳號列表",
+        "method": "GET",
+        "path": "/admin/users/by-store/{storeId}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "storeId": "650e8400-e29b-41d4-a716-446655440002"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "550e8400-e29b-41d4-a716-446655440001",
+                  "email": "owner@store.com",
+                  "displayName": "王小明",
+                  "roles": ["ROLE_STORE_OWNER"],
+                  "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                  "storeName": "玩具公仔專賣店",
+                  "enabled": true
+                },
+                {
+                  "id": "550e8400-e29b-41d4-a716-446655440003",
+                  "email": "editor@store.com",
+                  "displayName": "李小華",
+                  "roles": ["ROLE_STORE_EDITOR"],
+                  "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                  "storeName": "玩具公仔專賣店",
+                  "enabled": true
+                }
+              ]
+            }
+          }
+        }
+      },
+      "enableAdminUser": {
+        "name": "啟用帳號",
+        "method": "POST",
+        "path": "/admin/users/{id}/enable",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "550e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "帳號已啟用",
+              "data": null
+            }
+          }
+        }
+      },
+      "disableAdminUser": {
+        "name": "停用帳號",
+        "method": "POST",
+        "path": "/admin/users/{id}/disable",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "550e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "帳號已停用",
+              "data": null
+            }
+          }
+        }
+      },
+      "resetPassword": {
+        "name": "重置密碼",
+        "method": "POST",
+        "path": "/admin/users/{id}/reset-password",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "550e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "密碼已重置",
+              "data": {
+                "temporaryPassword": "Temp123456"
+              }
+            }
+          }
+        }
+      }
+    },
+    "role": {
+      "createRole": {
+        "name": "建立角色",
+        "method": "POST",
+        "path": "/admin/roles",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "code": "ROLE_MANAGER",
+            "name": "經理",
+            "description": "店家經理角色",
+            "sortOrder": 4
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "建立成功",
+              "data": {
+                "id": "750e8400-e29b-41d4-a716-446655440001",
+                "code": "ROLE_MANAGER",
+                "name": "經理",
+                "description": "店家經理角色",
+                "isSystem": false,
+                "sortOrder": 4,
+                "createdAt": "2025-12-23T10:00:00"
+              }
+            }
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "角色代碼已存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "updateRole": {
+        "name": "更新角色",
+        "method": "PUT",
+        "path": "/admin/roles",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "id": "750e8400-e29b-41d4-a716-446655440001",
+            "name": "店家經理",
+            "description": "店家經理角色（更新後）",
+            "sortOrder": 5
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "更新成功",
+              "data": {
+                "id": "750e8400-e29b-41d4-a716-446655440001",
+                "code": "ROLE_MANAGER",
+                "name": "店家經理",
+                "description": "店家經理角色（更新後）",
+                "isSystem": false,
+                "sortOrder": 5,
+                "updatedAt": "2025-12-23T11:00:00"
+              }
+            }
+          }
+        }
+      },
+      "deleteRole": {
+        "name": "刪除角色",
+        "method": "DELETE",
+        "path": "/admin/roles/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "750e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 204,
+            "body": null
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "系統預設角色不可刪除",
+              "data": null
+            }
+          }
+        }
+      },
+      "getRoleById": {
+        "name": "查詢角色",
+        "method": "GET",
+        "path": "/admin/roles/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "750e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "750e8400-e29b-41d4-a716-446655440001",
+                "code": "ROLE_MANAGER",
+                "name": "店家經理",
+                "description": "店家經理角色",
+                "isSystem": false,
+                "sortOrder": 5
+              }
+            }
+          },
+          "error_404": {
+            "httpCode": 404,
+            "body": {
+              "success": false,
+              "message": "角色不存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "getRoleDetailById": {
+        "name": "查詢角色詳情（含權限）",
+        "method": "GET",
+        "path": "/admin/roles/{id}/detail",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "750e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "750e8400-e29b-41d4-a716-446655440001",
+                "code": "ROLE_MANAGER",
+                "name": "店家經理",
+                "description": "店家經理角色",
+                "isSystem": false,
+                "sortOrder": 5,
+                "permissions": [
+                  {
+                    "menuId": "menu-001",
+                    "menuName": "商品管理",
+                    "canView": true,
+                    "canEdit": true,
+                    "canDelete": false
+                  },
+                  {
+                    "menuId": "menu-002",
+                    "menuName": "訂單管理",
+                    "canView": true,
+                    "canEdit": true,
+                    "canDelete": true
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "getAllRoles": {
+        "name": "查詢所有角色",
+        "method": "GET",
+        "path": "/admin/roles",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "role-admin-001",
+                  "code": "ROLE_ADMIN",
+                  "name": "系統管理員",
+                  "description": "系統最高權限",
+                  "isSystem": true,
+                  "sortOrder": 1
+                },
+                {
+                  "id": "role-owner-001",
+                  "code": "ROLE_STORE_OWNER",
+                  "name": "店家負責人",
+                  "description": "店家負責人權限",
+                  "isSystem": true,
+                  "sortOrder": 2
+                },
+                {
+                  "id": "role-editor-001",
+                  "code": "ROLE_STORE_EDITOR",
+                  "name": "店家編輯",
+                  "description": "店家編輯人員權限",
+                  "isSystem": true,
+                  "sortOrder": 3
+                },
+                {
+                  "id": "750e8400-e29b-41d4-a716-446655440001",
+                  "code": "ROLE_MANAGER",
+                  "name": "店家經理",
+                  "description": "店家經理角色",
+                  "isSystem": false,
+                  "sortOrder": 5
+                }
+              ]
+            }
+          }
+        }
+      },
+      "setRoleMenuPermissions": {
+        "name": "設定角色權限",
+        "method": "POST",
+        "path": "/admin/roles/permissions",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "roleId": "750e8400-e29b-41d4-a716-446655440001",
+            "permissions": [
+              {
+                "menuId": "menu-001",
+                "canView": true,
+                "canEdit": true,
+                "canDelete": false
+              },
+              {
+                "menuId": "menu-002",
+                "canView": true,
+                "canEdit": true,
+                "canDelete": true
+              },
+              {
+                "menuId": "menu-003",
+                "canView": true,
+                "canEdit": false,
+                "canDelete": false
+              }
+            ]
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 204,
+            "body": null
+          },
+          "error_404": {
+            "httpCode": 404,
+            "body": {
+              "success": false,
+              "message": "角色不存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "getRoleByCode": {
+        "name": "根據代碼查詢角色",
+        "method": "GET",
+        "path": "/admin/roles/code/{code}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "code": "ROLE_MANAGER"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "750e8400-e29b-41d4-a716-446655440001",
+                "code": "ROLE_MANAGER",
+                "name": "店家經理",
+                "description": "店家經理角色",
+                "isSystem": false,
+                "sortOrder": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "menu": {
+      "createMenu": {
+        "name": "建立選單",
+        "method": "POST",
+        "path": "/admin/menus",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "code": "PRODUCT_MANAGEMENT",
+            "name": "商品管理",
+            "path": "/products",
+            "icon": "icon-product",
+            "parentId": null,
+            "sortOrder": 1,
+            "description": "商品管理功能"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "建立成功",
+              "data": {
+                "id": "menu-001",
+                "code": "PRODUCT_MANAGEMENT",
+                "name": "商品管理",
+                "path": "/products",
+                "icon": "icon-product",
+                "parentId": null,
+                "sortOrder": 1,
+                "description": "商品管理功能",
+                "createdAt": "2025-12-23T10:00:00"
+              }
+            }
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "選單代碼已存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "updateMenu": {
+        "name": "更新選單",
+        "method": "PUT",
+        "path": "/admin/menus",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "id": "menu-001",
+            "name": "商品管理中心",
+            "path": "/products",
+            "icon": "icon-product-new",
+            "sortOrder": 2,
+            "description": "商品管理中心功能"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "更新成功",
+              "data": {
+                "id": "menu-001",
+                "code": "PRODUCT_MANAGEMENT",
+                "name": "商品管理中心",
+                "path": "/products",
+                "icon": "icon-product-new",
+                "parentId": null,
+                "sortOrder": 2,
+                "description": "商品管理中心功能",
+                "updatedAt": "2025-12-23T11:00:00"
+              }
+            }
+          }
+        }
+      },
+      "deleteMenu": {
+        "name": "刪除選單",
+        "method": "DELETE",
+        "path": "/admin/menus/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "menu-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 204,
+            "body": null
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "不可刪除有子選單的選單",
+              "data": null
+            }
+          }
+        }
+      },
+      "getMenuById": {
+        "name": "查詢選單",
+        "method": "GET",
+        "path": "/admin/menus/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "menu-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "menu-001",
+                "code": "PRODUCT_MANAGEMENT",
+                "name": "商品管理",
+                "path": "/products",
+                "icon": "icon-product",
+                "parentId": null,
+                "sortOrder": 1,
+                "description": "商品管理功能"
+              }
+            }
+          }
+        }
+      },
+      "getAllMenus": {
+        "name": "查詢所有選單（平面）",
+        "method": "GET",
+        "path": "/admin/menus",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "menu-001",
+                  "code": "PRODUCT_MANAGEMENT",
+                  "name": "商品管理",
+                  "path": "/products",
+                  "icon": "icon-product",
+                  "parentId": null,
+                  "sortOrder": 1
+                },
+                {
+                  "id": "menu-002",
+                  "code": "PRODUCT_LIST",
+                  "name": "商品列表",
+                  "path": "/products/list",
+                  "icon": "icon-list",
+                  "parentId": "menu-001",
+                  "sortOrder": 1
+                },
+                {
+                  "id": "menu-003",
+                  "code": "ORDER_MANAGEMENT",
+                  "name": "訂單管理",
+                  "path": "/orders",
+                  "icon": "icon-order",
+                  "parentId": null,
+                  "sortOrder": 2
+                }
+              ]
+            }
+          }
+        }
+      },
+      "getMenuTree": {
+        "name": "查詢選單樹",
+        "method": "GET",
+        "path": "/admin/menus/tree",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "menu-001",
+                  "code": "PRODUCT_MANAGEMENT",
+                  "name": "商品管理",
+                  "path": "/products",
+                  "icon": "icon-product",
+                  "parentId": null,
+                  "sortOrder": 1,
+                  "children": [
+                    {
+                      "id": "menu-002",
+                      "code": "PRODUCT_LIST",
+                      "name": "商品列表",
+                      "path": "/products/list",
+                      "icon": "icon-list",
+                      "parentId": "menu-001",
+                      "sortOrder": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "menu-004",
+                      "code": "PRODUCT_CREATE",
+                      "name": "新增商品",
+                      "path": "/products/create",
+                      "icon": "icon-add",
+                      "parentId": "menu-001",
+                      "sortOrder": 2,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "menu-003",
+                  "code": "ORDER_MANAGEMENT",
+                  "name": "訂單管理",
+                  "path": "/orders",
+                  "icon": "icon-order",
+                  "parentId": null,
+                  "sortOrder": 2,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      },
+      "getAccessibleMenuTree": {
+        "name": "查詢可訪問選單",
+        "method": "GET",
+        "path": "/admin/menus/accessible/{adminUserId}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "adminUserId": "550e8400-e29b-41d4-a716-446655440001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "menu-001",
+                  "code": "PRODUCT_MANAGEMENT",
+                  "name": "商品管理",
+                  "path": "/products",
+                  "icon": "icon-product",
+                  "parentId": null,
+                  "sortOrder": 1,
+                  "children": [
+                    {
+                      "id": "menu-002",
+                      "code": "PRODUCT_LIST",
+                      "name": "商品列表",
+                      "path": "/products/list",
+                      "icon": "icon-list",
+                      "parentId": "menu-001",
+                      "sortOrder": 1,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "getMenuByCode": {
+        "name": "根據代碼查詢選單",
+        "method": "GET",
+        "path": "/admin/menus/code/{code}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "code": "PRODUCT_MANAGEMENT"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "menu-001",
+                "code": "PRODUCT_MANAGEMENT",
+                "name": "商品管理",
+                "path": "/products",
+                "icon": "icon-product",
+                "parentId": null,
+                "sortOrder": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "lottery": {
+      "createLottery": {
+        "name": "建立商品",
+        "method": "POST",
+        "path": "/admin/lotteries",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "storeId": "650e8400-e29b-41d4-a716-446655440002",
+            "title": "鬼滅之刃一番賞",
+            "description": "限量發售的鬼滅之刃一番賞",
+            "imageUrl": "https://example.com/images/kimetsu.jpg",
+            "category": "OFFICIAL_ICHIBAN",
+            "pricePerDraw": 650,
+            "discountedPrice": 500,
+            "autoDiscountEnabled": true,
+            "allowMultiDraw": true,
+            "multiDrawOptions": [10, 50]
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "建立成功",
+              "data": {
+                "id": "lottery-001",
+                "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                "storeName": "玩具公仔專賣店",
+                "title": "鬼滅之刃一番賞",
+                "description": "限量發售的鬼滅之刃一番賞",
+                "imageUrl": "https://example.com/images/kimetsu.jpg",
+                "category": "OFFICIAL_ICHIBAN",
+                "categoryName": "官方一番賞",
+                "pricePerDraw": 650,
+                "currentPrice": 650,
+                "status": "DRAFT",
+                "statusName": "草稿",
+                "createdAt": "2025-12-23T10:00:00"
+              }
+            }
+          }
+        }
+      },
+      "updateLottery": {
+        "name": "更新商品",
+        "method": "PUT",
+        "path": "/admin/lotteries",
+        "request": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "body": {
+            "id": "lottery-001",
+            "title": "鬼滅之刃一番賞（更新）",
+            "description": "限量發售的鬼滅之刃一番賞（更新版）",
+            "pricePerDraw": 680
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "更新成功",
+              "data": {
+                "id": "lottery-001",
+                "title": "鬼滅之刃一番賞（更新）",
+                "description": "限量發售的鬼滅之刃一番賞（更新版）",
+                "pricePerDraw": 680,
+                "updatedAt": "2025-12-23T11:00:00"
+              }
+            }
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "僅限草稿或已下架狀態可編輯",
+              "data": null
+            }
+          }
+        }
+      },
+      "deleteLottery": {
+        "name": "刪除商品",
+        "method": "DELETE",
+        "path": "/admin/lotteries/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "lottery-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 204,
+            "body": null
+          },
+          "error_400": {
+            "httpCode": 400,
+            "body": {
+              "success": false,
+              "message": "僅限草稿或已下架狀態可刪除",
+              "data": null
+            }
+          }
+        }
+      },
+      "getLotteryById": {
+        "name": "查詢商品詳情",
+        "method": "GET",
+        "path": "/admin/lotteries/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "lottery-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "lottery-001",
+                "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                "storeName": "玩具公仔專賣店",
+                "title": "鬼滅之刃一番賞",
+                "description": "限量發售的鬼滅之刃一番賞",
+                "imageUrl": "https://example.com/images/kimetsu.jpg",
+                "category": "OFFICIAL_ICHIBAN",
+                "categoryName": "官方一番賞",
+                "pricePerDraw": 650,
+                "currentPrice": 650,
+                "discountedPrice": 500,
+                "autoDiscountEnabled": true,
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "totalStock": 100,
+                "remainingStock": 80,
+                "createdAt": "2025-12-23T10:00:00"
+              }
+            }
+          },
+          "error_404": {
+            "httpCode": 404,
+            "body": {
+              "success": false,
+              "message": "商品不存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "queryLotteries": {
+        "name": "查詢商品列表",
+        "method": "GET",
+        "path": "/admin/lotteries",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "queryParams": {
+            "storeId": "650e8400-e29b-41d4-a716-446655440002",
+            "keyword": "鬼滅",
+            "category": "OFFICIAL_ICHIBAN",
+            "status": "PUBLISHED",
+            "page": 1,
+            "size": 10,
+            "sortBy": "createdAt",
+            "sortDirection": "DESC"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "items": [
+                  {
+                    "id": "lottery-001",
+                    "storeId": "650e8400-e29b-41d4-a716-446655440002",
+                    "storeName": "玩具公仔專賣店",
+                    "title": "鬼滅之刃一番賞",
+                    "imageUrl": "https://example.com/images/kimetsu.jpg",
+                    "category": "OFFICIAL_ICHIBAN",
+                    "categoryName": "官方一番賞",
+                    "pricePerDraw": 650,
+                    "currentPrice": 650,
+                    "status": "PUBLISHED",
+                    "statusName": "已上架",
+                    "remainingStock": 80,
+                    "createdAt": "2025-12-23T10:00:00"
+                  }
+                ],
+                "totalItems": 1,
+                "totalPages": 1,
+                "currentPage": 1,
+                "pageSize": 10
+              }
+            }
+          }
+        }
+      },
+      "publishLottery": {
+        "name": "上架商品",
+        "method": "POST",
+        "path": "/admin/lotteries/{id}/publish",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "lottery-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "上架成功",
+              "data": {
+                "id": "lottery-001",
+                "status": "PUBLISHED",
+                "statusName": "已上架"
+              }
+            }
+          }
+        }
+      },
+      "unpublishLottery": {
+        "name": "下架商品",
+        "method": "POST",
+        "path": "/admin/lotteries/{id}/unpublish",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "lottery-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "下架成功",
+              "data": {
+                "id": "lottery-001",
+                "status": "UNPUBLISHED",
+                "statusName": "已下架"
+              }
+            }
+          }
+        }
+      }
+    },
+    "operationLog": {
+      "queryOperationLogs": {
+        "name": "查詢操作紀錄",
+        "method": "GET",
+        "path": "/admin/operation-logs",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "queryParams": {
+            "operatorId": "550e8400-e29b-41d4-a716-446655440000",
+            "module": "LOTTERY",
+            "action": "CREATE",
+            "startDate": "2025-12-01T00:00:00",
+            "endDate": "2025-12-31T23:59:59",
+            "page": 1,
+            "size": 20
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "items": [
+                  {
+                    "id": "log-001",
+                    "operatorId": "550e8400-e29b-41d4-a716-446655440000",
+                    "operatorName": "系統管理員",
+                    "module": "LOTTERY",
+                    "moduleName": "商品管理",
+                    "action": "CREATE",
+                    "actionName": "建立",
+                    "targetId": "lottery-001",
+                    "targetName": "鬼滅之刃一番賞",
+                    "description": "建立新商品",
+                    "ipAddress": "192.168.1.100",
+                    "userAgent": "Mozilla/5.0...",
+                    "createdAt": "2025-12-23T10:00:00"
+                  },
+                  {
+                    "id": "log-002",
+                    "operatorId": "550e8400-e29b-41d4-a716-446655440000",
+                    "operatorName": "系統管理員",
+                    "module": "LOTTERY",
+                    "moduleName": "商品管理",
+                    "action": "PUBLISH",
+                    "actionName": "上架",
+                    "targetId": "lottery-001",
+                    "targetName": "鬼滅之刃一番賞",
+                    "description": "上架商品",
+                    "ipAddress": "192.168.1.100",
+                    "userAgent": "Mozilla/5.0...",
+                    "createdAt": "2025-12-23T10:30:00"
+                  }
+                ],
+                "totalItems": 2,
+                "totalPages": 1,
+                "currentPage": 1,
+                "pageSize": 20
+              }
+            }
+          }
+        }
+      },
+      "getOperationLogById": {
+        "name": "查詢操作紀錄詳情",
+        "method": "GET",
+        "path": "/admin/operation-logs/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "log-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "log-001",
+                "operatorId": "550e8400-e29b-41d4-a716-446655440000",
+                "operatorName": "系統管理員",
+                "module": "LOTTERY",
+                "moduleName": "商品管理",
+                "action": "CREATE",
+                "actionName": "建立",
+                "targetId": "lottery-001",
+                "targetName": "鬼滅之刃一番賞",
+                "description": "建立新商品",
+                "requestData": "{\"title\":\"鬼滅之刃一番賞\",\"pricePerDraw\":650}",
+                "responseData": "{\"id\":\"lottery-001\",\"status\":\"DRAFT\"}",
+                "ipAddress": "192.168.1.100",
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+                "createdAt": "2025-12-23T10:00:00"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "commonErrorResponses": {
+    "400_BadRequest": {
+      "httpCode": 400,
+      "body": {
+        "success": false,
+        "message": "請求參數錯誤",
+        "data": null
+      }
+    },
+    "401_Unauthorized": {
+      "httpCode": 401,
+      "body": {
+        "success": false,
+        "message": "未認證或 Token 無效",
+        "data": null
+      }
+    },
+    "403_Forbidden": {
+      "httpCode": 403,
+      "body": {
+        "success": false,
+        "message": "無權限執行此操作",
+        "data": null
+      }
+    },
+    "404_NotFound": {
+      "httpCode": 404,
+      "body": {
+        "success": false,
+        "message": "資源不存在",
+        "data": null
+      }
+    },
+    "500_InternalServerError": {
+      "httpCode": 500,
+      "body": {
+        "success": false,
+        "message": "伺服器內部錯誤",
+        "data": null
+      }
+    }
+  },
+  "notes": {
+    "authentication": "除了登入 API 外，所有 API 都需要在 Header 中加入 Authorization: Bearer {accessToken}",
+    "responseFormat": "所有回應都會被 GlobalResponseAspect 包裝成統一格式：{ success, message, data }",
+    "pagination": "分頁查詢預設 page=1, size=10",
+    "dateFormat": "所有時間格式使用 ISO-8601：yyyy-MM-dd'T'HH:mm:ss",
+    "uuid": "所有 ID 都是 UUID 格式（String）"
+  }
+}
