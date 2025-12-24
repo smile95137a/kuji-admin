@@ -54,8 +54,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 登入相關 API 不需要認證
                         .requestMatchers("/admin/auth/**").permitAll()
-                        // 其他 /admin/** 需要後台角色
-                        .requestMatchers("/admin/**").hasAnyRole("Admin", "StoreOwner", "StoreEditor")
+                        // 其他 /admin/** 需要後台角色（注意：Spring Security 會自動移除 ROLE_ 前綴）
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )
                 .addFilterBefore(adminJwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(session -> session
@@ -69,6 +69,7 @@ public class SecurityConfig {
      * 前台安全配置（/api/**）
      * Order(2) 表示次要處理
      * 支援 OAuth2 登入
+     * 同時支援前台 USER 和後台 Admin/StoreOwner/StoreEditor 角色
      */
     @Bean
     @Order(2)
@@ -80,8 +81,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 登入、註冊、OAuth 不需要認證
                         .requestMatchers("/api/auth/**", "/login/oauth2/**").permitAll()
-                        // 其他 /api/** 需要 USER 角色
-                        .requestMatchers("/api/**").hasRole("USER")
+                        // 其他 /api/** 需要 USER 或後台管理角色
+                        .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )
                 // ⚠️ 暫時停用 OAuth2 登入（需要先配置 OAuth2 Provider）
                 // .oauth2Login(oauth2 -> oauth2

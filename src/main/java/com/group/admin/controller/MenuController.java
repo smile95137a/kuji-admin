@@ -112,15 +112,17 @@ public class MenuController {
     }
 
     /**
-     * 根據用戶查詢可訪問的選單樹
+     * 根據當前登入用戶查詢可訪問的選單樹
      *
-     * @param adminUserId 管理者用戶ID
      * @return 可訪問的選單樹
      */
-    @Operation(summary = "查詢可訪問選單", description = "根據用戶角色取得可訪問的選單樹（用於前端動態渲染選單）")
-    @GetMapping("/accessible/{adminUserId}")
-    public ResponseEntity<List<MenuTreeRes>> getAccessibleMenuTree(
-            @Parameter(description = "管理者用戶ID") @PathVariable String adminUserId) {
+    @Operation(summary = "查詢可訪問選單", description = "根據當前登入用戶的角色取得可訪問的選單樹（用於前端動態渲染選單）")
+    @GetMapping("/accessible")
+    public ResponseEntity<List<MenuTreeRes>> getAccessibleMenuTree() {
+        String adminUserId = com.group.admin.util.SecurityUtils.getCurrentAdminUserId();
+        if (adminUserId == null) {
+            return ResponseEntity.status(401).build();
+        }
         List<MenuTreeRes> res = menuService.getAccessibleMenuTree(adminUserId);
         return ResponseEntity.ok(res);
     }

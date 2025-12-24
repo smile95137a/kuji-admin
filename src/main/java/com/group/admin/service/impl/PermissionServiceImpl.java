@@ -36,9 +36,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PermissionServiceImpl implements PermissionService {
 
-    private static final String ROLE_ADMIN = "ADMIN";
-    private static final String ROLE_STORE_OWNER = "STORE_OWNER";
-    private static final String ROLE_STORE_EDITOR = "STORE_EDITOR";
+    private static final String ROLE_ADMIN = "ROLE_ADMIN";
+    private static final String ROLE_STORE_OWNER = "ROLE_STORE_OWNER";
+    private static final String ROLE_STORE_EDITOR = "ROLE_STORE_EDITOR";
 
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
@@ -64,12 +64,20 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     public boolean hasRole(String adminUserId, String roleCode) {
         List<String> roleCodes = getUserRoleCodes(adminUserId);
-        return roleCodes.contains(roleCode);
+        log.info("🔍 [Permission] 檢查角色 - userId={}, 要檢查的角色={}, 使用者的角色={}", 
+            adminUserId, roleCode, roleCodes);
+        boolean result = roleCodes.contains(roleCode);
+        log.info("✅ [Permission] 角色檢查結果: {}", result);
+        return result;
     }
 
     @Override
     public boolean isAdmin(String adminUserId) {
-        return hasRole(adminUserId, ROLE_ADMIN);
+        log.info("🎭 [Permission] 檢查是否為 Admin - userId={}, ROLE_ADMIN常數={}", 
+            adminUserId, ROLE_ADMIN);
+        boolean result = hasRole(adminUserId, ROLE_ADMIN);
+        log.info("🎭 [Permission] isAdmin 結果: {}", result);
+        return result;
     }
 
     @Override
@@ -96,19 +104,29 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public List<String> getUserRoleCodes(String adminUserId) {
+        log.info("🔍 [Permission] 開始查詢使用者角色代碼 - userId={}", adminUserId);
+        
         List<String> roleIds = getUserRoleIds(adminUserId);
+        log.info("📋 [Permission] 查詢到 {} 個角色 ID: {}", roleIds.size(), roleIds);
+        
         if (roleIds.isEmpty()) {
+            log.warn("⚠️  [Permission] 使用者沒有任何角色");
             return Collections.emptyList();
         }
         
         // 根據角色 ID 查詢角色代碼
-        return roleIds.stream()
+        List<String> roleCodes = roleIds.stream()
                 .map(roleId -> {
                     Role role = roleMapper.selectByPrimaryKey(roleId);
-                    return role != null ? role.getCode() : null;
+                    String code = role != null ? role.getCode() : null;
+                    log.info("  ↳ 角色 ID: {} → Code: {}", roleId, code);
+                    return code;
                 })
                 .filter(code -> code != null)
                 .collect(Collectors.toList());
+        
+        log.info("✅ [Permission] 最終角色代碼列表: {}", roleCodes);
+        return roleCodes;
     }
 
     @Override

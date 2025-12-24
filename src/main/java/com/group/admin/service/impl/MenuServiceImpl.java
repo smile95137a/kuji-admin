@@ -193,12 +193,20 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuTreeRes> getAccessibleMenuTree(String adminUserId) {
+        log.info("🔍 [MenuService] 開始查詢選單樹, adminUserId={}", adminUserId);
+        
         // 如果是 Admin，返回全部可見選單
-        if (permissionService.isAdmin(adminUserId)) {
+        boolean isAdmin = permissionService.isAdmin(adminUserId);
+        log.info("🎭 [MenuService] 是否為管理員: {}", isAdmin);
+        
+        if (isAdmin) {
             MenuExample visibleExample = new MenuExample();
             visibleExample.createCriteria().andIsVisibleEqualTo(true);
             List<Menu> allMenus = menuMapper.selectByExample(visibleExample);
-            return buildMenuTree(allMenus, null);
+            log.info("📋 [MenuService] 查詢到 {} 個可見選單", allMenus.size());
+            List<MenuTreeRes> tree = buildMenuTree(allMenus, null);
+            log.info("🌲 [MenuService] 建立選單樹完成, 共 {} 個頂層節點", tree.size());
+            return tree;
         }
 
         // 查詢用戶的角色

@@ -1,5 +1,6 @@
 package com.group.admin.util;
 
+import com.group.admin.security.UserPrincipal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -27,14 +28,15 @@ public class SecurityUtils {
             return null;
         }
 
-        // 嘗試解析用戶ID
-        // 這裡假設 principal 是字串形式的用戶名或ID (UUID)
+        // 如果是 UserPrincipal，直接取得 userId
+        if (principal instanceof UserPrincipal) {
+            return ((UserPrincipal) principal).getUserId();
+        }
+
+        // 兼容舊的 String 形式
         if (principal instanceof String) {
             return (String) principal;
         }
-        
-        // 如果 principal 是自訂的 UserDetails 實現，可以在這裡處理
-        // 例如: if (principal instanceof CustomUserDetails) { ... }
         
         return null;
     }
@@ -55,6 +57,12 @@ public class SecurityUtils {
             return null;
         }
 
+        // 如果是 UserPrincipal，取得 username
+        if (principal instanceof UserPrincipal) {
+            return ((UserPrincipal) principal).getUsername();
+        }
+
+        // 兼容 String 形式
         if (principal instanceof String) {
             return (String) principal;
         }
