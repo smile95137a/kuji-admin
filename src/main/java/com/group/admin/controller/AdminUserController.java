@@ -46,7 +46,7 @@ public class AdminUserController {
      * @return 建立的帳號資訊
      */
     @PostMapping("/store-owner")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "建立店家負責人帳號", description = "由 Admin 建立 StoreOwner 帳號並建立對應店家")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "建立成功"),
@@ -67,7 +67,7 @@ public class AdminUserController {
      * @return 建立的帳號資訊
      */
     @PostMapping("/store-editor")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "建立店家編輯人員帳號", description = "由 Admin 建立 StoreEditor 帳號並綁定到指定店家")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "建立成功"),
@@ -88,7 +88,7 @@ public class AdminUserController {
      * @return 帳號資訊
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "取得帳號詳情", description = "取得指定帳號的詳細資訊")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "查詢成功"),
@@ -109,7 +109,7 @@ public class AdminUserController {
      * @return 帳號列表
      */
     @GetMapping
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "取得所有帳號列表", description = "取得所有後台帳號列表")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "查詢成功"),
@@ -129,7 +129,7 @@ public class AdminUserController {
      * @return 帳號列表
      */
     @GetMapping("/by-store/{storeId}")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "取得指定店家的所有帳號", description = "取得綁定到指定店家的所有帳號")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "查詢成功"),
@@ -150,7 +150,7 @@ public class AdminUserController {
      * @return 成功訊息
      */
     @PostMapping("/{id}/activate")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "啟用帳號", description = "啟用指定帳號")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "啟用成功"),
@@ -172,7 +172,7 @@ public class AdminUserController {
      * @return 成功訊息
      */
     @PostMapping("/{id}/deactivate")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "停用帳號", description = "停用指定帳號，停用後無法登入")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "停用成功"),
@@ -194,7 +194,7 @@ public class AdminUserController {
      * @return 新的初始密碼
      */
     @PostMapping("/{id}/reset-password")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "重設帳號密碼", description = "重設指定帳號的密碼，並設定首次登入需改密碼")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "重設成功，回傳新密碼"),
@@ -216,7 +216,7 @@ public class AdminUserController {
      * @return 成功訊息
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "刪除帳號", description = "刪除指定帳號（軟刪除，實際為停用）")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "刪除成功"),
