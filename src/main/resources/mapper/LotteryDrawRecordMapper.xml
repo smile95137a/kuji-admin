@@ -6,6 +6,10 @@
     <result column="lottery_id" jdbcType="VARCHAR" property="lotteryId" />
     <result column="user_id" jdbcType="VARCHAR" property="userId" />
     <result column="prize_id" jdbcType="VARCHAR" property="prizeId" />
+    <result column="ticket_id" jdbcType="VARCHAR" property="ticketId" />
+    <result column="session_id" jdbcType="VARCHAR" property="sessionId" />
+    <result column="is_opener_draw" jdbcType="TINYINT" property="isOpenerDraw" />
+    <result column="triggered_free_draw" jdbcType="TINYINT" property="triggeredFreeDraw" />
     <result column="selected_number" jdbcType="VARCHAR" property="selectedNumber" />
     <result column="cost_type" jdbcType="VARCHAR" property="costType" />
     <result column="cost_amount" jdbcType="BIGINT" property="costAmount" />
@@ -71,8 +75,8 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, lottery_id, user_id, prize_id, selected_number, cost_type, cost_amount, status, 
-    created_at
+    id, lottery_id, user_id, prize_id, ticket_id, session_id, is_opener_draw, triggered_free_draw, 
+    selected_number, cost_type, cost_amount, status, created_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.LotteryDrawRecordExample" resultMap="BaseResultMap">
     select
@@ -107,13 +111,15 @@
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.LotteryDrawRecord">
     insert into lottery_draw_record (id, lottery_id, user_id, 
-      prize_id, selected_number, cost_type, 
-      cost_amount, status, created_at
-      )
+      prize_id, ticket_id, session_id, 
+      is_opener_draw, triggered_free_draw, selected_number, 
+      cost_type, cost_amount, status, 
+      created_at)
     values (#{id,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, 
-      #{prizeId,jdbcType=VARCHAR}, #{selectedNumber,jdbcType=VARCHAR}, #{costType,jdbcType=VARCHAR}, 
-      #{costAmount,jdbcType=BIGINT}, #{status,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}
-      )
+      #{prizeId,jdbcType=VARCHAR}, #{ticketId,jdbcType=VARCHAR}, #{sessionId,jdbcType=VARCHAR}, 
+      #{isOpenerDraw,jdbcType=TINYINT}, #{triggeredFreeDraw,jdbcType=TINYINT}, #{selectedNumber,jdbcType=VARCHAR}, 
+      #{costType,jdbcType=VARCHAR}, #{costAmount,jdbcType=BIGINT}, #{status,jdbcType=VARCHAR}, 
+      #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryDrawRecord">
     insert into lottery_draw_record
@@ -129,6 +135,18 @@
       </if>
       <if test="prizeId != null">
         prize_id,
+      </if>
+      <if test="ticketId != null">
+        ticket_id,
+      </if>
+      <if test="sessionId != null">
+        session_id,
+      </if>
+      <if test="isOpenerDraw != null">
+        is_opener_draw,
+      </if>
+      <if test="triggeredFreeDraw != null">
+        triggered_free_draw,
       </if>
       <if test="selectedNumber != null">
         selected_number,
@@ -158,6 +176,18 @@
       </if>
       <if test="prizeId != null">
         #{prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="ticketId != null">
+        #{ticketId,jdbcType=VARCHAR},
+      </if>
+      <if test="sessionId != null">
+        #{sessionId,jdbcType=VARCHAR},
+      </if>
+      <if test="isOpenerDraw != null">
+        #{isOpenerDraw,jdbcType=TINYINT},
+      </if>
+      <if test="triggeredFreeDraw != null">
+        #{triggeredFreeDraw,jdbcType=TINYINT},
       </if>
       <if test="selectedNumber != null">
         #{selectedNumber,jdbcType=VARCHAR},
@@ -197,6 +227,18 @@
       <if test="row.prizeId != null">
         prize_id = #{row.prizeId,jdbcType=VARCHAR},
       </if>
+      <if test="row.ticketId != null">
+        ticket_id = #{row.ticketId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.sessionId != null">
+        session_id = #{row.sessionId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.isOpenerDraw != null">
+        is_opener_draw = #{row.isOpenerDraw,jdbcType=TINYINT},
+      </if>
+      <if test="row.triggeredFreeDraw != null">
+        triggered_free_draw = #{row.triggeredFreeDraw,jdbcType=TINYINT},
+      </if>
       <if test="row.selectedNumber != null">
         selected_number = #{row.selectedNumber,jdbcType=VARCHAR},
       </if>
@@ -223,6 +265,10 @@
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       prize_id = #{row.prizeId,jdbcType=VARCHAR},
+      ticket_id = #{row.ticketId,jdbcType=VARCHAR},
+      session_id = #{row.sessionId,jdbcType=VARCHAR},
+      is_opener_draw = #{row.isOpenerDraw,jdbcType=TINYINT},
+      triggered_free_draw = #{row.triggeredFreeDraw,jdbcType=TINYINT},
       selected_number = #{row.selectedNumber,jdbcType=VARCHAR},
       cost_type = #{row.costType,jdbcType=VARCHAR},
       cost_amount = #{row.costAmount,jdbcType=BIGINT},
@@ -243,6 +289,18 @@
       </if>
       <if test="prizeId != null">
         prize_id = #{prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="ticketId != null">
+        ticket_id = #{ticketId,jdbcType=VARCHAR},
+      </if>
+      <if test="sessionId != null">
+        session_id = #{sessionId,jdbcType=VARCHAR},
+      </if>
+      <if test="isOpenerDraw != null">
+        is_opener_draw = #{isOpenerDraw,jdbcType=TINYINT},
+      </if>
+      <if test="triggeredFreeDraw != null">
+        triggered_free_draw = #{triggeredFreeDraw,jdbcType=TINYINT},
       </if>
       <if test="selectedNumber != null">
         selected_number = #{selectedNumber,jdbcType=VARCHAR},
@@ -267,6 +325,10 @@
     set lottery_id = #{lotteryId,jdbcType=VARCHAR},
       user_id = #{userId,jdbcType=VARCHAR},
       prize_id = #{prizeId,jdbcType=VARCHAR},
+      ticket_id = #{ticketId,jdbcType=VARCHAR},
+      session_id = #{sessionId,jdbcType=VARCHAR},
+      is_opener_draw = #{isOpenerDraw,jdbcType=TINYINT},
+      triggered_free_draw = #{triggeredFreeDraw,jdbcType=TINYINT},
       selected_number = #{selectedNumber,jdbcType=VARCHAR},
       cost_type = #{costType,jdbcType=VARCHAR},
       cost_amount = #{costAmount,jdbcType=BIGINT},

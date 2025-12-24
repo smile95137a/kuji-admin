@@ -385,6 +385,266 @@ public class LotteryDrawRecordExample {
             return (Criteria) this;
         }
 
+        public Criteria andTicketIdIsNull() {
+            addCriterion("ticket_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdIsNotNull() {
+            addCriterion("ticket_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdEqualTo(String value) {
+            addCriterion("ticket_id =", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdNotEqualTo(String value) {
+            addCriterion("ticket_id <>", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdGreaterThan(String value) {
+            addCriterion("ticket_id >", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdGreaterThanOrEqualTo(String value) {
+            addCriterion("ticket_id >=", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdLessThan(String value) {
+            addCriterion("ticket_id <", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdLessThanOrEqualTo(String value) {
+            addCriterion("ticket_id <=", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdLike(String value) {
+            addCriterion("ticket_id like", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdNotLike(String value) {
+            addCriterion("ticket_id not like", value, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdIn(List<String> values) {
+            addCriterion("ticket_id in", values, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdNotIn(List<String> values) {
+            addCriterion("ticket_id not in", values, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdBetween(String value1, String value2) {
+            addCriterion("ticket_id between", value1, value2, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andTicketIdNotBetween(String value1, String value2) {
+            addCriterion("ticket_id not between", value1, value2, "ticketId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdIsNull() {
+            addCriterion("session_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdIsNotNull() {
+            addCriterion("session_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdEqualTo(String value) {
+            addCriterion("session_id =", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdNotEqualTo(String value) {
+            addCriterion("session_id <>", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdGreaterThan(String value) {
+            addCriterion("session_id >", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdGreaterThanOrEqualTo(String value) {
+            addCriterion("session_id >=", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdLessThan(String value) {
+            addCriterion("session_id <", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdLessThanOrEqualTo(String value) {
+            addCriterion("session_id <=", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdLike(String value) {
+            addCriterion("session_id like", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdNotLike(String value) {
+            addCriterion("session_id not like", value, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdIn(List<String> values) {
+            addCriterion("session_id in", values, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdNotIn(List<String> values) {
+            addCriterion("session_id not in", values, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdBetween(String value1, String value2) {
+            addCriterion("session_id between", value1, value2, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSessionIdNotBetween(String value1, String value2) {
+            addCriterion("session_id not between", value1, value2, "sessionId");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawIsNull() {
+            addCriterion("is_opener_draw is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawIsNotNull() {
+            addCriterion("is_opener_draw is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawEqualTo(Byte value) {
+            addCriterion("is_opener_draw =", value, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawNotEqualTo(Byte value) {
+            addCriterion("is_opener_draw <>", value, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawGreaterThan(Byte value) {
+            addCriterion("is_opener_draw >", value, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawGreaterThanOrEqualTo(Byte value) {
+            addCriterion("is_opener_draw >=", value, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawLessThan(Byte value) {
+            addCriterion("is_opener_draw <", value, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawLessThanOrEqualTo(Byte value) {
+            addCriterion("is_opener_draw <=", value, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawIn(List<Byte> values) {
+            addCriterion("is_opener_draw in", values, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawNotIn(List<Byte> values) {
+            addCriterion("is_opener_draw not in", values, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawBetween(Byte value1, Byte value2) {
+            addCriterion("is_opener_draw between", value1, value2, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsOpenerDrawNotBetween(Byte value1, Byte value2) {
+            addCriterion("is_opener_draw not between", value1, value2, "isOpenerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawIsNull() {
+            addCriterion("triggered_free_draw is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawIsNotNull() {
+            addCriterion("triggered_free_draw is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawEqualTo(Byte value) {
+            addCriterion("triggered_free_draw =", value, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawNotEqualTo(Byte value) {
+            addCriterion("triggered_free_draw <>", value, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawGreaterThan(Byte value) {
+            addCriterion("triggered_free_draw >", value, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawGreaterThanOrEqualTo(Byte value) {
+            addCriterion("triggered_free_draw >=", value, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawLessThan(Byte value) {
+            addCriterion("triggered_free_draw <", value, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawLessThanOrEqualTo(Byte value) {
+            addCriterion("triggered_free_draw <=", value, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawIn(List<Byte> values) {
+            addCriterion("triggered_free_draw in", values, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawNotIn(List<Byte> values) {
+            addCriterion("triggered_free_draw not in", values, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawBetween(Byte value1, Byte value2) {
+            addCriterion("triggered_free_draw between", value1, value2, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andTriggeredFreeDrawNotBetween(Byte value1, Byte value2) {
+            addCriterion("triggered_free_draw not between", value1, value2, "triggeredFreeDraw");
+            return (Criteria) this;
+        }
+
         public Criteria andSelectedNumberIsNull() {
             addCriterion("selected_number is null");
             return (Criteria) this;

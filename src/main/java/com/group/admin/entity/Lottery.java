@@ -15,6 +15,8 @@ public class Lottery {
 
     private String subCategory;
 
+    private String gameMode;
+
     private Long pricePerDraw;
 
     private Long discountedPrice;
@@ -34,6 +36,16 @@ public class Lottery {
     private Integer totalDraws;
 
     private Integer maxDraws;
+
+    private Integer protectionDraws;
+
+    private Integer protectionMinutes;
+
+    private Byte freeDrawEnabled;
+
+    private String designatedPrizeNumbers;
+
+    private Byte ticketsGenerated;
 
     private String status;
 
@@ -97,6 +109,14 @@ public class Lottery {
 
     public void setSubCategory(String subCategory) {
         this.subCategory = subCategory == null ? null : subCategory.trim();
+    }
+
+    public String getGameMode() {
+        return gameMode;
+    }
+
+    public void setGameMode(String gameMode) {
+        this.gameMode = gameMode == null ? null : gameMode.trim();
     }
 
     public Long getPricePerDraw() {
@@ -177,6 +197,46 @@ public class Lottery {
 
     public void setMaxDraws(Integer maxDraws) {
         this.maxDraws = maxDraws;
+    }
+
+    public Integer getProtectionDraws() {
+        return protectionDraws;
+    }
+
+    public void setProtectionDraws(Integer protectionDraws) {
+        this.protectionDraws = protectionDraws;
+    }
+
+    public Integer getProtectionMinutes() {
+        return protectionMinutes;
+    }
+
+    public void setProtectionMinutes(Integer protectionMinutes) {
+        this.protectionMinutes = protectionMinutes;
+    }
+
+    public Byte getFreeDrawEnabled() {
+        return freeDrawEnabled;
+    }
+
+    public void setFreeDrawEnabled(Byte freeDrawEnabled) {
+        this.freeDrawEnabled = freeDrawEnabled;
+    }
+
+    public String getDesignatedPrizeNumbers() {
+        return designatedPrizeNumbers;
+    }
+
+    public void setDesignatedPrizeNumbers(String designatedPrizeNumbers) {
+        this.designatedPrizeNumbers = designatedPrizeNumbers == null ? null : designatedPrizeNumbers.trim();
+    }
+
+    public Byte getTicketsGenerated() {
+        return ticketsGenerated;
+    }
+
+    public void setTicketsGenerated(Byte ticketsGenerated) {
+        this.ticketsGenerated = ticketsGenerated;
     }
 
     public String getStatus() {

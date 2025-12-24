@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LotteryTicketMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.LotteryTicket">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="lottery_id" jdbcType="VARCHAR" property="lotteryId" />
+    <result column="ticket_number" jdbcType="INTEGER" property="ticketNumber" />
+    <result column="prize_id" jdbcType="VARCHAR" property="prizeId" />
+    <result column="prize_level" jdbcType="VARCHAR" property="prizeLevel" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="drawn_by" jdbcType="VARCHAR" property="drawnBy" />
+    <result column="drawn_at" jdbcType="TIMESTAMP" property="drawnAt" />
+    <result column="is_designated_prize" jdbcType="TINYINT" property="isDesignatedPrize" />
+    <result column="designated_by" jdbcType="VARCHAR" property="designatedBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, lottery_id, ticket_number, prize_id, prize_level, status, drawn_by, drawn_at, 
+    is_designated_prize, designated_by, created_at, updated_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.LotteryTicketExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from lottery_ticket
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from lottery_ticket
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from lottery_ticket
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryTicketExample">
+    delete from lottery_ticket
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.LotteryTicket">
+    insert into lottery_ticket (id, lottery_id, ticket_number, 
+      prize_id, prize_level, status, 
+      drawn_by, drawn_at, is_designated_prize, 
+      designated_by, created_at, updated_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, #{ticketNumber,jdbcType=INTEGER}, 
+      #{prizeId,jdbcType=VARCHAR}, #{prizeLevel,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, 
+      #{drawnBy,jdbcType=VARCHAR}, #{drawnAt,jdbcType=TIMESTAMP}, #{isDesignatedPrize,jdbcType=TINYINT}, 
+      #{designatedBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryTicket">
+    insert into lottery_ticket
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="lotteryId != null">
+        lottery_id,
+      </if>
+      <if test="ticketNumber != null">
+        ticket_number,
+      </if>
+      <if test="prizeId != null">
+        prize_id,
+      </if>
+      <if test="prizeLevel != null">
+        prize_level,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="drawnBy != null">
+        drawn_by,
+      </if>
+      <if test="drawnAt != null">
+        drawn_at,
+      </if>
+      <if test="isDesignatedPrize != null">
+        is_designated_prize,
+      </if>
+      <if test="designatedBy != null">
+        designated_by,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryId != null">
+        #{lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="ticketNumber != null">
+        #{ticketNumber,jdbcType=INTEGER},
+      </if>
+      <if test="prizeId != null">
+        #{prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="prizeLevel != null">
+        #{prizeLevel,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="drawnBy != null">
+        #{drawnBy,jdbcType=VARCHAR},
+      </if>
+      <if test="drawnAt != null">
+        #{drawnAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isDesignatedPrize != null">
+        #{isDesignatedPrize,jdbcType=TINYINT},
+      </if>
+      <if test="designatedBy != null">
+        #{designatedBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.LotteryTicketExample" resultType="java.lang.Long">
+    select count(*) from lottery_ticket
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update lottery_ticket
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.lotteryId != null">
+        lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.ticketNumber != null">
+        ticket_number = #{row.ticketNumber,jdbcType=INTEGER},
+      </if>
+      <if test="row.prizeId != null">
+        prize_id = #{row.prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.prizeLevel != null">
+        prize_level = #{row.prizeLevel,jdbcType=VARCHAR},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.drawnBy != null">
+        drawn_by = #{row.drawnBy,jdbcType=VARCHAR},
+      </if>
+      <if test="row.drawnAt != null">
+        drawn_at = #{row.drawnAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.isDesignatedPrize != null">
+        is_designated_prize = #{row.isDesignatedPrize,jdbcType=TINYINT},
+      </if>
+      <if test="row.designatedBy != null">
+        designated_by = #{row.designatedBy,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update lottery_ticket
+    set id = #{row.id,jdbcType=VARCHAR},
+      lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
+      ticket_number = #{row.ticketNumber,jdbcType=INTEGER},
+      prize_id = #{row.prizeId,jdbcType=VARCHAR},
+      prize_level = #{row.prizeLevel,jdbcType=VARCHAR},
+      status = #{row.status,jdbcType=VARCHAR},
+      drawn_by = #{row.drawnBy,jdbcType=VARCHAR},
+      drawn_at = #{row.drawnAt,jdbcType=TIMESTAMP},
+      is_designated_prize = #{row.isDesignatedPrize,jdbcType=TINYINT},
+      designated_by = #{row.designatedBy,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryTicket">
+    update lottery_ticket
+    <set>
+      <if test="lotteryId != null">
+        lottery_id = #{lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="ticketNumber != null">
+        ticket_number = #{ticketNumber,jdbcType=INTEGER},
+      </if>
+      <if test="prizeId != null">
+        prize_id = #{prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="prizeLevel != null">
+        prize_level = #{prizeLevel,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="drawnBy != null">
+        drawn_by = #{drawnBy,jdbcType=VARCHAR},
+      </if>
+      <if test="drawnAt != null">
+        drawn_at = #{drawnAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isDesignatedPrize != null">
+        is_designated_prize = #{isDesignatedPrize,jdbcType=TINYINT},
+      </if>
+      <if test="designatedBy != null">
+        designated_by = #{designatedBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.LotteryTicket">
+    update lottery_ticket
+    set lottery_id = #{lotteryId,jdbcType=VARCHAR},
+      ticket_number = #{ticketNumber,jdbcType=INTEGER},
+      prize_id = #{prizeId,jdbcType=VARCHAR},
+      prize_level = #{prizeLevel,jdbcType=VARCHAR},
+      status = #{status,jdbcType=VARCHAR},
+      drawn_by = #{drawnBy,jdbcType=VARCHAR},
+      drawn_at = #{drawnAt,jdbcType=TIMESTAMP},
+      is_designated_prize = #{isDesignatedPrize,jdbcType=TINYINT},
+      designated_by = #{designatedBy,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>

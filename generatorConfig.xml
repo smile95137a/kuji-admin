@@ -11,9 +11,9 @@
 
         <!-- JDBC 連線設定 -->
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
-            connectionURL="jdbc:mysql://localhost:3306/kuji?useSSL=false&amp;serverTimezone=Asia/Taipei"
-            userId="root"
-            password="123456">
+            connectionURL="jdbc:mysql://onekuji-lotery.cdi42o44miez.ap-northeast-1.rds.amazonaws.com:3306/kuji?serverTimezone=UTC&amp;useUnicode=true&amp;characterEncoding=utf-8&amp;useSSL=true"
+            userId="admin"
+            password="EASONlotery!!">
             <!-- 避免讀取到其他 schema 的同名表格 -->
             <property name="nullCatalogMeansCurrent" value="true" />
         </jdbcConnection>
@@ -70,6 +70,12 @@
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="lottery_prize" domainObjectName="LotteryPrize" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="lottery_session" domainObjectName="LotterySession" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="lottery_ticket" domainObjectName="LotteryTicket" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="menu" domainObjectName="Menu" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">

@@ -11,6 +11,14 @@ public class LotteryDrawRecord {
 
     private String prizeId;
 
+    private String ticketId;
+
+    private String sessionId;
+
+    private Byte isOpenerDraw;
+
+    private Byte triggeredFreeDraw;
+
     private String selectedNumber;
 
     private String costType;
@@ -51,6 +59,38 @@ public class LotteryDrawRecord {
 
     public void setPrizeId(String prizeId) {
         this.prizeId = prizeId == null ? null : prizeId.trim();
+    }
+
+    public String getTicketId() {
+        return ticketId;
+    }
+
+    public void setTicketId(String ticketId) {
+        this.ticketId = ticketId == null ? null : ticketId.trim();
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId == null ? null : sessionId.trim();
+    }
+
+    public Byte getIsOpenerDraw() {
+        return isOpenerDraw;
+    }
+
+    public void setIsOpenerDraw(Byte isOpenerDraw) {
+        this.isOpenerDraw = isOpenerDraw;
+    }
+
+    public Byte getTriggeredFreeDraw() {
+        return triggeredFreeDraw;
+    }
+
+    public void setTriggeredFreeDraw(Byte triggeredFreeDraw) {
+        this.triggeredFreeDraw = triggeredFreeDraw;
     }
 
     public String getSelectedNumber() {
