@@ -1,6 +1,9 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.entity.StoreUser;
+import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCreateReq;
@@ -41,11 +44,12 @@ import java.util.List;
 public class AdminLotteryController {
 
     private final LotteryService lotteryService;
+    private final StoreUserMapper storeUserMapper;
 
     /**
      * 查詢商品列表（後台）
      * 
-     * ✅ 自動帶入當前使用者的 StoreID
+     * ✅ 自動帶入當前使用者的 StoreID（從資料庫查詢）
      * ✅ 前端做分頁，後端返回全部資料
      * ✅ 所有查詢條件都是可選的
      * 
@@ -58,21 +62,35 @@ public class AdminLotteryController {
     public ResponseEntity<List<LotteryRes>> queryLotteries(
             @RequestBody(required = false) QueryReq<LotteryCondition> req) {
         
-        // 取得當前使用者的店家 ID
-        String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+        String userId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
         
-        log.info("🔍 查詢商品列表: userId={}, storeId={}, condition={}", 
-                 SecurityUtils.getCurrentUserId(), storeId, req);
+        log.info("🔍 查詢商品列表: userId={}, isAdmin={}, condition={}", 
+                 userId, isAdmin, req);
         
-        // 自動設定 storeId（如果不是 Admin）
-        if (storeId != null) {
-            if (req == null) {
-                req = new QueryReq<>();
+        // 非 Admin 需要過濾店家
+        if (!isAdmin) {
+            // 從資料庫查詢使用者的店家列表
+            StoreUserExample storeUserExample = new StoreUserExample();
+            storeUserExample.createCriteria().andAdminUserIdEqualTo(userId);
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
+            
+            if (!storeUsers.isEmpty()) {
+                String storeId = storeUsers.get(0).getStoreId();
+                
+                // 自動設定 storeId
+                if (req == null) {
+                    req = new QueryReq<>();
+                }
+                if (req.getCondition() == null) {
+                    req.setCondition(new LotteryCondition());
+                }
+                req.getCondition().setStoreId(storeId);
+                
+                log.info("🔒 過濾店家: storeId={}", storeId);
             }
-            if (req.getCondition() == null) {
-                req.setCondition(new LotteryCondition());
-            }
-            req.getCondition().setStoreId(storeId);
+        } else {
+            log.info("👑 Admin 可查看所有店家的商品");
         }
         
         List<LotteryRes> result = lotteryService.queryLotteries(req);
@@ -84,7 +102,8 @@ public class AdminLotteryController {
     /**
      * 新增商品
      * 
-     * ✅ 自動帶入當前使用者的 StoreID
+     * ✅ 自動帶入當前使用者的 StoreID（從資料庫查詢）
+     * ✅ Admin 可以選擇任何店家，StoreOwner 自動使用第一個店家
      * 
      * @param req 商品建立請求
      * @return 建立的商品
@@ -95,23 +114,39 @@ public class AdminLotteryController {
     public ResponseEntity<LotteryRes> createLottery(
             @Valid @RequestBody LotteryCreateReq req) {
         
-        String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
         String userId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
         
-        if (storeId == null && !SecurityUtils.isAdmin()) {
-            throw new BusinessException("無法取得店家資訊");
-        }
+        log.info("➕ 新增商品: userId={}, isAdmin={}, title={}, 前端傳入 storeId={}", 
+                 userId, isAdmin, req.getTitle(), req.getStoreId());
         
-        log.info("➕ 新增商品: userId={}, storeId={}, title={}", userId, storeId, req.getTitle());
-        
-        // 自動設定 storeId
-        if (storeId != null) {
+        // 處理 storeId
+        if (req.getStoreId() == null || req.getStoreId().isBlank()) {
+            // 前端沒有傳 storeId，後端自動帶入
+            if (isAdmin) {
+                // Admin 必須明確指定店家
+                throw new BusinessException("Admin 新增商品時必須指定店家 ID");
+            }
+            
+            // StoreOwner/Editor：自動查詢並使用第一個店家
+            StoreUserExample example = new StoreUserExample();
+            example.createCriteria().andAdminUserIdEqualTo(userId);
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
+            
+            if (storeUsers.isEmpty()) {
+                throw new BusinessException("無法取得店家資訊，請聯繫管理員");
+            }
+            
+            String storeId = storeUsers.get(0).getStoreId();
             req.setStoreId(storeId);
+            log.info("🔧 [自動帶入] storeId={}", storeId);
+        } else {
+            log.info("✅ [前端提供] storeId={}", req.getStoreId());
         }
         
         LotteryRes result = lotteryService.createLottery(req);
         
-        log.info("✅ 新增成功: id={}", result.getId());
+        log.info("✅ 新增成功: id={}, storeId={}", result.getId(), result.getStoreId());
         return ResponseEntity.ok(result);
     }
 
@@ -223,23 +258,5 @@ public class AdminLotteryController {
         
         log.info("✅ 下架成功");
         return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 取得店家 ID 列表（前端用）
-     * 
-     * @return 店家 ID 列表
-     */
-    @GetMapping("/my-stores")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
-    @Operation(summary = "取得我的店家列表", description = "前端用於顯示店家選擇器")
-    public ResponseEntity<List<String>> getMyStores() {
-        
-        List<String> storeIds = SecurityUtils.getCurrentUserStoreIds();
-        
-        log.info("🏪 取得店家列表: userId={}, storeIds={}", 
-                 SecurityUtils.getCurrentUserId(), storeIds);
-        
-        return ResponseEntity.ok(storeIds);
     }
 }

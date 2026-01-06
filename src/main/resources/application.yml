@@ -27,3 +27,9 @@ logging:
   level:
     root: INFO
     com.group: DEBUG
+
+# 本地檔案上傳設定（暫時替代 S3）
+file:
+  upload:
+    base-path: src/main/resources/static/img  # 檔案儲存路徑
+    base-url: http://localhost:8080           # 前端存取的 base URL

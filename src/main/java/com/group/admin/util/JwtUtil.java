@@ -47,10 +47,29 @@ public class JwtUtil {
      * @return JWT Token
      */
     public String generateToken(String username, String userId, String userType, List<String> roles) {
+        return generateToken(username, userId, userType, roles, null);
+    }
+
+    /**
+     * 生成 Access Token（完整版，包含 storeIds）
+     * 
+     * @param username 使用者帳號
+     * @param userId 使用者 ID (UUID)
+     * @param userType 使用者類型（admin/user）
+     * @param roles 角色列表
+     * @param storeIds 店家 ID 列表（可為 null）
+     * @return JWT Token
+     */
+    public String generateToken(String username, String userId, String userType, List<String> roles, List<String> storeIds) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("userType", userType);
         claims.put("roles", roles);
+        
+        // 如果有 storeIds，加入 JWT
+        if (storeIds != null && !storeIds.isEmpty()) {
+            claims.put("storeIds", storeIds);
+        }
         
         return Jwts.builder()
                 .setClaims(claims)
@@ -131,6 +150,18 @@ public class JwtUtil {
     @SuppressWarnings("unchecked")
     public List<String> getRoles(String token) {
         return (List<String>) getClaims(token).get("roles");
+    }
+
+    /**
+     * 從 Token 取得店家 ID 列表
+     * 
+     * @param token JWT Token
+     * @return 店家 ID 列表（可能為 null）
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> getStoreIds(String token) {
+        Object storeIds = getClaims(token).get("storeIds");
+        return storeIds != null ? (List<String>) storeIds : null;
     }
 
     /**

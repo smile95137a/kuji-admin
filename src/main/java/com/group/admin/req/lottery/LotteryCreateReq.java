@@ -19,9 +19,14 @@ public class LotteryCreateReq {
 
     /**
      * 所屬店家ID
+     * 
+     * ⚠️ 不加 @NotBlank 驗證，因為：
+     * - StoreOwner 可以不傳，後端自動帶入
+     * - Admin 必須明確指定，由 Controller 驗證
      */
-    @NotBlank(message = "店家ID不可為空")
-    @Schema(description = "所屬店家ID", example = "550e8400-e29b-41d4-a716-446655440000", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "所屬店家ID（StoreOwner 可不傳，後端自動帶入）", 
+            example = "550e8400-e29b-41d4-a716-446655440000", 
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String storeId;
 
     /**

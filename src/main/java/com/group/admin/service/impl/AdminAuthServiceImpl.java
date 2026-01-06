@@ -14,13 +14,16 @@ import com.group.admin.constants.ErrorCodes;
 import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
 import com.group.admin.entity.Role;
+import com.group.admin.entity.StoreUser;
 import com.group.admin.enums.AdminUserStatus;
 import com.group.admin.example.AdminUserExample;
 import com.group.admin.example.AdminUserRoleExample;
+import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.auth.AdminLoginReq;
 import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.req.auth.RefreshTokenReq;
@@ -49,6 +52,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final AdminUserMapper adminUserMapper;
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
+    private final StoreUserMapper storeUserMapper;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -86,15 +90,18 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 取得角色列表
         List<String> roles = getUserRoles(user.getId());
         
+        // 取得店家 ID 列表
+        List<String> storeIds = getUserStoreIds(user.getId());
+        
         // 更新最後登入時間
         user.setLastLoginAt(LocalDateTime.now());
         adminUserMapper.updateByPrimaryKey(user);
         
-        // 生成 Token
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles);
+        // 生成 Token（包含 storeIds）
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         
-        log.info("後台登入成功：username={}, userId={}", user.getUsername(), user.getId());
+        log.info("後台登入成功：username={}, userId={}, storeIds={}", user.getUsername(), user.getId(), storeIds);
         
         return buildLoginRes(user, accessToken, refreshToken, roles);
     }
@@ -134,11 +141,14 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 取得角色列表
         List<String> roles = getUserRoles(user.getId());
         
-        // 生成新 Token
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles);
+        // 取得店家 ID 列表
+        List<String> storeIds = getUserStoreIds(user.getId());
+        
+        // 生成新 Token（包含 storeIds）
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         
-        log.info("首次登入修改密碼成功：userId={}", userId);
+        log.info("首次登入修改密碼成功：userId={}, storeIds={}", userId, storeIds);
         
         return buildLoginRes(user, accessToken, refreshToken, roles);
     }
@@ -202,11 +212,14 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 取得角色列表
         List<String> roles = getUserRoles(user.getId());
         
-        // 生成新 Token
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles);
+        // 取得店家 ID 列表
+        List<String> storeIds = getUserStoreIds(user.getId());
+        
+        // 生成新 Token（包含 storeIds）
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         
-        log.info("刷新 Token 成功：username={}", username);
+        log.info("刷新 Token 成功：username={}, storeIds={}", username, storeIds);
         
         return buildLoginRes(user, accessToken, refreshToken, roles);
     }
@@ -280,6 +293,21 @@ public class AdminAuthServiceImpl implements AdminAuthService {
                     return role != null ? role.getCode() : null;
                 })
                 .filter(code -> code != null)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 取得使用者店家 ID 列表
+     * 
+     * @param adminUserId Admin 使用者 ID (UUID)
+     * @return 店家 ID 列表（可能為空）
+     */
+    private List<String> getUserStoreIds(String adminUserId) {
+        StoreUserExample example = new StoreUserExample();
+        example.createCriteria().andAdminUserIdEqualTo(adminUserId);
+        List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
+        return storeUsers.stream()
+                .map(StoreUser::getStoreId)
                 .collect(Collectors.toList());
     }
 
