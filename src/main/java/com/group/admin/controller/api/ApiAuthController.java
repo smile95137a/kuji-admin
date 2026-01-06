@@ -1,4 +1,4 @@
-package com.group.admin.controller;
+package com.group.admin.controller.api;
 
 import java.util.List;
 
@@ -24,6 +24,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 前台認證 API
  * 
+ * URL: /api/auth/**
+ * 角色：公開（無需登入）
+ * 
  * 支援：
  * - Email + 密碼註冊/登入 (provider = EMAIL)
  * - Google OAuth2 登入 (provider = GOOGLE)
@@ -31,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class ApiAuthController {
 

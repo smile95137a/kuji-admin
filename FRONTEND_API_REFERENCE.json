@@ -1698,6 +1698,610 @@
           }
         }
       }
+    },
+    "news": {
+      "adminQueryNews": {
+        "name": "後台查詢最新消息列表",
+        "method": "POST",
+        "path": "/admin/news/list",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "condition": {
+              "title": "公告",
+              "status": "PUBLISHED",
+              "keyword": "維護",
+              "createdAtStart": "2025-01-01T00:00:00",
+              "createdAtEnd": "2025-12-31T23:59:59"
+            },
+            "sortBy": "created_at",
+            "sortOrder": "DESC"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "news-uuid-001",
+                  "title": "系統維護公告",
+                  "content": "系統將於本週六凌晨進行例行維護...",
+                  "imageUrl": "https://example.com/news.jpg",
+                  "status": "PUBLISHED",
+                  "statusName": "已上架",
+                  "scheduledAt": "2026-01-06T10:00:00",
+                  "endTime": "2026-02-06T23:59:59",
+                  "createdBy": "admin-uuid",
+                  "createdAt": "2026-01-06T09:00:00",
+                  "updatedAt": "2026-01-06T09:30:00"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "adminGetNewsById": {
+        "name": "後台查詢最新消息詳情",
+        "method": "GET",
+        "path": "/admin/news/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "news-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "news-uuid-001",
+                "title": "系統維護公告",
+                "content": "系統將於本週六凌晨進行例行維護...",
+                "imageUrl": "https://example.com/news.jpg",
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "scheduledAt": "2026-01-06T10:00:00",
+                "endTime": "2026-02-06T23:59:59",
+                "createdBy": "admin-uuid",
+                "createdAt": "2026-01-06T09:00:00",
+                "updatedAt": "2026-01-06T09:30:00"
+              }
+            }
+          }
+        }
+      },
+      "adminCreateNews": {
+        "name": "後台新增最新消息",
+        "method": "POST",
+        "path": "/admin/news",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "title": "春節活動開跑！",
+            "content": "春節期間推出限定活動，參加抽獎就有機會獲得豐富獎品！",
+            "imageUrl": "https://example.com/spring.jpg",
+            "status": "DRAFT",
+            "scheduledAt": "2026-02-01T00:00:00",
+            "endTime": "2026-02-28T23:59:59"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "新增成功",
+              "data": {
+                "id": "news-uuid-002",
+                "title": "春節活動開跑！",
+                "content": "春節期間推出限定活動...",
+                "imageUrl": "https://example.com/spring.jpg",
+                "status": "DRAFT",
+                "statusName": "草稿",
+                "scheduledAt": "2026-02-01T00:00:00",
+                "endTime": "2026-02-28T23:59:59",
+                "createdBy": "admin-uuid",
+                "createdAt": "2026-01-06T10:00:00",
+                "updatedAt": "2026-01-06T10:00:00"
+              }
+            }
+          }
+        }
+      },
+      "adminUpdateNews": {
+        "name": "後台更新最新消息",
+        "method": "PUT",
+        "path": "/admin/news/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "Content-Type": "application/json"
+          },
+          "pathParams": {
+            "id": "news-uuid-001"
+          },
+          "body": {
+            "title": "系統維護公告（更新）",
+            "content": "維護時間調整為週日凌晨...",
+            "status": "PUBLISHED"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "更新成功",
+              "data": {
+                "id": "news-uuid-001",
+                "title": "系統維護公告（更新）",
+                "content": "維護時間調整為週日凌晨...",
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "updatedAt": "2026-01-06T11:00:00"
+              }
+            }
+          }
+        }
+      },
+      "adminDeleteNews": {
+        "name": "後台刪除最新消息",
+        "method": "DELETE",
+        "path": "/admin/news/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "news-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "刪除成功",
+              "data": null
+            }
+          }
+        }
+      },
+      "adminPublishNews": {
+        "name": "後台上架最新消息",
+        "method": "POST",
+        "path": "/admin/news/{id}/publish",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "news-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "上架成功",
+              "data": {
+                "id": "news-uuid-001",
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "scheduledAt": "2026-01-06T11:30:00"
+              }
+            }
+          }
+        }
+      },
+      "adminUnpublishNews": {
+        "name": "後台下架最新消息",
+        "method": "POST",
+        "path": "/admin/news/{id}/unpublish",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "news-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "下架成功",
+              "data": {
+                "id": "news-uuid-001",
+                "status": "ARCHIVED",
+                "statusName": "已下架",
+                "endTime": "2026-01-06T12:00:00"
+              }
+            }
+          }
+        }
+      },
+      "frontendGetPublishedNews": {
+        "name": "前台查詢最新消息列表",
+        "method": "GET",
+        "path": "/news?limit={limit}",
+        "request": {
+          "queryParams": {
+            "limit": 5
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "news-uuid-001",
+                  "title": "系統維護公告",
+                  "content": "系統將於本週六凌晨進行例行維護...",
+                  "imageUrl": "https://example.com/news.jpg",
+                  "status": "PUBLISHED",
+                  "statusName": "已上架",
+                  "scheduledAt": "2026-01-06T10:00:00",
+                  "createdAt": "2026-01-06T09:00:00"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "frontendGetNewsDetail": {
+        "name": "前台查詢最新消息詳情",
+        "method": "GET",
+        "path": "/news/{id}",
+        "request": {
+          "pathParams": {
+            "id": "news-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "news-uuid-001",
+                "title": "系統維護公告",
+                "content": "系統將於本週六凌晨進行例行維護，維護期間無法使用服務。預計維護時間為凌晨 2:00 至 6:00，造成不便敬請見諒。",
+                "imageUrl": "https://example.com/news.jpg",
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "scheduledAt": "2026-01-06T10:00:00",
+                "createdAt": "2026-01-06T09:00:00"
+              }
+            }
+          }
+        }
+      }
+    },
+    "banner": {
+      "adminQueryBanners": {
+        "name": "後台查詢 Banner 列表",
+        "method": "POST",
+        "path": "/admin/banner/list",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "condition": {
+              "storeId": "store-uuid-001",
+              "title": "優惠",
+              "status": "PUBLISHED"
+            },
+            "sortBy": "order_num",
+            "sortOrder": "ASC"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "banner-uuid-001",
+                  "storeId": "store-uuid-001",
+                  "storeName": "KUJI 測試商店",
+                  "title": "春節限時優惠",
+                  "imageUrl": "https://example.com/banner.jpg",
+                  "orderNum": 1,
+                  "status": "PUBLISHED",
+                  "statusName": "已上架",
+                  "startTime": "2026-01-06T00:00:00",
+                  "endTime": "2026-02-28T23:59:59",
+                  "createdAt": "2026-01-05T10:00:00",
+                  "updatedAt": "2026-01-06T09:00:00"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "adminGetBannerById": {
+        "name": "後台查詢 Banner 詳情",
+        "method": "GET",
+        "path": "/admin/banner/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "banner-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": {
+                "id": "banner-uuid-001",
+                "storeId": "store-uuid-001",
+                "storeName": "KUJI 測試商店",
+                "title": "春節限時優惠",
+                "imageUrl": "https://example.com/banner.jpg",
+                "orderNum": 1,
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "startTime": "2026-01-06T00:00:00",
+                "endTime": "2026-02-28T23:59:59",
+                "createdAt": "2026-01-05T10:00:00",
+                "updatedAt": "2026-01-06T09:00:00"
+              }
+            }
+          }
+        }
+      },
+      "adminCreateBanner": {
+        "name": "後台新增 Banner",
+        "method": "POST",
+        "path": "/admin/banner",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "storeId": "store-uuid-001",
+            "title": "新年特賣",
+            "imageUrl": "https://example.com/new-year.jpg",
+            "orderNum": 2,
+            "status": "UNPUBLISHED",
+            "startTime": "2026-02-01T00:00:00",
+            "endTime": "2026-02-15T23:59:59"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "新增成功",
+              "data": {
+                "id": "banner-uuid-002",
+                "storeId": "store-uuid-001",
+                "storeName": "KUJI 測試商店",
+                "title": "新年特賣",
+                "imageUrl": "https://example.com/new-year.jpg",
+                "orderNum": 2,
+                "status": "UNPUBLISHED",
+                "statusName": "未上架",
+                "startTime": "2026-02-01T00:00:00",
+                "endTime": "2026-02-15T23:59:59",
+                "createdAt": "2026-01-06T10:00:00",
+                "updatedAt": "2026-01-06T10:00:00"
+              }
+            }
+          }
+        }
+      },
+      "adminUpdateBanner": {
+        "name": "後台更新 Banner",
+        "method": "PUT",
+        "path": "/admin/banner/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "Content-Type": "application/json"
+          },
+          "pathParams": {
+            "id": "banner-uuid-001"
+          },
+          "body": {
+            "title": "春節限時優惠（延長）",
+            "endTime": "2026-03-31T23:59:59"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "更新成功",
+              "data": {
+                "id": "banner-uuid-001",
+                "title": "春節限時優惠（延長）",
+                "endTime": "2026-03-31T23:59:59",
+                "updatedAt": "2026-01-06T11:00:00"
+              }
+            }
+          }
+        }
+      },
+      "adminDeleteBanner": {
+        "name": "後台刪除 Banner",
+        "method": "DELETE",
+        "path": "/admin/banner/{id}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "banner-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "刪除成功",
+              "data": null
+            }
+          }
+        }
+      },
+      "adminPublishBanner": {
+        "name": "後台上架 Banner",
+        "method": "POST",
+        "path": "/admin/banner/{id}/publish",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "banner-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "上架成功",
+              "data": {
+                "id": "banner-uuid-001",
+                "status": "PUBLISHED",
+                "statusName": "已上架",
+                "startTime": "2026-01-06T11:30:00"
+              }
+            }
+          }
+        }
+      },
+      "adminUnpublishBanner": {
+        "name": "後台下架 Banner",
+        "method": "POST",
+        "path": "/admin/banner/{id}/unpublish",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "banner-uuid-001"
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "下架成功",
+              "data": {
+                "id": "banner-uuid-001",
+                "status": "UNPUBLISHED",
+                "statusName": "未上架",
+                "endTime": "2026-01-06T12:00:00"
+              }
+            }
+          }
+        }
+      },
+      "adminUpdateBannerOrder": {
+        "name": "後台更新 Banner 排序",
+        "method": "PUT",
+        "path": "/admin/banner/{id}/order?orderNum={orderNum}",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "pathParams": {
+            "id": "banner-uuid-001"
+          },
+          "queryParams": {
+            "orderNum": 5
+          }
+        },
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "排序更新成功",
+              "data": {
+                "id": "banner-uuid-001",
+                "orderNum": 5,
+                "updatedAt": "2026-01-06T12:30:00"
+              }
+            }
+          }
+        }
+      },
+      "frontendGetCarouselBanners": {
+        "name": "前台查詢輪播 Banner",
+        "method": "GET",
+        "path": "/banner/carousel",
+        "request": {},
+        "response": {
+          "success": {
+            "httpCode": 200,
+            "body": {
+              "success": true,
+              "message": "查詢成功",
+              "data": [
+                {
+                  "id": "banner-uuid-001",
+                  "storeId": "store-uuid-001",
+                  "storeName": "KUJI 測試商店",
+                  "title": "春節限時優惠",
+                  "imageUrl": "https://example.com/banner.jpg",
+                  "orderNum": 1,
+                  "status": "PUBLISHED",
+                  "statusName": "已上架"
+                },
+                {
+                  "id": "banner-uuid-002",
+                  "storeId": "store-uuid-002",
+                  "storeName": "動漫精品店",
+                  "title": "新品上架",
+                  "imageUrl": "https://example.com/banner2.jpg",
+                  "orderNum": 2,
+                  "status": "PUBLISHED",
+                  "statusName": "已上架"
+                }
+              ]
+            }
+          }
+        }
+      }
     }
   },
   "commonErrorResponses": {

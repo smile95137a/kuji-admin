@@ -81,6 +81,9 @@
         <table tableName="menu" domainObjectName="Menu" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
+        <table tableName="news" domainObjectName="News" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
         <table tableName="order" domainObjectName="Order" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>

@@ -1,4 +1,4 @@
-package com.group.admin.controller;
+package com.group.admin.controller.api;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,11 +16,15 @@ import java.util.Map;
 
 /**
  * OAuth2 認證控制器
+ * 
+ * URL: /api/auth/oauth2/**
+ * 角色：公開（無需登入）
+ * 
  * 處理 OAuth2 登入成功/失敗的回調
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/auth/oauth2")
+@RequestMapping("/auth/oauth2")
 @RequiredArgsConstructor
 public class OAuth2Controller {
 

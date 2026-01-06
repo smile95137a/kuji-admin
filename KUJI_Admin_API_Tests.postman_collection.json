@@ -14,6 +14,21 @@
       "key": "accessToken",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "newsId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bannerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "storeId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -237,6 +252,454 @@
               "path": ["test", "admin-login"]
             },
             "description": "使用店家編輯帳號登入"
+          }
+        }
+      ]
+    },
+    {
+      "name": "後台 - 最新消息管理",
+      "item": [
+        {
+          "name": "查詢最新消息列表",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"status\": \"PUBLISHED\"\n  },\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/news/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news", "list"]
+            },
+            "description": "查詢最新消息列表（支援動態條件）"
+          }
+        },
+        {
+          "name": "新增最新消息",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set('newsId', jsonData.data.id);",
+                  "        pm.test('新增成功並保存 News ID', function() {",
+                  "            pm.expect(jsonData.data.id).to.not.be.null;",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"測試公告 - Postman\",\n  \"content\": \"這是透過 Postman 建立的測試公告內容。\",\n  \"imageUrl\": \"https://via.placeholder.com/800x400\",\n  \"status\": \"DRAFT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/news",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news"]
+            },
+            "description": "新增最新消息"
+          }
+        },
+        {
+          "name": "查詢最新消息詳情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/news/{{newsId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news", "{{newsId}}"]
+            },
+            "description": "查詢單一最新消息詳情"
+          }
+        },
+        {
+          "name": "更新最新消息",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"測試公告 - 已更新\",\n  \"content\": \"更新後的內容。\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/news/{{newsId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news", "{{newsId}}"]
+            },
+            "description": "更新最新消息"
+          }
+        },
+        {
+          "name": "上架最新消息",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/news/{{newsId}}/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news", "{{newsId}}", "publish"]
+            },
+            "description": "上架最新消息"
+          }
+        },
+        {
+          "name": "下架最新消息",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/news/{{newsId}}/unpublish",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news", "{{newsId}}", "unpublish"]
+            },
+            "description": "下架最新消息"
+          }
+        },
+        {
+          "name": "刪除最新消息",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/news/{{newsId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "news", "{{newsId}}"]
+            },
+            "description": "刪除最新消息"
+          }
+        }
+      ]
+    },
+    {
+      "name": "後台 - Banner 管理",
+      "item": [
+        {
+          "name": "查詢 Banner 列表",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"status\": \"PUBLISHED\"\n  },\n  \"sortBy\": \"order_num\",\n  \"sortOrder\": \"ASC\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "list"]
+            },
+            "description": "查詢 Banner 列表（支援動態條件）"
+          }
+        },
+        {
+          "name": "新增 Banner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set('bannerId', jsonData.data.id);",
+                  "        pm.test('新增成功並保存 Banner ID', function() {",
+                  "            pm.expect(jsonData.data.id).to.not.be.null;",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storeId\": \"{{storeId}}\",\n  \"title\": \"測試 Banner - Postman\",\n  \"imageUrl\": \"https://via.placeholder.com/1200x400\",\n  \"orderNum\": 1,\n  \"status\": \"UNPUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner"]
+            },
+            "description": "新增 Banner（需要先設定 storeId 變數）"
+          }
+        },
+        {
+          "name": "查詢 Banner 詳情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "{{bannerId}}"]
+            },
+            "description": "查詢單一 Banner 詳情"
+          }
+        },
+        {
+          "name": "更新 Banner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"測試 Banner - 已更新\",\n  \"orderNum\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "{{bannerId}}"]
+            },
+            "description": "更新 Banner"
+          }
+        },
+        {
+          "name": "更新 Banner 排序",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/{{bannerId}}/order?orderNum=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "{{bannerId}}", "order"],
+              "query": [
+                {
+                  "key": "orderNum",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "更新 Banner 排序號碼"
+          }
+        },
+        {
+          "name": "上架 Banner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/{{bannerId}}/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "{{bannerId}}", "publish"]
+            },
+            "description": "上架 Banner"
+          }
+        },
+        {
+          "name": "下架 Banner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/{{bannerId}}/unpublish",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "{{bannerId}}", "unpublish"]
+            },
+            "description": "下架 Banner"
+          }
+        },
+        {
+          "name": "刪除 Banner",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/banner/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "banner", "{{bannerId}}"]
+            },
+            "description": "刪除 Banner"
+          }
+        }
+      ]
+    },
+    {
+      "name": "前台 - 最新消息",
+      "item": [
+        {
+          "name": "查詢最新消息列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/news?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["news"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "查詢前台最新消息列表（僅 PUBLISHED）"
+          }
+        },
+        {
+          "name": "查詢最新消息詳情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/news/{{newsId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["news", "{{newsId}}"]
+            },
+            "description": "查詢單一最新消息詳情"
+          }
+        }
+      ]
+    },
+    {
+      "name": "前台 - Banner 輪播",
+      "item": [
+        {
+          "name": "查詢輪播 Banner",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/banner/carousel",
+              "host": ["{{baseUrl}}"],
+              "path": ["banner", "carousel"]
+            },
+            "description": "查詢前台輪播 Banner（僅 PUBLISHED 且店家 ACTIVE）"
           }
         }
       ]

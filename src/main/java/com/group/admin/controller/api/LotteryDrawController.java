@@ -16,7 +16,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 前台抽獎 API
+ * 前台抽獎功能 API
+ * 
+ * 路由：/lottery/draw/**（context-path 是 /api，所以完整路徑是 /api/lottery/draw/**）
+ * 
+ * 職責：
+ * - 執行抽獎
+ * - 查詢籤位列表
+ * - 刮刮樂獎項指定
+ * - Session 管理
  * 
  * <p>⚠️ 安全重點：此 Controller 不會洩漏未抽籤位的獎品資訊</p>
  * 
@@ -25,9 +33,9 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/lottery")  // 注意：context-path 是 /api，所以完整路徑是 /api/lottery
+@RequestMapping("/lottery/draw")  // 注意：context-path 是 /api，所以完整路徑是 /api/lottery/draw
 @RequiredArgsConstructor
-@Tag(name = "前台抽獎", description = "玩家抽獎相關 API")
+@Tag(name = "前台抽獎功能", description = "玩家抽獎、籤位查詢 API")
 public class LotteryDrawController {
 
     private final LotteryTicketService ticketService;

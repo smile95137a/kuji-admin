@@ -2,11 +2,13 @@ package com.group.admin.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,8 @@ import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
 import com.group.admin.mapper.PointLogMapper;
 import com.group.admin.mapper.UserMapper;
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCreateReq;
 import com.group.admin.req.lottery.LotteryQueryReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
@@ -697,5 +701,283 @@ public class LotteryServiceImpl implements LotteryService {
             log.warn("多抽選項解析失敗: {}", json, e);
             return List.of();
         }
+    }
+    
+    // ==================== 新架構方法實作 ====================
+    
+    /**
+     * 查詢商品列表（新架構）
+     */
+    @Override
+    public List<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req) {
+        log.info("🔍 [新架構] 查詢商品列表: {}", req);
+        
+        LotteryCondition condition = req != null ? req.getCondition() : null;
+        
+        // 使用 MyBatis Example 動態 SQL
+        LotteryExample example = new LotteryExample();
+        LotteryExample.Criteria criteria = example.createCriteria();
+        
+        // ✅ 所有條件都是可選的
+        if (condition != null) {
+            if (condition.getStoreId() != null) {
+                criteria.andStoreIdEqualTo(condition.getStoreId());
+            }
+            if (condition.getTitle() != null && !condition.getTitle().isEmpty()) {
+                criteria.andTitleLike("%" + condition.getTitle() + "%");
+            }
+            if (condition.getStatus() != null) {
+                criteria.andStatusEqualTo(condition.getStatus());
+            }
+            if (condition.getCategory() != null) {
+                criteria.andCategoryEqualTo(condition.getCategory());
+            }
+            if (condition.getPriceMin() != null) {
+                criteria.andPricePerDrawGreaterThanOrEqualTo(condition.getPriceMin());
+            }
+            if (condition.getPriceMax() != null) {
+                criteria.andPricePerDrawLessThanOrEqualTo(condition.getPriceMax());
+            }
+            // totalQuantity 欄位可能不存在，先註解掉
+            // if (condition.getTotalQuantityMin() != null) {
+            //     criteria.andTotalQuantityGreaterThanOrEqualTo(condition.getTotalQuantityMin());
+            // }
+            // if (condition.getTotalQuantityMax() != null) {
+            //     criteria.andTotalQuantityLessThanOrEqualTo(condition.getTotalQuantityMax());
+            // }
+            if (condition.getCreatedAtStart() != null) {
+                criteria.andCreatedAtGreaterThanOrEqualTo(condition.getCreatedAtStart());
+            }
+            if (condition.getCreatedAtEnd() != null) {
+                criteria.andCreatedAtLessThanOrEqualTo(condition.getCreatedAtEnd());
+            }
+            if (condition.getKeyword() != null && !condition.getKeyword().isEmpty()) {
+                criteria.andTitleLike("%" + condition.getKeyword() + "%");
+            }
+        }
+        
+        // 排序
+        if (req != null && req.getSortBy() != null) {
+            String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
+            example.setOrderByClause(req.getSortBy() + " " + order);
+        } else {
+            example.setOrderByClause("created_at DESC");
+        }
+        
+        // ✅ 查詢全部資料（前端做分頁）
+        List<Lottery> lotteries = lotteryMapper.selectByExample(example);
+        
+        log.info("✅ 查詢成功: 共 {} 筆", lotteries.size());
+        
+        return lotteries.stream()
+                .map(this::convertToResNew)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 新增商品（新架構）
+     */
+    @Override
+    @Transactional
+    public LotteryRes createLottery(LotteryCreateReq req) {
+        log.info("➕ [新架構] 新增商品: {}", req.getTitle());
+        
+        if (req.getStoreId() == null) {
+            throw new BusinessException("店家 ID 不能為空");
+        }
+        
+        Lottery lottery = new Lottery();
+        lottery.setId(UUID.randomUUID().toString());
+        lottery.setStoreId(req.getStoreId());
+        lottery.setTitle(req.getTitle());
+        lottery.setDescription(req.getDescription());
+        lottery.setCategory(req.getCategory());
+        lottery.setStatus("OFF_SHELF");  // 預設下架
+        lottery.setPricePerDraw(req.getPricePerDraw());
+        // lottery.setTotalQuantity(req.getTotalQuantity());  // 欄位可能不存在
+        // lottery.setRemainingQuantity(req.getTotalQuantity());
+        lottery.setImageUrl(req.getImageUrl());
+        lottery.setCreatedAt(LocalDateTime.now());
+        lottery.setUpdatedAt(LocalDateTime.now());
+        
+        lotteryMapper.insert(lottery);
+        
+        log.info("✅ 新增成功: id={}", lottery.getId());
+        
+        return convertToResNew(lottery);
+    }
+    
+    /**
+     * 更新商品（新架構）
+     */
+    @Override
+    @Transactional
+    public LotteryRes updateLottery(String id, LotteryUpdateReq req) {
+        log.info("✏️ [新架構] 更新商品: id={}", id);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        // 更新欄位
+        if (req.getTitle() != null) {
+            lottery.setTitle(req.getTitle());
+        }
+        if (req.getDescription() != null) {
+            lottery.setDescription(req.getDescription());
+        }
+        if (req.getImageUrl() != null) {
+            lottery.setImageUrl(req.getImageUrl());
+        }
+        if (req.getPricePerDraw() != null) {
+            lottery.setPricePerDraw(req.getPricePerDraw());
+        }
+        
+        lottery.setUpdatedAt(LocalDateTime.now());
+        
+        lotteryMapper.updateByPrimaryKey(lottery);
+        
+        log.info("✅ 更新成功");
+        
+        return convertToResNew(lottery);
+    }
+    
+    /**
+     * 刪除商品（新架構）
+     */
+    @Override
+    @Transactional
+    public void deleteLottery(String id) {
+        log.info("🗑️ [新架構] 刪除商品: id={}", id);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        // 只能刪除下架的商品
+        if ("ON_SHELF".equals(lottery.getStatus())) {
+            throw new BusinessException("無法刪除已上架的商品");
+        }
+        
+        lotteryMapper.deleteByPrimaryKey(id);
+        
+        log.info("✅ 刪除成功");
+    }
+    
+    /**
+     * 取得商品詳情（新架構）
+     */
+    @Override
+    public LotteryRes getLottery(String id) {
+        log.info("🔍 [新架構] 查詢商品詳情: id={}", id);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        return convertToResNew(lottery);
+    }
+    
+    /**
+     * 更新商品狀態（新架構）
+     */
+    @Override
+    @Transactional
+    public LotteryRes updateStatus(String id, String status) {
+        log.info("🔄 [新架構] 更新商品狀態: id={}, status={}", id, status);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        lottery.setStatus(status);
+        lottery.setUpdatedAt(LocalDateTime.now());
+        
+        lotteryMapper.updateByPrimaryKey(lottery);
+        
+        log.info("✅ 狀態更新成功");
+        
+        return convertToResNew(lottery);
+    }
+    
+    /**
+     * 轉換為 Res（新架構簡化版）
+     */
+    private LotteryRes convertToResNew(Lottery lottery) {
+        LotteryRes res = new LotteryRes();
+        
+        // 基本資訊
+        res.setId(lottery.getId());
+        res.setStoreId(lottery.getStoreId());
+        res.setTitle(lottery.getTitle());
+        res.setDescription(lottery.getDescription());
+        res.setImageUrl(lottery.getImageUrl());
+        
+        // 分類資訊
+        res.setCategory(lottery.getCategory());
+        res.setSubCategory(lottery.getSubCategory());
+        
+        // 價格相關
+        res.setPricePerDraw(lottery.getPricePerDraw());
+        res.setDiscountedPrice(lottery.getDiscountedPrice());
+        res.setAutoDiscountEnabled(lottery.getAutoDiscountEnabled() != null && lottery.getAutoDiscountEnabled() == 1);
+        res.setDiscountTriggered(false); // 需要額外計算邏輯
+        
+        // 多抽選項
+        res.setAllowMultiDraw(lottery.getAllowMultiDraw() != null && lottery.getAllowMultiDraw() == 1);
+        if (lottery.getMultiDrawOptions() != null && !lottery.getMultiDrawOptions().isEmpty()) {
+            try {
+                List<Integer> options = Arrays.stream(lottery.getMultiDrawOptions().split(","))
+                        .map(String::trim)
+                        .map(Integer::parseInt)
+                        .collect(Collectors.toList());
+                res.setMultiDrawOptions(options);
+            } catch (Exception e) {
+                log.warn("⚠️ 解析多抽選項失敗: {}", lottery.getMultiDrawOptions());
+            }
+        }
+        
+        // 時間相關
+        res.setScheduledAt(lottery.getScheduledAt());
+        res.setStartTime(lottery.getStartTime());
+        res.setEndTime(lottery.getEndTime());
+        
+        // 抽數統計
+        res.setTotalDraws(lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0);
+        res.setMaxDraws(lottery.getMaxDraws() != null ? lottery.getMaxDraws() : 0);
+        res.setRemainingDraws(calculateRemainingDraws(lottery));
+        
+        // 狀態與排序
+        res.setStatus(lottery.getStatus());
+        res.setOrderNum(lottery.getOrderNum());
+        res.setWeight(lottery.getWeight());
+        
+        // 系統欄位
+        res.setCreatedBy(lottery.getCreatedBy());
+        res.setCreatedAt(lottery.getCreatedAt());
+        res.setUpdatedAt(lottery.getUpdatedAt());
+        res.setRemark(lottery.getRemark());
+        
+        // 獎項統計（需要查詢 lottery_prize 表）
+        // TODO: 如果需要顯示獎項統計，需要額外查詢
+        // res.setTotalPrizes(calculateTotalPrizes(lottery.getId()));
+        // res.setRemainingPrizes(calculateRemainingPrizes(lottery.getId()));
+        
+        return res;
+    }
+    
+    /**
+     * 計算剩餘抽數
+     */
+    private Integer calculateRemainingDraws(Lottery lottery) {
+        if (lottery.getMaxDraws() == null || lottery.getMaxDraws() == 0) {
+            return 0; // 無限制或未設定
+        }
+        int totalDraws = lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0;
+        return Math.max(0, lottery.getMaxDraws() - totalDraws);
     }
 }

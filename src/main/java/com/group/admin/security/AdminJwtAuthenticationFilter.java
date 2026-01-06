@@ -14,11 +14,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
 import com.group.admin.entity.Role;
+import com.group.admin.entity.StoreUser;
 import com.group.admin.example.AdminUserExample;
 import com.group.admin.example.AdminUserRoleExample;
+import com.group.admin.example.StoreUserExample;
 import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.util.JwtUtil;
 
 import org.springframework.lang.NonNull;
@@ -43,6 +46,7 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
     private final AdminUserMapper adminUserMapper;
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
+    private final StoreUserMapper storeUserMapper;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -102,6 +106,17 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
             AdminUser adminUser = adminUsers.get(0);
             log.info("✅ [AdminJwtFilter] 找到管理員: {} (ID: {})", username, adminUser.getId());
             
+            // 查詢使用者的店家列表
+            StoreUserExample storeUserExample = new StoreUserExample();
+            storeUserExample.createCriteria().andAdminUserIdEqualTo(adminUser.getId());
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
+            
+            List<String> storeIds = new ArrayList<>();
+            for (StoreUser storeUser : storeUsers) {
+                storeIds.add(storeUser.getStoreId());
+            }
+            log.info("🏪 [AdminJwtFilter] 使用者店家列表: {}", storeIds);
+            
             // 使用 Example 模式查詢角色
             AdminUserRoleExample roleExample = new AdminUserRoleExample();
             roleExample.createCriteria().andAdminUserIdEqualTo(adminUser.getId());
@@ -128,6 +143,7 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
                     .username(adminUser.getUsername())
                     .password(adminUser.getPassword())
                     .isAdmin(true)
+                    .storeIds(storeIds)  // ← 設定店家 ID 列表
                     .authorities(authorities)
                     .adminUser(adminUser)
                     .build();

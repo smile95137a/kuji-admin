@@ -4,6 +4,9 @@ import com.group.admin.security.UserPrincipal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * 安全工具類
  *
@@ -145,5 +148,69 @@ public class SecurityUtils {
      */
     public static String getCurrentApiUserId() {
         return getCurrentUserId();
+    }
+
+    /**
+     * 取得當前使用者的店家 ID 列表
+     * 
+     * @return 店家 ID 列表（可能有多個店家）
+     *         如果是 ROLE_ADMIN，返回空列表（表示可存取所有店家）
+     *         如果未登入或無店家，返回空列表
+     */
+    public static List<String> getCurrentUserStoreIds() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Collections.emptyList();
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserPrincipal)) {
+            return Collections.emptyList();
+        }
+
+        UserPrincipal userPrincipal = (UserPrincipal) principal;
+        
+        // 如果是 Admin，返回空列表（表示可以存取所有店家）
+        if (userPrincipal.getRoles() != null && userPrincipal.getRoles().contains("ROLE_ADMIN")) {
+            return Collections.emptyList();
+        }
+        
+        // 返回店家 ID 列表
+        List<String> storeIds = userPrincipal.getStoreIds();
+        return storeIds != null ? storeIds : Collections.emptyList();
+    }
+
+    /**
+     * 取得當前使用者的主要店家 ID（第一個店家）
+     * 
+     * @return 店家 ID（單一）
+     *         如果使用者有多個店家，返回第一個
+     *         如果是 ROLE_ADMIN 或無店家，返回 null
+     */
+    public static String getCurrentUserPrimaryStoreId() {
+        List<String> storeIds = getCurrentUserStoreIds();
+        return storeIds.isEmpty() ? null : storeIds.get(0);
+    }
+
+    /**
+     * 檢查當前使用者是否有權限存取指定店家
+     * 
+     * @param storeId 要檢查的店家 ID
+     * @return 是否有權限
+     *         ROLE_ADMIN 永遠返回 true
+     *         其他角色需要在 storeIds 列表中
+     */
+    public static boolean canAccessStore(String storeId) {
+        if (storeId == null) {
+            return false;
+        }
+        
+        // Admin 可以存取所有店家
+        if (isAdmin()) {
+            return true;
+        }
+        
+        List<String> storeIds = getCurrentUserStoreIds();
+        return storeIds.contains(storeId);
     }
 }

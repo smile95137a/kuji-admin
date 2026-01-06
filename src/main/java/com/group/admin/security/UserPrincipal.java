@@ -60,8 +60,16 @@ public class UserPrincipal implements UserDetails {
     
     /**
      * 店家 ID（如果是店家相關角色）
+     * @deprecated 使用 storeIds 代替，支援多店家管理
      */
+    @Deprecated
     private String storeId;
+    
+    /**
+     * 店家 ID 列表（支援使用者管理多個店家）
+     * 如果是 ROLE_ADMIN，此列表可能為空（表示可存取所有店家）
+     */
+    private List<String> storeIds;
     
     /**
      * 後台管理員物件（如果是後台使用者）

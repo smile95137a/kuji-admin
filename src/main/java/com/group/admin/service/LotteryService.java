@@ -1,6 +1,8 @@
 package com.group.admin.service;
 
 import com.group.admin.entity.LotteryDrawRecord;
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCreateReq;
 import com.group.admin.req.lottery.LotteryQueryReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
@@ -159,4 +161,61 @@ public interface LotteryService {
      * @return 統計資訊（總數、剩餘數等）
      */
     Map<String, Object> getPrizeStatistics(String lotteryId);
+    
+    // ==================== 新架構 API（Condition + QueryReq 模式）====================
+    
+    /**
+     * 查詢商品列表（新架構）
+     * 
+     * 使用 Condition + QueryReq 模式
+     * 所有查詢條件可選，MyBatis 動態 SQL
+     * 返回全部資料，前端做分頁
+     * 
+     * @param req 查詢請求（可選）
+     * @return 商品列表（全部資料）
+     */
+    List<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req);
+    
+    /**
+     * 新增商品（新架構）
+     * 
+     * storeId 已經在 Controller 自動帶入
+     * 
+     * @param req 商品建立請求
+     * @return 建立的商品
+     */
+    LotteryRes createLottery(LotteryCreateReq req);
+    
+    /**
+     * 更新商品（新架構）
+     * 
+     * @param id 商品 ID
+     * @param req 更新請求
+     * @return 更新後的商品
+     */
+    LotteryRes updateLottery(String id, LotteryUpdateReq req);
+    
+    /**
+     * 刪除商品（新架構）
+     * 
+     * @param id 商品 ID
+     */
+    void deleteLottery(String id);
+    
+    /**
+     * 取得商品詳情（新架構）
+     * 
+     * @param id 商品 ID
+     * @return 商品詳情
+     */
+    LotteryRes getLottery(String id);
+    
+    /**
+     * 更新商品狀態（新架構）
+     * 
+     * @param id 商品 ID
+     * @param status ON_SHELF / OFF_SHELF
+     * @return 更新後的商品
+     */
+    LotteryRes updateStatus(String id, String status);
 }

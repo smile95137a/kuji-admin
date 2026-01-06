@@ -1,4 +1,4 @@
-package com.group.admin.controller;
+package com.group.admin.controller.api;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +10,12 @@ import com.group.admin.entity.User;
 import com.group.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 前台使用者 API
+ * 
+ * URL: /api/user/**
+ * 角色：前台使用者
+ */
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor

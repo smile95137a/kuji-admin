@@ -222,3 +222,263 @@ private static final String ROLE_ADMIN = "ADMIN";       // ❌
 3. 呼叫的 API endpoint 與 HTTP method
 4. 預期行為 vs 實際行為
 
+---
+
+# 新架構規範（2025-12-25 更新）
+
+## API 目錄結構
+
+### 前後台分離原則
+```
+controller/
+├── admin/           # 後台管理 API → /admin/**
+│   ├── AdminLotteryController.java
+│   ├── AdminStoreController.java
+│   └── AdminUserController.java
+└── api/             # 前台 API → /api/**
+    ├── LotteryController.java
+    ├── UserController.java
+    └── OrderController.java
+```
+
+## StoreID 自動帶入機制
+
+### 問題背景
+店家負責人新增商品時，前端無法取得 StoreID，需要從 JWT Token 自動提取。
+
+### 解決方案
+
+#### 1. 擴充 UserPrincipal
+```java
+@Data
+@Builder
+public class UserPrincipal implements UserDetails {
+    private String userId;
+    private String username;
+    private List<String> roles;
+    private List<String> storeIds;  // ← 新增店家 ID 列表
+    // ...
+}
+```
+
+#### 2. Filter 中查詢並設定 StoreID
+```java
+// AdminJwtAuthenticationFilter.java
+StoreUserExample example = new StoreUserExample();
+example.createCriteria().andAdminUserIdEqualTo(adminUser.getId());
+List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
+
+List<String> storeIds = storeUsers.stream()
+        .map(StoreUser::getStoreId)
+        .collect(Collectors.toList());
+
+UserPrincipal principal = UserPrincipal.builder()
+        .storeIds(storeIds)  // ← 設定店家 ID
+        .build();
+```
+
+#### 3. SecurityUtils 提供取值方法
+```java
+/**
+ * 取得當前使用者的主要店家 ID
+ */
+public static String getCurrentUserPrimaryStoreId() {
+    UserPrincipal principal = (UserPrincipal) SecurityContextHolder
+            .getContext()
+            .getAuthentication()
+            .getPrincipal();
+    
+    List<String> storeIds = principal.getStoreIds();
+    return storeIds.isEmpty() ? null : storeIds.get(0);
+}
+```
+
+#### 4. Controller 中自動帶入
+```java
+@PostMapping
+public ResponseEntity<LotteryRes> createLottery(@RequestBody LotteryCreateReq req) {
+    // ✅ 自動取得並設定 storeId
+    String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+    req.setStoreId(storeId);
+    
+    return ResponseEntity.ok(service.createLottery(req));
+}
+```
+
+## 查詢 API 設計模式
+
+### 核心原則
+1. **查詢條件與查詢行為分離**：Condition + QueryReq
+2. **所有條件可選**：使用 MyBatis 動態 SQL
+3. **前端做分頁**：後端返回全部資料（List 不用 PageHelper）
+4. **組合而非繼承**：QueryReq 包裝 Condition
+
+### BaseCondition（通用查詢條件）
+```java
+@Data
+public abstract class BaseCondition {
+    private LocalDateTime createdAtStart;  // 建立時間起
+    private LocalDateTime createdAtEnd;    // 建立時間迄
+    private String keyword;                // 關鍵字搜尋
+}
+```
+
+### QueryReq（通用查詢請求）
+```java
+@Data
+public class QueryReq<T> {
+    private T condition;       // 查詢條件（可選）
+    private Integer page;      // 分頁參數（前端用）
+    private Integer size;
+    private String sortBy;     // 排序欄位
+    private String sortOrder;  // ASC/DESC
+}
+```
+
+### 具體 Condition 範例
+```java
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class LotteryCondition extends BaseCondition {
+    private String storeId;    // 後端自動帶入
+    private String title;      // 模糊查詢
+    private String status;     // ON_SHELF/OFF_SHELF
+    private String category;
+    private Long priceMin;
+    private Long priceMax;
+}
+```
+
+### Controller 範例（後台）
+```java
+@PostMapping("/admin/lottery/list")
+public ResponseEntity<List<LotteryRes>> queryLotteries(
+        @RequestBody(required = false) QueryReq<LotteryCondition> req) {
+    
+    // ✅ 自動帶入 storeId
+    String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+    if (req == null) req = new QueryReq<>();
+    if (req.getCondition() == null) req.setCondition(new LotteryCondition());
+    req.getCondition().setStoreId(storeId);
+    
+    // ✅ 返回全部資料（前端做分頁）
+    return ResponseEntity.ok(service.queryLotteries(req));
+}
+```
+
+### Service 範例（動態 SQL）
+```java
+@Override
+public List<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req) {
+    LotteryCondition condition = req != null ? req.getCondition() : null;
+    
+    LotteryExample example = new LotteryExample();
+    LotteryExample.Criteria criteria = example.createCriteria();
+    
+    // ✅ 所有條件都是可選的
+    if (condition != null) {
+        if (condition.getStoreId() != null) {
+            criteria.andStoreIdEqualTo(condition.getStoreId());
+        }
+        if (condition.getTitle() != null && !condition.getTitle().isEmpty()) {
+            criteria.andTitleLike("%" + condition.getTitle() + "%");
+        }
+        if (condition.getStatus() != null) {
+            criteria.andStatusEqualTo(condition.getStatus());
+        }
+    }
+    
+    // 排序
+    if (req != null && req.getSortBy() != null) {
+        String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
+        example.setOrderByClause(req.getSortBy() + " " + order);
+    }
+    
+    // ✅ 查詢全部資料
+    List<Lottery> lotteries = lotteryMapper.selectByExample(example);
+    return lotteries.stream().map(this::toRes).collect(Collectors.toList());
+}
+```
+
+## 前端使用範例
+
+### 後台：查詢商品
+```javascript
+// 不用傳 storeId，後端自動帶入
+const response = await axios.post('/api/admin/lottery/list', {
+  condition: {
+    title: '鬼滅',
+    status: 'ON_SHELF'
+  },
+  sortBy: 'created_at',
+  sortOrder: 'DESC'
+});
+
+// 前端自己做分頁
+const data = response.data.data;
+const page1 = data.slice(0, 20);
+```
+
+### 後台：新增商品
+```javascript
+// 不用傳 storeId
+const response = await axios.post('/api/admin/lottery', {
+  title: '鬼滅之刃一番賞',
+  category: 'OFFICIAL_ICHIBAN',
+  pricePerDraw: 80
+  // storeId 後端自動帶入
+});
+```
+
+## 開發工作流程（更新）
+
+### 新增查詢 API
+1. 建立 `XXXCondition extends BaseCondition`
+2. Controller 接收 `QueryReq<XXXCondition>`
+3. 自動帶入 storeId（如果需要）
+4. Service 使用 MyBatis Example 動態查詢
+5. 返回 `List<Res>`（不用 PageHelper）
+
+### 新增商品/資料 API
+1. 取得 storeId：`SecurityUtils.getCurrentUserPrimaryStoreId()`
+2. 設定到 Req：`req.setStoreId(storeId)`
+3. Service 驗證 storeId 不為空
+4. 寫入資料庫
+
+## 常見錯誤（新增）
+
+### 問題：前端拿不到 storeId
+```java
+// ❌ 錯誤：要求前端傳 storeId
+@PostMapping
+public ResponseEntity<LotteryRes> create(@RequestBody LotteryCreateReq req) {
+    if (req.getStoreId() == null) throw new BusinessException("缺少 storeId");
+}
+
+// ✅ 正確：後端自動帶入
+@PostMapping
+public ResponseEntity<LotteryRes> create(@RequestBody LotteryCreateReq req) {
+    String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+    req.setStoreId(storeId);
+}
+```
+
+### 問題：查詢 API 返回空
+```java
+// 檢查點 1：是否自動帶入 storeId
+log.info("查詢條件: {}", req.getCondition());
+
+// 檢查點 2：MyBatis Example 是否正確設定條件
+if (condition.getStoreId() != null) {  // ← 一定要檢查 null
+    criteria.andStoreIdEqualTo(condition.getStoreId());
+}
+```
+
+## 不得隨意更動（風險區）更新
+
+- ❌ 不要在前端傳 storeId（後端自動帶入）
+- ❌ 不要在 Service 使用 PageHelper（前端做分頁）
+- ❌ 不要在 Controller 返回 Page 物件（返回 List）
+- ❌ 不要忘記檢查 Condition 欄位是否為 null
+- ❌ 不要在查詢 API 要求所有條件必填（全部可選）
+

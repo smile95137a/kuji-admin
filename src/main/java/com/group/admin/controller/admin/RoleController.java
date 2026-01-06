@@ -1,4 +1,4 @@
-package com.group.admin.controller;
+package com.group.admin.controller.admin;
 
 import com.group.admin.req.role.RoleCreateReq;
 import com.group.admin.req.role.RoleMenuPermissionReq;
