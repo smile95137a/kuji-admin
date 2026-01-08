@@ -6,6 +6,7 @@ import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
+import com.group.admin.req.lottery.LotteryCopyReq;
 import com.group.admin.req.lottery.LotteryCreateReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
@@ -154,12 +155,13 @@ public class AdminLotteryController {
      * 更新商品
      * 
      * ✅ 驗證使用者是否有權限修改此商品
+     * ⚠️ 使用正則表達式限制 id 必須是 UUID 格式
      * 
-     * @param id 商品 ID
+     * @param id 商品 ID（UUID 格式）
      * @param req 更新請求
      * @return 更新後的商品
      */
-    @PutMapping("/{id}")
+    @PutMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "更新商品", description = "更新商品資訊")
     public ResponseEntity<LotteryRes> updateLottery(
@@ -181,11 +183,12 @@ public class AdminLotteryController {
      * 刪除商品
      * 
      * ✅ 驗證使用者是否有權限刪除此商品
+     * ⚠️ 使用正則表達式限制 id 必須是 UUID 格式
      * 
-     * @param id 商品 ID
+     * @param id 商品 ID（UUID 格式）
      * @return 刪除結果
      */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "刪除商品", description = "刪除商品（僅 Admin 和店主）")
     public ResponseEntity<Void> deleteLottery(@PathVariable String id) {
@@ -203,10 +206,13 @@ public class AdminLotteryController {
     /**
      * 取得商品詳情
      * 
-     * @param id 商品 ID
+     * ⚠️ 使用正則表達式限制 id 必須是 UUID 格式
+     * 避免與 /list、/on-shelf 等路徑衝突
+     * 
+     * @param id 商品 ID（UUID 格式）
      * @return 商品詳情
      */
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "取得商品詳情", description = "查詢單一商品")
     public ResponseEntity<LotteryRes> getLottery(@PathVariable String id) {
@@ -221,10 +227,12 @@ public class AdminLotteryController {
     /**
      * 上架商品
      * 
-     * @param id 商品 ID
+     * ⚠️ 使用正則表達式限制 id 必須是 UUID 格式
+     * 
+     * @param id 商品 ID（UUID 格式）
      * @return 更新後的商品
      */
-    @PostMapping("/{id}/on-shelf")
+    @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/on-shelf")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "上架商品", description = "將商品設為上架狀態")
     public ResponseEntity<LotteryRes> onShelf(@PathVariable String id) {
@@ -242,10 +250,12 @@ public class AdminLotteryController {
     /**
      * 下架商品
      * 
-     * @param id 商品 ID
+     * ⚠️ 使用正則表達式限制 id 必須是 UUID 格式
+     * 
+     * @param id 商品 ID（UUID 格式）
      * @return 更新後的商品
      */
-    @PostMapping("/{id}/off-shelf")
+    @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/off-shelf")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "下架商品", description = "將商品設為下架狀態")
     public ResponseEntity<LotteryRes> offShelf(@PathVariable String id) {
@@ -257,6 +267,46 @@ public class AdminLotteryController {
         LotteryRes result = lotteryService.updateStatus(id, "OFF_SHELF");
         
         log.info("✅ 下架成功");
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 複製商品（完整複製）
+     * 
+     * 複製內容：
+     * 1. Lottery 主表（產生新 ID、標題加上「複製」）
+     * 2. 所有 LotteryPrize（獎項）
+     * 3. 可選擇是否重新生成籤號
+     * 
+     * 預設行為：
+     * - 新商品標題：原標題 + "（複製）"
+     * - 新商品狀態：OFF_SHELF（避免立即上架）
+     * - 抽數統計：重置為 0
+     * - 獎項數量：重置為原始數量
+     * 
+     * @param req 複製請求
+     * @return 複製後的商品
+     */
+    @PostMapping("/copy")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "複製商品", description = "將指定商品完整複製（包含所有獎項）")
+    public ResponseEntity<LotteryRes> copyLottery(@Valid @RequestBody LotteryCopyReq req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        
+        log.info("📋 複製商品: userId={}, sourceLotteryId={}, newTitle={}, regenerateTickets={}, newStatus={}", 
+                 userId, req.getSourceLotteryId(), req.getNewTitle(), 
+                 req.getRegenerateTickets(), req.getNewStatus());
+        
+        // 呼叫 Service 層複製邏輯
+        LotteryRes result = lotteryService.copyLottery(
+                req.getSourceLotteryId(), 
+                req.getNewTitle(), 
+                req.getRegenerateTickets(), 
+                req.getNewStatus()
+        );
+        
+        log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
         return ResponseEntity.ok(result);
     }
 }

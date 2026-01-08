@@ -104,16 +104,25 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 綁定 StoreOwner 角色
         bindRole(adminUser.getId(), RoleCode.ROLE_STORE_OWNER);
 
-        // 建立 Store
+        // 建立 Store（完整資料）
         Store store = new Store();
         store.setId(UUID.randomUUID().toString());
         store.setOwnerId(adminUser.getId());
         store.setStoreName(req.getStoreName());
         store.setShortDescription(req.getShortDescription());
-        store.setEmail(req.getEmail());
-        store.setPhone(req.getPhone());
+        store.setLongDescription(req.getLongDescription());
+        store.setLogoUrl(req.getLogoUrl());
+        store.setCoverImageUrl(req.getCoverImageUrl());
+        store.setEmail(req.getStoreEmail());
+        store.setPhone(req.getStorePhone());
+        store.setAddress(req.getStoreAddress());
+        store.setBusinessHours(req.getBusinessHours());
+        store.setFacebookUrl(req.getFacebookUrl());
+        store.setInstagramUrl(req.getInstagramUrl());
+        store.setLineId(req.getLineId());
         store.setStatus(StoreStatus.ACTIVE.getCode());
         store.setCreatedAt(LocalDateTime.now());
+        store.setUpdatedAt(LocalDateTime.now());
         storeMapper.insert(store);
 
         // 建立 StoreUser 關聯

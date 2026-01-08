@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.PrizeBoxMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.PrizeBox">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="lottery_id" jdbcType="VARCHAR" property="lotteryId" />
+    <result column="prize_id" jdbcType="VARCHAR" property="prizeId" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="draw_result_id" jdbcType="VARCHAR" property="drawResultId" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="is_recyclable" jdbcType="TINYINT" property="isRecyclable" />
+    <result column="recycle_bonus" jdbcType="BIGINT" property="recycleBonus" />
+    <result column="recycled_at" jdbcType="TIMESTAMP" property="recycledAt" />
+    <result column="shipped_at" jdbcType="TIMESTAMP" property="shippedAt" />
+    <result column="order_id" jdbcType="VARCHAR" property="orderId" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_id, lottery_id, prize_id, store_id, draw_result_id, status, is_recyclable, 
+    recycle_bonus, recycled_at, shipped_at, order_id, created_at, updated_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.PrizeBoxExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from prize_box
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from prize_box
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from prize_box
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.PrizeBoxExample">
+    delete from prize_box
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.PrizeBox">
+    insert into prize_box (id, user_id, lottery_id, 
+      prize_id, store_id, draw_result_id, 
+      status, is_recyclable, recycle_bonus, 
+      recycled_at, shipped_at, order_id, 
+      created_at, updated_at)
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, 
+      #{prizeId,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{drawResultId,jdbcType=VARCHAR}, 
+      #{status,jdbcType=VARCHAR}, #{isRecyclable,jdbcType=TINYINT}, #{recycleBonus,jdbcType=BIGINT}, 
+      #{recycledAt,jdbcType=TIMESTAMP}, #{shippedAt,jdbcType=TIMESTAMP}, #{orderId,jdbcType=VARCHAR}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.PrizeBox">
+    insert into prize_box
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="lotteryId != null">
+        lottery_id,
+      </if>
+      <if test="prizeId != null">
+        prize_id,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="drawResultId != null">
+        draw_result_id,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="isRecyclable != null">
+        is_recyclable,
+      </if>
+      <if test="recycleBonus != null">
+        recycle_bonus,
+      </if>
+      <if test="recycledAt != null">
+        recycled_at,
+      </if>
+      <if test="shippedAt != null">
+        shipped_at,
+      </if>
+      <if test="orderId != null">
+        order_id,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryId != null">
+        #{lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="prizeId != null">
+        #{prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="drawResultId != null">
+        #{drawResultId,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="isRecyclable != null">
+        #{isRecyclable,jdbcType=TINYINT},
+      </if>
+      <if test="recycleBonus != null">
+        #{recycleBonus,jdbcType=BIGINT},
+      </if>
+      <if test="recycledAt != null">
+        #{recycledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="shippedAt != null">
+        #{shippedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="orderId != null">
+        #{orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.PrizeBoxExample" resultType="java.lang.Long">
+    select count(*) from prize_box
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update prize_box
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.lotteryId != null">
+        lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.prizeId != null">
+        prize_id = #{row.prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.drawResultId != null">
+        draw_result_id = #{row.drawResultId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.isRecyclable != null">
+        is_recyclable = #{row.isRecyclable,jdbcType=TINYINT},
+      </if>
+      <if test="row.recycleBonus != null">
+        recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
+      </if>
+      <if test="row.recycledAt != null">
+        recycled_at = #{row.recycledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.shippedAt != null">
+        shipped_at = #{row.shippedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.orderId != null">
+        order_id = #{row.orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update prize_box
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
+      prize_id = #{row.prizeId,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      draw_result_id = #{row.drawResultId,jdbcType=VARCHAR},
+      status = #{row.status,jdbcType=VARCHAR},
+      is_recyclable = #{row.isRecyclable,jdbcType=TINYINT},
+      recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
+      recycled_at = #{row.recycledAt,jdbcType=TIMESTAMP},
+      shipped_at = #{row.shippedAt,jdbcType=TIMESTAMP},
+      order_id = #{row.orderId,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.PrizeBox">
+    update prize_box
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryId != null">
+        lottery_id = #{lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="prizeId != null">
+        prize_id = #{prizeId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="drawResultId != null">
+        draw_result_id = #{drawResultId,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="isRecyclable != null">
+        is_recyclable = #{isRecyclable,jdbcType=TINYINT},
+      </if>
+      <if test="recycleBonus != null">
+        recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
+      </if>
+      <if test="recycledAt != null">
+        recycled_at = #{recycledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="shippedAt != null">
+        shipped_at = #{shippedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="orderId != null">
+        order_id = #{orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.PrizeBox">
+    update prize_box
+    set user_id = #{userId,jdbcType=VARCHAR},
+      lottery_id = #{lotteryId,jdbcType=VARCHAR},
+      prize_id = #{prizeId,jdbcType=VARCHAR},
+      store_id = #{storeId,jdbcType=VARCHAR},
+      draw_result_id = #{drawResultId,jdbcType=VARCHAR},
+      status = #{status,jdbcType=VARCHAR},
+      is_recyclable = #{isRecyclable,jdbcType=TINYINT},
+      recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
+      recycled_at = #{recycledAt,jdbcType=TIMESTAMP},
+      shipped_at = #{shippedAt,jdbcType=TIMESTAMP},
+      order_id = #{orderId,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>

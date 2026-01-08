@@ -20,6 +20,7 @@ import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryDrawRecord;
 import com.group.admin.entity.LotteryPrize;
 import com.group.admin.entity.PointLog;
+import com.group.admin.entity.Store;
 import com.group.admin.entity.User;
 import com.group.admin.enums.LotteryCategoryEnum;
 import com.group.admin.enums.LotteryStatusEnum;
@@ -30,6 +31,7 @@ import com.group.admin.mapper.LotteryDrawRecordMapper;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
 import com.group.admin.mapper.PointLogMapper;
+import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
@@ -62,6 +64,7 @@ public class LotteryServiceImpl implements LotteryService {
     private final UserMapper userMapper;
     private final PointLogMapper pointLogMapper;
     private final ObjectMapper objectMapper;
+    private final StoreMapper storeMapper;
     
     private final Random random = new Random();
 
@@ -905,7 +908,7 @@ public class LotteryServiceImpl implements LotteryService {
     }
     
     /**
-     * 轉換為 Res（新架構簡化版）
+     * 轉換為 Res（新架構完整版）
      */
     private LotteryRes convertToResNew(Lottery lottery) {
         LotteryRes res = new LotteryRes();
@@ -913,16 +916,27 @@ public class LotteryServiceImpl implements LotteryService {
         // 基本資訊
         res.setId(lottery.getId());
         res.setStoreId(lottery.getStoreId());
+        
+        // ✅ 查詢店家名稱
+        if (lottery.getStoreId() != null) {
+            Store store = storeMapper.selectByPrimaryKey(lottery.getStoreId());
+            if (store != null) {
+                res.setStoreName(store.getStoreName());
+            }
+        }
+        
         res.setTitle(lottery.getTitle());
         res.setDescription(lottery.getDescription());
         res.setImageUrl(lottery.getImageUrl());
         
-        // 分類資訊
+        // ✅ 分類資訊（加上中文名稱）
         res.setCategory(lottery.getCategory());
+        res.setCategoryName(LotteryCategoryEnum.getNameByCode(lottery.getCategory()));
         res.setSubCategory(lottery.getSubCategory());
         
         // 價格相關
         res.setPricePerDraw(lottery.getPricePerDraw());
+        res.setCurrentPrice(lottery.getPricePerDraw()); // ✅ 加上當前價格
         res.setDiscountedPrice(lottery.getDiscountedPrice());
         res.setAutoDiscountEnabled(lottery.getAutoDiscountEnabled() != null && lottery.getAutoDiscountEnabled() == 1);
         res.setDiscountTriggered(false); // 需要額外計算邏輯
@@ -938,7 +952,10 @@ public class LotteryServiceImpl implements LotteryService {
                 res.setMultiDrawOptions(options);
             } catch (Exception e) {
                 log.warn("⚠️ 解析多抽選項失敗: {}", lottery.getMultiDrawOptions());
+                res.setMultiDrawOptions(List.of()); // ✅ 設定空列表而非 null
             }
+        } else {
+            res.setMultiDrawOptions(List.of()); // ✅ 設定空列表而非 null
         }
         
         // 時間相關
@@ -951,10 +968,11 @@ public class LotteryServiceImpl implements LotteryService {
         res.setMaxDraws(lottery.getMaxDraws() != null ? lottery.getMaxDraws() : 0);
         res.setRemainingDraws(calculateRemainingDraws(lottery));
         
-        // 狀態與排序
+        // ✅ 狀態與排序（加上中文名稱）
         res.setStatus(lottery.getStatus());
-        res.setOrderNum(lottery.getOrderNum());
-        res.setWeight(lottery.getWeight());
+        res.setStatusName(LotteryStatusEnum.getNameByCode(lottery.getStatus()));
+        res.setOrderNum(lottery.getOrderNum() != null ? lottery.getOrderNum() : 0);
+        res.setWeight(lottery.getWeight() != null ? lottery.getWeight() : 0);
         
         // 系統欄位
         res.setCreatedBy(lottery.getCreatedBy());
@@ -962,10 +980,9 @@ public class LotteryServiceImpl implements LotteryService {
         res.setUpdatedAt(lottery.getUpdatedAt());
         res.setRemark(lottery.getRemark());
         
-        // 獎項統計（需要查詢 lottery_prize 表）
-        // TODO: 如果需要顯示獎項統計，需要額外查詢
-        // res.setTotalPrizes(calculateTotalPrizes(lottery.getId()));
-        // res.setRemainingPrizes(calculateRemainingPrizes(lottery.getId()));
+        // ✅ 獎項統計
+        res.setTotalPrizes(sumQuantityByLotteryId(lottery.getId()));
+        res.setRemainingPrizes(sumRemainingByLotteryId(lottery.getId()));
         
         return res;
     }
@@ -980,4 +997,127 @@ public class LotteryServiceImpl implements LotteryService {
         int totalDraws = lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0;
         return Math.max(0, lottery.getMaxDraws() - totalDraws);
     }
+    
+    // ==================== 複製商品功能 ====================
+    
+    @Override
+    @Transactional
+    public LotteryRes copyLottery(String sourceLotteryId, String newTitle, Boolean regenerateTickets, String newStatus) {
+        log.info("🔄 開始複製商品: sourceLotteryId={}, newTitle={}, regenerateTickets={}, newStatus={}", 
+                 sourceLotteryId, newTitle, regenerateTickets, newStatus);
+        
+        // 1. 查詢來源商品
+        Lottery sourceLottery = lotteryMapper.selectByPrimaryKey(sourceLotteryId);
+        if (sourceLottery == null) {
+            log.error("❌ 來源商品不存在: sourceLotteryId={}", sourceLotteryId);
+            throw new BusinessException("LOTTERY_NOT_FOUND", "來源商品不存在");
+        }
+        
+        // 2. 複製 Lottery 主表
+        Lottery newLottery = new Lottery();
+        String newLotteryId = UUID.randomUUID().toString();
+        
+        newLottery.setId(newLotteryId);
+        newLottery.setStoreId(sourceLottery.getStoreId());
+        
+        // 標題處理：若沒提供新標題，自動加上「（複製）」後綴
+        if (newTitle != null && !newTitle.isEmpty()) {
+            newLottery.setTitle(newTitle);
+        } else {
+            newLottery.setTitle(sourceLottery.getTitle() + "（複製）");
+        }
+        
+        newLottery.setImageUrl(sourceLottery.getImageUrl());
+        newLottery.setCategory(sourceLottery.getCategory());
+        newLottery.setSubCategory(sourceLottery.getSubCategory());
+        newLottery.setGameMode(sourceLottery.getGameMode());
+        newLottery.setPricePerDraw(sourceLottery.getPricePerDraw());
+        newLottery.setDiscountedPrice(sourceLottery.getDiscountedPrice());
+        newLottery.setAutoDiscountEnabled(sourceLottery.getAutoDiscountEnabled());
+        newLottery.setAllowMultiDraw(sourceLottery.getAllowMultiDraw());
+        newLottery.setMultiDrawOptions(sourceLottery.getMultiDrawOptions());
+        newLottery.setScheduledAt(sourceLottery.getScheduledAt());
+        newLottery.setStartTime(sourceLottery.getStartTime());
+        newLottery.setEndTime(sourceLottery.getEndTime());
+        
+        // ✅ 抽數相關：重置為 0
+        newLottery.setTotalDraws(0);
+        newLottery.setMaxDraws(sourceLottery.getMaxDraws());
+        newLottery.setProtectionDraws(sourceLottery.getProtectionDraws());
+        newLottery.setProtectionMinutes(sourceLottery.getProtectionMinutes());
+        newLottery.setFreeDrawEnabled(sourceLottery.getFreeDrawEnabled());
+        newLottery.setDesignatedPrizeNumbers(sourceLottery.getDesignatedPrizeNumbers());
+        
+        // ✅ 籤號生成標記：根據參數決定
+        if (regenerateTickets != null && regenerateTickets) {
+            newLottery.setTicketsGenerated((byte) 0); // 需要重新生成
+        } else {
+            newLottery.setTicketsGenerated(sourceLottery.getTicketsGenerated());
+        }
+        
+        // ✅ 狀態：預設 OFF_SHELF，避免立即上架
+        if (newStatus != null && !newStatus.isEmpty()) {
+            newLottery.setStatus(newStatus);
+        } else {
+            newLottery.setStatus("OFF_SHELF");
+        }
+        
+        newLottery.setOrderNum(sourceLottery.getOrderNum());
+        newLottery.setWeight(sourceLottery.getWeight());
+        newLottery.setCreatedBy(sourceLottery.getCreatedBy());
+        newLottery.setCreatedAt(LocalDateTime.now());
+        newLottery.setUpdatedAt(LocalDateTime.now());
+        newLottery.setDescription(sourceLottery.getDescription());
+        newLottery.setRemark("複製自商品：" + sourceLottery.getTitle());
+        
+        lotteryMapper.insert(newLottery);
+        log.info("✅ Lottery 主表複製完成: newLotteryId={}", newLotteryId);
+        
+        // 3. 複製所有 LotteryPrize（獎項）
+        LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+        prizeExample.createCriteria().andLotteryIdEqualTo(sourceLotteryId);
+        List<LotteryPrize> sourcePrizes = lotteryPrizeMapper.selectByExample(prizeExample);
+        
+        if (sourcePrizes != null && !sourcePrizes.isEmpty()) {
+            for (LotteryPrize sourcePrize : sourcePrizes) {
+                LotteryPrize newPrize = new LotteryPrize();
+                
+                newPrize.setId(UUID.randomUUID().toString());
+                newPrize.setLotteryId(newLotteryId); // ✅ 關聯到新商品
+                newPrize.setName(sourcePrize.getName());
+                newPrize.setImageUrl(sourcePrize.getImageUrl());
+                newPrize.setLevel(sourcePrize.getLevel());
+                newPrize.setPrizeNumber(sourcePrize.getPrizeNumber());
+                newPrize.setQuantity(sourcePrize.getQuantity());
+                newPrize.setRemaining(sourcePrize.getQuantity()); // ✅ 重置為原始數量
+                newPrize.setWeight(sourcePrize.getWeight());
+                newPrize.setPrizeType(sourcePrize.getPrizeType());
+                newPrize.setPointValue(sourcePrize.getPointValue());
+                newPrize.setIsLastPrize(sourcePrize.getIsLastPrize());
+                newPrize.setIsGrandPrize(sourcePrize.getIsGrandPrize());
+                newPrize.setOrderNum(sourcePrize.getOrderNum());
+                newPrize.setCreatedAt(LocalDateTime.now());
+                newPrize.setUpdatedAt(LocalDateTime.now());
+                newPrize.setDescription(sourcePrize.getDescription());
+                
+                lotteryPrizeMapper.insert(newPrize);
+            }
+            
+            log.info("✅ LotteryPrize 複製完成: 共複製 {} 個獎項", sourcePrizes.size());
+        } else {
+            log.warn("⚠️ 來源商品沒有獎項資料");
+        }
+        
+        // 4. 如果需要重新生成籤號，這裡可以呼叫籤號生成邏輯
+        // （預留，目前先不實作，等待籤號系統完整後再補）
+        if (regenerateTickets != null && regenerateTickets) {
+            log.info("ℹ️ 需要重新生成籤號（待實作）");
+            // TODO: 呼叫 LotteryTicketService.generateTickets(newLotteryId)
+        }
+        
+        log.info("🎉 商品複製完成: newLotteryId={}, newTitle={}", newLotteryId, newLottery.getTitle());
+        
+        return convertToResNew(newLottery);
+    }
 }
+

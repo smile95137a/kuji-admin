@@ -87,7 +87,22 @@
         <table tableName="order" domainObjectName="Order" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
+        <table tableName="order_item" domainObjectName="OrderItem" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="order_status_log" domainObjectName="OrderStatusLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
         <table tableName="point_log" domainObjectName="PointLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="prize_box" domainObjectName="PrizeBox" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="recharge_plan" domainObjectName="RechargePlan" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="recharge_record" domainObjectName="RechargeRecord" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="refresh_token" domainObjectName="RefreshToken" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
@@ -106,6 +121,12 @@
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="user" domainObjectName="User" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="user_wallet" domainObjectName="UserWallet" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="wallet_transaction" domainObjectName="WalletTransaction" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
 

@@ -218,4 +218,20 @@ public interface LotteryService {
      * @return 更新後的商品
      */
     LotteryRes updateStatus(String id, String status);
+    
+    /**
+     * 複製商品（完整複製）
+     * 
+     * 複製內容包含：
+     * - Lottery 主表資料（產生新 ID、更新標題）
+     * - 所有 LotteryPrize（獎項）
+     * - 可選擇是否重新生成籤號
+     * 
+     * @param sourceLotteryId 來源商品 ID
+     * @param newTitle 新商品標題（選填）
+     * @param regenerateTickets 是否重新生成籤號
+     * @param newStatus 新商品狀態（選填，預設 OFF_SHELF）
+     * @return 複製後的商品
+     */
+    LotteryRes copyLottery(String sourceLotteryId, String newTitle, Boolean regenerateTickets, String newStatus);
 }
