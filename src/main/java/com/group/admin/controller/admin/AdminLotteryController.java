@@ -65,9 +65,12 @@ public class AdminLotteryController {
         
         String userId = SecurityUtils.getCurrentUserId();
         boolean isAdmin = SecurityUtils.isAdmin();
+        boolean isStoreOwner = SecurityUtils.isStoreOwner();
+        boolean isStoreEditor = SecurityUtils.isStoreEditor();
         
-        log.info("🔍 查詢商品列表: userId={}, isAdmin={}, condition={}", 
-                 userId, isAdmin, req);
+        log.info("🔍 查詢商品列表: userId={}, isAdmin={}, isStoreOwner={}, isStoreEditor={}", 
+                 userId, isAdmin, isStoreOwner, isStoreEditor);
+        log.info("🔍 請求條件: {}", req);
         
         // 非 Admin 需要過濾店家
         if (!isAdmin) {
@@ -89,6 +92,8 @@ public class AdminLotteryController {
                 req.getCondition().setStoreId(storeId);
                 
                 log.info("🔒 過濾店家: storeId={}", storeId);
+            } else {
+                log.warn("⚠️ 使用者沒有關聯任何店家: userId={}", userId);
             }
         } else {
             log.info("👑 Admin 可查看所有店家的商品");

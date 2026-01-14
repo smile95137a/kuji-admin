@@ -250,23 +250,28 @@ public class WalletServiceImpl implements WalletService {
         WalletTransactionExample.Criteria criteria = example.createCriteria();
         
         if (condition != null) {
-            if (condition.getUserId() != null) {
+            if (condition.getUserId() != null && !condition.getUserId().isEmpty()) {
                 criteria.andUserIdEqualTo(condition.getUserId());
             }
-            if (condition.getTransactionType() != null) {
+            if (condition.getTransactionType() != null && !condition.getTransactionType().isEmpty()) {
                 criteria.andTransactionTypeEqualTo(condition.getTransactionType());
             }
-            if (condition.getCoinType() != null) {
+            if (condition.getCoinType() != null && !condition.getCoinType().isEmpty()) {
                 criteria.andCoinTypeEqualTo(condition.getCoinType());
             }
-            if (condition.getRelatedId() != null) {
+            if (condition.getRelatedId() != null && !condition.getRelatedId().isEmpty()) {
                 criteria.andRelatedIdEqualTo(condition.getRelatedId());
             }
+            // 日期範圍（LocalDate 轉 LocalDateTime）
             if (condition.getCreatedAtStart() != null) {
-                criteria.andCreatedAtGreaterThanOrEqualTo(condition.getCreatedAtStart());
+                criteria.andCreatedAtGreaterThanOrEqualTo(
+                    condition.getCreatedAtStart().atStartOfDay()
+                );
             }
             if (condition.getCreatedAtEnd() != null) {
-                criteria.andCreatedAtLessThanOrEqualTo(condition.getCreatedAtEnd());
+                criteria.andCreatedAtLessThanOrEqualTo(
+                    condition.getCreatedAtEnd().atTime(23, 59, 59)
+                );
             }
         }
         

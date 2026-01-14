@@ -721,50 +721,69 @@ public class LotteryServiceImpl implements LotteryService {
         LotteryExample example = new LotteryExample();
         LotteryExample.Criteria criteria = example.createCriteria();
         
-        // ✅ 所有條件都是可選的
+        // ✅ 所有條件都是可選的（空字串視為 null）
         if (condition != null) {
-            if (condition.getStoreId() != null) {
+            // storeId：空字串視為 null（不過濾店家）
+            if (isNotBlank(condition.getStoreId())) {
                 criteria.andStoreIdEqualTo(condition.getStoreId());
+                log.info("🔍 過濾店家: {}", condition.getStoreId());
+            } else {
+                log.info("🔍 不過濾店家（查詢所有）");
             }
-            if (condition.getTitle() != null && !condition.getTitle().isEmpty()) {
+            
+            // title：模糊查詢
+            if (isNotBlank(condition.getTitle())) {
                 criteria.andTitleLike("%" + condition.getTitle() + "%");
             }
-            if (condition.getStatus() != null) {
+            
+            // status：精確匹配
+            if (isNotBlank(condition.getStatus())) {
                 criteria.andStatusEqualTo(condition.getStatus());
             }
-            if (condition.getCategory() != null) {
+            
+            // category：精確匹配
+            if (isNotBlank(condition.getCategory())) {
                 criteria.andCategoryEqualTo(condition.getCategory());
             }
+            
+            // 價格範圍
             if (condition.getPriceMin() != null) {
                 criteria.andPricePerDrawGreaterThanOrEqualTo(condition.getPriceMin());
             }
             if (condition.getPriceMax() != null) {
                 criteria.andPricePerDrawLessThanOrEqualTo(condition.getPriceMax());
             }
-            // totalQuantity 欄位可能不存在，先註解掉
-            // if (condition.getTotalQuantityMin() != null) {
-            //     criteria.andTotalQuantityGreaterThanOrEqualTo(condition.getTotalQuantityMin());
-            // }
-            // if (condition.getTotalQuantityMax() != null) {
-            //     criteria.andTotalQuantityLessThanOrEqualTo(condition.getTotalQuantityMax());
-            // }
+            
+            // 日期範圍（LocalDate 轉 LocalDateTime）
             if (condition.getCreatedAtStart() != null) {
-                criteria.andCreatedAtGreaterThanOrEqualTo(condition.getCreatedAtStart());
+                criteria.andCreatedAtGreaterThanOrEqualTo(
+                    condition.getCreatedAtStart().atStartOfDay()
+                );
             }
             if (condition.getCreatedAtEnd() != null) {
-                criteria.andCreatedAtLessThanOrEqualTo(condition.getCreatedAtEnd());
+                criteria.andCreatedAtLessThanOrEqualTo(
+                    condition.getCreatedAtEnd().atTime(23, 59, 59)
+                );
             }
-            if (condition.getKeyword() != null && !condition.getKeyword().isEmpty()) {
+            
+            // keyword：模糊查詢
+            if (isNotBlank(condition.getKeyword())) {
                 criteria.andTitleLike("%" + condition.getKeyword() + "%");
             }
         }
         
         // 排序
-        if (req != null && req.getSortBy() != null) {
-            String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
+        if (req != null && isNotBlank(req.getSortBy())) {
+            String order = isNotBlank(req.getSortOrder()) ? req.getSortOrder() : "ASC";
             example.setOrderByClause(req.getSortBy() + " " + order);
         } else {
-            example.setOrderByClause("created_at DESC");
+            // ✅ Admin 查詢時預設按 store_id ASC, created_at DESC 排序
+            // 這樣同一店家的商品會排在一起，最新的在前面
+            if (condition == null || !isNotBlank(condition.getStoreId())) {
+                example.setOrderByClause("store_id ASC, created_at DESC");
+            } else {
+                example.setOrderByClause("created_at DESC");
+            }
         }
         
         // ✅ 查詢全部資料（前端做分頁）
@@ -984,6 +1003,15 @@ public class LotteryServiceImpl implements LotteryService {
         res.setTotalPrizes(sumQuantityByLotteryId(lottery.getId()));
         res.setRemainingPrizes(sumRemainingByLotteryId(lottery.getId()));
         
+        // ✅ 新增欄位（前台商品詳情需要）
+        res.setProtectionDraws(lottery.getProtectionDraws());
+        res.setProtectionMinutes(lottery.getProtectionMinutes());
+        res.setContent(lottery.getDescription()); // content 使用 description 欄位
+        res.setGameMode(lottery.getGameMode());
+        res.setFreeDrawEnabled(lottery.getFreeDrawEnabled() != null && lottery.getFreeDrawEnabled() == 1);
+        res.setDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers());
+        res.setTicketsGenerated(lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1);
+        
         return res;
     }
     
@@ -1119,5 +1147,17 @@ public class LotteryServiceImpl implements LotteryService {
         
         return convertToResNew(newLottery);
     }
+    
+    // ==================== 輔助方法 ====================
+    
+    /**
+     * 判斷字串是否非空白
+     * 空字串 "" 視為空白
+     * 
+     * @param str 字串
+     * @return 是否非空白
+     */
+    private boolean isNotBlank(String str) {
+        return str != null && !str.trim().isEmpty();
+    }
 }
-

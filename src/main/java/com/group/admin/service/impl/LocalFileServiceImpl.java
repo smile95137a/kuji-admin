@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.group.admin.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,15 +17,17 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 本地檔案上傳 Service 實作（暫時替代 S3）
+ * 本地檔案上傳 Service 實作（開發環境使用）
  * 
  * <p>將檔案儲存在本地 static/img 目錄，供前端透過 /img/** 存取</p>
+ * <p>僅在 local profile 啟用（需要手動指定 -Dspring.profiles.active=local）</p>
  * 
  * @author KUJI System
  * @since 1.0.0
  */
 @Slf4j
 @Service
+@Profile("local")
 public class LocalFileServiceImpl implements S3Service {
 
     @Value("${file.upload.base-path:src/main/resources/static/img}")

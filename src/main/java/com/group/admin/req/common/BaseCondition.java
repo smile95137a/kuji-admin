@@ -1,8 +1,9 @@
 package com.group.admin.req.common;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * 通用查詢條件基礎類別
@@ -16,13 +17,17 @@ public abstract class BaseCondition {
     
     /**
      * 建立時間（起）
+     * 支援格式：yyyy-MM-dd
      */
-    private LocalDateTime createdAtStart;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate createdAtStart;
     
     /**
      * 建立時間（迄）
+     * 支援格式：yyyy-MM-dd
      */
-    private LocalDateTime createdAtEnd;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate createdAtEnd;
     
     /**
      * 關鍵字搜尋（模糊查詢）

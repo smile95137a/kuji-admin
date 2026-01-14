@@ -1,5 +1,7 @@
 package com.group.admin.service;
 
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.recharge.RechargePlanCondition;
 import com.group.admin.req.recharge.RechargePlanCreateReq;
 import com.group.admin.req.recharge.RechargePlanUpdateReq;
 import com.group.admin.res.wallet.RechargePlanRes;
@@ -60,4 +62,12 @@ public interface RechargePlanService {
      * @return 方案詳情
      */
     RechargePlanRes getPlanDetail(String id);
+    
+    /**
+     * 查詢儲值方案列表（支援條件查詢）
+     * 
+     * @param req 查詢請求
+     * @return 方案列表
+     */
+    List<RechargePlanRes> queryPlans(QueryReq<RechargePlanCondition> req);
 }

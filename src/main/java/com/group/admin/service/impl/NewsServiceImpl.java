@@ -59,12 +59,16 @@ public class NewsServiceImpl implements NewsService {
                 criteria.andStatusEqualTo(condition.getStatus());
             }
             
-            // 建立時間範圍
+            // 日期範圍（LocalDate 轉 LocalDateTime）
             if (condition.getCreatedAtStart() != null) {
-                criteria.andCreatedAtGreaterThanOrEqualTo(condition.getCreatedAtStart());
+                criteria.andCreatedAtGreaterThanOrEqualTo(
+                    condition.getCreatedAtStart().atStartOfDay()
+                );
             }
             if (condition.getCreatedAtEnd() != null) {
-                criteria.andCreatedAtLessThanOrEqualTo(condition.getCreatedAtEnd());
+                criteria.andCreatedAtLessThanOrEqualTo(
+                    condition.getCreatedAtEnd().atTime(23, 59, 59)
+                );
             }
             
             // 關鍵字搜尋（僅搜尋標題）

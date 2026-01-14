@@ -98,26 +98,8 @@ public class AdminFrontendUserController {
         return ResponseEntity.ok(result);
     }
     
-    /**
-     * 軟刪除會員
-     * 
-     * ⚠️ 不是真的刪除，只是標記為 DELETED
-     * 
-     * @param id 會員 ID
-     * @return 成功訊息
-     */
-    @DeleteMapping("/{id:[a-f0-9\\-]{36}}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
-    @Operation(summary = "刪除會員", description = "軟刪除會員（標記為已刪除）")
-    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
-        
-        log.info("🗑️ 刪除會員: userId={}", id);
-        
-        frontendUserService.deleteUser(id);
-        
-        log.info("✅ 刪除成功");
-        return ResponseEntity.noContent().build();
-    }
+    // ❌ 已移除 deleteUser 方法，只保留停用功能
+    // 若需要刪除會員，請使用停用功能
     
     /**
      * 啟用會員

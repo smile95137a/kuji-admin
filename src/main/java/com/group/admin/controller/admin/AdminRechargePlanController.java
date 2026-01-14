@@ -1,5 +1,7 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.recharge.RechargePlanCondition;
 import com.group.admin.req.recharge.RechargePlanCreateReq;
 import com.group.admin.req.recharge.RechargePlanUpdateReq;
 import com.group.admin.res.wallet.RechargePlanRes;
@@ -67,6 +69,19 @@ public class AdminRechargePlanController {
     public ResponseEntity<List<RechargePlanRes>> getAllPlans() {
         log.info("🔍 [Admin] 查詢所有儲值方案");
         List<RechargePlanRes> plans = rechargePlanService.getAllPlans();
+        return ResponseEntity.ok(plans);
+    }
+    
+    /**
+     * 查詢儲值方案（支援條件查詢）
+     * 
+     * 可選條件：name（名稱模糊）、isActive、amountMin、amountMax
+     */
+    @PostMapping("/query")
+    public ResponseEntity<List<RechargePlanRes>> queryPlans(
+            @RequestBody(required = false) QueryReq<RechargePlanCondition> req) {
+        log.info("🔍 [Admin] 查詢儲值方案（條件查詢）: {}", req);
+        List<RechargePlanRes> plans = rechargePlanService.queryPlans(req);
         return ResponseEntity.ok(plans);
     }
     

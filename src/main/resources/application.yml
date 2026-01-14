@@ -2,7 +2,8 @@ spring:
   application:
     name: admin
 
-  # 預設 Profile
+  # 預設 Profile - 開發環境（本地開發）
+  # 正式部署時使用 -Dspring.profiles.active=prod
   profiles:
     active: dev
 
@@ -18,10 +19,41 @@ spring:
     time-zone: Asia/Taipei
     date-format: yyyy-MM-dd HH:mm:ss
 
+  # 郵件設定（Gmail SMTP）
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME:}
+    password: ${GMAIL_APP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
 server:
   port: 8080
   servlet:
     context-path: /api
+
+# Actuator 配置（健康檢查端點）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info  # 只開放 health 和 info 端點
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized  # 只有認證用戶才能看詳細資訊
+  health:
+    defaults:
+      enabled: true
 
 logging:
   level:
@@ -33,3 +65,8 @@ file:
   upload:
     base-path: src/main/resources/static/img  # 檔案儲存路徑
     base-url: http://localhost:8080           # 前端存取的 base URL
+
+# 應用程式設定
+app:
+  name: KUJI 一番賞
+  frontend-url: http://localhost:3000

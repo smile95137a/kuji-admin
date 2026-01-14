@@ -63,11 +63,16 @@ public class FrontendUserServiceImpl implements FrontendUserService {
             if (condition.getGoldCoinsMax() != null) {
                 criteria.andGoldCoinsLessThanOrEqualTo(condition.getGoldCoinsMax());
             }
+            // 日期範圍（LocalDate 轉 LocalDateTime）
             if (condition.getCreatedAtStart() != null) {
-                criteria.andCreatedAtGreaterThanOrEqualTo(condition.getCreatedAtStart());
+                criteria.andCreatedAtGreaterThanOrEqualTo(
+                    condition.getCreatedAtStart().atStartOfDay()
+                );
             }
             if (condition.getCreatedAtEnd() != null) {
-                criteria.andCreatedAtLessThanOrEqualTo(condition.getCreatedAtEnd());
+                criteria.andCreatedAtLessThanOrEqualTo(
+                    condition.getCreatedAtEnd().atTime(23, 59, 59)
+                );
             }
             if (condition.getKeyword() != null && !condition.getKeyword().isEmpty()) {
                 // 關鍵字搜尋：Email 或暱稱

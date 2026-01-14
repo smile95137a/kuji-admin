@@ -4,6 +4,8 @@ import com.group.admin.entity.RechargePlan;
 import com.group.admin.example.RechargePlanExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.RechargePlanMapper;
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.recharge.RechargePlanCondition;
 import com.group.admin.req.recharge.RechargePlanCreateReq;
 import com.group.admin.req.recharge.RechargePlanUpdateReq;
 import com.group.admin.res.wallet.RechargePlanRes;
@@ -133,7 +135,8 @@ public class RechargePlanServiceImpl implements RechargePlanService {
     public List<RechargePlanRes> getAllPlans() {
         RechargePlanExample example = new RechargePlanExample();
         example.createCriteria().andDeletedAtIsNull();
-        example.setOrderByClause("order_num ASC, created_at DESC");
+        // ✅ 修正排序：按 order_num ASC，若相同則按 created_at ASC（先建立的排前面）
+        example.setOrderByClause("order_num ASC, created_at ASC");
         
         List<RechargePlan> plans = rechargePlanMapper.selectByExample(example);
         return plans.stream().map(this::convertToRes).collect(Collectors.toList());
@@ -146,6 +149,61 @@ public class RechargePlanServiceImpl implements RechargePlanService {
             throw new BusinessException("儲值方案不存在");
         }
         return convertToRes(plan);
+    }
+    
+    @Override
+    public List<RechargePlanRes> queryPlans(QueryReq<RechargePlanCondition> req) {
+        log.info("🔍 查詢儲值方案列表: {}", req);
+        
+        RechargePlanCondition condition = req != null ? req.getCondition() : null;
+        
+        RechargePlanExample example = new RechargePlanExample();
+        RechargePlanExample.Criteria criteria = example.createCriteria();
+        
+        // ✅ 排除已刪除的方案
+        criteria.andDeletedAtIsNull();
+        
+        // ✅ 所有條件都是可選的
+        if (condition != null) {
+            if (condition.getName() != null && !condition.getName().isEmpty()) {
+                criteria.andNameLike("%" + condition.getName() + "%");
+            }
+            if (condition.getIsActive() != null) {
+                criteria.andIsActiveEqualTo(condition.getIsActive() ? (byte) 1 : (byte) 0);
+            }
+            if (condition.getAmountMin() != null) {
+                criteria.andAmountGreaterThanOrEqualTo(condition.getAmountMin());
+            }
+            if (condition.getAmountMax() != null) {
+                criteria.andAmountLessThanOrEqualTo(condition.getAmountMax());
+            }
+            // 日期範圍（LocalDate 轉 LocalDateTime）
+            if (condition.getCreatedAtStart() != null) {
+                criteria.andCreatedAtGreaterThanOrEqualTo(
+                    condition.getCreatedAtStart().atStartOfDay()
+                );
+            }
+            if (condition.getCreatedAtEnd() != null) {
+                criteria.andCreatedAtLessThanOrEqualTo(
+                    condition.getCreatedAtEnd().atTime(23, 59, 59)
+                );
+            }
+        }
+        
+        // 排序
+        if (req != null && req.getSortBy() != null) {
+            String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
+            example.setOrderByClause(req.getSortBy() + " " + order);
+        } else {
+            // ✅ 預設按 order_num ASC, created_at ASC 排序（先建立的排前面）
+            example.setOrderByClause("order_num ASC, created_at ASC");
+        }
+        
+        List<RechargePlan> plans = rechargePlanMapper.selectByExample(example);
+        
+        log.info("✅ 查詢成功: 共 {} 筆", plans.size());
+        
+        return plans.stream().map(this::convertToRes).collect(Collectors.toList());
     }
     
     /**

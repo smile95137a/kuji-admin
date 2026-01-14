@@ -33,8 +33,7 @@ public class WalletAdjustReq {
     private Long amount;
     
     /**
-     * 調整原因（必填，供後續查核）
+     * 調整原因（選填，供後續查核）
      */
-    @NotBlank(message = "調整原因不可為空")
     private String reason;
 }

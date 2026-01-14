@@ -207,4 +207,48 @@ public class LotteryRes {
      */
     @Schema(description = "剩餘獎項數量", example = "55")
     private Integer remainingPrizes;
+    
+    // ==================== 新增欄位（前台商品詳情需要）====================
+    
+    /**
+     * 保護抽數（大獎保底機制）
+     */
+    @Schema(description = "保護抽數（幾抽內必出大獎）", example = "50")
+    private Integer protectionDraws;
+    
+    /**
+     * 保護時間（分鐘）
+     */
+    @Schema(description = "保護時間（分鐘，搶購保護）", example = "10")
+    private Integer protectionMinutes;
+    
+    /**
+     * 商品內容詳情（CKEditor 富文本內容）
+     */
+    @Schema(description = "商品內容詳情（HTML 格式）", example = "<p>商品詳細說明...</p>")
+    private String content;
+    
+    /**
+     * 遊戲模式
+     */
+    @Schema(description = "遊戲模式", example = "NORMAL")
+    private String gameMode;
+    
+    /**
+     * 是否啟用免費抽
+     */
+    @Schema(description = "是否啟用免費抽", example = "false")
+    private Boolean freeDrawEnabled;
+    
+    /**
+     * 指定號碼（籤況顯示用）
+     */
+    @Schema(description = "指定號碼（逗號分隔）", example = "1,5,10,15")
+    private String designatedPrizeNumbers;
+    
+    /**
+     * 是否已生成抽籤號碼
+     */
+    @Schema(description = "是否已生成抽籤號碼", example = "true")
+    private Boolean ticketsGenerated;
 }

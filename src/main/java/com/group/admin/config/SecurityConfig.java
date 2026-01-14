@@ -81,6 +81,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 登入、註冊、OAuth 不需要認證
                         .requestMatchers("/api/auth/**", "/login/oauth2/**").permitAll()
+                        // 公開 API（不需要認證）
+                        .requestMatchers("/api/district/**").permitAll()  // 行政區資料
+                        .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
+                        .requestMatchers("/api/ws/**").permitAll()        // WebSocket
                         // 其他 /api/** 需要 USER 或後台管理角色
                         .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )
@@ -107,6 +111,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Actuator 健康檢查端點（公開）
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Swagger 相關路徑
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .anyRequest().permitAll()

@@ -19,6 +19,7 @@ import com.group.admin.req.AuthGoogleReq;
 import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
 import com.group.admin.res.AuthRes;
+import com.group.admin.service.ReferralCodeService;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
 
@@ -40,6 +41,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final ReferralCodeService referralCodeService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${google.client-id:}")
@@ -63,11 +65,31 @@ public class UserServiceImpl implements UserService {
         user.setBonusCoins(0L);
         user.setStatus("ACTIVE");
         user.setEmailVerified((byte) 0);
+        // ✅ 新增支援手機號碼和頭像
+        user.setPhoneNumber(req.getPhoneNumber());
+        user.setAvatar(req.getAvatar());
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
         userMapper.insert(user);
         log.info("新使用者註冊成功: {}, provider: EMAIL", user.getEmail());
+        
+        // ✅ 處理推薦碼（如果有提供）
+        if (req.getReferralCode() != null && !req.getReferralCode().trim().isEmpty()) {
+            log.info("🎁 處理推薦碼: {}", req.getReferralCode());
+            try {
+                boolean used = referralCodeService.useCode(user.getId(), req.getReferralCode().trim());
+                if (used) {
+                    log.info("✅ 推薦碼使用成功: userId={}, code={}", user.getId(), req.getReferralCode());
+                } else {
+                    log.warn("⚠️ 推薦碼無效或已停用: {}", req.getReferralCode());
+                }
+            } catch (Exception e) {
+                // 推薦碼處理失敗不影響註冊
+                log.warn("⚠️ 推薦碼處理失敗: {}", e.getMessage());
+            }
+        }
+        
         return user;
     }
 
@@ -76,6 +98,17 @@ public class UserServiceImpl implements UserService {
         User user = findByEmail(req.getEmail());
         if (user == null) {
             throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        // ✅ 檢查會員狀態（停用或刪除的會員不能登入）
+        if ("INACTIVE".equals(user.getStatus())) {
+            throw new IllegalArgumentException("帳號已被停用，請聯繫客服");
+        }
+        if ("DELETED".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+        if ("SUSPENDED".equals(user.getStatus())) {
+            throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
         }
 
         // 檢查是否為 OAuth 用戶（沒有密碼或 provider 不是 EMAIL）
@@ -147,6 +180,17 @@ public class UserServiceImpl implements UserService {
                 userMapper.insert(user);
                 log.info("Google OAuth 新用戶註冊: {}", email);
             } else {
+                // ✅ 檢查會員狀態（停用或刪除的會員不能登入）
+                if ("INACTIVE".equals(user.getStatus())) {
+                    throw new IllegalArgumentException("帳號已被停用，請聯繫客服");
+                }
+                if ("DELETED".equals(user.getStatus())) {
+                    throw new IllegalArgumentException("帳號不存在");
+                }
+                if ("SUSPENDED".equals(user.getStatus())) {
+                    throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
+                }
+
                 // 已存在用戶
                 if ("EMAIL".equals(user.getProvider())) {
                     // 如果是本地帳號，可以選擇綁定 Google 或拒絕
