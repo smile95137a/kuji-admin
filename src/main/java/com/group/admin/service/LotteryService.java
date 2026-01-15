@@ -234,4 +234,53 @@ public interface LotteryService {
      * @return 複製後的商品
      */
     LotteryRes copyLottery(String sourceLotteryId, String newTitle, Boolean regenerateTickets, String newStatus);
+    
+    // ==================== 整合 API（商品+獎品一起操作）====================
+    
+    /**
+     * 建立商品並同時新增獎品列表
+     * 
+     * 一支 API 完成：
+     * 1. 建立商品（Lottery）
+     * 2. 批次新增獎品（LotteryPrize）
+     * 3. 返回完整資料（包含獎品列表）
+     * 
+     * @param req 商品與獎品整合建立請求
+     * @param operatorId 操作者 ID
+     * @return 商品與獎品完整資訊
+     */
+    com.group.admin.res.lottery.LotteryWithPrizesRes createLotteryWithPrizes(
+            com.group.admin.req.lottery.LotteryWithPrizesCreateReq req, 
+            String operatorId);
+    
+    /**
+     * 更新商品並同時更新獎品列表
+     * 
+     * 一支 API 完成：
+     * 1. 更新商品（Lottery）
+     * 2. 更新/新增獎品（LotteryPrize）
+     *    - 有 ID 的獎品 → 更新
+     *    - 沒有 ID 的獎品 → 新增
+     * 3. 返回完整資料（包含獎品列表）
+     * 
+     * @param req 商品與獎品整合更新請求
+     * @param operatorId 操作者 ID
+     * @return 商品與獎品完整資訊
+     */
+    com.group.admin.res.lottery.LotteryWithPrizesRes updateLotteryWithPrizes(
+            com.group.admin.req.lottery.LotteryWithPrizesUpdateReq req, 
+            String operatorId);
+    
+    /**
+     * 查詢商品詳情（包含獎品列表）
+     * 
+     * 一支 API 返回：
+     * - 商品基本資訊
+     * - 所有獎品列表
+     * - 統計資訊（總數量、剩餘數量、進度）
+     * 
+     * @param lotteryId 商品 ID
+     * @return 商品與獎品完整資訊
+     */
+    com.group.admin.res.lottery.LotteryWithPrizesRes getLotteryWithPrizes(String lotteryId);
 }

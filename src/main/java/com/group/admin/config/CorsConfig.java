@@ -47,36 +47,16 @@ public class CorsConfig {
         log.info("🔧 [CORS] Active Profile: {}", activeProfile);
         log.info("🔧 [CORS] Allowed Origins Config: {}", allowedOrigins);
         
-        // 依據環境設定允許的來源
-        if ("prod".equals(activeProfile)) {
-            // 生產環境：從配置讀取允許的域名
-            if (allowedOrigins != null && !allowedOrigins.isBlank()) {
-                List<String> origins = Arrays.asList(allowedOrigins.split(","));
-                config.setAllowedOrigins(origins);
-                log.info("🔧 [CORS] Prod - Using configured origins: {}", origins);
-            } else {
-                // 預設的生產環境域名（請替換為實際域名）
-                List<String> defaultOrigins = Arrays.asList(
-                    "https://kuji.com",
-                    "https://www.kuji.com",
-                    "https://admin.kuji.com",
-                    "http://18.179.187.129"
-                );
-                config.setAllowedOrigins(defaultOrigins);
-                log.info("🔧 [CORS] Prod - Using default origins: {}", defaultOrigins);
-            }
+        // 使用 AllowedOriginPatterns 而非 AllowedOrigins（支援 credentials）
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            List<String> origins = Arrays.asList(allowedOrigins.split(","));
+            // 使用 setAllowedOriginPatterns 以支援 credentials
+            config.setAllowedOriginPatterns(origins);
+            log.info("🔧 [CORS] Using configured origin patterns: {}", origins);
         } else {
-            // 開發環境
-            if (allowedOrigins != null && !allowedOrigins.isBlank()) {
-                // 如果有配置，使用配置的來源
-                List<String> origins = Arrays.asList(allowedOrigins.split(","));
-                config.setAllowedOrigins(origins);
-                log.info("🔧 [CORS] Dev - Using configured origins: {}", origins);
-            } else {
-                // 沒有配置則允許所有來源
-                config.addAllowedOriginPattern("*");
-                log.info("🔧 [CORS] Dev - Allowing all origins with pattern *");
-            }
+            // 預設允許所有來源（開發環境）
+            config.addAllowedOriginPattern("*");
+            log.info("🔧 [CORS] Allowing all origins with pattern *");
         }
         
         // 暴露的 Response Headers（前端可讀取）

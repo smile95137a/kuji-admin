@@ -213,6 +213,49 @@ public class WalletServiceImpl implements WalletService {
     
     @Override
     @Transactional
+    public void deductBonus(String userId, Long amount, String transactionType, String relatedId, String description) {
+        log.info("🔍 扣除紅利：userId={}, amount={}, type={}", userId, amount, transactionType);
+        
+        if (amount <= 0) {
+            throw new BusinessException("扣除金額必須大於 0");
+        }
+        
+        // 查詢錢包
+        UserWalletExample example = new UserWalletExample();
+        example.createCriteria().andUserIdEqualTo(userId);
+        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
+        
+        if (wallets.isEmpty()) {
+            throw new BusinessException("錢包不存在");
+        }
+        
+        UserWallet wallet = wallets.get(0);
+        
+        // 檢查餘額
+        if (wallet.getBonusCoins() < amount) {
+            throw new BusinessException("紅利點數不足");
+        }
+        
+        // 更新餘額
+        Long newBalance = wallet.getBonusCoins() - amount;
+        wallet.setBonusCoins(newBalance);
+        wallet.setVersion(wallet.getVersion() + 1);
+        wallet.setUpdatedAt(LocalDateTime.now());
+        
+        int rows = userWalletMapper.updateByPrimaryKey(wallet);
+        if (rows == 0) {
+            throw new BusinessException("點數扣除失敗，請重試");
+        }
+        
+        // 記錄交易（負數）
+        recordTransaction(userId, CoinTypeEnum.BONUS.getCode(), transactionType, 
+                -amount, newBalance, relatedId, description, null);
+        
+        log.info("✅ 紅利扣除成功：newBalance={}", newBalance);
+    }
+    
+    @Override
+    @Transactional
     public void adjustCoins(WalletAdjustReq req, String operatorId) {
         log.info("🔍 手動調整點數：userId={}, coinType={}, amount={}, operator={}", 
                 req.getUserId(), req.getCoinType(), req.getAmount(), operatorId);

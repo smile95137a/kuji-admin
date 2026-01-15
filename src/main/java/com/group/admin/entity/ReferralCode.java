@@ -2,49 +2,35 @@ package com.group.admin.entity;
 
 import java.time.LocalDateTime;
 
-/**
- * 推薦碼實體
- * 
- * @author KUJI System
- * @since 1.0.0
- */
 public class ReferralCode {
-    
     private String id;
-    
-    /**
-     * 推薦碼（唯一）
-     */
+
     private String code;
+
+    private String ownerId;
+
+    private String ownerType;
     
-    /**
-     * 所屬店家 ID
-     */
     private String storeId;
     
-    /**
-     * 推薦碼描述
-     */
     private String description;
-    
-    /**
-     * 是否啟用
-     */
-    private Byte isActive;
-    
-    /**
-     * 使用次數
-     */
+
+    private Long rewardGold;
+
+    private Long rewardBonus;
+
+    private Integer maxUsage;
+
     private Integer usedCount;
-    
-    /**
-     * 建立時間
-     */
+
+    private LocalDateTime validFrom;
+
+    private LocalDateTime validUntil;
+
+    private Boolean isActive;
+
     private LocalDateTime createdAt;
-    
-    /**
-     * 更新時間
-     */
+
     private LocalDateTime updatedAt;
 
     public String getId() {
@@ -63,6 +49,22 @@ public class ReferralCode {
         this.code = code == null ? null : code.trim();
     }
 
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId == null ? null : ownerId.trim();
+    }
+
+    public String getOwnerType() {
+        return ownerType;
+    }
+
+    public void setOwnerType(String ownerType) {
+        this.ownerType = ownerType == null ? null : ownerType.trim();
+    }
+    
     public String getStoreId() {
         return storeId;
     }
@@ -70,7 +72,7 @@ public class ReferralCode {
     public void setStoreId(String storeId) {
         this.storeId = storeId == null ? null : storeId.trim();
     }
-
+    
     public String getDescription() {
         return description;
     }
@@ -79,12 +81,28 @@ public class ReferralCode {
         this.description = description == null ? null : description.trim();
     }
 
-    public Byte getIsActive() {
-        return isActive;
+    public Long getRewardGold() {
+        return rewardGold;
     }
 
-    public void setIsActive(Byte isActive) {
-        this.isActive = isActive;
+    public void setRewardGold(Long rewardGold) {
+        this.rewardGold = rewardGold;
+    }
+
+    public Long getRewardBonus() {
+        return rewardBonus;
+    }
+
+    public void setRewardBonus(Long rewardBonus) {
+        this.rewardBonus = rewardBonus;
+    }
+
+    public Integer getMaxUsage() {
+        return maxUsage;
+    }
+
+    public void setMaxUsage(Integer maxUsage) {
+        this.maxUsage = maxUsage;
     }
 
     public Integer getUsedCount() {
@@ -93,6 +111,30 @@ public class ReferralCode {
 
     public void setUsedCount(Integer usedCount) {
         this.usedCount = usedCount;
+    }
+
+    public LocalDateTime getValidFrom() {
+        return validFrom;
+    }
+
+    public void setValidFrom(LocalDateTime validFrom) {
+        this.validFrom = validFrom;
+    }
+
+    public LocalDateTime getValidUntil() {
+        return validUntil;
+    }
+
+    public void setValidUntil(LocalDateTime validUntil) {
+        this.validUntil = validUntil;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 
     public LocalDateTime getCreatedAt() {

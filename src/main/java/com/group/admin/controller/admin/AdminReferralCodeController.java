@@ -160,6 +160,7 @@ public class AdminReferralCodeController {
      */
     @GetMapping("/validate/{code}")
     @Operation(summary = "驗證推薦碼", description = "驗證推薦碼是否有效")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     public ResponseEntity<Boolean> validateCode(@PathVariable String code) {
         log.info("✅ 驗證推薦碼: code={}", code);
         boolean valid = referralCodeService.validateCode(code);

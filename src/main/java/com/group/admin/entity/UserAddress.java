@@ -2,69 +2,31 @@ package com.group.admin.entity;
 
 import java.time.LocalDateTime;
 
-/**
- * 會員運送地址實體
- * 
- * @author KUJI System
- * @since 1.0.0
- */
 public class UserAddress {
-    
     private String id;
-    
-    /**
-     * 會員 ID
-     */
+
     private String userId;
     
-    /**
-     * 地址標籤（如：家、公司）
-     */
     private String label;
-    
-    /**
-     * 收件人姓名
-     */
+
     private String recipientName;
-    
-    /**
-     * 收件人電話
-     */
+
     private String recipientPhone;
+
+    private String postalCode;
     
-    /**
-     * 城市
-     */
-    private String city;
-    
-    /**
-     * 區域
-     */
-    private String district;
-    
-    /**
-     * 郵遞區號
-     */
     private String zipCode;
-    
-    /**
-     * 詳細地址
-     */
+
+    private String city;
+
+    private String district;
+
     private String address;
-    
-    /**
-     * 是否為預設地址
-     */
-    private Byte isDefault;
-    
-    /**
-     * 建立時間
-     */
+
+    private Boolean isDefault;
+
     private LocalDateTime createdAt;
-    
-    /**
-     * 更新時間
-     */
+
     private LocalDateTime updatedAt;
 
     public String getId() {
@@ -82,7 +44,7 @@ public class UserAddress {
     public void setUserId(String userId) {
         this.userId = userId == null ? null : userId.trim();
     }
-
+    
     public String getLabel() {
         return label;
     }
@@ -107,6 +69,22 @@ public class UserAddress {
         this.recipientPhone = recipientPhone == null ? null : recipientPhone.trim();
     }
 
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode == null ? null : postalCode.trim();
+    }
+    
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode == null ? null : zipCode.trim();
+    }
+
     public String getCity() {
         return city;
     }
@@ -123,14 +101,6 @@ public class UserAddress {
         this.district = district == null ? null : district.trim();
     }
 
-    public String getZipCode() {
-        return zipCode;
-    }
-
-    public void setZipCode(String zipCode) {
-        this.zipCode = zipCode == null ? null : zipCode.trim();
-    }
-
     public String getAddress() {
         return address;
     }
@@ -139,11 +109,11 @@ public class UserAddress {
         this.address = address == null ? null : address.trim();
     }
 
-    public Byte getIsDefault() {
+    public Boolean getIsDefault() {
         return isDefault;
     }
 
-    public void setIsDefault(Byte isDefault) {
+    public void setIsDefault(Boolean isDefault) {
         this.isDefault = isDefault;
     }
 

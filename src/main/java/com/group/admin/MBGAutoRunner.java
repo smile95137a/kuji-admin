@@ -43,9 +43,9 @@ public class MBGAutoRunner {
         System.out.println("=================================================");
         System.out.println("⚠️  執行前會清理舊的生成檔案，避免重複載入錯誤");
         System.out.println("=================================================\n");
-        String url = "jdbc:mysql://onekuji-lotery.cdi42o44miez.ap-northeast-1.rds.amazonaws.com:3306/kuji?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true";
+        String url = "jdbc:mysql://database-1.clsi2geo699r.ap-northeast-1.rds.amazonaws.com:3306/kuji?useSSL=true&serverTimezone=Asia/Taipei&characterEncoding=UTF-8";
         String user = "admin";
-        String password = "EASONlotery!!";
+        String password = "WUfan0667.";
         String schema = "kuji";
         String targetPackageEntity = "com.group.admin.entity";
         String targetPackageExample = "com.group.admin.example";

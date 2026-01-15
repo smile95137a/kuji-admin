@@ -40,6 +40,10 @@ jwt:
   secret: ${JWT_SECRET:KUJI_PRODUCTION_SECRET_KEY_2026_VERY_SECURE_DO_NOT_SHARE}
   expiration: 86400000  # 24 小時
 
+# 正式環境 CORS - 允許前端域名
+cors:
+  allowed-origins: http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://18.179.187.129,http://18.179.187.129:80,http://18.179.187.129:3000,http://18.179.187.129:5173
+
 # Google OAuth
 google:
   client-id: ${GOOGLE_CLIENT_ID:}

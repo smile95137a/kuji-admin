@@ -67,6 +67,18 @@ public interface WalletService {
     void addBonus(String userId, Long amount, String transactionType, String relatedId, String description);
     
     /**
+     * 扣除紅利（抽獎消費）
+     * 使用樂觀鎖確保併發安全
+     * 
+     * @param userId 玩家 ID
+     * @param amount 扣除金額
+     * @param transactionType 交易類型
+     * @param relatedId 關聯 ID（抽獎ID等）
+     * @param description 說明
+     */
+    void deductBonus(String userId, Long amount, String transactionType, String relatedId, String description);
+    
+    /**
      * 手動調整點數（Admin）
      * 
      * @param req 調整請求

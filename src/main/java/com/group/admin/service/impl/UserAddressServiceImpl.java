@@ -54,7 +54,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         address.setDistrict(req.getDistrict());
         address.setZipCode(req.getZipCode());
         address.setAddress(req.getAddress());
-        address.setIsDefault(isFirst || (req.getIsDefault() != null && req.getIsDefault()) ? (byte) 1 : (byte) 0);
+        address.setIsDefault(isFirst || (req.getIsDefault() != null && req.getIsDefault()));
         address.setCreatedAt(LocalDateTime.now());
         address.setUpdatedAt(LocalDateTime.now());
         
@@ -102,7 +102,7 @@ public class UserAddressServiceImpl implements UserAddressService {
             address.setAddress(req.getAddress());
         }
         if (req.getIsDefault() != null) {
-            address.setIsDefault(req.getIsDefault() ? (byte) 1 : (byte) 0);
+            address.setIsDefault(req.getIsDefault());
         }
         address.setUpdatedAt(LocalDateTime.now());
         
@@ -122,7 +122,7 @@ public class UserAddressServiceImpl implements UserAddressService {
             throw new BusinessException("地址不存在或無權限操作");
         }
         
-        boolean wasDefault = address.getIsDefault() == 1;
+        boolean wasDefault = Boolean.TRUE.equals(address.getIsDefault());
         userAddressMapper.deleteByPrimaryKey(addressId);
         
         // 如果刪除的是預設地址，自動將第一個設為預設
@@ -130,7 +130,7 @@ public class UserAddressServiceImpl implements UserAddressService {
             List<UserAddress> remainingAddresses = userAddressMapper.selectByUserId(userId);
             if (!remainingAddresses.isEmpty()) {
                 UserAddress firstAddress = remainingAddresses.get(0);
-                firstAddress.setIsDefault((byte) 1);
+                firstAddress.setIsDefault(true);
                 firstAddress.setUpdatedAt(LocalDateTime.now());
                 userAddressMapper.updateByPrimaryKey(firstAddress);
             }
@@ -176,7 +176,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         userAddressMapper.clearDefaultByUserId(userId);
         
         // 設定為預設
-        address.setIsDefault((byte) 1);
+        address.setIsDefault(true);
         address.setUpdatedAt(LocalDateTime.now());
         userAddressMapper.updateByPrimaryKey(address);
         
@@ -198,7 +198,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         res.setDistrict(address.getDistrict());
         res.setZipCode(address.getZipCode());
         res.setAddress(address.getAddress());
-        res.setIsDefault(address.getIsDefault() == 1);
+        res.setIsDefault(Boolean.TRUE.equals(address.getIsDefault()));
         res.setCreatedAt(address.getCreatedAt());
         res.setUpdatedAt(address.getUpdatedAt());
         

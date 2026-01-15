@@ -11,9 +11,9 @@
 
         <!-- JDBC 連線設定 -->
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
-            connectionURL="jdbc:mysql://onekuji-lotery.cdi42o44miez.ap-northeast-1.rds.amazonaws.com:3306/kuji?serverTimezone=UTC&amp;useUnicode=true&amp;characterEncoding=utf-8&amp;useSSL=true"
+            connectionURL="jdbc:mysql://database-1.clsi2geo699r.ap-northeast-1.rds.amazonaws.com:3306/kuji?useSSL=true&amp;serverTimezone=Asia/Taipei&amp;characterEncoding=UTF-8"
             userId="admin"
-            password="EASONlotery!!">
+            password="WUfan0667.">
             <!-- 避免讀取到其他 schema 的同名表格 -->
             <property name="nullCatalogMeansCurrent" value="true" />
         </jdbcConnection>
@@ -60,6 +60,12 @@
         <table tableName="banner" domainObjectName="Banner" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
+        <table tableName="district" domainObjectName="District" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="email_log" domainObjectName="EmailLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
         <table tableName="lottery" domainObjectName="Lottery" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
@@ -76,6 +82,9 @@
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="lottery_ticket" domainObjectName="LotteryTicket" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="marquee" domainObjectName="Marquee" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="menu" domainObjectName="Menu" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
@@ -105,7 +114,16 @@
         <table tableName="recharge_record" domainObjectName="RechargeRecord" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
+        <table tableName="referral_code" domainObjectName="ReferralCode" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="referral_record" domainObjectName="ReferralRecord" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
         <table tableName="refresh_token" domainObjectName="RefreshToken" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="report_snapshot" domainObjectName="ReportSnapshot" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="role" domainObjectName="Role" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
@@ -120,7 +138,13 @@
         <table tableName="store_user" domainObjectName="StoreUser" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
+        <table tableName="system_log" domainObjectName="SystemLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
         <table tableName="user" domainObjectName="User" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
+        </table>
+        <table tableName="user_address" domainObjectName="UserAddress" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="user_wallet" domainObjectName="UserWallet" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">

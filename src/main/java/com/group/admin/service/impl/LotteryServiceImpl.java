@@ -1148,6 +1148,274 @@ public class LotteryServiceImpl implements LotteryService {
         return convertToResNew(newLottery);
     }
     
+    // ==================== 整合 API（商品+獎品一起操作）====================
+    
+    @Override
+    @Transactional
+    public com.group.admin.res.lottery.LotteryWithPrizesRes createLotteryWithPrizes(
+            com.group.admin.req.lottery.LotteryWithPrizesCreateReq req, 
+            String operatorId) {
+        
+        log.info("📦 建立商品與獎品: title={}, prizeCount={}, operatorId={}", 
+                req.getLottery().getTitle(), 
+                req.getPrizes() != null ? req.getPrizes().size() : 0,
+                operatorId);
+        
+        // Step 1: 建立商品
+        LotteryRes lotteryRes = createLottery(req.getLottery(), operatorId);
+        String lotteryId = lotteryRes.getId();
+        
+        log.info("✅ 商品建立成功: lotteryId={}", lotteryId);
+        
+        // Step 2: 批次建立獎品（如果有）
+        List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = new ArrayList<>();
+        
+        if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
+            log.info("🎁 開始批次新增獎品: count={}", req.getPrizes().size());
+            
+            for (com.group.admin.req.lottery.LotteryPrizeCreateReq prizeReq : req.getPrizes()) {
+                // 設定 lotteryId
+                prizeReq.setLotteryId(lotteryId);
+                
+                // 建立獎品
+                LotteryPrize prize = new LotteryPrize();
+                prize.setId(UUID.randomUUID().toString());
+                prize.setLotteryId(lotteryId);
+                prize.setName(prizeReq.getName());
+                prize.setDescription(prizeReq.getDescription());
+                prize.setImageUrl(prizeReq.getImageUrl());
+                prize.setLevel(prizeReq.getLevel());
+                prize.setPrizeNumber(prizeReq.getPrizeNumber());
+                prize.setQuantity(prizeReq.getQuantity());
+                prize.setRemaining(prizeReq.getQuantity()); // 初始剩餘 = 總數量
+                prize.setWeight(prizeReq.getWeight() != null ? prizeReq.getWeight() : 1);
+                prize.setPrizeType(prizeReq.getPrizeType());
+                prize.setPointValue(prizeReq.getPointValue());
+                prize.setIsLastPrize(prizeReq.getIsLastPrize() != null && prizeReq.getIsLastPrize() ? (byte) 1 : (byte) 0);
+                prize.setIsGrandPrize(prizeReq.getIsGrandPrize() != null && prizeReq.getIsGrandPrize() ? (byte) 1 : (byte) 0);
+                prize.setCreatedAt(LocalDateTime.now());
+                prize.setUpdatedAt(LocalDateTime.now());
+                
+                lotteryPrizeMapper.insert(prize);
+                
+                // 轉換為 Res
+                prizeResList.add(convertPrizeToRes(prize));
+            }
+            
+            log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
+        }
+        
+        // Step 3: 組裝回應
+        return buildLotteryWithPrizesRes(lotteryRes, prizeResList);
+    }
+    
+    @Override
+    @Transactional
+    public com.group.admin.res.lottery.LotteryWithPrizesRes updateLotteryWithPrizes(
+            com.group.admin.req.lottery.LotteryWithPrizesUpdateReq req, 
+            String operatorId) {
+        
+        String lotteryId = req.getLotteryId();
+        log.info("📝 更新商品與獎品: lotteryId={}, operatorId={}", lotteryId, operatorId);
+        
+        // Step 1: 更新商品（如果有提供 lottery 更新資訊）
+        LotteryRes lotteryRes;
+        if (req.getLottery() != null) {
+            req.getLottery().setId(lotteryId); // 確保 ID 正確
+            lotteryRes = updateLottery(req.getLottery(), operatorId);
+            log.info("✅ 商品更新成功: lotteryId={}", lotteryId);
+        } else {
+            // 沒有提供更新資訊，直接查詢現有資料
+            Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+            if (lottery == null) {
+                throw new BusinessException("商品不存在: " + lotteryId);
+            }
+            lotteryRes = convertToResNew(lottery);
+        }
+        
+        // Step 2: 更新/新增獎品（如果有提供 prizes）
+        List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = new ArrayList<>();
+        
+        if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
+            log.info("🎁 處理獎品更新: count={}", req.getPrizes().size());
+            
+            for (com.group.admin.req.lottery.LotteryPrizeUpdateReq prizeReq : req.getPrizes()) {
+                if (prizeReq.getId() != null && !prizeReq.getId().isBlank()) {
+                    // 有 ID → 更新現有獎品
+                    LotteryPrize existingPrize = lotteryPrizeMapper.selectByPrimaryKey(prizeReq.getId());
+                    if (existingPrize == null) {
+                        log.warn("⚠️ 獎品不存在，跳過: prizeId={}", prizeReq.getId());
+                        continue;
+                    }
+                    
+                    // 更新欄位（只更新非 null 的欄位）
+                    if (prizeReq.getName() != null) existingPrize.setName(prizeReq.getName());
+                    if (prizeReq.getDescription() != null) existingPrize.setDescription(prizeReq.getDescription());
+                    if (prizeReq.getImageUrl() != null) existingPrize.setImageUrl(prizeReq.getImageUrl());
+                    if (prizeReq.getLevel() != null) existingPrize.setLevel(prizeReq.getLevel());
+                    if (prizeReq.getPrizeNumber() != null) existingPrize.setPrizeNumber(prizeReq.getPrizeNumber());
+                    if (prizeReq.getQuantity() != null) existingPrize.setQuantity(prizeReq.getQuantity());
+                    if (prizeReq.getWeight() != null) existingPrize.setWeight(prizeReq.getWeight());
+                    if (prizeReq.getPrizeType() != null) existingPrize.setPrizeType(prizeReq.getPrizeType());
+                    if (prizeReq.getPointValue() != null) existingPrize.setPointValue(prizeReq.getPointValue());
+                    if (prizeReq.getIsLastPrize() != null) existingPrize.setIsLastPrize(prizeReq.getIsLastPrize() ? (byte) 1 : (byte) 0);
+                    if (prizeReq.getIsGrandPrize() != null) existingPrize.setIsGrandPrize(prizeReq.getIsGrandPrize() ? (byte) 1 : (byte) 0);
+                    existingPrize.setUpdatedAt(LocalDateTime.now());
+                    
+                    lotteryPrizeMapper.updateByPrimaryKey(existingPrize);
+                    prizeResList.add(convertPrizeToRes(existingPrize));
+                    
+                    log.info("✅ 獎品更新成功: prizeId={}", prizeReq.getId());
+                    
+                } else {
+                    // 沒有 ID → 新增獎品
+                    LotteryPrize newPrize = new LotteryPrize();
+                    newPrize.setId(UUID.randomUUID().toString());
+                    newPrize.setLotteryId(lotteryId);
+                    newPrize.setName(prizeReq.getName());
+                    newPrize.setDescription(prizeReq.getDescription());
+                    newPrize.setImageUrl(prizeReq.getImageUrl());
+                    newPrize.setLevel(prizeReq.getLevel());
+                    newPrize.setPrizeNumber(prizeReq.getPrizeNumber());
+                    newPrize.setQuantity(prizeReq.getQuantity() != null ? prizeReq.getQuantity() : 1);
+                    newPrize.setRemaining(prizeReq.getQuantity() != null ? prizeReq.getQuantity() : 1);
+                    newPrize.setWeight(prizeReq.getWeight() != null ? prizeReq.getWeight() : 1);
+                    newPrize.setPrizeType(prizeReq.getPrizeType());
+                    newPrize.setPointValue(prizeReq.getPointValue());
+                    newPrize.setIsLastPrize(prizeReq.getIsLastPrize() != null && prizeReq.getIsLastPrize() ? (byte) 1 : (byte) 0);
+                    newPrize.setIsGrandPrize(prizeReq.getIsGrandPrize() != null && prizeReq.getIsGrandPrize() ? (byte) 1 : (byte) 0);
+                    newPrize.setCreatedAt(LocalDateTime.now());
+                    newPrize.setUpdatedAt(LocalDateTime.now());
+                    
+                    lotteryPrizeMapper.insert(newPrize);
+                    prizeResList.add(convertPrizeToRes(newPrize));
+                    
+                    log.info("✅ 獎品新增成功: prizeId={}", newPrize.getId());
+                }
+            }
+        }
+        
+        // 如果沒有提供 prizes，查詢現有所有獎品
+        if (prizeResList.isEmpty()) {
+            LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+            prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
+            List<LotteryPrize> existingPrizes = lotteryPrizeMapper.selectByExample(prizeExample);
+            prizeResList = existingPrizes.stream()
+                    .map(this::convertPrizeToRes)
+                    .collect(Collectors.toList());
+        }
+        
+        // Step 3: 組裝回應
+        return buildLotteryWithPrizesRes(lotteryRes, prizeResList);
+    }
+    
+    @Override
+    public com.group.admin.res.lottery.LotteryWithPrizesRes getLotteryWithPrizes(String lotteryId) {
+        log.info("🔍 查詢商品與獎品: lotteryId={}", lotteryId);
+        
+        // Step 1: 查詢商品
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在: " + lotteryId);
+        }
+        
+        LotteryRes lotteryRes = convertToResNew(lottery);
+        
+        // Step 2: 查詢所有獎品
+        LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+        prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
+        prizeExample.setOrderByClause("order_num ASC, level ASC");
+        
+        List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
+        List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = prizes.stream()
+                .map(this::convertPrizeToRes)
+                .collect(Collectors.toList());
+        
+        log.info("✅ 查詢成功: lotteryId={}, prizeCount={}", lotteryId, prizeResList.size());
+        
+        // Step 3: 組裝回應
+        return buildLotteryWithPrizesRes(lotteryRes, prizeResList);
+    }
+    
+    /**
+     * 組裝 LotteryWithPrizesRes 回應
+     */
+    private com.group.admin.res.lottery.LotteryWithPrizesRes buildLotteryWithPrizesRes(
+            LotteryRes lotteryRes, 
+            List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList) {
+        
+        // 計算統計資訊
+        int totalPrizeCount = prizeResList.stream()
+                .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                .sum();
+        
+        int remainingPrizeCount = prizeResList.stream()
+                .mapToInt(p -> p.getRemaining() != null ? p.getRemaining() : 0)
+                .sum();
+        
+        double progressPercentage = totalPrizeCount > 0 
+                ? ((totalPrizeCount - remainingPrizeCount) * 100.0 / totalPrizeCount)
+                : 0.0;
+        
+        // 查詢店家名稱
+        String storeName = null;
+        if (lotteryRes.getStoreId() != null) {
+            Store store = storeMapper.selectByPrimaryKey(lotteryRes.getStoreId());
+            if (store != null) {
+                storeName = store.getStoreName();
+            }
+        }
+        
+        return com.group.admin.res.lottery.LotteryWithPrizesRes.builder()
+                .id(lotteryRes.getId())
+                .storeId(lotteryRes.getStoreId())
+                .storeName(storeName)
+                .title(lotteryRes.getTitle())
+                .description(lotteryRes.getDescription())
+                .imageUrl(lotteryRes.getImageUrl())
+                .category(lotteryRes.getCategory())
+                .subCategory(lotteryRes.getSubCategory())
+                .pricePerDraw(lotteryRes.getPricePerDraw())
+                .discountedPrice(lotteryRes.getDiscountedPrice())
+                .autoDiscountEnabled(lotteryRes.getAutoDiscountEnabled())
+                .totalDraws(lotteryRes.getTotalDraws())
+                .remainingDraws(lotteryRes.getRemainingDraws())
+                .status(lotteryRes.getStatus())
+                .scheduledAt(lotteryRes.getScheduledAt())
+                .createdAt(lotteryRes.getCreatedAt())
+                .updatedAt(lotteryRes.getUpdatedAt())
+                .prizes(prizeResList)
+                .totalPrizeCount(totalPrizeCount)
+                .remainingPrizeCount(remainingPrizeCount)
+                .progressPercentage(Math.round(progressPercentage * 100.0) / 100.0)
+                .build();
+    }
+    
+    /**
+     * 轉換 LotteryPrize Entity → LotteryPrizeRes
+     */
+    private com.group.admin.res.lottery.LotteryPrizeRes convertPrizeToRes(LotteryPrize prize) {
+        com.group.admin.res.lottery.LotteryPrizeRes res = new com.group.admin.res.lottery.LotteryPrizeRes();
+        res.setId(prize.getId());
+        res.setLotteryId(prize.getLotteryId());
+        res.setName(prize.getName());
+        res.setDescription(prize.getDescription());
+        res.setImageUrl(prize.getImageUrl());
+        res.setLevel(prize.getLevel());
+        res.setPrizeNumber(prize.getPrizeNumber());
+        res.setQuantity(prize.getQuantity());
+        res.setRemaining(prize.getRemaining());
+        res.setWeight(prize.getWeight());
+        res.setPrizeType(prize.getPrizeType());
+        res.setPointValue(prize.getPointValue());
+        res.setIsLastPrize(prize.getIsLastPrize() != null && prize.getIsLastPrize() == 1);
+        res.setIsGrandPrize(prize.getIsGrandPrize() != null && prize.getIsGrandPrize() == 1);
+        res.setOrderNum(prize.getOrderNum());
+        res.setCreatedAt(prize.getCreatedAt());
+        res.setUpdatedAt(prize.getUpdatedAt());
+        return res;
+    }
+    
     // ==================== 輔助方法 ====================
     
     /**

@@ -46,7 +46,7 @@ public class MarqueeServiceImpl implements MarqueeService {
         
         // 設定預設值
         if (marquee.getIsActive() == null) {
-            marquee.setIsActive((byte) 1);  // 預設啟用
+            marquee.setIsActive(true);  // 預設啟用
         }
         if (marquee.getPriority() == null) {
             marquee.setPriority(0);
@@ -56,7 +56,7 @@ public class MarqueeServiceImpl implements MarqueeService {
         log.info("✅ 跑馬燈已建立: id={}, content={}", marquee.getId(), marquee.getContent());
         
         // 如果狀態為啟用，立即廣播
-        if (marquee.getIsActive() != null && marquee.getIsActive() == 1) {
+        if (Boolean.TRUE.equals(marquee.getIsActive())) {
             broadcastMarquee(marquee);
         }
         

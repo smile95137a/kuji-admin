@@ -14,6 +14,23 @@
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="email_verified" jdbcType="TINYINT" property="emailVerified" />
     <result column="phone_number" jdbcType="VARCHAR" property="phoneNumber" />
+    <result column="line_id" jdbcType="VARCHAR" property="lineId" />
+    <result column="recipient_name" jdbcType="VARCHAR" property="recipientName" />
+    <result column="recipient_phone" jdbcType="VARCHAR" property="recipientPhone" />
+    <result column="city" jdbcType="VARCHAR" property="city" />
+    <result column="district" jdbcType="VARCHAR" property="district" />
+    <result column="address_detail" jdbcType="VARCHAR" property="addressDetail" />
+    <result column="invoice_type" jdbcType="VARCHAR" property="invoiceType" />
+    <result column="invoice_email" jdbcType="VARCHAR" property="invoiceEmail" />
+    <result column="carrier_code" jdbcType="VARCHAR" property="carrierCode" />
+    <result column="tax_id" jdbcType="VARCHAR" property="taxId" />
+    <result column="company_name" jdbcType="VARCHAR" property="companyName" />
+    <result column="referral_code" jdbcType="VARCHAR" property="referralCode" />
+    <result column="referred_store_id" jdbcType="VARCHAR" property="referredStoreId" />
+    <result column="email_verification_token" jdbcType="VARCHAR" property="emailVerificationToken" />
+    <result column="email_verification_expires" jdbcType="TIMESTAMP" property="emailVerificationExpires" />
+    <result column="password_reset_token" jdbcType="VARCHAR" property="passwordResetToken" />
+    <result column="password_reset_expires" jdbcType="TIMESTAMP" property="passwordResetExpires" />
     <result column="last_login_at" jdbcType="TIMESTAMP" property="lastLoginAt" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
@@ -78,7 +95,10 @@
   </sql>
   <sql id="Base_Column_List">
     id, email, nickname, password, avatar, provider, provider_id, gold_coins, bonus_coins, 
-    status, email_verified, phone_number, last_login_at, created_at, updated_at
+    status, email_verified, phone_number, line_id, recipient_name, recipient_phone, city, 
+    district, address_detail, invoice_type, invoice_email, carrier_code, tax_id, company_name, 
+    referral_code, referred_store_id, email_verification_token, email_verification_expires, 
+    password_reset_token, password_reset_expires, last_login_at, created_at, updated_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.UserExample" resultMap="BaseResultMap">
     select
@@ -116,14 +136,26 @@
       password, avatar, provider, 
       provider_id, gold_coins, bonus_coins, 
       status, email_verified, phone_number, 
-      last_login_at, created_at, updated_at
-      )
+      line_id, recipient_name, recipient_phone, 
+      city, district, address_detail, 
+      invoice_type, invoice_email, carrier_code, 
+      tax_id, company_name, referral_code, 
+      referred_store_id, email_verification_token, 
+      email_verification_expires, password_reset_token, 
+      password_reset_expires, last_login_at, 
+      created_at, updated_at)
     values (#{id,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR}, #{nickname,jdbcType=VARCHAR}, 
       #{password,jdbcType=VARCHAR}, #{avatar,jdbcType=VARCHAR}, #{provider,jdbcType=VARCHAR}, 
       #{providerId,jdbcType=VARCHAR}, #{goldCoins,jdbcType=BIGINT}, #{bonusCoins,jdbcType=BIGINT}, 
       #{status,jdbcType=VARCHAR}, #{emailVerified,jdbcType=TINYINT}, #{phoneNumber,jdbcType=VARCHAR}, 
-      #{lastLoginAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
-      )
+      #{lineId,jdbcType=VARCHAR}, #{recipientName,jdbcType=VARCHAR}, #{recipientPhone,jdbcType=VARCHAR}, 
+      #{city,jdbcType=VARCHAR}, #{district,jdbcType=VARCHAR}, #{addressDetail,jdbcType=VARCHAR}, 
+      #{invoiceType,jdbcType=VARCHAR}, #{invoiceEmail,jdbcType=VARCHAR}, #{carrierCode,jdbcType=VARCHAR}, 
+      #{taxId,jdbcType=VARCHAR}, #{companyName,jdbcType=VARCHAR}, #{referralCode,jdbcType=VARCHAR}, 
+      #{referredStoreId,jdbcType=VARCHAR}, #{emailVerificationToken,jdbcType=VARCHAR}, 
+      #{emailVerificationExpires,jdbcType=TIMESTAMP}, #{passwordResetToken,jdbcType=VARCHAR}, 
+      #{passwordResetExpires,jdbcType=TIMESTAMP}, #{lastLoginAt,jdbcType=TIMESTAMP}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.User">
     insert into user
@@ -163,6 +195,57 @@
       </if>
       <if test="phoneNumber != null">
         phone_number,
+      </if>
+      <if test="lineId != null">
+        line_id,
+      </if>
+      <if test="recipientName != null">
+        recipient_name,
+      </if>
+      <if test="recipientPhone != null">
+        recipient_phone,
+      </if>
+      <if test="city != null">
+        city,
+      </if>
+      <if test="district != null">
+        district,
+      </if>
+      <if test="addressDetail != null">
+        address_detail,
+      </if>
+      <if test="invoiceType != null">
+        invoice_type,
+      </if>
+      <if test="invoiceEmail != null">
+        invoice_email,
+      </if>
+      <if test="carrierCode != null">
+        carrier_code,
+      </if>
+      <if test="taxId != null">
+        tax_id,
+      </if>
+      <if test="companyName != null">
+        company_name,
+      </if>
+      <if test="referralCode != null">
+        referral_code,
+      </if>
+      <if test="referredStoreId != null">
+        referred_store_id,
+      </if>
+      <if test="emailVerificationToken != null">
+        email_verification_token,
+      </if>
+      <if test="emailVerificationExpires != null">
+        email_verification_expires,
+      </if>
+      <if test="passwordResetToken != null">
+        password_reset_token,
+      </if>
+      <if test="passwordResetExpires != null">
+        password_reset_expires,
       </if>
       <if test="lastLoginAt != null">
         last_login_at,
@@ -210,6 +293,57 @@
       </if>
       <if test="phoneNumber != null">
         #{phoneNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="lineId != null">
+        #{lineId,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientName != null">
+        #{recipientName,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientPhone != null">
+        #{recipientPhone,jdbcType=VARCHAR},
+      </if>
+      <if test="city != null">
+        #{city,jdbcType=VARCHAR},
+      </if>
+      <if test="district != null">
+        #{district,jdbcType=VARCHAR},
+      </if>
+      <if test="addressDetail != null">
+        #{addressDetail,jdbcType=VARCHAR},
+      </if>
+      <if test="invoiceType != null">
+        #{invoiceType,jdbcType=VARCHAR},
+      </if>
+      <if test="invoiceEmail != null">
+        #{invoiceEmail,jdbcType=VARCHAR},
+      </if>
+      <if test="carrierCode != null">
+        #{carrierCode,jdbcType=VARCHAR},
+      </if>
+      <if test="taxId != null">
+        #{taxId,jdbcType=VARCHAR},
+      </if>
+      <if test="companyName != null">
+        #{companyName,jdbcType=VARCHAR},
+      </if>
+      <if test="referralCode != null">
+        #{referralCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referredStoreId != null">
+        #{referredStoreId,jdbcType=VARCHAR},
+      </if>
+      <if test="emailVerificationToken != null">
+        #{emailVerificationToken,jdbcType=VARCHAR},
+      </if>
+      <if test="emailVerificationExpires != null">
+        #{emailVerificationExpires,jdbcType=TIMESTAMP},
+      </if>
+      <if test="passwordResetToken != null">
+        #{passwordResetToken,jdbcType=VARCHAR},
+      </if>
+      <if test="passwordResetExpires != null">
+        #{passwordResetExpires,jdbcType=TIMESTAMP},
       </if>
       <if test="lastLoginAt != null">
         #{lastLoginAt,jdbcType=TIMESTAMP},
@@ -267,6 +401,57 @@
       <if test="row.phoneNumber != null">
         phone_number = #{row.phoneNumber,jdbcType=VARCHAR},
       </if>
+      <if test="row.lineId != null">
+        line_id = #{row.lineId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.recipientName != null">
+        recipient_name = #{row.recipientName,jdbcType=VARCHAR},
+      </if>
+      <if test="row.recipientPhone != null">
+        recipient_phone = #{row.recipientPhone,jdbcType=VARCHAR},
+      </if>
+      <if test="row.city != null">
+        city = #{row.city,jdbcType=VARCHAR},
+      </if>
+      <if test="row.district != null">
+        district = #{row.district,jdbcType=VARCHAR},
+      </if>
+      <if test="row.addressDetail != null">
+        address_detail = #{row.addressDetail,jdbcType=VARCHAR},
+      </if>
+      <if test="row.invoiceType != null">
+        invoice_type = #{row.invoiceType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.invoiceEmail != null">
+        invoice_email = #{row.invoiceEmail,jdbcType=VARCHAR},
+      </if>
+      <if test="row.carrierCode != null">
+        carrier_code = #{row.carrierCode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.taxId != null">
+        tax_id = #{row.taxId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.companyName != null">
+        company_name = #{row.companyName,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referralCode != null">
+        referral_code = #{row.referralCode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referredStoreId != null">
+        referred_store_id = #{row.referredStoreId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.emailVerificationToken != null">
+        email_verification_token = #{row.emailVerificationToken,jdbcType=VARCHAR},
+      </if>
+      <if test="row.emailVerificationExpires != null">
+        email_verification_expires = #{row.emailVerificationExpires,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.passwordResetToken != null">
+        password_reset_token = #{row.passwordResetToken,jdbcType=VARCHAR},
+      </if>
+      <if test="row.passwordResetExpires != null">
+        password_reset_expires = #{row.passwordResetExpires,jdbcType=TIMESTAMP},
+      </if>
       <if test="row.lastLoginAt != null">
         last_login_at = #{row.lastLoginAt,jdbcType=TIMESTAMP},
       </if>
@@ -295,6 +480,23 @@
       status = #{row.status,jdbcType=VARCHAR},
       email_verified = #{row.emailVerified,jdbcType=TINYINT},
       phone_number = #{row.phoneNumber,jdbcType=VARCHAR},
+      line_id = #{row.lineId,jdbcType=VARCHAR},
+      recipient_name = #{row.recipientName,jdbcType=VARCHAR},
+      recipient_phone = #{row.recipientPhone,jdbcType=VARCHAR},
+      city = #{row.city,jdbcType=VARCHAR},
+      district = #{row.district,jdbcType=VARCHAR},
+      address_detail = #{row.addressDetail,jdbcType=VARCHAR},
+      invoice_type = #{row.invoiceType,jdbcType=VARCHAR},
+      invoice_email = #{row.invoiceEmail,jdbcType=VARCHAR},
+      carrier_code = #{row.carrierCode,jdbcType=VARCHAR},
+      tax_id = #{row.taxId,jdbcType=VARCHAR},
+      company_name = #{row.companyName,jdbcType=VARCHAR},
+      referral_code = #{row.referralCode,jdbcType=VARCHAR},
+      referred_store_id = #{row.referredStoreId,jdbcType=VARCHAR},
+      email_verification_token = #{row.emailVerificationToken,jdbcType=VARCHAR},
+      email_verification_expires = #{row.emailVerificationExpires,jdbcType=TIMESTAMP},
+      password_reset_token = #{row.passwordResetToken,jdbcType=VARCHAR},
+      password_reset_expires = #{row.passwordResetExpires,jdbcType=TIMESTAMP},
       last_login_at = #{row.lastLoginAt,jdbcType=TIMESTAMP},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
@@ -338,6 +540,57 @@
       <if test="phoneNumber != null">
         phone_number = #{phoneNumber,jdbcType=VARCHAR},
       </if>
+      <if test="lineId != null">
+        line_id = #{lineId,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientName != null">
+        recipient_name = #{recipientName,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientPhone != null">
+        recipient_phone = #{recipientPhone,jdbcType=VARCHAR},
+      </if>
+      <if test="city != null">
+        city = #{city,jdbcType=VARCHAR},
+      </if>
+      <if test="district != null">
+        district = #{district,jdbcType=VARCHAR},
+      </if>
+      <if test="addressDetail != null">
+        address_detail = #{addressDetail,jdbcType=VARCHAR},
+      </if>
+      <if test="invoiceType != null">
+        invoice_type = #{invoiceType,jdbcType=VARCHAR},
+      </if>
+      <if test="invoiceEmail != null">
+        invoice_email = #{invoiceEmail,jdbcType=VARCHAR},
+      </if>
+      <if test="carrierCode != null">
+        carrier_code = #{carrierCode,jdbcType=VARCHAR},
+      </if>
+      <if test="taxId != null">
+        tax_id = #{taxId,jdbcType=VARCHAR},
+      </if>
+      <if test="companyName != null">
+        company_name = #{companyName,jdbcType=VARCHAR},
+      </if>
+      <if test="referralCode != null">
+        referral_code = #{referralCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referredStoreId != null">
+        referred_store_id = #{referredStoreId,jdbcType=VARCHAR},
+      </if>
+      <if test="emailVerificationToken != null">
+        email_verification_token = #{emailVerificationToken,jdbcType=VARCHAR},
+      </if>
+      <if test="emailVerificationExpires != null">
+        email_verification_expires = #{emailVerificationExpires,jdbcType=TIMESTAMP},
+      </if>
+      <if test="passwordResetToken != null">
+        password_reset_token = #{passwordResetToken,jdbcType=VARCHAR},
+      </if>
+      <if test="passwordResetExpires != null">
+        password_reset_expires = #{passwordResetExpires,jdbcType=TIMESTAMP},
+      </if>
       <if test="lastLoginAt != null">
         last_login_at = #{lastLoginAt,jdbcType=TIMESTAMP},
       </if>
@@ -363,6 +616,23 @@
       status = #{status,jdbcType=VARCHAR},
       email_verified = #{emailVerified,jdbcType=TINYINT},
       phone_number = #{phoneNumber,jdbcType=VARCHAR},
+      line_id = #{lineId,jdbcType=VARCHAR},
+      recipient_name = #{recipientName,jdbcType=VARCHAR},
+      recipient_phone = #{recipientPhone,jdbcType=VARCHAR},
+      city = #{city,jdbcType=VARCHAR},
+      district = #{district,jdbcType=VARCHAR},
+      address_detail = #{addressDetail,jdbcType=VARCHAR},
+      invoice_type = #{invoiceType,jdbcType=VARCHAR},
+      invoice_email = #{invoiceEmail,jdbcType=VARCHAR},
+      carrier_code = #{carrierCode,jdbcType=VARCHAR},
+      tax_id = #{taxId,jdbcType=VARCHAR},
+      company_name = #{companyName,jdbcType=VARCHAR},
+      referral_code = #{referralCode,jdbcType=VARCHAR},
+      referred_store_id = #{referredStoreId,jdbcType=VARCHAR},
+      email_verification_token = #{emailVerificationToken,jdbcType=VARCHAR},
+      email_verification_expires = #{emailVerificationExpires,jdbcType=TIMESTAMP},
+      password_reset_token = #{passwordResetToken,jdbcType=VARCHAR},
+      password_reset_expires = #{passwordResetExpires,jdbcType=TIMESTAMP},
       last_login_at = #{lastLoginAt,jdbcType=TIMESTAMP},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}

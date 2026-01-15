@@ -63,7 +63,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         referralCode.setCode(req.getCode().toUpperCase());
         referralCode.setStoreId(req.getStoreId());
         referralCode.setDescription(req.getDescription());
-        referralCode.setIsActive((byte) 1);
+        referralCode.setIsActive(true);
         referralCode.setUsedCount(0);
         referralCode.setCreatedAt(LocalDateTime.now());
         referralCode.setUpdatedAt(LocalDateTime.now());
@@ -89,7 +89,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
             referralCode.setDescription(req.getDescription());
         }
         if (req.getIsActive() != null) {
-            referralCode.setIsActive(req.getIsActive() ? (byte) 1 : (byte) 0);
+            referralCode.setIsActive(req.getIsActive());
         }
         referralCode.setUpdatedAt(LocalDateTime.now());
         
@@ -162,7 +162,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     @Override
     public boolean validateCode(String code) {
         ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
-        return referralCode != null && referralCode.getIsActive() == 1;
+        return referralCode != null && Boolean.TRUE.equals(referralCode.getIsActive());
     }
     
     @Override
@@ -172,14 +172,14 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         
         // 檢查推薦碼是否有效
         ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
-        if (referralCode == null || referralCode.getIsActive() != 1) {
+        if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
             log.warn("❌ 推薦碼無效或已停用: {}", code);
             return false;
         }
         
         // 檢查使用者是否已使用過推薦碼
-        ReferralRecord existingRecord = referralRecordMapper.selectByUserId(userId);
-        if (existingRecord != null) {
+        List<ReferralRecord> existingRecords = referralRecordMapper.selectByUserId(userId);
+        if (!existingRecords.isEmpty()) {
             log.warn("❌ 使用者已使用過推薦碼: userId={}", userId);
             return false;
         }
@@ -222,8 +222,8 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public ReferralRecordRes getRecordByUserId(String userId) {
-        ReferralRecord record = referralRecordMapper.selectByUserId(userId);
-        return record != null ? toReferralRecordRes(record) : null;
+        List<ReferralRecord> records = referralRecordMapper.selectByUserId(userId);
+        return !records.isEmpty() ? toReferralRecordRes(records.get(0)) : null;
     }
     
     /**
@@ -236,7 +236,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         res.setStoreId(code.getStoreId());
         res.setStoreName(storeName);
         res.setDescription(code.getDescription());
-        res.setIsActive(code.getIsActive() == 1);
+        res.setIsActive(Boolean.TRUE.equals(code.getIsActive()));
         res.setUsedCount(code.getUsedCount());
         res.setCreatedAt(code.getCreatedAt());
         res.setUpdatedAt(code.getUpdatedAt());

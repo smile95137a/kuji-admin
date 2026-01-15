@@ -56,7 +56,7 @@ public class AdminMarqueeController {
         marquee.setTextColor(req.getTextColor());
         marquee.setStartTime(req.getStartTime());
         marquee.setEndTime(req.getEndTime());
-        marquee.setIsActive(req.getIsActive() != null && req.getIsActive() ? (byte) 1 : (byte) 0);
+        marquee.setIsActive(req.getIsActive() != null && req.getIsActive());
         
         return ResponseEntity.ok(marqueeService.createMarquee(marquee));
     }
@@ -80,7 +80,7 @@ public class AdminMarqueeController {
         if (req.getTextColor() != null) marquee.setTextColor(req.getTextColor());
         if (req.getStartTime() != null) marquee.setStartTime(req.getStartTime());
         if (req.getEndTime() != null) marquee.setEndTime(req.getEndTime());
-        if (req.getIsActive() != null) marquee.setIsActive(req.getIsActive() ? (byte) 1 : (byte) 0);
+        if (req.getIsActive() != null) marquee.setIsActive(req.getIsActive());
         
         return ResponseEntity.ok(marqueeService.updateMarquee(marquee));
     }

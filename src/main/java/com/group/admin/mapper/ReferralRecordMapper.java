@@ -1,70 +1,51 @@
 package com.group.admin.mapper;
 
 import com.group.admin.entity.ReferralRecord;
-import org.apache.ibatis.annotations.*;
-
+import com.group.admin.example.ReferralRecordExample;
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
-/**
- * 推薦關係紀錄 Mapper
- * 
- * @author KUJI System
- * @since 1.0.0
- */
-@Mapper
 public interface ReferralRecordMapper {
-    
-    @Insert("INSERT INTO referral_record (id, user_id, referral_code_id, store_id, used_code, referred_at) " +
-            "VALUES (#{id}, #{userId}, #{referralCodeId}, #{storeId}, #{usedCode}, #{referredAt})")
-    int insert(ReferralRecord record);
-    
-    @Select("SELECT * FROM referral_record WHERE id = #{id}")
-    @Results({
-        @Result(column = "id", property = "id"),
-        @Result(column = "user_id", property = "userId"),
-        @Result(column = "referral_code_id", property = "referralCodeId"),
-        @Result(column = "store_id", property = "storeId"),
-        @Result(column = "used_code", property = "usedCode"),
-        @Result(column = "referred_at", property = "referredAt")
-    })
+    long countByExample(ReferralRecordExample example);
+
+    int deleteByExample(ReferralRecordExample example);
+
+    int deleteByPrimaryKey(String id);
+
+    int insert(ReferralRecord row);
+
+    int insertSelective(ReferralRecord row);
+
+    List<ReferralRecord> selectByExample(ReferralRecordExample example);
+
     ReferralRecord selectByPrimaryKey(String id);
+
+    int updateByExampleSelective(@Param("row") ReferralRecord row, @Param("example") ReferralRecordExample example);
+
+    int updateByExample(@Param("row") ReferralRecord row, @Param("example") ReferralRecordExample example);
+
+    int updateByPrimaryKeySelective(ReferralRecord row);
+
+    int updateByPrimaryKey(ReferralRecord row);
     
-    @Select("SELECT * FROM referral_record WHERE user_id = #{userId}")
-    @Results({
-        @Result(column = "id", property = "id"),
-        @Result(column = "user_id", property = "userId"),
-        @Result(column = "referral_code_id", property = "referralCodeId"),
-        @Result(column = "store_id", property = "storeId"),
-        @Result(column = "used_code", property = "usedCode"),
-        @Result(column = "referred_at", property = "referredAt")
-    })
-    ReferralRecord selectByUserId(String userId);
+    // ========== 自定義查詢方法（使用 Annotation）==========
     
+    /**
+     * 根據用戶 ID 查詢使用記錄
+     */
+    @Select("SELECT * FROM referral_record WHERE user_id = #{userId} ORDER BY referred_at DESC")
+    List<ReferralRecord> selectByUserId(@Param("userId") String userId);
+    
+    /**
+     * 根據推薦碼 ID 查詢使用記錄
+     */
+    @Select("SELECT * FROM referral_record WHERE referral_code_id = #{codeId} ORDER BY referred_at DESC")
+    List<ReferralRecord> selectByReferralCodeId(@Param("codeId") String codeId);
+    
+    /**
+     * 根據店家 ID 查詢使用記錄
+     */
     @Select("SELECT * FROM referral_record WHERE store_id = #{storeId} ORDER BY referred_at DESC")
-    @Results({
-        @Result(column = "id", property = "id"),
-        @Result(column = "user_id", property = "userId"),
-        @Result(column = "referral_code_id", property = "referralCodeId"),
-        @Result(column = "store_id", property = "storeId"),
-        @Result(column = "used_code", property = "usedCode"),
-        @Result(column = "referred_at", property = "referredAt")
-    })
-    List<ReferralRecord> selectByStoreId(String storeId);
-    
-    @Select("SELECT * FROM referral_record WHERE referral_code_id = #{referralCodeId} ORDER BY referred_at DESC")
-    @Results({
-        @Result(column = "id", property = "id"),
-        @Result(column = "user_id", property = "userId"),
-        @Result(column = "referral_code_id", property = "referralCodeId"),
-        @Result(column = "store_id", property = "storeId"),
-        @Result(column = "used_code", property = "usedCode"),
-        @Result(column = "referred_at", property = "referredAt")
-    })
-    List<ReferralRecord> selectByReferralCodeId(String referralCodeId);
-    
-    @Select("SELECT COUNT(*) FROM referral_record WHERE store_id = #{storeId}")
-    int countByStoreId(String storeId);
-    
-    @Select("SELECT COUNT(*) FROM referral_record WHERE referral_code_id = #{referralCodeId}")
-    int countByReferralCodeId(String referralCodeId);
+    List<ReferralRecord> selectByStoreId(@Param("storeId") String storeId);
 }

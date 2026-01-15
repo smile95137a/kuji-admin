@@ -1,81 +1,165 @@
 package com.group.admin.entity;
 
-import lombok.Data;
 import java.time.LocalDateTime;
 
-/**
- * 郵件發送記錄
- * 記錄所有發送的郵件內容與狀態
- */
-@Data
 public class EmailLog {
     private String id;
-    
-    /**
-     * 郵件類型: VERIFICATION/PASSWORD_RESET/NOTIFICATION/ORDER
-     */
+
     private String emailType;
-    
-    /**
-     * 收件人信箱
-     */
+
     private String toEmail;
-    
-    /**
-     * 收件人姓名
-     */
+
     private String toName;
-    
-    /**
-     * 郵件主旨
-     */
+
     private String subject;
-    
-    /**
-     * 郵件內容
-     */
-    private String content;
-    
-    /**
-     * 使用的模板名稱
-     */
+
     private String templateName;
-    
-    /**
-     * 模板參數（JSON）
-     */
-    private String templateParams;
-    
-    /**
-     * 狀態: PENDING/SENT/FAILED
-     */
+
     private String status;
-    
-    /**
-     * 發送失敗原因
-     */
-    private String errorMessage;
-    
-    /**
-     * 實際發送時間
-     */
+
     private LocalDateTime sentAt;
-    
-    /**
-     * 重試次數
-     */
+
     private Integer retryCount;
-    
-    /**
-     * 關聯類型
-     */
+
     private String relatedType;
-    
-    /**
-     * 關聯ID
-     */
+
     private String relatedId;
-    
+
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
+
+    private String content;
+
+    private String templateParams;
+
+    private String errorMessage;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id == null ? null : id.trim();
+    }
+
+    public String getEmailType() {
+        return emailType;
+    }
+
+    public void setEmailType(String emailType) {
+        this.emailType = emailType == null ? null : emailType.trim();
+    }
+
+    public String getToEmail() {
+        return toEmail;
+    }
+
+    public void setToEmail(String toEmail) {
+        this.toEmail = toEmail == null ? null : toEmail.trim();
+    }
+
+    public String getToName() {
+        return toName;
+    }
+
+    public void setToName(String toName) {
+        this.toName = toName == null ? null : toName.trim();
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject == null ? null : subject.trim();
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName == null ? null : templateName.trim();
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status == null ? null : status.trim();
+    }
+
+    public LocalDateTime getSentAt() {
+        return sentAt;
+    }
+
+    public void setSentAt(LocalDateTime sentAt) {
+        this.sentAt = sentAt;
+    }
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(Integer retryCount) {
+        this.retryCount = retryCount;
+    }
+
+    public String getRelatedType() {
+        return relatedType;
+    }
+
+    public void setRelatedType(String relatedType) {
+        this.relatedType = relatedType == null ? null : relatedType.trim();
+    }
+
+    public String getRelatedId() {
+        return relatedId;
+    }
+
+    public void setRelatedId(String relatedId) {
+        this.relatedId = relatedId == null ? null : relatedId.trim();
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content == null ? null : content.trim();
+    }
+
+    public String getTemplateParams() {
+        return templateParams;
+    }
+
+    public void setTemplateParams(String templateParams) {
+        this.templateParams = templateParams == null ? null : templateParams.trim();
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage == null ? null : errorMessage.trim();
+    }
 }

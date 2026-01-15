@@ -27,6 +27,40 @@ public class User {
 
     private String phoneNumber;
 
+    private String lineId;
+
+    private String recipientName;
+
+    private String recipientPhone;
+
+    private String city;
+
+    private String district;
+
+    private String addressDetail;
+
+    private String invoiceType;
+
+    private String invoiceEmail;
+
+    private String carrierCode;
+
+    private String taxId;
+
+    private String companyName;
+
+    private String referralCode;
+
+    private String referredStoreId;
+
+    private String emailVerificationToken;
+
+    private LocalDateTime emailVerificationExpires;
+
+    private String passwordResetToken;
+
+    private LocalDateTime passwordResetExpires;
+
     private LocalDateTime lastLoginAt;
 
     private LocalDateTime createdAt;
@@ -127,6 +161,142 @@ public class User {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber == null ? null : phoneNumber.trim();
+    }
+
+    public String getLineId() {
+        return lineId;
+    }
+
+    public void setLineId(String lineId) {
+        this.lineId = lineId == null ? null : lineId.trim();
+    }
+
+    public String getRecipientName() {
+        return recipientName;
+    }
+
+    public void setRecipientName(String recipientName) {
+        this.recipientName = recipientName == null ? null : recipientName.trim();
+    }
+
+    public String getRecipientPhone() {
+        return recipientPhone;
+    }
+
+    public void setRecipientPhone(String recipientPhone) {
+        this.recipientPhone = recipientPhone == null ? null : recipientPhone.trim();
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city == null ? null : city.trim();
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public void setDistrict(String district) {
+        this.district = district == null ? null : district.trim();
+    }
+
+    public String getAddressDetail() {
+        return addressDetail;
+    }
+
+    public void setAddressDetail(String addressDetail) {
+        this.addressDetail = addressDetail == null ? null : addressDetail.trim();
+    }
+
+    public String getInvoiceType() {
+        return invoiceType;
+    }
+
+    public void setInvoiceType(String invoiceType) {
+        this.invoiceType = invoiceType == null ? null : invoiceType.trim();
+    }
+
+    public String getInvoiceEmail() {
+        return invoiceEmail;
+    }
+
+    public void setInvoiceEmail(String invoiceEmail) {
+        this.invoiceEmail = invoiceEmail == null ? null : invoiceEmail.trim();
+    }
+
+    public String getCarrierCode() {
+        return carrierCode;
+    }
+
+    public void setCarrierCode(String carrierCode) {
+        this.carrierCode = carrierCode == null ? null : carrierCode.trim();
+    }
+
+    public String getTaxId() {
+        return taxId;
+    }
+
+    public void setTaxId(String taxId) {
+        this.taxId = taxId == null ? null : taxId.trim();
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName == null ? null : companyName.trim();
+    }
+
+    public String getReferralCode() {
+        return referralCode;
+    }
+
+    public void setReferralCode(String referralCode) {
+        this.referralCode = referralCode == null ? null : referralCode.trim();
+    }
+
+    public String getReferredStoreId() {
+        return referredStoreId;
+    }
+
+    public void setReferredStoreId(String referredStoreId) {
+        this.referredStoreId = referredStoreId == null ? null : referredStoreId.trim();
+    }
+
+    public String getEmailVerificationToken() {
+        return emailVerificationToken;
+    }
+
+    public void setEmailVerificationToken(String emailVerificationToken) {
+        this.emailVerificationToken = emailVerificationToken == null ? null : emailVerificationToken.trim();
+    }
+
+    public LocalDateTime getEmailVerificationExpires() {
+        return emailVerificationExpires;
+    }
+
+    public void setEmailVerificationExpires(LocalDateTime emailVerificationExpires) {
+        this.emailVerificationExpires = emailVerificationExpires;
+    }
+
+    public String getPasswordResetToken() {
+        return passwordResetToken;
+    }
+
+    public void setPasswordResetToken(String passwordResetToken) {
+        this.passwordResetToken = passwordResetToken == null ? null : passwordResetToken.trim();
+    }
+
+    public LocalDateTime getPasswordResetExpires() {
+        return passwordResetExpires;
+    }
+
+    public void setPasswordResetExpires(LocalDateTime passwordResetExpires) {
+        this.passwordResetExpires = passwordResetExpires;
     }
 
     public LocalDateTime getLastLoginAt() {
