@@ -9,6 +9,8 @@ import com.group.admin.mapper.ReferralCodeMapper;
 import com.group.admin.mapper.ReferralRecordMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.UserMapper;
+import com.group.admin.repository.ReferralCodeRepository;
+import com.group.admin.repository.ReferralRecordRepository;
 import com.group.admin.req.referral.ReferralCodeCreateReq;
 import com.group.admin.req.referral.ReferralCodeUpdateReq;
 import com.group.admin.res.referral.ReferralCodeRes;
@@ -37,6 +39,8 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     private final ReferralCodeMapper referralCodeMapper;
     private final ReferralRecordMapper referralRecordMapper;
+    private final ReferralCodeRepository referralCodeRepository;
+    private final ReferralRecordRepository referralRecordRepository;
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
     
@@ -46,7 +50,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         log.info("🎫 建立推薦碼: code={}, storeId={}", req.getCode(), req.getStoreId());
         
         // 檢查推薦碼是否已存在
-        ReferralCode existingCode = referralCodeMapper.selectByCode(req.getCode());
+        ReferralCode existingCode = referralCodeRepository.selectByCode(req.getCode());
         if (existingCode != null) {
             throw new BusinessException("推薦碼已存在: " + req.getCode());
         }
@@ -127,7 +131,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public ReferralCodeRes getByCode(String code) {
-        ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
+        ReferralCode referralCode = referralCodeRepository.selectByCode(code.toUpperCase());
         if (referralCode == null) {
             return null;
         }
@@ -138,7 +142,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public List<ReferralCodeRes> getByStoreId(String storeId) {
-        List<ReferralCode> codes = referralCodeMapper.selectByStoreId(storeId);
+        List<ReferralCode> codes = referralCodeRepository.selectByStoreId(storeId);
         Store store = storeMapper.selectByPrimaryKey(storeId);
         String storeName = store != null ? store.getStoreName() : null;
         
@@ -149,7 +153,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public List<ReferralCodeRes> getAll() {
-        List<ReferralCode> codes = referralCodeMapper.selectAll();
+        List<ReferralCode> codes = referralCodeRepository.selectAll();
         
         return codes.stream()
                 .map(code -> {
@@ -161,7 +165,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public boolean validateCode(String code) {
-        ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
+        ReferralCode referralCode = referralCodeRepository.selectByCode(code.toUpperCase());
         return referralCode != null && Boolean.TRUE.equals(referralCode.getIsActive());
     }
     
@@ -171,14 +175,14 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         log.info("🎁 使用推薦碼: userId={}, code={}", userId, code);
         
         // 檢查推薦碼是否有效
-        ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
+        ReferralCode referralCode = referralCodeRepository.selectByCode(code.toUpperCase());
         if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
             log.warn("❌ 推薦碼無效或已停用: {}", code);
             return false;
         }
         
         // 檢查使用者是否已使用過推薦碼
-        List<ReferralRecord> existingRecords = referralRecordMapper.selectByUserId(userId);
+        List<ReferralRecord> existingRecords = referralRecordRepository.selectByUserId(userId);
         if (!existingRecords.isEmpty()) {
             log.warn("❌ 使用者已使用過推薦碼: userId={}", userId);
             return false;
@@ -206,7 +210,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public List<ReferralRecordRes> getRecordsByCodeId(String referralCodeId) {
-        List<ReferralRecord> records = referralRecordMapper.selectByReferralCodeId(referralCodeId);
+        List<ReferralRecord> records = referralRecordRepository.selectByReferralCodeId(referralCodeId);
         return records.stream()
                 .map(this::toReferralRecordRes)
                 .collect(Collectors.toList());
@@ -214,7 +218,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public List<ReferralRecordRes> getRecordsByStoreId(String storeId) {
-        List<ReferralRecord> records = referralRecordMapper.selectByStoreId(storeId);
+        List<ReferralRecord> records = referralRecordRepository.selectByStoreId(storeId);
         return records.stream()
                 .map(this::toReferralRecordRes)
                 .collect(Collectors.toList());
@@ -222,7 +226,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public ReferralRecordRes getRecordByUserId(String userId) {
-        List<ReferralRecord> records = referralRecordMapper.selectByUserId(userId);
+        List<ReferralRecord> records = referralRecordRepository.selectByUserId(userId);
         return !records.isEmpty() ? toReferralRecordRes(records.get(0)) : null;
     }
     

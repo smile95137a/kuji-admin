@@ -6,16 +6,12 @@ public class UserAddress {
     private String id;
 
     private String userId;
-    
-    private String label;
 
     private String recipientName;
 
     private String recipientPhone;
 
     private String postalCode;
-    
-    private String zipCode;
 
     private String city;
 
@@ -44,14 +40,6 @@ public class UserAddress {
     public void setUserId(String userId) {
         this.userId = userId == null ? null : userId.trim();
     }
-    
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
-        this.label = label == null ? null : label.trim();
-    }
 
     public String getRecipientName() {
         return recipientName;
@@ -75,14 +63,6 @@ public class UserAddress {
 
     public void setPostalCode(String postalCode) {
         this.postalCode = postalCode == null ? null : postalCode.trim();
-    }
-    
-    public String getZipCode() {
-        return zipCode;
-    }
-
-    public void setZipCode(String zipCode) {
-        this.zipCode = zipCode == null ? null : zipCode.trim();
     }
 
     public String getCity() {

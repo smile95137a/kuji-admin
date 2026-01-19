@@ -4,6 +4,8 @@
   <resultMap id="BaseResultMap" type="com.group.admin.entity.ReferralCode">
     <id column="id" jdbcType="VARCHAR" property="id" />
     <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
     <result column="owner_id" jdbcType="VARCHAR" property="ownerId" />
     <result column="owner_type" jdbcType="VARCHAR" property="ownerType" />
     <result column="reward_gold" jdbcType="BIGINT" property="rewardGold" />
@@ -75,8 +77,8 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, code, owner_id, owner_type, reward_gold, reward_bonus, max_usage, used_count, 
-    valid_from, valid_until, is_active, created_at, updated_at
+    id, code, store_id, description, owner_id, owner_type, reward_gold, reward_bonus, 
+    max_usage, used_count, valid_from, valid_until, is_active, created_at, updated_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.ReferralCodeExample" resultMap="BaseResultMap">
     select
@@ -110,16 +112,18 @@
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.ReferralCode">
-    insert into referral_code (id, code, owner_id, 
-      owner_type, reward_gold, reward_bonus, 
-      max_usage, used_count, valid_from, 
-      valid_until, is_active, created_at, 
-      updated_at)
-    values (#{id,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR}, #{ownerId,jdbcType=VARCHAR}, 
-      #{ownerType,jdbcType=VARCHAR}, #{rewardGold,jdbcType=BIGINT}, #{rewardBonus,jdbcType=BIGINT}, 
-      #{maxUsage,jdbcType=INTEGER}, #{usedCount,jdbcType=INTEGER}, #{validFrom,jdbcType=TIMESTAMP}, 
-      #{validUntil,jdbcType=TIMESTAMP}, #{isActive,jdbcType=BIT}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP})
+    insert into referral_code (id, code, store_id, 
+      description, owner_id, owner_type, 
+      reward_gold, reward_bonus, max_usage, 
+      used_count, valid_from, valid_until, 
+      is_active, created_at, updated_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, 
+      #{description,jdbcType=VARCHAR}, #{ownerId,jdbcType=VARCHAR}, #{ownerType,jdbcType=VARCHAR}, 
+      #{rewardGold,jdbcType=BIGINT}, #{rewardBonus,jdbcType=BIGINT}, #{maxUsage,jdbcType=INTEGER}, 
+      #{usedCount,jdbcType=INTEGER}, #{validFrom,jdbcType=TIMESTAMP}, #{validUntil,jdbcType=TIMESTAMP}, 
+      #{isActive,jdbcType=BIT}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
+      )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.ReferralCode">
     insert into referral_code
@@ -129,6 +133,12 @@
       </if>
       <if test="code != null">
         code,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="description != null">
+        description,
       </if>
       <if test="ownerId != null">
         owner_id,
@@ -170,6 +180,12 @@
       </if>
       <if test="code != null">
         #{code,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
       </if>
       <if test="ownerId != null">
         #{ownerId,jdbcType=VARCHAR},
@@ -221,6 +237,12 @@
       <if test="row.code != null">
         code = #{row.code,jdbcType=VARCHAR},
       </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.description != null">
+        description = #{row.description,jdbcType=VARCHAR},
+      </if>
       <if test="row.ownerId != null">
         owner_id = #{row.ownerId,jdbcType=VARCHAR},
       </if>
@@ -263,6 +285,8 @@
     update referral_code
     set id = #{row.id,jdbcType=VARCHAR},
       code = #{row.code,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      description = #{row.description,jdbcType=VARCHAR},
       owner_id = #{row.ownerId,jdbcType=VARCHAR},
       owner_type = #{row.ownerType,jdbcType=VARCHAR},
       reward_gold = #{row.rewardGold,jdbcType=BIGINT},
@@ -283,6 +307,12 @@
     <set>
       <if test="code != null">
         code = #{code,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=VARCHAR},
       </if>
       <if test="ownerId != null">
         owner_id = #{ownerId,jdbcType=VARCHAR},
@@ -323,6 +353,8 @@
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ReferralCode">
     update referral_code
     set code = #{code,jdbcType=VARCHAR},
+      store_id = #{storeId,jdbcType=VARCHAR},
+      description = #{description,jdbcType=VARCHAR},
       owner_id = #{ownerId,jdbcType=VARCHAR},
       owner_type = #{ownerType,jdbcType=VARCHAR},
       reward_gold = #{rewardGold,jdbcType=BIGINT},

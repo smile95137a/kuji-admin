@@ -60,6 +60,15 @@ logging:
     root: INFO
     com.group: DEBUG
 
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.group.admin.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    lazy-loading-enabled: false
+    aggressive-lazy-loading: false
+
 # 本地檔案上傳設定（暫時替代 S3）
 file:
   upload:

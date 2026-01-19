@@ -101,9 +101,9 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setEndTime(req.getEndTime());
         lottery.setMaxDraws(req.getMaxDraws());
         lottery.setTotalDraws(0);
-        lottery.setStatus(LotteryStatusEnum.DRAFT.getCode());
+        lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
-        lottery.setWeight(req.getWeight() != null ? req.getWeight() : 1);
+        // ✅ 不再設定 weight
         lottery.setCreatedBy(operatorId);
         lottery.setCreatedAt(LocalDateTime.now());
         lottery.setUpdatedAt(LocalDateTime.now());
@@ -155,7 +155,7 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getEndTime() != null) lottery.setEndTime(req.getEndTime());
         if (req.getMaxDraws() != null) lottery.setMaxDraws(req.getMaxDraws());
         if (req.getOrderNum() != null) lottery.setOrderNum(req.getOrderNum());
-        if (req.getWeight() != null) lottery.setWeight(req.getWeight());
+        // ✅ 不再設定 weight
         if (req.getRemark() != null) lottery.setRemark(req.getRemark());
         
         lottery.setUpdatedAt(LocalDateTime.now());
@@ -571,17 +571,22 @@ public class LotteryServiceImpl implements LotteryService {
     }
 
     /**
-     * 根據權重選擇獎項
+     * 根據剩餘數量選擇獎項
+     * 
+     * ✅ 機率計算：1/剩餘數量
+     * - 不使用 weight 欄位
+     * - 每個獎項的機率 = remaining / 總剩餘數量
+     * - 例如：A賞剩1個，B賞剩3個 → A機率=1/4，B機率=3/4
      */
     private LotteryPrize selectPrize(List<LotteryPrize> prizes, String lotteryId) {
         LotteryPrize selected = null;
         int attempts = 0;
         
         while (attempts++ < 5) {
-            // 計算總權重
+            // 計算總剩餘數量（機率 = 1/剩餘數量）
             long total = prizes.stream()
                     .filter(p -> p.getRemaining() != null && p.getRemaining() > 0)
-                    .mapToLong(p -> (long) p.getRemaining() * (p.getWeight() == null || p.getWeight() == 0 ? 1 : p.getWeight()))
+                    .mapToLong(p -> (long) p.getRemaining())
                     .sum();
             
             if (total <= 0) break;
@@ -591,8 +596,8 @@ public class LotteryServiceImpl implements LotteryService {
             
             for (LotteryPrize p : prizes) {
                 if (p.getRemaining() == null || p.getRemaining() <= 0) continue;
-                long weight = (long) p.getRemaining() * (p.getWeight() == null || p.getWeight() == 0 ? 1 : p.getWeight());
-                cum += weight;
+                long remaining = (long) p.getRemaining();
+                cum += remaining;
                 if (r < cum) {
                     // 扣減獎項剩餘數量
                     int updated = decrementPrizeRemaining(p.getId());
@@ -1188,7 +1193,7 @@ public class LotteryServiceImpl implements LotteryService {
                 prize.setPrizeNumber(prizeReq.getPrizeNumber());
                 prize.setQuantity(prizeReq.getQuantity());
                 prize.setRemaining(prizeReq.getQuantity()); // 初始剩餘 = 總數量
-                prize.setWeight(prizeReq.getWeight() != null ? prizeReq.getWeight() : 1);
+                // ✅ 不再設定 weight，使用 1/剩餘數量 機率
                 prize.setPrizeType(prizeReq.getPrizeType());
                 prize.setPointValue(prizeReq.getPointValue());
                 prize.setIsLastPrize(prizeReq.getIsLastPrize() != null && prizeReq.getIsLastPrize() ? (byte) 1 : (byte) 0);

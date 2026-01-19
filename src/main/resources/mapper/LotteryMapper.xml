@@ -30,10 +30,19 @@
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="play_mode" jdbcType="VARCHAR" property="playMode" />
+    <result column="hot_count" jdbcType="INTEGER" property="hotCount" />
+    <result column="theme" jdbcType="VARCHAR" property="theme" />
+    <result column="tags" jdbcType="VARCHAR" property="tags" />
+    <result column="bonus_enabled" jdbcType="BIT" property="bonusEnabled" />
+    <result column="bonus_points_per_draw" jdbcType="INTEGER" property="bonusPointsPerDraw" />
+    <result column="bonus_cost_per_draw" jdbcType="INTEGER" property="bonusCostPerDraw" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.Lottery">
     <result column="description" jdbcType="LONGVARCHAR" property="description" />
     <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
+    <result column="gallery_images" jdbcType="LONGVARCHAR" property="galleryImages" />
+    <result column="content" jdbcType="LONGVARCHAR" property="content" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -98,10 +107,11 @@
     discounted_price, auto_discount_enabled, allow_multi_draw, multi_draw_options, scheduled_at, 
     start_time, end_time, total_draws, max_draws, protection_draws, protection_minutes, 
     free_draw_enabled, designated_prize_numbers, tickets_generated, status, order_num, 
-    weight, created_by, created_at, updated_at
+    weight, created_by, created_at, updated_at, play_mode, hot_count, theme, tags, bonus_enabled, 
+    bonus_points_per_draw, bonus_cost_per_draw
   </sql>
   <sql id="Blob_Column_List">
-    description, remark
+    description, remark, gallery_images, content
   </sql>
   <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.LotteryExample" resultMap="ResultMapWithBLOBs">
     select
@@ -163,7 +173,10 @@
       protection_minutes, free_draw_enabled, designated_prize_numbers, 
       tickets_generated, status, order_num, 
       weight, created_by, created_at, 
-      updated_at, description, remark
+      updated_at, play_mode, hot_count, 
+      theme, tags, bonus_enabled, 
+      bonus_points_per_draw, bonus_cost_per_draw, description, 
+      remark, gallery_images, content
       )
     values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
       #{imageUrl,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{subCategory,jdbcType=VARCHAR}, 
@@ -174,7 +187,10 @@
       #{protectionMinutes,jdbcType=INTEGER}, #{freeDrawEnabled,jdbcType=TINYINT}, #{designatedPrizeNumbers,jdbcType=VARCHAR}, 
       #{ticketsGenerated,jdbcType=TINYINT}, #{status,jdbcType=VARCHAR}, #{orderNum,jdbcType=INTEGER}, 
       #{weight,jdbcType=INTEGER}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR}, #{remark,jdbcType=LONGVARCHAR}
+      #{updatedAt,jdbcType=TIMESTAMP}, #{playMode,jdbcType=VARCHAR}, #{hotCount,jdbcType=INTEGER}, 
+      #{theme,jdbcType=VARCHAR}, #{tags,jdbcType=VARCHAR}, #{bonusEnabled,jdbcType=BIT}, 
+      #{bonusPointsPerDraw,jdbcType=INTEGER}, #{bonusCostPerDraw,jdbcType=INTEGER}, #{description,jdbcType=LONGVARCHAR}, 
+      #{remark,jdbcType=LONGVARCHAR}, #{galleryImages,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR}
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Lottery">
@@ -264,11 +280,38 @@
       <if test="updatedAt != null">
         updated_at,
       </if>
+      <if test="playMode != null">
+        play_mode,
+      </if>
+      <if test="hotCount != null">
+        hot_count,
+      </if>
+      <if test="theme != null">
+        theme,
+      </if>
+      <if test="tags != null">
+        tags,
+      </if>
+      <if test="bonusEnabled != null">
+        bonus_enabled,
+      </if>
+      <if test="bonusPointsPerDraw != null">
+        bonus_points_per_draw,
+      </if>
+      <if test="bonusCostPerDraw != null">
+        bonus_cost_per_draw,
+      </if>
       <if test="description != null">
         description,
       </if>
       <if test="remark != null">
         remark,
+      </if>
+      <if test="galleryImages != null">
+        gallery_images,
+      </if>
+      <if test="content != null">
+        content,
       </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
@@ -356,11 +399,38 @@
       <if test="updatedAt != null">
         #{updatedAt,jdbcType=TIMESTAMP},
       </if>
+      <if test="playMode != null">
+        #{playMode,jdbcType=VARCHAR},
+      </if>
+      <if test="hotCount != null">
+        #{hotCount,jdbcType=INTEGER},
+      </if>
+      <if test="theme != null">
+        #{theme,jdbcType=VARCHAR},
+      </if>
+      <if test="tags != null">
+        #{tags,jdbcType=VARCHAR},
+      </if>
+      <if test="bonusEnabled != null">
+        #{bonusEnabled,jdbcType=BIT},
+      </if>
+      <if test="bonusPointsPerDraw != null">
+        #{bonusPointsPerDraw,jdbcType=INTEGER},
+      </if>
+      <if test="bonusCostPerDraw != null">
+        #{bonusCostPerDraw,jdbcType=INTEGER},
+      </if>
       <if test="description != null">
         #{description,jdbcType=LONGVARCHAR},
       </if>
       <if test="remark != null">
         #{remark,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="galleryImages != null">
+        #{galleryImages,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="content != null">
+        #{content,jdbcType=LONGVARCHAR},
       </if>
     </trim>
   </insert>
@@ -457,11 +527,38 @@
       <if test="row.updatedAt != null">
         updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
       </if>
+      <if test="row.playMode != null">
+        play_mode = #{row.playMode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.hotCount != null">
+        hot_count = #{row.hotCount,jdbcType=INTEGER},
+      </if>
+      <if test="row.theme != null">
+        theme = #{row.theme,jdbcType=VARCHAR},
+      </if>
+      <if test="row.tags != null">
+        tags = #{row.tags,jdbcType=VARCHAR},
+      </if>
+      <if test="row.bonusEnabled != null">
+        bonus_enabled = #{row.bonusEnabled,jdbcType=BIT},
+      </if>
+      <if test="row.bonusPointsPerDraw != null">
+        bonus_points_per_draw = #{row.bonusPointsPerDraw,jdbcType=INTEGER},
+      </if>
+      <if test="row.bonusCostPerDraw != null">
+        bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER},
+      </if>
       <if test="row.description != null">
         description = #{row.description,jdbcType=LONGVARCHAR},
       </if>
       <if test="row.remark != null">
         remark = #{row.remark,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="row.galleryImages != null">
+        gallery_images = #{row.galleryImages,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="row.content != null">
+        content = #{row.content,jdbcType=LONGVARCHAR},
       </if>
     </set>
     <if test="example != null">
@@ -498,8 +595,17 @@
       created_by = #{row.createdBy,jdbcType=VARCHAR},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      play_mode = #{row.playMode,jdbcType=VARCHAR},
+      hot_count = #{row.hotCount,jdbcType=INTEGER},
+      theme = #{row.theme,jdbcType=VARCHAR},
+      tags = #{row.tags,jdbcType=VARCHAR},
+      bonus_enabled = #{row.bonusEnabled,jdbcType=BIT},
+      bonus_points_per_draw = #{row.bonusPointsPerDraw,jdbcType=INTEGER},
+      bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER},
       description = #{row.description,jdbcType=LONGVARCHAR},
-      remark = #{row.remark,jdbcType=LONGVARCHAR}
+      remark = #{row.remark,jdbcType=LONGVARCHAR},
+      gallery_images = #{row.galleryImages,jdbcType=LONGVARCHAR},
+      content = #{row.content,jdbcType=LONGVARCHAR}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -533,7 +639,14 @@
       weight = #{row.weight,jdbcType=INTEGER},
       created_by = #{row.createdBy,jdbcType=VARCHAR},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      play_mode = #{row.playMode,jdbcType=VARCHAR},
+      hot_count = #{row.hotCount,jdbcType=INTEGER},
+      theme = #{row.theme,jdbcType=VARCHAR},
+      tags = #{row.tags,jdbcType=VARCHAR},
+      bonus_enabled = #{row.bonusEnabled,jdbcType=BIT},
+      bonus_points_per_draw = #{row.bonusPointsPerDraw,jdbcType=INTEGER},
+      bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -622,11 +735,38 @@
       <if test="updatedAt != null">
         updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       </if>
+      <if test="playMode != null">
+        play_mode = #{playMode,jdbcType=VARCHAR},
+      </if>
+      <if test="hotCount != null">
+        hot_count = #{hotCount,jdbcType=INTEGER},
+      </if>
+      <if test="theme != null">
+        theme = #{theme,jdbcType=VARCHAR},
+      </if>
+      <if test="tags != null">
+        tags = #{tags,jdbcType=VARCHAR},
+      </if>
+      <if test="bonusEnabled != null">
+        bonus_enabled = #{bonusEnabled,jdbcType=BIT},
+      </if>
+      <if test="bonusPointsPerDraw != null">
+        bonus_points_per_draw = #{bonusPointsPerDraw,jdbcType=INTEGER},
+      </if>
+      <if test="bonusCostPerDraw != null">
+        bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER},
+      </if>
       <if test="description != null">
         description = #{description,jdbcType=LONGVARCHAR},
       </if>
       <if test="remark != null">
         remark = #{remark,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="galleryImages != null">
+        gallery_images = #{galleryImages,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="content != null">
+        content = #{content,jdbcType=LONGVARCHAR},
       </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
@@ -660,8 +800,17 @@
       created_by = #{createdBy,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      play_mode = #{playMode,jdbcType=VARCHAR},
+      hot_count = #{hotCount,jdbcType=INTEGER},
+      theme = #{theme,jdbcType=VARCHAR},
+      tags = #{tags,jdbcType=VARCHAR},
+      bonus_enabled = #{bonusEnabled,jdbcType=BIT},
+      bonus_points_per_draw = #{bonusPointsPerDraw,jdbcType=INTEGER},
+      bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER},
       description = #{description,jdbcType=LONGVARCHAR},
-      remark = #{remark,jdbcType=LONGVARCHAR}
+      remark = #{remark,jdbcType=LONGVARCHAR},
+      gallery_images = #{galleryImages,jdbcType=LONGVARCHAR},
+      content = #{content,jdbcType=LONGVARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Lottery">
@@ -692,7 +841,14 @@
       weight = #{weight,jdbcType=INTEGER},
       created_by = #{createdBy,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      play_mode = #{playMode,jdbcType=VARCHAR},
+      hot_count = #{hotCount,jdbcType=INTEGER},
+      theme = #{theme,jdbcType=VARCHAR},
+      tags = #{tags,jdbcType=VARCHAR},
+      bonus_enabled = #{bonusEnabled,jdbcType=BIT},
+      bonus_points_per_draw = #{bonusPointsPerDraw,jdbcType=INTEGER},
+      bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.dto.res.report.*;
 import com.group.admin.entity.ReportSnapshot;
 import com.group.admin.mapper.ReportSnapshotMapper;
+import com.group.admin.repository.ReportSnapshotRepository;
 import com.group.admin.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class ReportServiceImpl implements ReportService {
     
     private final JdbcTemplate jdbcTemplate;
     private final ReportSnapshotMapper reportSnapshotMapper;
+    private final ReportSnapshotRepository reportSnapshotRepository;
     private final ObjectMapper objectMapper;
     
     @Override
@@ -574,7 +576,7 @@ public class ReportServiceImpl implements ReportService {
     
     @Override
     public List<?> getReportSnapshots(String reportType, String periodType, String storeId) {
-        return reportSnapshotMapper.selectByTypeAndPeriod(reportType, periodType, 100);
+        return reportSnapshotRepository.selectByTypeAndPeriod(reportType, periodType, 100);
     }
     
     // ========== 工具方法 ==========

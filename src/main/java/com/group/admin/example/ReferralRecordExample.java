@@ -175,6 +175,76 @@ public class ReferralRecordExample {
             return (Criteria) this;
         }
 
+        public Criteria andUserIdIsNull() {
+            addCriterion("user_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdIsNotNull() {
+            addCriterion("user_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdEqualTo(String value) {
+            addCriterion("user_id =", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdNotEqualTo(String value) {
+            addCriterion("user_id <>", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdGreaterThan(String value) {
+            addCriterion("user_id >", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdGreaterThanOrEqualTo(String value) {
+            addCriterion("user_id >=", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdLessThan(String value) {
+            addCriterion("user_id <", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdLessThanOrEqualTo(String value) {
+            addCriterion("user_id <=", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdLike(String value) {
+            addCriterion("user_id like", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdNotLike(String value) {
+            addCriterion("user_id not like", value, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdIn(List<String> values) {
+            addCriterion("user_id in", values, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdNotIn(List<String> values) {
+            addCriterion("user_id not in", values, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdBetween(String value1, String value2) {
+            addCriterion("user_id between", value1, value2, "userId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUserIdNotBetween(String value1, String value2) {
+            addCriterion("user_id not between", value1, value2, "userId");
+            return (Criteria) this;
+        }
+
         public Criteria andReferralCodeIdIsNull() {
             addCriterion("referral_code_id is null");
             return (Criteria) this;
@@ -242,6 +312,206 @@ public class ReferralRecordExample {
 
         public Criteria andReferralCodeIdNotBetween(String value1, String value2) {
             addCriterion("referral_code_id not between", value1, value2, "referralCodeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdIsNull() {
+            addCriterion("store_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdIsNotNull() {
+            addCriterion("store_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdEqualTo(String value) {
+            addCriterion("store_id =", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdNotEqualTo(String value) {
+            addCriterion("store_id <>", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdGreaterThan(String value) {
+            addCriterion("store_id >", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdGreaterThanOrEqualTo(String value) {
+            addCriterion("store_id >=", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdLessThan(String value) {
+            addCriterion("store_id <", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdLessThanOrEqualTo(String value) {
+            addCriterion("store_id <=", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdLike(String value) {
+            addCriterion("store_id like", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdNotLike(String value) {
+            addCriterion("store_id not like", value, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdIn(List<String> values) {
+            addCriterion("store_id in", values, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdNotIn(List<String> values) {
+            addCriterion("store_id not in", values, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdBetween(String value1, String value2) {
+            addCriterion("store_id between", value1, value2, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andStoreIdNotBetween(String value1, String value2) {
+            addCriterion("store_id not between", value1, value2, "storeId");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeIsNull() {
+            addCriterion("used_code is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeIsNotNull() {
+            addCriterion("used_code is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeEqualTo(String value) {
+            addCriterion("used_code =", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeNotEqualTo(String value) {
+            addCriterion("used_code <>", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeGreaterThan(String value) {
+            addCriterion("used_code >", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeGreaterThanOrEqualTo(String value) {
+            addCriterion("used_code >=", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeLessThan(String value) {
+            addCriterion("used_code <", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeLessThanOrEqualTo(String value) {
+            addCriterion("used_code <=", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeLike(String value) {
+            addCriterion("used_code like", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeNotLike(String value) {
+            addCriterion("used_code not like", value, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeIn(List<String> values) {
+            addCriterion("used_code in", values, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeNotIn(List<String> values) {
+            addCriterion("used_code not in", values, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeBetween(String value1, String value2) {
+            addCriterion("used_code between", value1, value2, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andUsedCodeNotBetween(String value1, String value2) {
+            addCriterion("used_code not between", value1, value2, "usedCode");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtIsNull() {
+            addCriterion("referred_at is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtIsNotNull() {
+            addCriterion("referred_at is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtEqualTo(LocalDateTime value) {
+            addCriterion("referred_at =", value, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtNotEqualTo(LocalDateTime value) {
+            addCriterion("referred_at <>", value, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtGreaterThan(LocalDateTime value) {
+            addCriterion("referred_at >", value, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtGreaterThanOrEqualTo(LocalDateTime value) {
+            addCriterion("referred_at >=", value, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtLessThan(LocalDateTime value) {
+            addCriterion("referred_at <", value, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtLessThanOrEqualTo(LocalDateTime value) {
+            addCriterion("referred_at <=", value, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtIn(List<LocalDateTime> values) {
+            addCriterion("referred_at in", values, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtNotIn(List<LocalDateTime> values) {
+            addCriterion("referred_at not in", values, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtBetween(LocalDateTime value1, LocalDateTime value2) {
+            addCriterion("referred_at between", value1, value2, "referredAt");
+            return (Criteria) this;
+        }
+
+        public Criteria andReferredAtNotBetween(LocalDateTime value1, LocalDateTime value2) {
+            addCriterion("referred_at not between", value1, value2, "referredAt");
             return (Criteria) this;
         }
 

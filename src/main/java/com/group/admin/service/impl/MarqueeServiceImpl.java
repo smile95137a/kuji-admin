@@ -2,6 +2,7 @@ package com.group.admin.service.impl;
 
 import com.group.admin.entity.Marquee;
 import com.group.admin.mapper.MarqueeMapper;
+import com.group.admin.repository.MarqueeRepository;
 import com.group.admin.service.MarqueeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,21 +22,22 @@ import java.util.UUID;
 public class MarqueeServiceImpl implements MarqueeService {
     
     private final MarqueeMapper marqueeMapper;
+    private final MarqueeRepository marqueeRepository;
     private final SimpMessagingTemplate messagingTemplate;
     
     @Override
     public List<Marquee> getActiveMarquees() {
-        return marqueeMapper.selectActiveMarquees(LocalDateTime.now());
+        return marqueeRepository.selectActiveMarquees(LocalDateTime.now());
     }
     
     @Override
     public List<Marquee> getAllMarquees() {
-        return marqueeMapper.selectAll();
+        return marqueeRepository.selectAll();
     }
     
     @Override
     public Marquee getMarqueeById(String id) {
-        return marqueeMapper.selectById(id);
+        return marqueeRepository.selectById(id);
     }
     
     @Override
@@ -66,7 +68,7 @@ public class MarqueeServiceImpl implements MarqueeService {
     @Override
     public Marquee updateMarquee(Marquee marquee) {
         marquee.setUpdatedAt(LocalDateTime.now());
-        marqueeMapper.update(marquee);
+        marqueeRepository.update(marquee);
         log.info("✅ 跑馬燈已更新: id={}", marquee.getId());
         
         // 廣播更新後的跑馬燈列表
@@ -77,7 +79,7 @@ public class MarqueeServiceImpl implements MarqueeService {
     
     @Override
     public void deleteMarquee(String id) {
-        marqueeMapper.deleteById(id);
+        marqueeRepository.deleteById(id);
         log.info("🗑️ 跑馬燈已刪除: id={}", id);
         
         // 廣播更新後的跑馬燈列表
@@ -87,7 +89,7 @@ public class MarqueeServiceImpl implements MarqueeService {
     @Override
     public void updateStatus(String id, String status) {
         Byte isActive = "ACTIVE".equals(status) ? (byte) 1 : (byte) 0;
-        marqueeMapper.updateStatus(id, isActive, LocalDateTime.now());
+        marqueeRepository.updateStatus(id, isActive, LocalDateTime.now());
         log.info("✅ 跑馬燈狀態已更新: id={}, status={}", id, status);
         
         // 廣播更新後的跑馬燈列表

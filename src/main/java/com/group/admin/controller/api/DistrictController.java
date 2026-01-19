@@ -1,16 +1,14 @@
 package com.group.admin.controller.api;
 
 import com.group.admin.entity.District;
-import com.group.admin.mapper.DistrictMapper;
+import com.group.admin.service.DistrictService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 行政區 API（前台使用）
@@ -22,14 +20,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DistrictController {
     
-    private final DistrictMapper districtMapper;
+    private final DistrictService districtService;
     
     /**
      * 取得所有縣市列表
      */
     @GetMapping("/cities")
     public ResponseEntity<List<String>> getAllCities() {
-        List<String> cities = districtMapper.selectAllCities();
+        List<String> cities = districtService.getAllCities();
         return ResponseEntity.ok(cities);
     }
     
@@ -38,7 +36,7 @@ public class DistrictController {
      */
     @GetMapping("/districts/{city}")
     public ResponseEntity<List<District>> getDistrictsByCity(@PathVariable String city) {
-        List<District> districts = districtMapper.selectByCity(city);
+        List<District> districts = districtService.getDistrictsByCity(city);
         return ResponseEntity.ok(districts);
     }
     
@@ -47,11 +45,7 @@ public class DistrictController {
      */
     @GetMapping("/tree")
     public ResponseEntity<Map<String, List<District>>> getDistrictTree() {
-        List<District> allDistricts = districtMapper.selectAll();
-        
-        Map<String, List<District>> tree = allDistricts.stream()
-            .collect(Collectors.groupingBy(District::getCity));
-        
+        Map<String, List<District>> tree = districtService.getDistrictTree();
         return ResponseEntity.ok(tree);
     }
     
@@ -60,7 +54,7 @@ public class DistrictController {
      */
     @GetMapping("/all")
     public ResponseEntity<List<District>> getAllDistricts() {
-        List<District> districts = districtMapper.selectAll();
+        List<District> districts = districtService.getAllDistricts();
         return ResponseEntity.ok(districts);
     }
     
@@ -71,7 +65,7 @@ public class DistrictController {
     public ResponseEntity<District> getDistrict(
             @RequestParam String city,
             @RequestParam String district) {
-        District result = districtMapper.selectByCityAndDistrict(city, district);
+        District result = districtService.getDistrict(city, district);
         return ResponseEntity.ok(result);
     }
 }

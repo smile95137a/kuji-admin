@@ -67,7 +67,6 @@ public class LotteryPrizeServiceImpl implements LotteryPrizeService {
         prize.setPrizeNumber(req.getPrizeNumber());
         prize.setQuantity(req.getQuantity());
         prize.setRemaining(req.getQuantity()); // 初始時剩餘數量 = 總數量
-        prize.setWeight(req.getWeight() != null ? req.getWeight() : 1);
         prize.setPrizeType(req.getPrizeType() != null ? req.getPrizeType() : "physical");
         prize.setPointValue(req.getPointValue());
         prize.setIsLastPrize(req.getIsLastPrize() != null && req.getIsLastPrize() ? (byte) 1 : (byte) 0);

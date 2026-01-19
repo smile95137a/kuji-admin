@@ -1894,6 +1894,456 @@ public class LotteryExample {
             addCriterion("updated_at not between", value1, value2, "updatedAt");
             return (Criteria) this;
         }
+
+        public Criteria andPlayModeIsNull() {
+            addCriterion("play_mode is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeIsNotNull() {
+            addCriterion("play_mode is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeEqualTo(String value) {
+            addCriterion("play_mode =", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeNotEqualTo(String value) {
+            addCriterion("play_mode <>", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeGreaterThan(String value) {
+            addCriterion("play_mode >", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeGreaterThanOrEqualTo(String value) {
+            addCriterion("play_mode >=", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeLessThan(String value) {
+            addCriterion("play_mode <", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeLessThanOrEqualTo(String value) {
+            addCriterion("play_mode <=", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeLike(String value) {
+            addCriterion("play_mode like", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeNotLike(String value) {
+            addCriterion("play_mode not like", value, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeIn(List<String> values) {
+            addCriterion("play_mode in", values, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeNotIn(List<String> values) {
+            addCriterion("play_mode not in", values, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeBetween(String value1, String value2) {
+            addCriterion("play_mode between", value1, value2, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andPlayModeNotBetween(String value1, String value2) {
+            addCriterion("play_mode not between", value1, value2, "playMode");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountIsNull() {
+            addCriterion("hot_count is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountIsNotNull() {
+            addCriterion("hot_count is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountEqualTo(Integer value) {
+            addCriterion("hot_count =", value, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountNotEqualTo(Integer value) {
+            addCriterion("hot_count <>", value, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountGreaterThan(Integer value) {
+            addCriterion("hot_count >", value, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountGreaterThanOrEqualTo(Integer value) {
+            addCriterion("hot_count >=", value, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountLessThan(Integer value) {
+            addCriterion("hot_count <", value, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountLessThanOrEqualTo(Integer value) {
+            addCriterion("hot_count <=", value, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountIn(List<Integer> values) {
+            addCriterion("hot_count in", values, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountNotIn(List<Integer> values) {
+            addCriterion("hot_count not in", values, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountBetween(Integer value1, Integer value2) {
+            addCriterion("hot_count between", value1, value2, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andHotCountNotBetween(Integer value1, Integer value2) {
+            addCriterion("hot_count not between", value1, value2, "hotCount");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeIsNull() {
+            addCriterion("theme is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeIsNotNull() {
+            addCriterion("theme is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeEqualTo(String value) {
+            addCriterion("theme =", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeNotEqualTo(String value) {
+            addCriterion("theme <>", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeGreaterThan(String value) {
+            addCriterion("theme >", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeGreaterThanOrEqualTo(String value) {
+            addCriterion("theme >=", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeLessThan(String value) {
+            addCriterion("theme <", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeLessThanOrEqualTo(String value) {
+            addCriterion("theme <=", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeLike(String value) {
+            addCriterion("theme like", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeNotLike(String value) {
+            addCriterion("theme not like", value, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeIn(List<String> values) {
+            addCriterion("theme in", values, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeNotIn(List<String> values) {
+            addCriterion("theme not in", values, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeBetween(String value1, String value2) {
+            addCriterion("theme between", value1, value2, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andThemeNotBetween(String value1, String value2) {
+            addCriterion("theme not between", value1, value2, "theme");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsIsNull() {
+            addCriterion("tags is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsIsNotNull() {
+            addCriterion("tags is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsEqualTo(String value) {
+            addCriterion("tags =", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsNotEqualTo(String value) {
+            addCriterion("tags <>", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsGreaterThan(String value) {
+            addCriterion("tags >", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsGreaterThanOrEqualTo(String value) {
+            addCriterion("tags >=", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsLessThan(String value) {
+            addCriterion("tags <", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsLessThanOrEqualTo(String value) {
+            addCriterion("tags <=", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsLike(String value) {
+            addCriterion("tags like", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsNotLike(String value) {
+            addCriterion("tags not like", value, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsIn(List<String> values) {
+            addCriterion("tags in", values, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsNotIn(List<String> values) {
+            addCriterion("tags not in", values, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsBetween(String value1, String value2) {
+            addCriterion("tags between", value1, value2, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andTagsNotBetween(String value1, String value2) {
+            addCriterion("tags not between", value1, value2, "tags");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledIsNull() {
+            addCriterion("bonus_enabled is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledIsNotNull() {
+            addCriterion("bonus_enabled is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledEqualTo(Boolean value) {
+            addCriterion("bonus_enabled =", value, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledNotEqualTo(Boolean value) {
+            addCriterion("bonus_enabled <>", value, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledGreaterThan(Boolean value) {
+            addCriterion("bonus_enabled >", value, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledGreaterThanOrEqualTo(Boolean value) {
+            addCriterion("bonus_enabled >=", value, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledLessThan(Boolean value) {
+            addCriterion("bonus_enabled <", value, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledLessThanOrEqualTo(Boolean value) {
+            addCriterion("bonus_enabled <=", value, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledIn(List<Boolean> values) {
+            addCriterion("bonus_enabled in", values, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledNotIn(List<Boolean> values) {
+            addCriterion("bonus_enabled not in", values, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledBetween(Boolean value1, Boolean value2) {
+            addCriterion("bonus_enabled between", value1, value2, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusEnabledNotBetween(Boolean value1, Boolean value2) {
+            addCriterion("bonus_enabled not between", value1, value2, "bonusEnabled");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawIsNull() {
+            addCriterion("bonus_points_per_draw is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawIsNotNull() {
+            addCriterion("bonus_points_per_draw is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawEqualTo(Integer value) {
+            addCriterion("bonus_points_per_draw =", value, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawNotEqualTo(Integer value) {
+            addCriterion("bonus_points_per_draw <>", value, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawGreaterThan(Integer value) {
+            addCriterion("bonus_points_per_draw >", value, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawGreaterThanOrEqualTo(Integer value) {
+            addCriterion("bonus_points_per_draw >=", value, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawLessThan(Integer value) {
+            addCriterion("bonus_points_per_draw <", value, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawLessThanOrEqualTo(Integer value) {
+            addCriterion("bonus_points_per_draw <=", value, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawIn(List<Integer> values) {
+            addCriterion("bonus_points_per_draw in", values, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawNotIn(List<Integer> values) {
+            addCriterion("bonus_points_per_draw not in", values, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawBetween(Integer value1, Integer value2) {
+            addCriterion("bonus_points_per_draw between", value1, value2, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusPointsPerDrawNotBetween(Integer value1, Integer value2) {
+            addCriterion("bonus_points_per_draw not between", value1, value2, "bonusPointsPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawIsNull() {
+            addCriterion("bonus_cost_per_draw is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawIsNotNull() {
+            addCriterion("bonus_cost_per_draw is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawEqualTo(Integer value) {
+            addCriterion("bonus_cost_per_draw =", value, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawNotEqualTo(Integer value) {
+            addCriterion("bonus_cost_per_draw <>", value, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawGreaterThan(Integer value) {
+            addCriterion("bonus_cost_per_draw >", value, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawGreaterThanOrEqualTo(Integer value) {
+            addCriterion("bonus_cost_per_draw >=", value, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawLessThan(Integer value) {
+            addCriterion("bonus_cost_per_draw <", value, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawLessThanOrEqualTo(Integer value) {
+            addCriterion("bonus_cost_per_draw <=", value, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawIn(List<Integer> values) {
+            addCriterion("bonus_cost_per_draw in", values, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawNotIn(List<Integer> values) {
+            addCriterion("bonus_cost_per_draw not in", values, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawBetween(Integer value1, Integer value2) {
+            addCriterion("bonus_cost_per_draw between", value1, value2, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
+
+        public Criteria andBonusCostPerDrawNotBetween(Integer value1, Integer value2) {
+            addCriterion("bonus_cost_per_draw not between", value1, value2, "bonusCostPerDraw");
+            return (Criteria) this;
+        }
     }
 
     public static class Criteria extends GeneratedCriteria {

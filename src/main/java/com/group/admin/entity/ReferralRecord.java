@@ -5,15 +5,17 @@ import java.time.LocalDateTime;
 public class ReferralRecord {
     private String id;
 
+    private String userId;
+
     private String referralCodeId;
 
-    private String referralCode;
-    
-    private String userId;
-    
-    private String usedCode;
-    
     private String storeId;
+
+    private String usedCode;
+
+    private LocalDateTime referredAt;
+
+    private String referralCode;
 
     private String referrerId;
 
@@ -28,8 +30,6 @@ public class ReferralRecord {
     private Boolean isRewardGiven;
 
     private LocalDateTime rewardGivenAt;
-    
-    private LocalDateTime referredAt;
 
     private LocalDateTime createdAt;
 
@@ -41,6 +41,14 @@ public class ReferralRecord {
         this.id = id == null ? null : id.trim();
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId == null ? null : userId.trim();
+    }
+
     public String getReferralCodeId() {
         return referralCodeId;
     }
@@ -49,22 +57,14 @@ public class ReferralRecord {
         this.referralCodeId = referralCodeId == null ? null : referralCodeId.trim();
     }
 
-    public String getReferralCode() {
-        return referralCode;
+    public String getStoreId() {
+        return storeId;
     }
 
-    public void setReferralCode(String referralCode) {
-        this.referralCode = referralCode == null ? null : referralCode.trim();
-    }
-    
-    public String getUserId() {
-        return userId;
+    public void setStoreId(String storeId) {
+        this.storeId = storeId == null ? null : storeId.trim();
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId == null ? null : userId.trim();
-    }
-    
     public String getUsedCode() {
         return usedCode;
     }
@@ -72,13 +72,21 @@ public class ReferralRecord {
     public void setUsedCode(String usedCode) {
         this.usedCode = usedCode == null ? null : usedCode.trim();
     }
-    
-    public String getStoreId() {
-        return storeId;
+
+    public LocalDateTime getReferredAt() {
+        return referredAt;
     }
 
-    public void setStoreId(String storeId) {
-        this.storeId = storeId == null ? null : storeId.trim();
+    public void setReferredAt(LocalDateTime referredAt) {
+        this.referredAt = referredAt;
+    }
+
+    public String getReferralCode() {
+        return referralCode;
+    }
+
+    public void setReferralCode(String referralCode) {
+        this.referralCode = referralCode == null ? null : referralCode.trim();
     }
 
     public String getReferrerId() {
@@ -135,14 +143,6 @@ public class ReferralRecord {
 
     public void setRewardGivenAt(LocalDateTime rewardGivenAt) {
         this.rewardGivenAt = rewardGivenAt;
-    }
-    
-    public LocalDateTime getReferredAt() {
-        return referredAt;
-    }
-
-    public void setReferredAt(LocalDateTime referredAt) {
-        this.referredAt = referredAt;
     }
 
     public LocalDateTime getCreatedAt() {

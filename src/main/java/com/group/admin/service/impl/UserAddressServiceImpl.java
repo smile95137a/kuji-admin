@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.group.admin.entity.UserAddress;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.UserAddressMapper;
+import com.group.admin.repository.UserAddressRepository;
 import com.group.admin.req.address.UserAddressCreateReq;
 import com.group.admin.req.address.UserAddressUpdateReq;
 import com.group.admin.res.address.UserAddressRes;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class UserAddressServiceImpl implements UserAddressService {
     
     private final UserAddressMapper userAddressMapper;
+    private final UserAddressRepository userAddressRepository;
     
     @Override
     @Transactional
@@ -37,22 +39,21 @@ public class UserAddressServiceImpl implements UserAddressService {
         
         // 如果設為預設地址，先清除其他預設
         if (req.getIsDefault() != null && req.getIsDefault()) {
-            userAddressMapper.clearDefaultByUserId(userId);
+            userAddressRepository.clearDefaultByUserId(userId);
         }
         
         // 如果是第一個地址，自動設為預設
-        List<UserAddress> existingAddresses = userAddressMapper.selectByUserId(userId);
+        List<UserAddress> existingAddresses = userAddressRepository.selectByUserId(userId);
         boolean isFirst = existingAddresses.isEmpty();
         
         UserAddress address = new UserAddress();
         address.setId(UUID.randomUUID().toString());
         address.setUserId(userId);
-        address.setLabel(req.getLabel());
         address.setRecipientName(req.getRecipientName());
         address.setRecipientPhone(req.getRecipientPhone());
         address.setCity(req.getCity());
         address.setDistrict(req.getDistrict());
-        address.setZipCode(req.getZipCode());
+        address.setPostalCode(req.getZipCode());
         address.setAddress(req.getAddress());
         address.setIsDefault(isFirst || (req.getIsDefault() != null && req.getIsDefault()));
         address.setCreatedAt(LocalDateTime.now());
@@ -76,13 +77,10 @@ public class UserAddressServiceImpl implements UserAddressService {
         
         // 如果設為預設地址，先清除其他預設
         if (req.getIsDefault() != null && req.getIsDefault()) {
-            userAddressMapper.clearDefaultByUserId(userId);
+            userAddressRepository.clearDefaultByUserId(userId);
         }
         
         // 更新欄位
-        if (req.getLabel() != null) {
-            address.setLabel(req.getLabel());
-        }
         if (req.getRecipientName() != null) {
             address.setRecipientName(req.getRecipientName());
         }
@@ -96,7 +94,7 @@ public class UserAddressServiceImpl implements UserAddressService {
             address.setDistrict(req.getDistrict());
         }
         if (req.getZipCode() != null) {
-            address.setZipCode(req.getZipCode());
+            address.setPostalCode(req.getZipCode());
         }
         if (req.getAddress() != null) {
             address.setAddress(req.getAddress());
@@ -127,7 +125,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         
         // 如果刪除的是預設地址，自動將第一個設為預設
         if (wasDefault) {
-            List<UserAddress> remainingAddresses = userAddressMapper.selectByUserId(userId);
+            List<UserAddress> remainingAddresses = userAddressRepository.selectByUserId(userId);
             if (!remainingAddresses.isEmpty()) {
                 UserAddress firstAddress = remainingAddresses.get(0);
                 firstAddress.setIsDefault(true);
@@ -150,7 +148,7 @@ public class UserAddressServiceImpl implements UserAddressService {
     
     @Override
     public List<UserAddressRes> getByUserId(String userId) {
-        List<UserAddress> addresses = userAddressMapper.selectByUserId(userId);
+        List<UserAddress> addresses = userAddressRepository.selectByUserId(userId);
         return addresses.stream()
                 .map(this::toUserAddressRes)
                 .collect(Collectors.toList());
@@ -158,7 +156,7 @@ public class UserAddressServiceImpl implements UserAddressService {
     
     @Override
     public UserAddressRes getDefaultByUserId(String userId) {
-        UserAddress address = userAddressMapper.selectDefaultByUserId(userId);
+        UserAddress address = userAddressRepository.selectDefaultByUserId(userId);
         return address != null ? toUserAddressRes(address) : null;
     }
     
@@ -173,7 +171,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         }
         
         // 清除其他預設
-        userAddressMapper.clearDefaultByUserId(userId);
+        userAddressRepository.clearDefaultByUserId(userId);
         
         // 設定為預設
         address.setIsDefault(true);
@@ -191,12 +189,12 @@ public class UserAddressServiceImpl implements UserAddressService {
         UserAddressRes res = new UserAddressRes();
         res.setId(address.getId());
         res.setUserId(address.getUserId());
-        res.setLabel(address.getLabel());
+        res.setLabel(null); // Entity 沒有 label 欄位
         res.setRecipientName(address.getRecipientName());
         res.setRecipientPhone(address.getRecipientPhone());
         res.setCity(address.getCity());
         res.setDistrict(address.getDistrict());
-        res.setZipCode(address.getZipCode());
+        res.setZipCode(address.getPostalCode()); // Entity 使用 postalCode
         res.setAddress(address.getAddress());
         res.setIsDefault(Boolean.TRUE.equals(address.getIsDefault()));
         res.setCreatedAt(address.getCreatedAt());
@@ -204,8 +202,8 @@ public class UserAddressServiceImpl implements UserAddressService {
         
         // 組合完整地址
         StringBuilder fullAddress = new StringBuilder();
-        if (address.getZipCode() != null && !address.getZipCode().isEmpty()) {
-            fullAddress.append(address.getZipCode()).append(" ");
+        if (address.getPostalCode() != null && !address.getPostalCode().isEmpty()) {
+            fullAddress.append(address.getPostalCode()).append(" ");
         }
         if (address.getCity() != null) {
             fullAddress.append(address.getCity());

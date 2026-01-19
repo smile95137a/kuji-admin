@@ -59,9 +59,27 @@ public class Lottery {
 
     private LocalDateTime updatedAt;
 
+    private String playMode;
+
+    private Integer hotCount;
+
+    private String theme;
+
+    private String tags;
+
+    private Boolean bonusEnabled;
+
+    private Integer bonusPointsPerDraw;
+
+    private Integer bonusCostPerDraw;
+
     private String description;
 
     private String remark;
+
+    private String galleryImages;
+
+    private String content;
 
     public String getId() {
         return id;
@@ -287,6 +305,62 @@ public class Lottery {
         this.updatedAt = updatedAt;
     }
 
+    public String getPlayMode() {
+        return playMode;
+    }
+
+    public void setPlayMode(String playMode) {
+        this.playMode = playMode == null ? null : playMode.trim();
+    }
+
+    public Integer getHotCount() {
+        return hotCount;
+    }
+
+    public void setHotCount(Integer hotCount) {
+        this.hotCount = hotCount;
+    }
+
+    public String getTheme() {
+        return theme;
+    }
+
+    public void setTheme(String theme) {
+        this.theme = theme == null ? null : theme.trim();
+    }
+
+    public String getTags() {
+        return tags;
+    }
+
+    public void setTags(String tags) {
+        this.tags = tags == null ? null : tags.trim();
+    }
+
+    public Boolean getBonusEnabled() {
+        return bonusEnabled;
+    }
+
+    public void setBonusEnabled(Boolean bonusEnabled) {
+        this.bonusEnabled = bonusEnabled;
+    }
+
+    public Integer getBonusPointsPerDraw() {
+        return bonusPointsPerDraw;
+    }
+
+    public void setBonusPointsPerDraw(Integer bonusPointsPerDraw) {
+        this.bonusPointsPerDraw = bonusPointsPerDraw;
+    }
+
+    public Integer getBonusCostPerDraw() {
+        return bonusCostPerDraw;
+    }
+
+    public void setBonusCostPerDraw(Integer bonusCostPerDraw) {
+        this.bonusCostPerDraw = bonusCostPerDraw;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -301,5 +375,21 @@ public class Lottery {
 
     public void setRemark(String remark) {
         this.remark = remark == null ? null : remark.trim();
+    }
+
+    public String getGalleryImages() {
+        return galleryImages;
+    }
+
+    public void setGalleryImages(String galleryImages) {
+        this.galleryImages = galleryImages == null ? null : galleryImages.trim();
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content == null ? null : content.trim();
     }
 }

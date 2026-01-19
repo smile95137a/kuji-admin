@@ -182,6 +182,8 @@ public class MBGAutoRunner {
 
     /**
      * 清理舊的生成檔案，避免 MyBatis 重複載入錯誤
+     * 
+     * ⚠️ 重要：不刪除 Mapper 介面，因為裡面有手動加的自定義方法
      */
     private static void cleanGeneratedFiles() {
         try {
@@ -199,12 +201,8 @@ public class MBGAutoRunner {
                 System.out.println("   🗑️  已清理 example/ 目錄");
             }
             
-            // 清理 Mapper（保留自定義的 Mapper，只刪除 XML）
-            File mapperDir = new File("src/main/java/com/group/admin/mapper");
-            if (mapperDir.exists()) {
-                deleteDirectory(mapperDir);
-                System.out.println("   🗑️  已清理 mapper/ 目錄");
-            }
+            // ✅ 不刪除 Mapper 介面（保留自定義方法）
+            System.out.println("   ✅ 保留 mapper/ 目錄（內含自定義方法）");
             
             // 清理 Mapper XML
             File xmlDir = new File("src/main/resources/mapper");
@@ -226,11 +224,8 @@ public class MBGAutoRunner {
                 System.out.println("   🗑️  已清理 target/classes/example");
             }
             
-            File targetMapperDir = new File("target/classes/com/group/admin/mapper");
-            if (targetMapperDir.exists()) {
-                deleteDirectory(targetMapperDir);
-                System.out.println("   🗑️  已清理 target/classes/mapper");
-            }
+            // ✅ 不刪除 target/classes/mapper（保留自定義方法）
+            System.out.println("   ✅ 保留 target/classes/mapper（內含自定義方法）");
             
             File targetXmlDir = new File("target/classes/mapper");
             if (targetXmlDir.exists()) {

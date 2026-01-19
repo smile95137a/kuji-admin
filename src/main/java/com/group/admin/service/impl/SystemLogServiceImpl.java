@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.SystemLog;
 import com.group.admin.mapper.SystemLogMapper;
+import com.group.admin.repository.SystemLogRepository;
 import com.group.admin.service.SystemLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class SystemLogServiceImpl implements SystemLogService {
     
     private final SystemLogMapper systemLogMapper;
+    private final SystemLogRepository systemLogRepository;
     private final ObjectMapper objectMapper;
     
     @Override
@@ -94,24 +96,24 @@ public class SystemLogServiceImpl implements SystemLogService {
     
     @Override
     public List<SystemLog> getLogsByType(String logType, int limit) {
-        return systemLogMapper.selectByType(logType, limit);
+        return systemLogRepository.selectByType(logType, limit);
     }
     
     @Override
     public List<SystemLog> getLogsByUserId(String userId, int limit) {
-        return systemLogMapper.selectByUserId(userId, limit);
+        return systemLogRepository.selectByUserId(userId, limit);
     }
     
     @Override
     public List<SystemLog> getLogsByDateRange(LocalDateTime start, LocalDateTime end, int limit) {
         // 使用 selectByTypeAndDateRange 方法，傳入 null 作為 logType 來查全部
-        return systemLogMapper.selectByTypeAndDateRange(null, start, end);
+        return systemLogRepository.selectByTypeAndDateRange(null, start, end);
     }
     
     @Override
     public int deleteOldLogs(int days) {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
-        int deleted = systemLogMapper.deleteOldLogs(cutoff);
+        int deleted = systemLogRepository.deleteOldLogs(cutoff);
         log.info("🗑️ 已清除 {} 筆過期日誌（{}天前）", deleted, days);
         return deleted;
     }

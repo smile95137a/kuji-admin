@@ -7,13 +7,13 @@ public class ReferralCode {
 
     private String code;
 
+    private String storeId;
+
+    private String description;
+
     private String ownerId;
 
     private String ownerType;
-    
-    private String storeId;
-    
-    private String description;
 
     private Long rewardGold;
 
@@ -49,6 +49,22 @@ public class ReferralCode {
         this.code = code == null ? null : code.trim();
     }
 
+    public String getStoreId() {
+        return storeId;
+    }
+
+    public void setStoreId(String storeId) {
+        this.storeId = storeId == null ? null : storeId.trim();
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description == null ? null : description.trim();
+    }
+
     public String getOwnerId() {
         return ownerId;
     }
@@ -63,22 +79,6 @@ public class ReferralCode {
 
     public void setOwnerType(String ownerType) {
         this.ownerType = ownerType == null ? null : ownerType.trim();
-    }
-    
-    public String getStoreId() {
-        return storeId;
-    }
-
-    public void setStoreId(String storeId) {
-        this.storeId = storeId == null ? null : storeId.trim();
-    }
-    
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description == null ? null : description.trim();
     }
 
     public Long getRewardGold() {

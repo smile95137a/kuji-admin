@@ -133,14 +133,68 @@ public class LotteryCreateReq {
     private Integer orderNum;
 
     /**
-     * 推薦權重
-     */
-    @Schema(description = "推薦權重（用於排序）", example = "10")
-    private Integer weight;
-
-    /**
      * 內部備註
      */
     @Schema(description = "內部備註（不對外顯示）", example = "這批貨進價較高")
     private String remark;
+
+    /**
+     * 遊玩模式
+     */
+    @Schema(description = "遊玩模式：LOTTERY_MODE（抽籤型）/ SCRATCH_MODE（刮刮樂型）", example = "LOTTERY_MODE")
+    private String playMode;
+
+    /**
+     * 商品狀態
+     */
+    @Schema(description = "商品狀態：DRAFT（草稿）/ ON_SHELF（上架）/ OFF_SHELF（下架）", example = "DRAFT")
+    private String status;
+
+    /**
+     * 熱門程度
+     */
+    @Schema(description = "熱門程度（用於顯示熱門標籤）", example = "999")
+    private Integer hotCount;
+
+    /**
+     * 商品主題分類
+     */
+    @Schema(description = "商品主題分類（火影忍者、航海王、鬼滅之刃等）", example = "鬼滅之刃")
+    private String theme;
+
+    /**
+     * 商品圖集
+     */
+    @Schema(description = "商品圖集（多張圖片URL）", example = "[\"https://example.com/images/1.jpg\", \"https://example.com/images/2.jpg\"]")
+    private List<String> galleryImages;
+
+    /**
+     * 商品詳細內容
+     */
+    @Schema(description = "商品詳細內容（HTML格式）", example = "【活動說明】\\n- 單抽 / 多抽（10、50）\\n- 啟用自動折扣後，每抽 100 元")
+    private String content;
+
+    /**
+     * 標籤列表
+     */
+    @Schema(description = "標籤列表", example = "[\"鬼滅之刃\", \"一番賞\", \"熱門\"]")
+    private List<String> tags;
+
+    /**
+     * 是否啟用紅利點數
+     */
+    @Schema(description = "是否啟用紅利點數", example = "true")
+    private Boolean bonusEnabled;
+
+    /**
+     * 每抽贈送紅利點數
+     */
+    @Schema(description = "每抽贈送紅利點數", example = "10")
+    private Integer bonusPointsPerDraw;
+
+    /**
+     * 每抽消耗紅利點數
+     */
+    @Schema(description = "每抽消耗紅利點數", example = "200")
+    private Integer bonusCostPerDraw;
 }

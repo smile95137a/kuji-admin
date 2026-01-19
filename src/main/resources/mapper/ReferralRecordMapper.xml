@@ -3,7 +3,11 @@
 <mapper namespace="com.group.admin.mapper.ReferralRecordMapper">
   <resultMap id="BaseResultMap" type="com.group.admin.entity.ReferralRecord">
     <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
     <result column="referral_code_id" jdbcType="VARCHAR" property="referralCodeId" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="used_code" jdbcType="VARCHAR" property="usedCode" />
+    <result column="referred_at" jdbcType="TIMESTAMP" property="referredAt" />
     <result column="referral_code" jdbcType="VARCHAR" property="referralCode" />
     <result column="referrer_id" jdbcType="VARCHAR" property="referrerId" />
     <result column="referee_id" jdbcType="VARCHAR" property="refereeId" />
@@ -73,8 +77,9 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, referral_code_id, referral_code, referrer_id, referee_id, referee_username, reward_gold, 
-    reward_bonus, is_reward_given, reward_given_at, created_at
+    id, user_id, referral_code_id, store_id, used_code, referred_at, referral_code, referrer_id, 
+    referee_id, referee_username, reward_gold, reward_bonus, is_reward_given, reward_given_at, 
+    created_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.ReferralRecordExample" resultMap="BaseResultMap">
     select
@@ -108,14 +113,18 @@
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.ReferralRecord">
-    insert into referral_record (id, referral_code_id, referral_code, 
-      referrer_id, referee_id, referee_username, 
-      reward_gold, reward_bonus, is_reward_given, 
-      reward_given_at, created_at)
-    values (#{id,jdbcType=VARCHAR}, #{referralCodeId,jdbcType=VARCHAR}, #{referralCode,jdbcType=VARCHAR}, 
-      #{referrerId,jdbcType=VARCHAR}, #{refereeId,jdbcType=VARCHAR}, #{refereeUsername,jdbcType=VARCHAR}, 
-      #{rewardGold,jdbcType=BIGINT}, #{rewardBonus,jdbcType=BIGINT}, #{isRewardGiven,jdbcType=BIT}, 
-      #{rewardGivenAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP})
+    insert into referral_record (id, user_id, referral_code_id, 
+      store_id, used_code, referred_at, 
+      referral_code, referrer_id, referee_id, 
+      referee_username, reward_gold, reward_bonus, 
+      is_reward_given, reward_given_at, created_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{referralCodeId,jdbcType=VARCHAR}, 
+      #{storeId,jdbcType=VARCHAR}, #{usedCode,jdbcType=VARCHAR}, #{referredAt,jdbcType=TIMESTAMP}, 
+      #{referralCode,jdbcType=VARCHAR}, #{referrerId,jdbcType=VARCHAR}, #{refereeId,jdbcType=VARCHAR}, 
+      #{refereeUsername,jdbcType=VARCHAR}, #{rewardGold,jdbcType=BIGINT}, #{rewardBonus,jdbcType=BIGINT}, 
+      #{isRewardGiven,jdbcType=BIT}, #{rewardGivenAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP}
+      )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.ReferralRecord">
     insert into referral_record
@@ -123,8 +132,20 @@
       <if test="id != null">
         id,
       </if>
+      <if test="userId != null">
+        user_id,
+      </if>
       <if test="referralCodeId != null">
         referral_code_id,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="usedCode != null">
+        used_code,
+      </if>
+      <if test="referredAt != null">
+        referred_at,
       </if>
       <if test="referralCode != null">
         referral_code,
@@ -158,8 +179,20 @@
       <if test="id != null">
         #{id,jdbcType=VARCHAR},
       </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
       <if test="referralCodeId != null">
         #{referralCodeId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="usedCode != null">
+        #{usedCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referredAt != null">
+        #{referredAt,jdbcType=TIMESTAMP},
       </if>
       <if test="referralCode != null">
         #{referralCode,jdbcType=VARCHAR},
@@ -202,8 +235,20 @@
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
       </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
       <if test="row.referralCodeId != null">
         referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.usedCode != null">
+        used_code = #{row.usedCode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referredAt != null">
+        referred_at = #{row.referredAt,jdbcType=TIMESTAMP},
       </if>
       <if test="row.referralCode != null">
         referral_code = #{row.referralCode,jdbcType=VARCHAR},
@@ -240,7 +285,11 @@
   <update id="updateByExample" parameterType="map">
     update referral_record
     set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
       referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      used_code = #{row.usedCode,jdbcType=VARCHAR},
+      referred_at = #{row.referredAt,jdbcType=TIMESTAMP},
       referral_code = #{row.referralCode,jdbcType=VARCHAR},
       referrer_id = #{row.referrerId,jdbcType=VARCHAR},
       referee_id = #{row.refereeId,jdbcType=VARCHAR},
@@ -257,8 +306,20 @@
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ReferralRecord">
     update referral_record
     <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
       <if test="referralCodeId != null">
         referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="usedCode != null">
+        used_code = #{usedCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referredAt != null">
+        referred_at = #{referredAt,jdbcType=TIMESTAMP},
       </if>
       <if test="referralCode != null">
         referral_code = #{referralCode,jdbcType=VARCHAR},
@@ -292,7 +353,11 @@
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ReferralRecord">
     update referral_record
-    set referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
+    set user_id = #{userId,jdbcType=VARCHAR},
+      referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
+      store_id = #{storeId,jdbcType=VARCHAR},
+      used_code = #{usedCode,jdbcType=VARCHAR},
+      referred_at = #{referredAt,jdbcType=TIMESTAMP},
       referral_code = #{referralCode,jdbcType=VARCHAR},
       referrer_id = #{referrerId,jdbcType=VARCHAR},
       referee_id = #{refereeId,jdbcType=VARCHAR},

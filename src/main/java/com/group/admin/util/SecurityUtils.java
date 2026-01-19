@@ -170,10 +170,9 @@ public class SecurityUtils {
 
         UserPrincipal userPrincipal = (UserPrincipal) principal;
         
-        // 如果是 Admin，返回空列表（表示可以存取所有店家）
-        if (userPrincipal.getRoles() != null && userPrincipal.getRoles().contains("ROLE_ADMIN")) {
-            return Collections.emptyList();
-        }
+        // ✅ 修改：Admin 也返回 storeIds（如果有的話）
+        // 原本的邏輯：如果是 Admin，返回空列表（表示可以存取所有店家）
+        // 新邏輯：返回實際的 storeIds，讓 Admin 也能自動帶入 storeId
         
         // 返回店家 ID 列表
         List<String> storeIds = userPrincipal.getStoreIds();

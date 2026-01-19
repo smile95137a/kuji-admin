@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.EmailLog;
 import com.group.admin.mapper.EmailLogMapper;
+import com.group.admin.repository.EmailLogRepository;
 import com.group.admin.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class EmailServiceImpl implements EmailService {
     
     private final JavaMailSender mailSender;
     private final EmailLogMapper emailLogMapper;
+    private final EmailLogRepository emailLogRepository;
     private final ObjectMapper objectMapper;
     
     @Value("${spring.mail.username:}")
@@ -95,7 +97,7 @@ public class EmailServiceImpl implements EmailService {
     
     @Override
     public void retryFailedEmails() {
-        List<EmailLog> failedEmails = emailLogMapper.selectPendingForRetry("FAILED", 3, 10);
+        List<EmailLog> failedEmails = emailLogRepository.selectPendingForRetry("FAILED", 3, 10);
         
         for (EmailLog emailLog : failedEmails) {
             try {
@@ -105,14 +107,14 @@ public class EmailServiceImpl implements EmailService {
                 emailLog.setSentAt(LocalDateTime.now());
                 emailLog.setRetryCount(emailLog.getRetryCount() + 1);
                 emailLog.setUpdatedAt(LocalDateTime.now());
-                emailLogMapper.updateStatus(emailLog);
+                emailLogRepository.updateStatus(emailLog);
                 
                 log.info("✅ 重試郵件發送成功: id={}, to={}", emailLog.getId(), emailLog.getToEmail());
             } catch (Exception e) {
                 emailLog.setRetryCount(emailLog.getRetryCount() + 1);
                 emailLog.setErrorMessage(e.getMessage());
                 emailLog.setUpdatedAt(LocalDateTime.now());
-                emailLogMapper.updateStatus(emailLog);
+                emailLogRepository.updateStatus(emailLog);
                 
                 log.error("❌ 重試郵件發送失敗: id={}, to={}, error={}", 
                          emailLog.getId(), emailLog.getToEmail(), e.getMessage());
@@ -156,14 +158,14 @@ public class EmailServiceImpl implements EmailService {
             emailLog.setStatus("SENT");
             emailLog.setSentAt(LocalDateTime.now());
             emailLog.setUpdatedAt(LocalDateTime.now());
-            emailLogMapper.updateStatus(emailLog);
+            emailLogRepository.updateStatus(emailLog);
             
             log.info("✅ 郵件發送成功: type={}, to={}, subject={}", emailType, toEmail, subject);
         } catch (Exception e) {
             emailLog.setStatus("FAILED");
             emailLog.setErrorMessage(e.getMessage());
             emailLog.setUpdatedAt(LocalDateTime.now());
-            emailLogMapper.updateStatus(emailLog);
+            emailLogRepository.updateStatus(emailLog);
             
             log.error("❌ 郵件發送失敗: type={}, to={}, error={}", emailType, toEmail, e.getMessage());
         }

@@ -4,7 +4,6 @@ import com.group.admin.entity.ReportSnapshot;
 import com.group.admin.example.ReportSnapshotExample;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 public interface ReportSnapshotMapper {
     long countByExample(ReportSnapshotExample example);
@@ -34,16 +33,4 @@ public interface ReportSnapshotMapper {
     int updateByPrimaryKeyWithBLOBs(ReportSnapshot row);
 
     int updateByPrimaryKey(ReportSnapshot row);
-    
-    // ========== 自定義查詢方法（使用 Annotation）==========
-    
-    /**
-     * 根據類型和週期查詢報表快照
-     */
-    @Select("SELECT * FROM report_snapshot " +
-            "WHERE report_type = #{type} AND period = #{period} " +
-            "ORDER BY created_at DESC LIMIT #{limit}")
-    List<ReportSnapshot> selectByTypeAndPeriod(@Param("type") String type, 
-                                               @Param("period") String period, 
-                                               @Param("limit") int limit);
 }

@@ -1,5 +1,8 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.entity.StoreUser;
+import com.group.admin.example.StoreUserExample;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.lottery.LotteryWithPrizesCreateReq;
 import com.group.admin.req.lottery.LotteryWithPrizesUpdateReq;
 import com.group.admin.res.lottery.LotteryWithPrizesRes;
@@ -13,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 後台商品與獎品整合管理 API
@@ -88,6 +93,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminLotteryWithPrizesController {
     
     private final LotteryService lotteryService;
+    private final StoreUserMapper storeUserMapper;
     
     /**
      * 建立商品並同時新增獎品
@@ -117,8 +123,16 @@ public class AdminLotteryWithPrizesController {
             @Valid @RequestBody LotteryWithPrizesCreateReq req) {
         
         String userId = SecurityUtils.getCurrentUserId();
-        log.info("📦 建立商品與獎品: userId={}, title={}, prizeCount={}", 
-                userId, 
+        
+        // ✅ 自動帶入 storeId（從資料庫查詢，不依賴 Security 層）
+        String storeId = getStoreIdByUserId(userId);
+        if (storeId != null) {
+            req.getLottery().setStoreId(storeId);
+        }
+        
+        log.info("📦 建立商品與獎品: userId={}, storeId={}, title={}, prizeCount={}", 
+                userId,
+                storeId,
                 req.getLottery().getTitle(),
                 req.getPrizes() != null ? req.getPrizes().size() : 0);
         
@@ -128,6 +142,30 @@ public class AdminLotteryWithPrizesController {
                 result.getId(), result.getTitle(), result.getTotalPrizeCount());
         
         return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 根據 userId 從資料庫查詢關聯的 storeId
+     * 
+     * @param userId 使用者 ID
+     * @return 第一個關聯的店家 ID，若無關聯則返回 null
+     */
+    private String getStoreIdByUserId(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        StoreUserExample example = new StoreUserExample();
+        example.createCriteria().andAdminUserIdEqualTo(userId);
+        List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
+        
+        if (storeUsers.isEmpty()) {
+            log.warn("⚠️ 使用者沒有關聯店家: userId={}", userId);
+            return null;
+        }
+        
+        String storeId = storeUsers.get(0).getStoreId();
+        log.info("🏪 查詢到店家: userId={}, storeId={}", userId, storeId);
+        return storeId;
     }
     
     /**

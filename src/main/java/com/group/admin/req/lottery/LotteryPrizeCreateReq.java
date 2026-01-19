@@ -16,9 +16,14 @@ public class LotteryPrizeCreateReq {
 
     /**
      * 所屬抽獎活動ID
+     * 
+     * ⚠️ 不加 @NotBlank 驗證，因為：
+     * - 整合創建時由後端自動帶入
+     * - 單獨創建時必須明確指定
      */
-    @NotBlank(message = "抽獎活動ID不可為空")
-    @Schema(description = "所屬抽獎活動ID", example = "550e8400-e29b-41d4-a716-446655440000", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "所屬抽獎活動ID（整合創建時後端自動帶入）", 
+            example = "550e8400-e29b-41d4-a716-446655440000", 
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String lotteryId;
 
     /**
@@ -61,15 +66,6 @@ public class LotteryPrizeCreateReq {
     @Min(value = 1, message = "獎項數量至少為1")
     @Schema(description = "總數量", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer quantity;
-
-    /**
-     * 抽中權重
-     * 0 = 不可抽（用於最後賞）
-     * 1 = 正常權重
-     */
-    @Min(value = 0, message = "權重不可為負數")
-    @Schema(description = "抽中權重（0=不可抽，用於最後賞）", example = "1")
-    private Integer weight;
 
     /**
      * 獎項類型
