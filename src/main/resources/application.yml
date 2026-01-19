@@ -18,6 +18,7 @@ spring:
   jackson:
     time-zone: Asia/Taipei
     date-format: yyyy-MM-dd HH:mm:ss
+    default-property-inclusion: non_null  # 排除 null 欄位
 
   # 郵件設定（Gmail SMTP）
   mail:
