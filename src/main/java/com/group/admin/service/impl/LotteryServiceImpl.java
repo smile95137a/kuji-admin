@@ -1421,6 +1421,77 @@ public class LotteryServiceImpl implements LotteryService {
         return res;
     }
     
+    @Override
+    public List<com.group.admin.res.lottery.LotteryWithPrizesRes> getAllLotteriesWithPrizes(
+            com.group.admin.req.common.QueryReq<com.group.admin.req.lottery.LotteryCondition> req) {
+        
+        log.info("🔍 查詢所有商品與獎品列表");
+        
+        // Step 1: 建構查詢條件
+        LotteryCondition condition = (req != null && req.getCondition() != null) 
+                ? req.getCondition() 
+                : new LotteryCondition();
+        
+        LotteryExample example = new LotteryExample();
+        LotteryExample.Criteria criteria = example.createCriteria();
+        
+        // 應用查詢條件
+        if (condition.getStoreId() != null) {
+            criteria.andStoreIdEqualTo(condition.getStoreId());
+        }
+        if (condition.getTitle() != null && !condition.getTitle().isEmpty()) {
+            criteria.andTitleLike("%" + condition.getTitle() + "%");
+        }
+        if (condition.getStatus() != null) {
+            criteria.andStatusEqualTo(condition.getStatus());
+        }
+        if (condition.getCategory() != null) {
+            criteria.andCategoryEqualTo(condition.getCategory());
+        }
+        if (condition.getPriceMin() != null) {
+            criteria.andPricePerDrawGreaterThanOrEqualTo(condition.getPriceMin());
+        }
+        if (condition.getPriceMax() != null) {
+            criteria.andPricePerDrawLessThanOrEqualTo(condition.getPriceMax());
+        }
+        
+        // 排序
+        if (req != null && req.getSortBy() != null) {
+            String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
+            example.setOrderByClause(req.getSortBy() + " " + order);
+        } else {
+            example.setOrderByClause("created_at DESC");
+        }
+        
+        // Step 2: 查詢所有商品
+        List<Lottery> lotteries = lotteryMapper.selectByExample(example);
+        log.info("✅ 查詢到 {} 個商品", lotteries.size());
+        
+        // Step 3: 為每個商品查詢獎品列表
+        List<com.group.admin.res.lottery.LotteryWithPrizesRes> result = lotteries.stream()
+                .map(lottery -> {
+                    // 轉換商品資訊
+                    LotteryRes lotteryRes = convertToResNew(lottery);
+                    
+                    // 查詢該商品的所有獎品
+                    LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+                    prizeExample.createCriteria().andLotteryIdEqualTo(lottery.getId());
+                    prizeExample.setOrderByClause("order_num ASC, level ASC");
+                    
+                    List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
+                    List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = prizes.stream()
+                            .map(this::convertPrizeToRes)
+                            .collect(Collectors.toList());
+                    
+                    // 組裝完整回應
+                    return buildLotteryWithPrizesRes(lotteryRes, prizeResList);
+                })
+                .collect(Collectors.toList());
+        
+        log.info("✅ 查詢成功: 返回 {} 個商品（包含獎品）", result.size());
+        return result;
+    }
+    
     // ==================== 輔助方法 ====================
     
     /**

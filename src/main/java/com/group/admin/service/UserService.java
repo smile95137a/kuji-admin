@@ -38,4 +38,14 @@ public interface UserService {
      * 根據 ID 查詢使用者（UUID 字串）
      */
     User findById(String id);
+    
+    /**
+     * 請求重設密碼（發送郵件）
+     */
+    void requestPasswordReset(String email);
+    
+    /**
+     * 驗證重設 token 並重設密碼
+     */
+    void resetPassword(String token, String newPassword);
 }

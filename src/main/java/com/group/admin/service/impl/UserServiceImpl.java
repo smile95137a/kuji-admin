@@ -19,6 +19,7 @@ import com.group.admin.req.AuthGoogleReq;
 import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
 import com.group.admin.res.AuthRes;
+import com.group.admin.service.EmailService;
 import com.group.admin.service.ReferralCodeService;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
@@ -42,6 +43,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final ReferralCodeService referralCodeService;
+    private final EmailService emailService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${google.client-id:}")
@@ -243,5 +245,67 @@ public class UserServiceImpl implements UserService {
             return null;
         }
         return userMapper.selectByPrimaryKey(id);
+    }
+
+    @Override
+    public void requestPasswordReset(String email) {
+        log.info("📧 請求重設密碼: email={}", email);
+        
+        // 查詢使用者
+        User user = findByEmail(email);
+        if (user == null) {
+            // 為了安全，即使使用者不存在也不報錯
+            log.warn("⚠️ 使用者不存在，但不回報錯誤: email={}", email);
+            return;
+        }
+        
+        // 只有 EMAIL provider 的帳號才能重設密碼
+        if (!"EMAIL".equals(user.getProvider())) {
+            log.warn("⚠️ 非 EMAIL 帳號無法重設密碼: email={}, provider={}", email, user.getProvider());
+            throw new IllegalArgumentException("此帳號使用第三方登入，無法重設密碼");
+        }
+        
+        // 生成重設 token（UUID）
+        String resetToken = UUID.randomUUID().toString();
+        
+        // 更新使用者的 password_reset_token 和過期時間（1小時後）
+        user.setPasswordResetToken(resetToken);
+        user.setPasswordResetExpires(LocalDateTime.now().plusHours(1));
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKey(user);
+        
+        // 發送密碼重設郵件
+        emailService.sendPasswordResetEmail(email, user.getNickname(), resetToken);
+        
+        log.info("✅ 密碼重設郵件已發送: email={}, token={}", email, resetToken);
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        log.info("🔑 執行密碼重設: token={}", token);
+        
+        // 查詢有此 token 且未過期的使用者
+        UserExample example = new UserExample();
+        example.createCriteria()
+               .andPasswordResetTokenEqualTo(token)
+               .andPasswordResetExpiresGreaterThan(LocalDateTime.now());
+        
+        List<User> users = userMapper.selectByExample(example);
+        
+        if (users.isEmpty()) {
+            log.warn("❌ 無效或已過期的 token: {}", token);
+            throw new IllegalArgumentException("重設連結無效或已過期");
+        }
+        
+        User user = users.get(0);
+        
+        // 更新密碼並清除 token
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetExpires(null);
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKey(user);
+        
+        log.info("✅ 密碼重設成功: userId={}, email={}", user.getId(), user.getEmail());
     }
 }

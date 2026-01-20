@@ -44,7 +44,7 @@ public class DistrictServiceImpl implements DistrictService {
     }
     
     @Override
-    public District getDistrict(String city, String district) {
-        return districtRepository.selectByCityAndDistrict(city, district);
+    public District getDistrict(String city, String districtName) {
+        return districtRepository.selectByCityAndDistrict(city, districtName);
     }
 }

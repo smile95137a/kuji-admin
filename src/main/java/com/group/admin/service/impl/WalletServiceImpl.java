@@ -81,7 +81,9 @@ public class WalletServiceImpl implements WalletService {
         List<UserWallet> wallets = userWalletMapper.selectByExample(example);
         
         if (wallets.isEmpty()) {
-            throw new BusinessException("錢包不存在");
+            // 自動建立錢包
+            log.info("💡 錢包不存在，自動建立：userId={}", userId);
+            return createWallet(userId);
         }
         
         return convertToRes(wallets.get(0));

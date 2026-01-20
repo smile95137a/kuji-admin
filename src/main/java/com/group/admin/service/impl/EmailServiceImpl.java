@@ -12,6 +12,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -21,7 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 郵件服務實作（使用 Gmail SMTP）
+ * 郵件服務實作（使用 Gmail SMTP + Thymeleaf 模板）
  */
 @Slf4j
 @Service
@@ -32,6 +34,7 @@ public class EmailServiceImpl implements EmailService {
     private final EmailLogMapper emailLogMapper;
     private final EmailLogRepository emailLogRepository;
     private final ObjectMapper objectMapper;
+    private final TemplateEngine templateEngine;
     
     @Value("${spring.mail.username:}")
     private String fromEmail;
@@ -46,14 +49,19 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendVerificationEmail(String email, String nickname, String verificationCode) {
         String subject = String.format("[%s] 信箱驗證碼", appName);
-        String content = buildVerificationEmailContent(nickname, verificationCode);
+        
+        // 使用 Thymeleaf 模板
+        Context context = new Context();
+        context.setVariable("nickname", nickname);
+        context.setVariable("verificationCode", verificationCode);
+        String content = templateEngine.process("verification-email", context);
         
         Map<String, Object> params = Map.of(
             "nickname", nickname,
             "verificationCode", verificationCode
         );
         
-        sendEmail("VERIFICATION", email, nickname, subject, content, "verification", params, null, null);
+        sendEmail("VERIFICATION", email, nickname, subject, content, "verification-email", params, null, null);
     }
     
     @Override
@@ -61,7 +69,14 @@ public class EmailServiceImpl implements EmailService {
     public void sendPasswordResetEmail(String email, String nickname, String resetToken) {
         String subject = String.format("[%s] 密碼重設請求", appName);
         String resetUrl = frontendUrl + "/reset-password?token=" + resetToken;
-        String content = buildPasswordResetEmailContent(nickname, resetUrl);
+        
+        // 使用 Thymeleaf 模板
+        Context context = new Context();
+        context.setVariable("nickname", nickname);
+        context.setVariable("resetUrl", resetUrl);
+        context.setVariable("resetToken", resetToken);
+        context.setVariable("expiryMinutes", "30");
+        String content = templateEngine.process("password-reset-email", context);
         
         Map<String, Object> params = Map.of(
             "nickname", nickname,
@@ -69,7 +84,7 @@ public class EmailServiceImpl implements EmailService {
             "resetToken", resetToken
         );
         
-        sendEmail("PASSWORD_RESET", email, nickname, subject, content, "password_reset", params, null, null);
+        sendEmail("PASSWORD_RESET", email, nickname, subject, content, "password-reset-email", params, null, null);
     }
     
     @Override

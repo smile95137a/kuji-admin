@@ -3,6 +3,8 @@ package com.group.admin.controller.admin;
 import com.group.admin.entity.StoreUser;
 import com.group.admin.example.StoreUserExample;
 import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryWithPrizesCreateReq;
 import com.group.admin.req.lottery.LotteryWithPrizesUpdateReq;
 import com.group.admin.res.lottery.LotteryWithPrizesRes;
@@ -272,6 +274,74 @@ public class AdminLotteryWithPrizesController {
         
         log.info("✅ 查詢成功: lotteryId={}, title={}, prizeCount={}", 
                 result.getId(), result.getTitle(), result.getTotalPrizeCount());
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 查詢所有商品列表（包含獎品列表）
+     * 
+     * <p><b>回應內容：</b>
+     * <ul>
+     *   <li>所有商品及其獎品的完整資訊</li>
+     *   <li>支援查詢條件過濾（storeId, title, status, category...）</li>
+     *   <li>每個商品包含：
+     *     <ul>
+     *       <li>商品基本資訊</li>
+     *       <li>完整的獎品列表</li>
+     *       <li>統計資訊（總數量、剩餘數量、進度）</li>
+     *     </ul>
+     *   </li>
+     * </ul>
+     * 
+     * <p><b>查詢條件範例：</b>
+     * <pre>
+     * POST /admin/lottery-with-prizes/list
+     * {
+     *   "condition": {
+     *     "status": "ON_SHELF",
+     *     "category": "OFFICIAL_ICHIBAN",
+     *     "title": "鬼滅"
+     *   },
+     *   "sortBy": "created_at",
+     *   "sortOrder": "DESC"
+     * }
+     * </pre>
+     * 
+     * <p><b>自動處理：</b>
+     * <ul>
+     *   <li>StoreOwner/Editor：自動過濾只返回自己店家的商品</li>
+     *   <li>Admin：返回所有店家的商品</li>
+     * </ul>
+     * 
+     * @param req 查詢請求（可選的查詢條件）
+     * @return 商品與獎品完整資訊列表
+     */
+    @PostMapping("/list")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "查詢所有商品與獎品", description = "一支 API 返回所有商品和獎品完整資訊（支援條件查詢）")
+    public ResponseEntity<List<LotteryWithPrizesRes>> getAllLotteriesWithPrizes(
+            @RequestBody(required = false) QueryReq<LotteryCondition> req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        
+        // ✅ 自動帶入 storeId（店家負責人/編輯只能查看自己的商品）
+        String storeId = getStoreIdByUserId(userId);
+        if (storeId != null) {
+            if (req == null) {
+                req = new QueryReq<>();
+            }
+            if (req.getCondition() == null) {
+                req.setCondition(new LotteryCondition());
+            }
+            req.getCondition().setStoreId(storeId);
+        }
+        
+        log.info("🔍 查詢所有商品與獎品: userId={}, storeId={}", userId, storeId);
+        
+        List<LotteryWithPrizesRes> result = lotteryService.getAllLotteriesWithPrizes(req);
+        
+        log.info("✅ 查詢成功: 返回 {} 個商品", result.size());
         
         return ResponseEntity.ok(result);
     }

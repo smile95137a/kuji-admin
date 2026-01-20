@@ -49,10 +49,13 @@ google:
   client-id: ${GOOGLE_CLIENT_ID:}
 
 # AWS S3 配置
+# ⚠️ 憑證已移至環境變數，請在啟動前設定：
+#   export AWS_ACCESS_KEY_ID=your_access_key
+#   export AWS_SECRET_ACCESS_KEY=your_secret_key
 aws:
   s3:
     bucket-name: test-ourkuji
     region: ap-northeast-1
-    access-key: ${AWS_ACCESS_KEY:}
-    secret-key: ${AWS_SECRET_KEY:}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
     base-url: https://test-ourkuji.s3.ap-northeast-1.amazonaws.com

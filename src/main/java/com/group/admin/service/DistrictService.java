@@ -32,6 +32,8 @@ public interface DistrictService {
     
     /**
      * 根據縣市和區域取得完整資訊
+     * @param city 縣市名稱
+     * @param districtName 行政區名稱
      */
-    District getDistrict(String city, String district);
+    District getDistrict(String city, String districtName);
 }

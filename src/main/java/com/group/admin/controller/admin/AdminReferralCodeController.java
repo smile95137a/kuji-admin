@@ -118,7 +118,7 @@ public class AdminReferralCodeController {
      */
     @GetMapping("/my-store")
     @Operation(summary = "取得我的店家推薦碼", description = "取得當前店家負責人的所有推薦碼")
-    @PreAuthorize("hasAnyRole('STORE_OWNER', 'STORE_EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     public ResponseEntity<List<ReferralCodeRes>> getMyStoreCodes() {
         String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
         log.info("📋 查詢我的店家推薦碼: storeId={}", storeId);

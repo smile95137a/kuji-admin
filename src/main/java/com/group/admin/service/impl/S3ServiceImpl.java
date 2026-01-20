@@ -64,12 +64,12 @@ public class S3ServiceImpl implements S3Service {
             // S3 Key（路徑）
             String s3Key = folder + "/" + fileName;
             
-            // 上傳到 S3
+            // 上傳到 S3（不使用 ACL，因為 bucket 已設定為公開讀取）
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(s3Key)
                     .contentType(file.getContentType())
-                    .acl(ObjectCannedACL.PUBLIC_READ)  // 公開讀取
+                    // 移除 ACL 設定，bucket 已通過 policy 設定公開讀取
                     .build();
             
             s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));

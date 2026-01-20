@@ -1,6 +1,7 @@
 package com.group.admin.controller.api;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,10 +14,14 @@ import com.group.admin.req.AuthGoogleReq;
 import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
 import com.group.admin.req.RefreshTokenReq;
+import com.group.admin.req.auth.ForgotPasswordReq;
+import com.group.admin.req.auth.ResetPasswordReq;
 import com.group.admin.res.AuthRes;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,11 +36,13 @@ import lombok.extern.slf4j.Slf4j;
  * - Email + 密碼註冊/登入 (provider = EMAIL)
  * - Google OAuth2 登入 (provider = GOOGLE)
  * - Token 刷新
+ * - 忘記密碼/重設密碼
  */
 @Slf4j
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "前台認證", description = "使用者註冊、登入、忘記密碼等功能")
 public class ApiAuthController {
 
     private final UserService userService;
@@ -122,5 +129,54 @@ public class ApiAuthController {
         res.setUser(user);
         
         return ResponseEntity.ok(res);
+    }
+    
+    /**
+     * 請求重設密碼（發送郵件）
+     * POST /api/auth/forgot-password
+     */
+    @PostMapping("/forgot-password")
+    @Operation(summary = "忘記密碼", description = "發送密碼重設郵件到註冊的 Email")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordReq req) {
+        log.info("📧 忘記密碼請求: email={}", req.getEmail());
+        
+        try {
+            userService.requestPasswordReset(req.getEmail());
+            return ResponseEntity.ok(Map.of(
+                "message", "如果此 Email 已註冊，將會收到密碼重設郵件"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 重設密碼（使用 token）
+     * POST /api/auth/reset-password
+     */
+    @PostMapping("/reset-password")
+    @Operation(summary = "重設密碼", description = "使用郵件中的 token 重設密碼")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordReq req) {
+        log.info("🔑 重設密碼請求");
+        
+        // 驗證密碼確認
+        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "兩次輸入的密碼不一致"
+            ));
+        }
+        
+        try {
+            userService.resetPassword(req.getToken(), req.getNewPassword());
+            return ResponseEntity.ok(Map.of(
+                "message", "密碼重設成功，請使用新密碼登入"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", e.getMessage()
+            ));
+        }
     }
 }

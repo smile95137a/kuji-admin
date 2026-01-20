@@ -283,4 +283,18 @@ public interface LotteryService {
      * @return 商品與獎品完整資訊
      */
     com.group.admin.res.lottery.LotteryWithPrizesRes getLotteryWithPrizes(String lotteryId);
+    
+    /**
+     * 查詢所有商品列表（包含獎品列表）
+     * 
+     * 一支 API 返回：
+     * - 所有商品及其獎品的完整資訊
+     * - 支援查詢條件過濾
+     * - 每個商品包含完整的獎品列表和統計資訊
+     * 
+     * @param req 查詢請求（可選的查詢條件）
+     * @return 商品與獎品完整資訊列表
+     */
+    List<com.group.admin.res.lottery.LotteryWithPrizesRes> getAllLotteriesWithPrizes(
+            com.group.admin.req.common.QueryReq<com.group.admin.req.lottery.LotteryCondition> req);
 }

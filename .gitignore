@@ -31,3 +31,18 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 環境變數與敏感資料 ###
+.env
+.env.local
+.env.*.local
+*.log
+app.log
+
+### AWS 憑證 ###
+**/application-local.yml
+**/application-*.yml.local
+
+### 測試結果 ###
+test-result.txt
+temp_token.txt
