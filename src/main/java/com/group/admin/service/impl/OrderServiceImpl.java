@@ -136,16 +136,16 @@ public class OrderServiceImpl implements OrderService {
         OrderExample.Criteria criteria = example.createCriteria();
 
         if (condition != null) {
-            if (condition.getUserId() != null && !condition.getUserId().isEmpty()) {
+            if (isNotBlank(condition.getUserId())) {
                 criteria.andUserIdEqualTo(condition.getUserId());
             }
-            if (condition.getStoreId() != null && !condition.getStoreId().isEmpty()) {
+            if (isNotBlank(condition.getStoreId())) {
                 criteria.andStoreIdEqualTo(condition.getStoreId());
             }
-            if (condition.getShippingStatus() != null && !condition.getShippingStatus().isEmpty()) {
+            if (isNotBlank(condition.getShippingStatus())) {
                 criteria.andStatusEqualTo(condition.getShippingStatus());
             }
-            if (condition.getOrderNo() != null && !condition.getOrderNo().isEmpty()) {
+            if (isNotBlank(condition.getOrderNo())) {
                 criteria.andOrderNumberLike("%" + condition.getOrderNo() + "%");
             }
             // 日期範圍（LocalDate 轉 LocalDateTime）
@@ -398,5 +398,13 @@ public class OrderServiceImpl implements OrderService {
                 .prizeLevel(item.getPrizeLevel())
                 .createdAt(item.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * 檢查字串是否非空白
+     * 空字串 "" 會被視為 null 處理
+     */
+    private boolean isNotBlank(String str) {
+        return str != null && !str.trim().isEmpty();
     }
 }

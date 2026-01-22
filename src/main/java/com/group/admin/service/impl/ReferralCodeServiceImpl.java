@@ -67,6 +67,8 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         referralCode.setCode(req.getCode().toUpperCase());
         referralCode.setStoreId(req.getStoreId());
         referralCode.setDescription(req.getDescription());
+        referralCode.setOwnerId(req.getStoreId());  // 設定 owner 為店家
+        referralCode.setOwnerType("STORE");          // 設定 owner 類型
         referralCode.setIsActive(true);
         referralCode.setUsedCount(0);
         referralCode.setCreatedAt(LocalDateTime.now());

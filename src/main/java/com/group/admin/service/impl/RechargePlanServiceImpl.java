@@ -165,7 +165,7 @@ public class RechargePlanServiceImpl implements RechargePlanService {
         
         // ✅ 所有條件都是可選的
         if (condition != null) {
-            if (condition.getName() != null && !condition.getName().isEmpty()) {
+            if (isNotBlank(condition.getName())) {
                 criteria.andNameLike("%" + condition.getName() + "%");
             }
             if (condition.getIsActive() != null) {
@@ -229,5 +229,13 @@ public class RechargePlanServiceImpl implements RechargePlanService {
                 .createdAt(plan.getCreatedAt())
                 .updatedAt(plan.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * 檢查字串是否非空白
+     * 空字串 "" 會被視為 null 處理
+     */
+    private boolean isNotBlank(String str) {
+        return str != null && !str.trim().isEmpty();
     }
 }

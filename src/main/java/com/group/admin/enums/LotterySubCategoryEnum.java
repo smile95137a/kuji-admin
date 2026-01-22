@@ -12,7 +12,8 @@ import lombok.Getter;
 public enum LotterySubCategoryEnum {
     
     LOTTERY_MODE("LOTTERY_MODE", "抽籤型"),
-    SCRATCH_MODE("SCRATCH_MODE", "刮刮樂型");
+    SCRATCH_MODE("SCRATCH_MODE", "刮刮樂型"),
+    SCRATCH_CARD_MODE("SCRATCH_CARD_MODE", "刮刮卡型");
 
     private final String code;
     private final String name;

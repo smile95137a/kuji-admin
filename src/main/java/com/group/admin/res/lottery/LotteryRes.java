@@ -71,6 +71,12 @@ public class LotteryRes {
     private String subCategory;
 
     /**
+     * 自製賞子類型中文名稱
+     */
+    @Schema(description = "自製賞子類型中文", example = "抽籤型")
+    private String subCategoryName;
+
+    /**
      * 每抽價格
      */
     @Schema(description = "每抽價格", example = "650")

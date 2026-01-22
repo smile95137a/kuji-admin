@@ -49,20 +49,20 @@ public class BannerServiceImpl implements BannerService {
         BannerExample example = new BannerExample();
         BannerExample.Criteria criteria = example.createCriteria();
         
-        // 動態條件查詢
+        // 動態條件查詢（空字串視為 null）
         if (condition != null) {
             // 店家 ID 查詢
-            if (condition.getStoreId() != null && !condition.getStoreId().isEmpty()) {
+            if (isNotBlank(condition.getStoreId())) {
                 criteria.andStoreIdEqualTo(condition.getStoreId());
             }
             
             // 標題模糊查詢
-            if (condition.getTitle() != null && !condition.getTitle().isEmpty()) {
+            if (isNotBlank(condition.getTitle())) {
                 criteria.andTitleLike("%" + condition.getTitle() + "%");
             }
             
             // 狀態查詢
-            if (condition.getStatus() != null && !condition.getStatus().isEmpty()) {
+            if (isNotBlank(condition.getStatus())) {
                 criteria.andStatusEqualTo(condition.getStatus());
             }
             
@@ -79,14 +79,14 @@ public class BannerServiceImpl implements BannerService {
             }
             
             // 關鍵字搜尋
-            if (condition.getKeyword() != null && !condition.getKeyword().isEmpty()) {
+            if (isNotBlank(condition.getKeyword())) {
                 criteria.andTitleLike("%" + condition.getKeyword() + "%");
             }
         }
         
         // 排序
-        if (req != null && req.getSortBy() != null) {
-            String sortOrder = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
+        if (req != null && isNotBlank(req.getSortBy())) {
+            String sortOrder = isNotBlank(req.getSortOrder()) ? req.getSortOrder() : "ASC";
             example.setOrderByClause(req.getSortBy() + " " + sortOrder);
         } else {
             // 預設按排序號升序
@@ -369,5 +369,13 @@ public class BannerServiceImpl implements BannerService {
             default:
                 return status;
         }
+    }
+
+    /**
+     * 檢查字串是否非空白
+     * 空字串 "" 會被視為 null 處理
+     */
+    private boolean isNotBlank(String str) {
+        return str != null && !str.trim().isEmpty();
     }
 }

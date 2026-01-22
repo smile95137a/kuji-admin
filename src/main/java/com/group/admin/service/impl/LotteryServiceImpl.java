@@ -24,6 +24,7 @@ import com.group.admin.entity.Store;
 import com.group.admin.entity.User;
 import com.group.admin.enums.LotteryCategoryEnum;
 import com.group.admin.enums.LotteryStatusEnum;
+import com.group.admin.enums.LotterySubCategoryEnum;
 import com.group.admin.example.LotteryExample;
 import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.exception.BusinessException;
@@ -207,22 +208,23 @@ public class LotteryServiceImpl implements LotteryService {
         LotteryExample example = new LotteryExample();
         LotteryExample.Criteria criteria = example.createCriteria();
         
-        if (req.getStoreId() != null) {
+        // ✅ 使用 isNotBlank 處理空字串
+        if (isNotBlank(req.getStoreId())) {
             criteria.andStoreIdEqualTo(req.getStoreId());
         }
-        if (req.getKeyword() != null && !req.getKeyword().isEmpty()) {
+        if (isNotBlank(req.getKeyword())) {
             criteria.andTitleLike("%" + req.getKeyword() + "%");
         }
-        if (req.getCategory() != null && !req.getCategory().isEmpty()) {
+        if (isNotBlank(req.getCategory())) {
             criteria.andCategoryEqualTo(req.getCategory());
         }
-        if (req.getStatus() != null && !req.getStatus().isEmpty()) {
+        if (isNotBlank(req.getStatus())) {
             criteria.andStatusEqualTo(req.getStatus());
         }
         
         // 設置排序
-        String sortBy = req.getSortBy() != null ? req.getSortBy() : "created_at";
-        String sortDirection = req.getSortDirection() != null ? req.getSortDirection() : "DESC";
+        String sortBy = isNotBlank(req.getSortBy()) ? req.getSortBy() : "created_at";
+        String sortDirection = isNotBlank(req.getSortDirection()) ? req.getSortDirection() : "DESC";
         example.setOrderByClause(sortBy + " " + sortDirection);
         
         // 獲取總數
@@ -957,6 +959,7 @@ public class LotteryServiceImpl implements LotteryService {
         res.setCategory(lottery.getCategory());
         res.setCategoryName(LotteryCategoryEnum.getNameByCode(lottery.getCategory()));
         res.setSubCategory(lottery.getSubCategory());
+        res.setSubCategoryName(LotterySubCategoryEnum.getNameByCode(lottery.getSubCategory())); // ✅ 新增子分類中文名稱
         
         // 價格相關
         res.setPricePerDraw(lottery.getPricePerDraw());
@@ -1435,17 +1438,17 @@ public class LotteryServiceImpl implements LotteryService {
         LotteryExample example = new LotteryExample();
         LotteryExample.Criteria criteria = example.createCriteria();
         
-        // 應用查詢條件
-        if (condition.getStoreId() != null) {
+        // 應用查詢條件（只有非空字串才加入條件）
+        if (isNotBlank(condition.getStoreId())) {
             criteria.andStoreIdEqualTo(condition.getStoreId());
         }
-        if (condition.getTitle() != null && !condition.getTitle().isEmpty()) {
+        if (isNotBlank(condition.getTitle())) {
             criteria.andTitleLike("%" + condition.getTitle() + "%");
         }
-        if (condition.getStatus() != null) {
+        if (isNotBlank(condition.getStatus())) {
             criteria.andStatusEqualTo(condition.getStatus());
         }
-        if (condition.getCategory() != null) {
+        if (isNotBlank(condition.getCategory())) {
             criteria.andCategoryEqualTo(condition.getCategory());
         }
         if (condition.getPriceMin() != null) {

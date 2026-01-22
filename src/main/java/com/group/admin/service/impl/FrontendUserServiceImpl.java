@@ -45,10 +45,10 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         
         // ✅ 所有條件都是可選的
         if (condition != null) {
-            if (condition.getEmail() != null && !condition.getEmail().isEmpty()) {
+            if (isNotBlank(condition.getEmail())) {
                 criteria.andEmailLike("%" + condition.getEmail() + "%");
             }
-            if (condition.getNickname() != null && !condition.getNickname().isEmpty()) {
+            if (isNotBlank(condition.getNickname())) {
                 criteria.andNicknameLike("%" + condition.getNickname() + "%");
             }
             if (condition.getStatus() != null) {
@@ -74,7 +74,7 @@ public class FrontendUserServiceImpl implements FrontendUserService {
                     condition.getCreatedAtEnd().atTime(23, 59, 59)
                 );
             }
-            if (condition.getKeyword() != null && !condition.getKeyword().isEmpty()) {
+            if (isNotBlank(condition.getKeyword())) {
                 // 關鍵字搜尋：Email 或暱稱
                 UserExample.Criteria orCriteria = example.or();
                 orCriteria.andEmailLike("%" + condition.getKeyword() + "%");
@@ -222,5 +222,13 @@ public class FrontendUserServiceImpl implements FrontendUserService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * 檢查字串是否非空白
+     * 空字串 "" 會被視為 null 處理
+     */
+    private boolean isNotBlank(String str) {
+        return str != null && !str.trim().isEmpty();
     }
 }

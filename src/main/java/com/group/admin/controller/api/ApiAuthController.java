@@ -53,8 +53,16 @@ public class ApiAuthController {
      * POST /api/auth/register
      */
     @PostMapping("/register")
+    @Operation(summary = "使用者註冊", description = "使用 Email 和密碼註冊新帳號")
     public ResponseEntity<AuthRes> register(@Valid @RequestBody AuthRegisterReq req) {
         log.info("用戶註冊請求: {}", req.getEmail());
+        
+        // 驗證密碼一致性（Controller 層額外檢查）
+        if (!req.getPassword().equals(req.getConfirmPassword())) {
+            log.warn("密碼確認不一致: {}", req.getEmail());
+            throw new IllegalArgumentException("密碼與確認密碼不一致");
+        }
+        
         User user = userService.register(req);
         
         // 註冊成功後直接返回 Token

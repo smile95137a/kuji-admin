@@ -51,6 +51,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User register(AuthRegisterReq req) {
+        // 驗證密碼確認
+        if (!req.getPassword().equals(req.getConfirmPassword())) {
+            throw new IllegalArgumentException("密碼與確認密碼不一致");
+        }
+        
         // 使用 Example 模式檢查 Email 是否已存在
         User existing = findByEmail(req.getEmail());
         if (existing != null) {
@@ -60,16 +65,28 @@ public class UserServiceImpl implements UserService {
         User user = new User();
         user.setId(UUID.randomUUID().toString()); // 使用 UUID
         user.setEmail(req.getEmail());
-        user.setNickname(req.getNickname() == null ? req.getEmail().split("@")[0] : req.getNickname());
+        user.setNickname(req.getNickname());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setProvider("EMAIL"); // 本地註冊
         user.setGoldCoins(0L);
         user.setBonusCoins(0L);
         user.setStatus("ACTIVE");
         user.setEmailVerified((byte) 0);
-        // ✅ 新增支援手機號碼和頭像
+        
+        // ✅ 手機號碼與 LINE ID
         user.setPhoneNumber(req.getPhoneNumber());
+        user.setLineId(req.getLineId());
+        
+        // ✅ 頭像
         user.setAvatar(req.getAvatar());
+        
+        // ✅ 收件地址資訊
+        user.setRecipientName(req.getAddressName());
+        user.setCity(req.getCity());
+        user.setDistrict(req.getArea()); // area → district
+        user.setAddressDetail(req.getAddress());
+        // zipCode 目前 User entity 沒有此欄位，如需要請先更新資料表
+        
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
