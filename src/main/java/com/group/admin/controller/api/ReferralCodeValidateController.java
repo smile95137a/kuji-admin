@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/auth/referral-code")
+@RequestMapping("/auth/referral-code")
 @RequiredArgsConstructor
 @Tag(name = "前台 - 推薦碼驗證", description = "註冊時驗證推薦碼 API")
 public class ReferralCodeValidateController {

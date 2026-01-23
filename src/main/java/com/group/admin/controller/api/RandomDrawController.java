@@ -37,7 +37,7 @@ import java.util.List;
  * @since 2025-12-25
  */
 @RestController
-@RequestMapping("/api/lottery/random")
+@RequestMapping("/lottery/random")
 @Validated
 @Slf4j
 public class RandomDrawController {

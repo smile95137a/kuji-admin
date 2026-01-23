@@ -43,6 +43,7 @@ import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryListRes;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +67,7 @@ public class LotteryServiceImpl implements LotteryService {
     private final PointLogMapper pointLogMapper;
     private final ObjectMapper objectMapper;
     private final StoreMapper storeMapper;
+    private final LotteryTicketService lotteryTicketService;
     
     private final Random random = new Random();
 
@@ -1211,6 +1213,17 @@ public class LotteryServiceImpl implements LotteryService {
             }
             
             log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
+            
+            // Step 2.5: 生成籤位（一番賞/扭蛋/卡牌模式在建立時就要有籤位）
+            // 檢查是否為需要立即生成籤位的商品類型
+            if (lotteryRes.getMaxDraws() != null && lotteryRes.getMaxDraws() > 0) {
+                try {
+                    lotteryTicketService.generateTickets(lotteryId);
+                    log.info("✅ 籤位生成完成: lotteryId={}, maxDraws={}", lotteryId, lotteryRes.getMaxDraws());
+                } catch (Exception e) {
+                    log.warn("⚠️ 籤位生成失敗: lotteryId={}, error={}", lotteryId, e.getMessage());
+                }
+            }
         }
         
         // Step 3: 組裝回應

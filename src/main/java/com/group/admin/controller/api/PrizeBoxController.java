@@ -22,7 +22,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/prize-box")
+@RequestMapping("/prize-box")
 @RequiredArgsConstructor
 public class PrizeBoxController {
     

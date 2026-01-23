@@ -17,7 +17,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/recharge-plan")
+@RequestMapping("/recharge-plan")
 @RequiredArgsConstructor
 public class RechargePlanController {
     

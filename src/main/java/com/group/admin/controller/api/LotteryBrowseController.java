@@ -91,4 +91,31 @@ public class LotteryBrowseController {
         
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * 根據店家 ID 查詢該店家的所有上架商品
+     * 
+     * @param storeId 店家 ID
+     * @return 該店家的商品列表
+     */
+    @GetMapping("/store/{storeId}")
+    @Operation(summary = "查詢店家商品列表", description = "根據店家 ID 查詢該店家所有上架中的商品")
+    public ResponseEntity<List<LotteryRes>> getLotteriesByStore(@PathVariable String storeId) {
+        
+        log.info("🔍 [前台] 查詢店家商品: storeId={}", storeId);
+        
+        // 建立查詢條件
+        QueryReq<LotteryCondition> req = new QueryReq<>();
+        LotteryCondition condition = new LotteryCondition();
+        condition.setStoreId(storeId);
+        condition.setStatus("ON_SHELF");  // 只查詢上架中的商品
+        req.setCondition(condition);
+        req.setSortBy("created_at");
+        req.setSortOrder("DESC");
+        
+        List<LotteryRes> result = lotteryService.queryLotteries(req);
+        
+        log.info("✅ 查詢成功: 店家 {} 共 {} 筆商品", storeId, result.size());
+        return ResponseEntity.ok(result);
+    }
 }
