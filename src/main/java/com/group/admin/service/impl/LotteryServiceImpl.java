@@ -527,6 +527,14 @@ public class LotteryServiceImpl implements LotteryService {
         return stats;
     }
 
+    @Override
+    public List<com.group.admin.res.lottery.LotteryPrizeRes> getPrizesByLotteryId(String lotteryId) {
+        List<LotteryPrize> prizes = selectPrizesByLotteryId(lotteryId);
+        return prizes.stream()
+                .map(this::convertPrizeToRes)
+                .collect(Collectors.toList());
+    }
+
     // ==================== 私有輔助方法 ====================
 
     /**

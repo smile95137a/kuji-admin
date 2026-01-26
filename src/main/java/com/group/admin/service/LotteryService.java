@@ -161,6 +161,14 @@ public interface LotteryService {
      * @return 統計資訊（總數、剩餘數等）
      */
     Map<String, Object> getPrizeStatistics(String lotteryId);
+
+    /**
+     * 根據商品 ID 查詢獎品列表
+     *
+     * @param lotteryId 商品ID
+     * @return 獎品列表
+     */
+    List<com.group.admin.res.lottery.LotteryPrizeRes> getPrizesByLotteryId(String lotteryId);
     
     // ==================== 新架構 API（Condition + QueryReq 模式）====================
     

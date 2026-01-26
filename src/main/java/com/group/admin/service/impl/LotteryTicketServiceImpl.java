@@ -21,6 +21,7 @@ import com.group.admin.mapper.LotteryPrizeMapper;
 import com.group.admin.mapper.LotteryTicketMapper;
 import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryTicketService;
+import com.group.admin.service.PrizeBoxService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
     private final LotteryTicketMapper lotteryTicketMapper;
+    private final PrizeBoxService prizeBoxService;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -114,9 +116,12 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         log.info("📦 獎品池大小: {}, 總籤位數: {}", prizePool.size(), totalTickets);
         
-        // 如果獎品總數 < 總籤位數，補上「謝謝惠顧」
-        while (prizePool.size() < totalTickets) {
-            prizePool.add(new PrizeSlot(null, "THANKS"));
+        // ⚠️ 一番賞/扭蛋/卡牌模式：獎品總數必須 = 總籤位數（不能有謝謝惠顧）
+        if (prizePool.size() != totalTickets) {
+            throw new BusinessException(
+                String.format("一番賞/扭蛋/卡牌模式：獎品總數(%d)必須等於總籤位數(%d)！每個籤位都應該有獎品，不能有謝謝惠顧。",
+                    prizePool.size(), totalTickets)
+            );
         }
         
         // 打亂順序（核心：隨機分配）
@@ -321,53 +326,134 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "商品未上架");
         }
         
-        // 2. 取得或建立場次
-        SessionInfo session = getOrCreateSession(lotteryId, userId);
-        
-        // 3. 檢查保護時間
+        // 2. 檢查保護時間
         if (!canDrawNow(lotteryId, userId)) {
             return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, 
                     "商品正在被其他玩家抽獎中，請稍後再試");
         }
         
-        // 4. 檢查餘額
-        // TODO: 從 UserMapper 查詢使用者餘額
-        Long pricePerDraw = lottery.getPricePerDraw();
-        // User user = userMapper.selectByPrimaryKey(userId);
-        // if (user.getGoldCoins() < pricePerDraw) {
-        //     return new DrawResult(false, ..., "餘額不足");
-        // }
-        
-        // 5. 決定籤位
+        // 3. 決定籤位
         int actualTicketNumber;
+        LotteryTicket targetTicket;
+        
         if (ticketNumber != null) {
-            // 選號模式
+            // 選號模式：檢查該籤位是否可用
+            LotteryTicketExample example = new LotteryTicketExample();
+            example.createCriteria()
+                    .andLotteryIdEqualTo(lotteryId)
+                    .andTicketNumberEqualTo(ticketNumber)
+                    .andStatusEqualTo("AVAILABLE");
+            List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
+            
+            if (tickets.isEmpty()) {
+                return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, 
+                        "該籤位已被抽走或不存在");
+            }
+            targetTicket = tickets.get(0);
             actualTicketNumber = ticketNumber;
-            // TODO: 檢查該籤位是否可用
         } else {
             // 隨機模式
-            Integer randomTicket = getRandomAvailableTicket(lotteryId);
-            if (randomTicket == null) {
+            Integer randomNumber = getRandomAvailableTicket(lotteryId);
+            if (randomNumber == null) {
                 return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "已無可抽籤位");
             }
-            actualTicketNumber = randomTicket;
+            
+            // 取得該籤位
+            LotteryTicketExample example = new LotteryTicketExample();
+            example.createCriteria()
+                    .andLotteryIdEqualTo(lotteryId)
+                    .andTicketNumberEqualTo(randomNumber);
+            List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
+            
+            if (tickets.isEmpty()) {
+                return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "籤位查詢失敗");
+            }
+            targetTicket = tickets.get(0);
+            actualTicketNumber = randomNumber;
         }
         
-        // 6-9. TODO: 更新籤位、扣款、檢查免單、記錄
+        // 4. 更新籤位狀態為已抽
+        targetTicket.setStatus("DRAWN");
+        targetTicket.setDrawnBy(userId);
+        targetTicket.setDrawnAt(LocalDateTime.now());
+        targetTicket.setUpdatedAt(LocalDateTime.now());
+        lotteryTicketMapper.updateByPrimaryKey(targetTicket);
         
-        // 10. 返回結果（模擬）
+        log.info("✅ 籤位更新成功: ticketNumber={}, prizeLevel={}", 
+                actualTicketNumber, targetTicket.getPrizeLevel());
+        
+        // 5. 取得獎品資訊
+        String prizeId = targetTicket.getPrizeId();
+        String prizeLevel = targetTicket.getPrizeLevel();
+        String prizeName = null;
+        String prizeImageUrl = null;
+        boolean isGrandPrize = false;
+        
+        if (prizeId != null) {
+            LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeId);
+            if (prize != null) {
+                prizeName = prize.getName();
+                prizeImageUrl = prize.getImageUrl();
+                isGrandPrize = prize.getIsGrandPrize() != null && prize.getIsGrandPrize() == 1;
+                
+                // 減少獎品剩餘數量
+                if (prize.getRemaining() != null && prize.getRemaining() > 0) {
+                    prize.setRemaining(prize.getRemaining() - 1);
+                    prize.setUpdatedAt(LocalDateTime.now());
+                    lotteryPrizeMapper.updateByPrimaryKey(prize);
+                }
+            }
+        } else {
+            prizeName = "謝謝惠顧";
+        }
+        
+        // 6. 更新商品的 totalDraws
+        if (lottery.getTotalDraws() == null) {
+            lottery.setTotalDraws(1);
+        } else {
+            lottery.setTotalDraws(lottery.getTotalDraws() + 1);
+        }
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+        
+        // 7. 將獎品加入賞品盒（如果不是謝謝惠顧）
+        if (prizeId != null) {
+            try {
+                // 計算回收紅利（例如：原價的 50%）
+                Long recycleBonus = lottery.getPricePerDraw() != null 
+                        ? lottery.getPricePerDraw() / 2 
+                        : 0L;
+                
+                prizeBoxService.addToPrizeBox(
+                        userId, 
+                        lotteryId, 
+                        prizeId, 
+                        lottery.getStoreId(), 
+                        recycleBonus
+                );
+                log.info("✅ 獎品已加入賞品盒: userId={}, prizeId={}", userId, prizeId);
+            } catch (Exception e) {
+                log.error("⚠️ 獎品加入賞品盒失敗: {}", e.getMessage());
+                // 不影響抽獎結果，只記錄錯誤
+            }
+        }
+        
+        // 8. TODO: 扣款、記錄抽獎紀錄、檢查免單
+        // 這些需要與錢包系統整合
+        
+        // 8. 返回結果
         return new DrawResult(
                 true, 
-                UUID.randomUUID().toString(), 
+                targetTicket.getId(), 
                 actualTicketNumber, 
-                null, 
-                "C", 
-                "模擬獎品", 
-                null, 
-                false, 
-                false, 
-                0L, 
-                "抽獎成功"
+                prizeId, 
+                prizeLevel, 
+                prizeName, 
+                prizeImageUrl, 
+                isGrandPrize, 
+                false,  // triggeredFreeDraw - TODO: 實作免單檢查
+                0L,     // refundAmount
+                "抽獎成功！恭喜獲得 " + prizeName
         );
     }
 

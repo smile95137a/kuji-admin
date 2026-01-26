@@ -25,20 +25,39 @@ public class FrontendUserUpdateReq {
     @Schema(description = "頭像 URL")
     private String avatar;
     
-    @Schema(description = "狀態（ACTIVE/INACTIVE/SUSPENDED）")
-    private String status;
-    
-    @Min(value = 0, message = "金幣不可為負數")
-    @Schema(description = "金幣餘額")
-    private Long goldCoins;
-    
-    @Min(value = 0, message = "紅利幣不可為負數")
-    @Schema(description = "紅利幣餘額")
-    private Long bonusCoins;
-    
     @Schema(description = "手機號碼")
     private String phoneNumber;
     
-    @Schema(description = "備註")
-    private String remark;
+    @Schema(description = "LINE ID")
+    private String lineId;
+    
+    @Schema(description = "收件人姓名")
+    private String recipientName;
+    
+    @Schema(description = "收件人電話")
+    private String recipientPhone;
+    
+    @Schema(description = "城市")
+    private String city;
+    
+    @Schema(description = "區域")
+    private String district;
+    
+    @Schema(description = "詳細地址")
+    private String addressDetail;
+    
+    @Schema(description = "發票類型：DUPLICATE/TRIPLICATE/CARRIER/DONATE")
+    private String invoiceType;
+    
+    @Schema(description = "發票 Email")
+    private String invoiceEmail;
+    
+    @Schema(description = "載具條碼")
+    private String carrierCode;
+    
+    @Schema(description = "統一編號（三聯式發票用）")
+    private String taxId;
+    
+    @Schema(description = "公司名稱（三聯式發票用）")
+    private String companyName;
 }

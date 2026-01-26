@@ -131,17 +131,41 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         if (req.getAvatar() != null) {
             user.setAvatar(req.getAvatar());
         }
-        if (req.getStatus() != null) {
-            user.setStatus(req.getStatus());
-        }
-        if (req.getGoldCoins() != null) {
-            user.setGoldCoins(req.getGoldCoins());
-        }
-        if (req.getBonusCoins() != null) {
-            user.setBonusCoins(req.getBonusCoins());
-        }
         if (req.getPhoneNumber() != null) {
             user.setPhoneNumber(req.getPhoneNumber());
+        }
+        if (req.getLineId() != null) {
+            user.setLineId(req.getLineId());
+        }
+        if (req.getRecipientName() != null) {
+            user.setRecipientName(req.getRecipientName());
+        }
+        if (req.getRecipientPhone() != null) {
+            user.setRecipientPhone(req.getRecipientPhone());
+        }
+        if (req.getCity() != null) {
+            user.setCity(req.getCity());
+        }
+        if (req.getDistrict() != null) {
+            user.setDistrict(req.getDistrict());
+        }
+        if (req.getAddressDetail() != null) {
+            user.setAddressDetail(req.getAddressDetail());
+        }
+        if (req.getInvoiceType() != null) {
+            user.setInvoiceType(req.getInvoiceType());
+        }
+        if (req.getInvoiceEmail() != null) {
+            user.setInvoiceEmail(req.getInvoiceEmail());
+        }
+        if (req.getCarrierCode() != null) {
+            user.setCarrierCode(req.getCarrierCode());
+        }
+        if (req.getTaxId() != null) {
+            user.setTaxId(req.getTaxId());
+        }
+        if (req.getCompanyName() != null) {
+            user.setCompanyName(req.getCompanyName());
         }
         
         user.setUpdatedAt(LocalDateTime.now());
