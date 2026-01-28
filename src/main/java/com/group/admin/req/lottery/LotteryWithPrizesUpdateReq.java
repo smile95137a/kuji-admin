@@ -57,10 +57,11 @@ import java.util.List;
 public class LotteryWithPrizesUpdateReq {
     
     /**
-     * 商品 ID（必填）
+     * 商品 ID
+     * 
+     * ⚠️ 此欄位會由 Controller 從 URL 路徑參數自動設定，前端不需要在 Body 中傳送
      */
-    @NotBlank(message = "商品 ID 不可為空")
-    @Schema(description = "商品 ID", example = "550e8400-e29b-41d4-a716-446655440000", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "商品 ID（由 URL 路徑參數自動設定）", example = "550e8400-e29b-41d4-a716-446655440000")
     private String lotteryId;
     
     /**

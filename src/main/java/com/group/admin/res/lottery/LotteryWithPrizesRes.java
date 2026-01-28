@@ -50,6 +50,9 @@ public class LotteryWithPrizesRes {
     @Schema(description = "自製賞子類型", example = "LOTTERY_MODE")
     private String subCategory;
     
+    @Schema(description = "遊戲模式：LOTTERY_MODE/SCRATCH_MODE", example = "LOTTERY_MODE")
+    private String playMode;
+    
     @Schema(description = "每抽價格", example = "80")
     private Long pricePerDraw;
     
@@ -59,7 +62,52 @@ public class LotteryWithPrizesRes {
     @Schema(description = "是否啟用自動降價", example = "true")
     private Boolean autoDiscountEnabled;
     
-    @Schema(description = "總抽數", example = "100")
+    @Schema(description = "是否允許多抽", example = "true")
+    private Boolean allowMultiDraw;
+    
+    @Schema(description = "多抽選項", example = "[10, 50]")
+    private List<Integer> multiDrawOptions;
+    
+    @Schema(description = "是否啟用紅利", example = "true")
+    private Boolean bonusEnabled;
+    
+    @Schema(description = "每抽贈送紅利", example = "5")
+    private Integer bonusPointsPerDraw;
+    
+    @Schema(description = "每抽消耗紅利", example = "100")
+    private Integer bonusCostPerDraw;
+    
+    @Schema(description = "標籤列表", example = "[\"新品\", \"一番賞\"]")
+    private List<String> tags;
+    
+    @Schema(description = "圖庫圖片", example = "[\"url1\", \"url2\"]")
+    private List<String> galleryImages;
+    
+    @Schema(description = "商品主題", example = "鬼滅之刃")
+    private String theme;
+    
+    @Schema(description = "熱門度", example = "999")
+    private Integer hotCount;
+    
+    @Schema(description = "顯示排序", example = "1")
+    private Integer orderNum;
+    
+    @Schema(description = "內部備註", example = "這批貨進價較高")
+    private String remark;
+    
+    @Schema(description = "詳細內容（HTML）", example = "<p>活動說明</p>")
+    private String content;
+    
+    @Schema(description = "活動開始時間")
+    private LocalDateTime startTime;
+    
+    @Schema(description = "活動結束時間")
+    private LocalDateTime endTime;
+    
+    @Schema(description = "最大抽數限制", example = "28")
+    private Integer maxDraws;
+    
+    @Schema(description = "總抽數（已抽次數）", example = "0")
     private Integer totalDraws;
     
     @Schema(description = "剩餘抽數", example = "85")

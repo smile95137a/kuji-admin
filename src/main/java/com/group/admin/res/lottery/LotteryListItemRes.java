@@ -58,6 +58,18 @@ public class LotteryListItemRes {
     @Schema(description = "商品狀態")
     private String status;
 
+    @Schema(description = "建立時間")
+    private String createdAt;
+
+    @Schema(description = "更新時間")
+    private String updatedAt;
+
+    @Schema(description = "活動開始時間")
+    private String startTime;
+
+    @Schema(description = "活動結束時間")
+    private String endTime;
+
     /**
      * 從 LotteryRes 轉換
      */
@@ -75,6 +87,10 @@ public class LotteryListItemRes {
                 .maxDraws(res.getMaxDraws())
                 .remainingDraws(res.getRemainingDraws())
                 .status(res.getStatus())
+                .createdAt(res.getCreatedAt() != null ? res.getCreatedAt().toString() : null)
+                .updatedAt(res.getUpdatedAt() != null ? res.getUpdatedAt().toString() : null)
+                .startTime(res.getStartTime() != null ? res.getStartTime().toString() : null)
+                .endTime(res.getEndTime() != null ? res.getEndTime().toString() : null)
                 .build();
     }
 }

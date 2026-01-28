@@ -87,43 +87,16 @@ public class LotteryBrowseController {
     }
 
     /**
-     * 取得商品基本資訊
-     * 
-     * @param id 商品 ID
-     * @return 商品基本資訊
-     */
-    @GetMapping("/{id}")
-    @Operation(summary = "取得商品基本資訊")
-    public ResponseEntity<LotteryRes> getLottery(@PathVariable String id) {
-        
-        log.info("🔍 [前台] 查詢商品基本資訊: lotteryId={}", id);
-        
-        LotteryRes result = lotteryService.getLottery(id);
-        
-        if (result == null) {
-            log.warn("⚠️ 商品不存在: id={}", id);
-            return ResponseEntity.notFound().build();
-        }
-        
-        // 只能查詢上架中的商品
-        if (!"ON_SHELF".equals(result.getStatus())) {
-            log.warn("⚠️ 商品未上架: id={}, status={}", id, result.getStatus());
-            return ResponseEntity.notFound().build();
-        }
-        
-        return ResponseEntity.ok(result);
-    }
-
-    /**
      * 取得商品詳情（完整版，包含獎品+籤位）
      * 
      * 這個 API 用於進入商品頁面後顯示完整資訊
+     * 包含：商品基本資訊、獎品列表、籤位列表、場次資訊
      * 
      * @param id 商品 ID
      * @return 商品詳情（包含獎品列表、籤位列表、場次資訊）
      */
-    @GetMapping("/{id}/detail")
-    @Operation(summary = "取得商品詳情（完整版）", description = "包含獎品列表、籤位列表（安全版）、場次資訊")
+    @GetMapping("/{id}")
+    @Operation(summary = "取得商品詳情（完整版）", description = "包含商品資訊、獎品列表、籤位列表（安全版）、場次資訊")
     public ResponseEntity<LotteryDetailRes> getLotteryDetail(@PathVariable String id) {
         
         log.info("🔍 [前台] 查詢商品詳情: lotteryId={}", id);

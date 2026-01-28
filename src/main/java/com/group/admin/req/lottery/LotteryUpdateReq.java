@@ -20,7 +20,6 @@ public class LotteryUpdateReq {
     /**
      * 商品ID（必填）
      */
-    @NotBlank(message = "商品ID不可為空")
     @Schema(description = "商品ID", example = "550e8400-e29b-41d4-a716-446655440000", requiredMode = Schema.RequiredMode.REQUIRED)
     private String id;
 
@@ -81,10 +80,40 @@ public class LotteryUpdateReq {
     private Boolean allowMultiDraw;
 
     /**
+     * 是否啟用紅利金支付
+     */
+    @Schema(description = "是否啟用紅利金支付", example = "true")
+    private Boolean bonusEnabled;
+
+    /**
      * 多抽選項
      */
     @Schema(description = "多抽選項列表", example = "[10, 50]")
     private List<Integer> multiDrawOptions;
+
+    /**
+     * 標籤列表
+     */
+    @Schema(description = "標籤列表", example = "[\"熱門\", \"限量\"]")
+    private List<String> tags;
+
+    /**
+     * 圖庫圖片 URL 列表
+     */
+    @Schema(description = "圖庫圖片 URL 列表")
+    private List<String> galleryImages;
+
+    /**
+     * 遊戲模式
+     */
+    @Schema(description = "遊戲模式：LOTTERY_MODE/SCRATCH_MODE", example = "LOTTERY_MODE")
+    private String playMode;
+
+    /**
+     * 商品狀態
+     */
+    @Schema(description = "商品狀態：DRAFT/ON_SHELF/OFF_SHELF/IN_PROGRESS/ENDED", example = "ON_SHELF")
+    private String status;
 
     /**
      * 定時上架時間

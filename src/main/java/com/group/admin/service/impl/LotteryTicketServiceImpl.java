@@ -73,7 +73,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 根據遊戲模式生成籤位
         switch (gameMode != null ? gameMode : "LOTTERY_MODE") {
             case "LOTTERY_MODE" -> generateRandomTickets(lotteryId, totalTickets);
-            case "SCRATCH_CARD_MODE" -> generateScratchTickets(lotteryId, totalTickets, lottery);
+            case "SCRATCH_MODE", "SCRATCH_CARD_MODE" -> generateScratchTickets(lotteryId, totalTickets, lottery);
             default -> generateRandomTickets(lotteryId, totalTickets);
         }
 
@@ -153,42 +153,65 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     /**
      * 生成刮刮樂籤位
      * 
-     * <p>店家指定模式：指定位置為大獎，其餘為謝謝惠顧</p>
-     * <p>玩家指定模式：先生成全部「謝謝惠顧」，等開套玩家指定</p>
+     * <p>規則：</p>
+     * <ul>
+     *   <li>獎品會按照獎品數量分配到隨機位置</li>
+     *   <li>剩餘的籤位自動設為「謝謝惠顧」</li>
+     *   <li>店家指定模式：可以在建立時指定大獎位置</li>
+     *   <li>玩家指定模式：等開套玩家指定大獎位置</li>
+     * </ul>
      */
     private void generateScratchTickets(String lotteryId, int totalTickets, Lottery lottery) {
         log.info("🎫 生成刮刮樂籤位: lotteryId={}, total={}", lotteryId, totalTickets);
 
-        // 取得大獎獎品（isGrandPrize = 1）
+        // 取得所有獎品
         LotteryPrizeExample prizeExample = new LotteryPrizeExample();
-        prizeExample.createCriteria()
-                .andLotteryIdEqualTo(lotteryId)
-                .andIsGrandPrizeEqualTo((byte) 1);
-        List<LotteryPrize> grandPrizes = lotteryPrizeMapper.selectByExample(prizeExample);
-        String grandPrizeId = grandPrizes.isEmpty() ? null : grandPrizes.get(0).getId();
+        prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
+        prizeExample.setOrderByClause("order_num ASC");
+        List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
         
-        // 解析店家指定的大獎位置（JSON Array）
-        // 刮刮樂初始生成時，所有籤位都是「謝謝惠顧」
-        // 店家指定或玩家指定模式會在之後透過 designatePrizePositions 設定
+        // 建立獎品池
+        List<PrizeSlot> prizePool = new ArrayList<>();
+        int totalPrizeCount = 0;
         
+        for (LotteryPrize prize : prizes) {
+            int quantity = prize.getQuantity() != null ? prize.getQuantity() : 0;
+            totalPrizeCount += quantity;
+            for (int i = 0; i < quantity; i++) {
+                prizePool.add(new PrizeSlot(prize.getId(), prize.getLevel()));
+            }
+        }
+        
+        log.info("📦 刮刮樂獎品池: 獎品數={}, 謝謝惠顧數={}, 總籤位={}", 
+                totalPrizeCount, totalTickets - totalPrizeCount, totalTickets);
+        
+        // 補齊「謝謝惠顧」
+        int thanksCount = totalTickets - totalPrizeCount;
+        for (int i = 0; i < thanksCount; i++) {
+            prizePool.add(new PrizeSlot(null, "THANKS"));
+        }
+        
+        // 打亂順序（隨機分配）
+        Collections.shuffle(prizePool, random);
+        
+        // 批量生成籤位
         LocalDateTime now = LocalDateTime.now();
-        for (int i = 1; i <= totalTickets; i++) {
+        for (int i = 0; i < totalTickets; i++) {
             LotteryTicket ticket = new LotteryTicket();
             ticket.setId(UUID.randomUUID().toString());
             ticket.setLotteryId(lotteryId);
-            ticket.setTicketNumber(i);
-            // 刮刮樂初始都是謝謝惠顧，等待後續指定
-            ticket.setPrizeId(null);
-            ticket.setPrizeLevel("THANKS");
-            ticket.setIsDesignatedPrize((byte) 0);
+            ticket.setTicketNumber(i + 1);
+            ticket.setPrizeId(prizePool.get(i).prizeId());
+            ticket.setPrizeLevel(prizePool.get(i).level());
             ticket.setStatus("AVAILABLE");
+            ticket.setIsDesignatedPrize((byte) 0);
             ticket.setCreatedAt(now);
             ticket.setUpdatedAt(now);
             lotteryTicketMapper.insert(ticket);
         }
         
-        log.info("✅ 刮刮樂籤位生成完成，共 {} 個籤位（待指定大獎位置），大獎獎品: {}", 
-                totalTickets, grandPrizeId);
+        log.info("✅ 刮刮樂籤位生成完成，獎品 {} 個，謝謝惠顧 {} 個", 
+                totalPrizeCount, thanksCount);
     }
 
     @Override
@@ -252,11 +275,14 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         List<LotteryTicketRes> result = new ArrayList<>();
         for (LotteryTicket ticket : tickets) {
             LotteryTicketRes res = toRes(ticket);
-            // ⚠️ 關鍵：隱藏未抽籤位的獎品資訊
+            // ⚠️ 關鍵：隱藏未抽籤位的獎品資訊（避免玩家通過圖片猜到大獎位置）
             if ("AVAILABLE".equals(ticket.getStatus())) {
                 res.setPrizeId(null);
                 res.setPrizeName(null);
                 res.setPrizeLevel(null);
+                res.setPrizeImageUrl(null);           // ← 隱藏圖片 URL
+                res.setIsGrandPrize(null);            // ← 隱藏是否為大獎
+                res.setIsLastPrize(null);             // ← 隱藏是否為最後賞
             }
             result.add(res);
         }

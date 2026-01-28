@@ -68,6 +68,12 @@ public class LotteryPrizeCreateReq {
     private Integer quantity;
 
     /**
+     * 權重（抽獎機率權重，數字越大機率越高）
+     */
+    @Schema(description = "抽獎權重（用於隨機抽取，數字越大機率越高）", example = "10")
+    private Integer weight;
+
+    /**
      * 獎項類型
      * physical: 實體獎品
      * digital: 數位獎品

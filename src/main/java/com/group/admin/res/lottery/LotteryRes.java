@@ -77,6 +77,12 @@ public class LotteryRes {
     private String subCategoryName;
 
     /**
+     * 遊戲模式
+     */
+    @Schema(description = "遊戲模式：LOTTERY_MODE/SCRATCH_MODE", example = "LOTTERY_MODE")
+    private String playMode;
+
+    /**
      * 每抽價格
      */
     @Schema(description = "每抽價格", example = "650")
@@ -117,6 +123,48 @@ public class LotteryRes {
      */
     @Schema(description = "多抽選項列表", example = "[10, 50]")
     private List<Integer> multiDrawOptions;
+
+    /**
+     * 是否啟用紅利點數
+     */
+    @Schema(description = "是否啟用紅利點數", example = "true")
+    private Boolean bonusEnabled;
+
+    /**
+     * 每抽贈送紅利點數
+     */
+    @Schema(description = "每抽贈送紅利點數", example = "5")
+    private Integer bonusPointsPerDraw;
+
+    /**
+     * 每抽消耗紅利點數
+     */
+    @Schema(description = "每抽消耗紅利點數", example = "100")
+    private Integer bonusCostPerDraw;
+
+    /**
+     * 標籤列表
+     */
+    @Schema(description = "標籤列表", example = "[\"新品\", \"一番賞\", \"收藏\"]")
+    private List<String> tags;
+
+    /**
+     * 圖庫圖片列表
+     */
+    @Schema(description = "圖庫圖片列表", example = "[\"url1\", \"url2\"]")
+    private List<String> galleryImages;
+
+    /**
+     * 商品主題
+     */
+    @Schema(description = "商品主題（鬼滅之刃、火影忍者等）", example = "鬼滅之刃")
+    private String theme;
+
+    /**
+     * 熱門度
+     */
+    @Schema(description = "熱門度（用於顯示熱門標籤）", example = "999")
+    private Integer hotCount;
 
     /**
      * 定時上架時間

@@ -90,6 +90,7 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setDiscountedPrice(req.getDiscountedPrice());
         lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
         lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        lottery.setBonusEnabled(req.getBonusEnabled());
         
         if (req.getMultiDrawOptions() != null) {
             try {
@@ -99,13 +100,34 @@ public class LotteryServiceImpl implements LotteryService {
             }
         }
         
+        if (req.getTags() != null) {
+            try {
+                lottery.setTags(objectMapper.writeValueAsString(req.getTags()));
+            } catch (JsonProcessingException e) {
+                log.warn("標籤序列化失敗", e);
+            }
+        }
+        
+        if (req.getGalleryImages() != null) {
+            try {
+                lottery.setGalleryImages(objectMapper.writeValueAsString(req.getGalleryImages()));
+            } catch (JsonProcessingException e) {
+                log.warn("圖庫序列化失敗", e);
+            }
+        }
+        
         lottery.setScheduledAt(req.getScheduledAt());
         lottery.setStartTime(req.getStartTime());
         lottery.setEndTime(req.getEndTime());
         lottery.setMaxDraws(req.getMaxDraws());
         lottery.setTotalDraws(0);
+        lottery.setPlayMode(req.getPlayMode());
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
+        lottery.setHotCount(req.getHotCount());
+        lottery.setTheme(req.getTheme());
+        lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
+        lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
         // ✅ 不再設定 weight
         lottery.setCreatedBy(operatorId);
         lottery.setCreatedAt(LocalDateTime.now());
@@ -144,6 +166,7 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getDiscountedPrice() != null) lottery.setDiscountedPrice(req.getDiscountedPrice());
         if (req.getAutoDiscountEnabled() != null) lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
         if (req.getAllowMultiDraw() != null) lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        if (req.getBonusEnabled() != null) lottery.setBonusEnabled(req.getBonusEnabled());
         
         if (req.getMultiDrawOptions() != null) {
             try {
@@ -153,11 +176,29 @@ public class LotteryServiceImpl implements LotteryService {
             }
         }
         
+        if (req.getTags() != null) {
+            try {
+                lottery.setTags(objectMapper.writeValueAsString(req.getTags()));
+            } catch (JsonProcessingException e) {
+                log.warn("標籤序列化失敗", e);
+            }
+        }
+        
+        if (req.getGalleryImages() != null) {
+            try {
+                lottery.setGalleryImages(objectMapper.writeValueAsString(req.getGalleryImages()));
+            } catch (JsonProcessingException e) {
+                log.warn("圖庫序列化失敗", e);
+            }
+        }
+        
         if (req.getScheduledAt() != null) lottery.setScheduledAt(req.getScheduledAt());
         if (req.getStartTime() != null) lottery.setStartTime(req.getStartTime());
         if (req.getEndTime() != null) lottery.setEndTime(req.getEndTime());
         if (req.getMaxDraws() != null) lottery.setMaxDraws(req.getMaxDraws());
         if (req.getOrderNum() != null) lottery.setOrderNum(req.getOrderNum());
+        if (req.getPlayMode() != null) lottery.setPlayMode(req.getPlayMode());
+        if (req.getStatus() != null) lottery.setStatus(req.getStatus());
         // ✅ 不再設定 weight
         if (req.getRemark() != null) lottery.setRemark(req.getRemark());
         
@@ -970,6 +1011,7 @@ public class LotteryServiceImpl implements LotteryService {
         res.setCategoryName(LotteryCategoryEnum.getNameByCode(lottery.getCategory()));
         res.setSubCategory(lottery.getSubCategory());
         res.setSubCategoryName(LotterySubCategoryEnum.getNameByCode(lottery.getSubCategory())); // ✅ 新增子分類中文名稱
+        res.setPlayMode(lottery.getPlayMode());
         
         // 價格相關
         res.setPricePerDraw(lottery.getPricePerDraw());
@@ -994,6 +1036,41 @@ public class LotteryServiceImpl implements LotteryService {
         } else {
             res.setMultiDrawOptions(List.of()); // ✅ 設定空列表而非 null
         }
+        
+        // 紅利相關
+        res.setBonusEnabled(lottery.getBonusEnabled());
+        res.setBonusPointsPerDraw(lottery.getBonusPointsPerDraw());
+        res.setBonusCostPerDraw(lottery.getBonusCostPerDraw());
+        
+        // 標籤與圖庫
+        if (lottery.getTags() != null && !lottery.getTags().isEmpty()) {
+            try {
+                List<String> tagList = objectMapper.readValue(lottery.getTags(), 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                res.setTags(tagList);
+            } catch (Exception e) {
+                log.warn("⚠️ 解析標籤失敗: {}", lottery.getTags());
+                res.setTags(List.of());
+            }
+        } else {
+            res.setTags(List.of());
+        }
+        
+        if (lottery.getGalleryImages() != null && !lottery.getGalleryImages().isEmpty()) {
+            try {
+                List<String> imageList = objectMapper.readValue(lottery.getGalleryImages(), 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                res.setGalleryImages(imageList);
+            } catch (Exception e) {
+                log.warn("⚠️ 解析圖庫失敗: {}", lottery.getGalleryImages());
+                res.setGalleryImages(List.of());
+            }
+        } else {
+            res.setGalleryImages(List.of());
+        }
+        
+        res.setTheme(lottery.getTheme());
+        res.setHotCount(lottery.getHotCount() != null ? lottery.getHotCount() : 0);
         
         // 時間相關
         res.setScheduledAt(lottery.getScheduledAt());
@@ -1222,15 +1299,59 @@ public class LotteryServiceImpl implements LotteryService {
             
             log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
             
-            // Step 2.5: 生成籤位（一番賞/扭蛋/卡牌模式在建立時就要有籤位）
-            // 檢查是否為需要立即生成籤位的商品類型
-            if (lotteryRes.getMaxDraws() != null && lotteryRes.getMaxDraws() > 0) {
-                try {
-                    lotteryTicketService.generateTickets(lotteryId);
-                    log.info("✅ 籤位生成完成: lotteryId={}, maxDraws={}", lotteryId, lotteryRes.getMaxDraws());
-                } catch (Exception e) {
-                    log.warn("⚠️ 籤位生成失敗: lotteryId={}, error={}", lotteryId, e.getMessage());
+            // Step 2.5: 驗證獎品數量並生成籤位
+            // 計算獎品總數
+            int totalPrizeQuantity = req.getPrizes().stream()
+                    .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                    .sum();
+            
+            String playMode = req.getLottery().getPlayMode();
+            Integer maxDraws = lotteryRes.getMaxDraws();
+            
+            log.info("🎰 籤位生成準備: playMode={}, maxDraws={}, totalPrizes={}", 
+                    playMode, maxDraws, totalPrizeQuantity);
+            
+            // ✅ 檢查總抽數是否設定
+            if (maxDraws == null || maxDraws <= 0) {
+                // 總抽數未設定或為 0，無論什麼模式都必須設定
+                String errorMsg = String.format(
+                    "總抽數錯誤：必須設定總抽數（maxDraws > 0）！\n" +
+                    "- 一番賞模式：總抽數必須等於獎品總數(%d)，不能有謝謝惠顧\n" +
+                    "- 刮刮樂模式：總抽數必須大於等於獎品總數(%d)，剩餘的會是謝謝惠顧",
+                    totalPrizeQuantity, totalPrizeQuantity
+                );
+                log.error("❌ {}", errorMsg);
+                throw new BusinessException(errorMsg);
+            } else {
+                // 有設定總抽數，檢查獎品數量是否符合規則
+                if ("LOTTERY_MODE".equals(playMode)) {
+                    // 一番賞/扭蛋/卡牌：獎品總數必須等於總抽數
+                    if (totalPrizeQuantity != maxDraws) {
+                        String errorMsg = String.format(
+                            "一番賞模式錯誤：獎品總數(%d)必須等於總抽數(%d)！" +
+                            "每個籤位都應該有獎品，不能有謝謝惠顧。請調整獎品數量或總抽數。",
+                            totalPrizeQuantity, maxDraws
+                        );
+                        log.error("❌ {}", errorMsg);
+                        throw new BusinessException(errorMsg);
+                    }
+                } else if ("SCRATCH_MODE".equals(playMode)) {
+                    // 刮刮樂：允許獎品總數 < 總抽數（剩餘為謝謝惠顧）
+                    if (totalPrizeQuantity > maxDraws) {
+                        String errorMsg = String.format(
+                            "刮刮樂模式錯誤：獎品總數(%d)不能大於總抽數(%d)！",
+                            totalPrizeQuantity, maxDraws
+                        );
+                        log.error("❌ {}", errorMsg);
+                        throw new BusinessException(errorMsg);
+                    }
+                    log.info("ℹ️ 刮刮樂模式：獎品 {} 個，謝謝惠顧 {} 個", 
+                            totalPrizeQuantity, maxDraws - totalPrizeQuantity);
                 }
+                
+                // 生成籤位
+                lotteryTicketService.generateTickets(lotteryId);
+                log.info("✅ 籤位生成完成: lotteryId={}, maxDraws={}", lotteryId, maxDraws);
             }
         }
         
@@ -1404,9 +1525,25 @@ public class LotteryServiceImpl implements LotteryService {
                 .imageUrl(lotteryRes.getImageUrl())
                 .category(lotteryRes.getCategory())
                 .subCategory(lotteryRes.getSubCategory())
+                .playMode(lotteryRes.getPlayMode())
                 .pricePerDraw(lotteryRes.getPricePerDraw())
                 .discountedPrice(lotteryRes.getDiscountedPrice())
                 .autoDiscountEnabled(lotteryRes.getAutoDiscountEnabled())
+                .allowMultiDraw(lotteryRes.getAllowMultiDraw())
+                .multiDrawOptions(lotteryRes.getMultiDrawOptions())
+                .bonusEnabled(lotteryRes.getBonusEnabled())
+                .bonusPointsPerDraw(lotteryRes.getBonusPointsPerDraw())
+                .bonusCostPerDraw(lotteryRes.getBonusCostPerDraw())
+                .tags(lotteryRes.getTags())
+                .galleryImages(lotteryRes.getGalleryImages())
+                .theme(lotteryRes.getTheme())
+                .hotCount(lotteryRes.getHotCount())
+                .orderNum(lotteryRes.getOrderNum())
+                .remark(lotteryRes.getRemark())
+                .content(lotteryRes.getContent())
+                .startTime(lotteryRes.getStartTime())
+                .endTime(lotteryRes.getEndTime())
+                .maxDraws(lotteryRes.getMaxDraws())
                 .totalDraws(lotteryRes.getTotalDraws())
                 .remainingDraws(lotteryRes.getRemainingDraws())
                 .status(lotteryRes.getStatus())
