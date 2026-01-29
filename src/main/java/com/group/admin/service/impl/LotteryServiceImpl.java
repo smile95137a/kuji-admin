@@ -1299,60 +1299,83 @@ public class LotteryServiceImpl implements LotteryService {
             
             log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
             
-            // Step 2.5: 驗證獎品數量並生成籤位
+            // Step 2.5: 🆕 自動計算 maxDraws 並更新商品
             // 計算獎品總數
             int totalPrizeQuantity = req.getPrizes().stream()
                     .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
                     .sum();
             
             String playMode = req.getLottery().getPlayMode();
-            Integer maxDraws = lotteryRes.getMaxDraws();
             
-            log.info("🎰 籤位生成準備: playMode={}, maxDraws={}, totalPrizes={}", 
-                    playMode, maxDraws, totalPrizeQuantity);
+            log.info("🎰 籤位生成準備: playMode={}, 獎品總數={}", playMode, totalPrizeQuantity);
             
-            // ✅ 檢查總抽數是否設定
-            if (maxDraws == null || maxDraws <= 0) {
-                // 總抽數未設定或為 0，無論什麼模式都必須設定
-                String errorMsg = String.format(
-                    "總抽數錯誤：必須設定總抽數（maxDraws > 0）！\n" +
-                    "- 一番賞模式：總抽數必須等於獎品總數(%d)，不能有謝謝惠顧\n" +
-                    "- 刮刮樂模式：總抽數必須大於等於獎品總數(%d)，剩餘的會是謝謝惠顧",
-                    totalPrizeQuantity, totalPrizeQuantity
-                );
+            // ✅ 檢查獎品總數
+            if (totalPrizeQuantity <= 0) {
+                String errorMsg = "獎品總數必須大於 0！請至少新增一個獎品。";
                 log.error("❌ {}", errorMsg);
                 throw new BusinessException(errorMsg);
-            } else {
-                // 有設定總抽數，檢查獎品數量是否符合規則
-                if ("LOTTERY_MODE".equals(playMode)) {
-                    // 一番賞/扭蛋/卡牌：獎品總數必須等於總抽數
-                    if (totalPrizeQuantity != maxDraws) {
-                        String errorMsg = String.format(
-                            "一番賞模式錯誤：獎品總數(%d)必須等於總抽數(%d)！" +
-                            "每個籤位都應該有獎品，不能有謝謝惠顧。請調整獎品數量或總抽數。",
-                            totalPrizeQuantity, maxDraws
-                        );
-                        log.error("❌ {}", errorMsg);
-                        throw new BusinessException(errorMsg);
-                    }
-                } else if ("SCRATCH_MODE".equals(playMode)) {
-                    // 刮刮樂：允許獎品總數 < 總抽數（剩餘為謝謝惠顧）
-                    if (totalPrizeQuantity > maxDraws) {
-                        String errorMsg = String.format(
-                            "刮刮樂模式錯誤：獎品總數(%d)不能大於總抽數(%d)！",
-                            totalPrizeQuantity, maxDraws
-                        );
-                        log.error("❌ {}", errorMsg);
-                        throw new BusinessException(errorMsg);
-                    }
-                    log.info("ℹ️ 刮刮樂模式：獎品 {} 個，謝謝惠顧 {} 個", 
-                            totalPrizeQuantity, maxDraws - totalPrizeQuantity);
-                }
-                
-                // 生成籤位
-                lotteryTicketService.generateTickets(lotteryId);
-                log.info("✅ 籤位生成完成: lotteryId={}, maxDraws={}", lotteryId, maxDraws);
             }
+            
+            // 🆕 後端自動計算 maxDraws（根據遊戲模式）
+            int calculatedMaxDraws;
+            Integer frontendMaxDraws = req.getLottery().getMaxDraws();
+            
+            if ("LOTTERY_MODE".equals(playMode)) {
+                // 一番賞/扭蛋/卡牌：maxDraws = 獎品總數（不能有謝謝惠顧）
+                calculatedMaxDraws = totalPrizeQuantity;
+                log.info("🎯 一番賞模式：自動設定 maxDraws = 獎品總數 = {}", calculatedMaxDraws);
+                
+                // 如果前端傳入的 maxDraws 與獎品總數不符，警告並覆寫
+                if (frontendMaxDraws != null && frontendMaxDraws != totalPrizeQuantity) {
+                    log.warn("⚠️ 一番賞模式：前端傳入 maxDraws={} 與獎品總數={} 不符，已自動覆寫", 
+                            frontendMaxDraws, totalPrizeQuantity);
+                }
+            } else if ("SCRATCH_MODE".equals(playMode)) {
+                // 刮刮樂：使用前端傳入的 maxDraws（支援謝謝惠顧）
+                if (frontendMaxDraws != null && frontendMaxDraws >= totalPrizeQuantity) {
+                    calculatedMaxDraws = frontendMaxDraws;
+                    int thanksgivingCount = frontendMaxDraws - totalPrizeQuantity;
+                    log.info("🎰 刮刮樂模式：使用前端設定 maxDraws = {}（獎品 {} 個 + 謝謝惠顧 {} 個）", 
+                            calculatedMaxDraws, totalPrizeQuantity, thanksgivingCount);
+                } else if (frontendMaxDraws != null && frontendMaxDraws < totalPrizeQuantity) {
+                    // 前端設定的 maxDraws 小於獎品總數，不合理，拋出錯誤
+                    String errorMsg = String.format(
+                        "刮刮樂模式錯誤：總抽數(%d)不能小於獎品總數(%d)！請調整設定。",
+                        frontendMaxDraws, totalPrizeQuantity
+                    );
+                    log.error("❌ {}", errorMsg);
+                    throw new BusinessException(errorMsg);
+                } else {
+                    // 前端未設定 maxDraws，預設為獎品總數（沒有謝謝惠顧）
+                    calculatedMaxDraws = totalPrizeQuantity;
+                    log.info("🎰 刮刮樂模式：前端未設定 maxDraws，預設 = 獎品總數 = {}（無謝謝惠顧）", calculatedMaxDraws);
+                }
+            } else {
+                // 未知模式，預設為獎品總數
+                calculatedMaxDraws = totalPrizeQuantity;
+                log.warn("⚠️ 未知遊戲模式: {}，預設設定 maxDraws = 獎品總數 = {}", playMode, calculatedMaxDraws);
+            }
+            
+            // 🆕 更新商品的 maxDraws（覆寫前端傳入的值）
+            Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+            if (lottery != null) {
+                lottery.setMaxDraws(calculatedMaxDraws);
+                lottery.setUpdatedAt(LocalDateTime.now());
+                lotteryMapper.updateByPrimaryKey(lottery);
+                log.info("✅ 已更新商品 maxDraws: lotteryId={}, maxDraws={}", lotteryId, calculatedMaxDraws);
+                
+                // 同步更新回傳的 lotteryRes
+                lotteryRes.setMaxDraws(calculatedMaxDraws);
+                lotteryRes.setRemainingDraws(calculatedMaxDraws);
+            } else {
+                String errorMsg = "更新 maxDraws 失敗：找不到商品 ID = " + lotteryId;
+                log.error("❌ {}", errorMsg);
+                throw new BusinessException(errorMsg);
+            }
+            
+            // 🆕 生成籤位（一番賞模式：每個籤位有獎品；刮刮樂：目前也是每個籤位有獎品，未來可擴充謝謝惠顧）
+            lotteryTicketService.generateTickets(lotteryId);
+            log.info("✅ 籤位生成完成: lotteryId={}, maxDraws={}", lotteryId, calculatedMaxDraws);
         }
         
         // Step 3: 組裝回應
@@ -1503,6 +1526,10 @@ public class LotteryServiceImpl implements LotteryService {
                 .mapToInt(p -> p.getRemaining() != null ? p.getRemaining() : 0)
                 .sum();
         
+        // 🆕 計算謝謝惠顧數量（maxDraws - 獎品總數）
+        int maxDraws = lotteryRes.getMaxDraws() != null ? lotteryRes.getMaxDraws() : 0;
+        int thanksgivingCount = Math.max(0, maxDraws - totalPrizeCount);
+        
         double progressPercentage = totalPrizeCount > 0 
                 ? ((totalPrizeCount - remainingPrizeCount) * 100.0 / totalPrizeCount)
                 : 0.0;
@@ -1553,6 +1580,7 @@ public class LotteryServiceImpl implements LotteryService {
                 .prizes(prizeResList)
                 .totalPrizeCount(totalPrizeCount)
                 .remainingPrizeCount(remainingPrizeCount)
+                .thanksgivingCount(thanksgivingCount)
                 .progressPercentage(Math.round(progressPercentage * 100.0) / 100.0)
                 .build();
     }

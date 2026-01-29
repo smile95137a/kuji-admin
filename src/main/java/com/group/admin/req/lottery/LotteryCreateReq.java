@@ -120,10 +120,29 @@ public class LotteryCreateReq {
     private LocalDateTime endTime;
 
     /**
-     * 總抽數上限（0=無限制）
+     * 總抽數上限（根據遊戲模式有不同規則）
+     * 
+     * 🆕 新架構（2025-12-25）：
+     * 
+     * <b>一番賞模式（LOTTERY_MODE）</b>：
+     * - ❌ 不建議傳入此欄位，後端會自動計算 = 獎品總數
+     * - 每個籤位都必須有獎品，不能有謝謝惠顧
+     * - 例如：3 個獎品 → maxDraws 自動設為 3
+     * 
+     * <b>刮刮樂模式（SCRATCH_MODE）</b>：
+     * - ✅ 必須傳入此欄位，支援謝謝惠顧
+     * - maxDraws 必須 >= 獎品總數
+     * - 剩餘的籤位會是謝謝惠顧
+     * - 例如：2 個獎品 + 傳入 maxDraws=50 → 生成 2 個中獎籤位 + 48 個謝謝惠顧
+     * 
+     * <b>驗證規則</b>：
+     * - 一番賞：maxDraws = 獎品總數（後端自動覆寫）
+     * - 刮刮樂：maxDraws >= 獎品總數（使用前端設定值）
      */
     @Min(value = 0, message = "抽數上限不可為負數")
-    @Schema(description = "總抽數上限（0=無限制）", example = "80")
+    @Schema(description = "總抽數上限（一番賞：自動計算；刮刮樂：必須傳入，支援謝謝惠顧）", 
+            example = "80", 
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Integer maxDraws;
 
     /**

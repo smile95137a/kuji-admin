@@ -232,7 +232,6 @@ public class AdminLotteryWithPrizesController {
                 req.getPrizes() != null ? req.getPrizes().size() : 0);
         
         // 設定 lotteryId
-        System.out.println("0.0.0.0.0.0.0." +lotteryId);
         req.setLotteryId(lotteryId);
         
         LotteryWithPrizesRes result = lotteryService.updateLotteryWithPrizes(req, userId);

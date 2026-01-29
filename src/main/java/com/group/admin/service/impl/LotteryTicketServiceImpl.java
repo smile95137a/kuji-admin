@@ -63,12 +63,15 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             throw new BusinessException("抽獎活動不存在: " + lotteryId);
         }
 
-        String gameMode = lottery.getSubCategory(); // 暫用 subCategory，待新增 gameMode 欄位
+        // 🆕 使用 playMode 欄位（新架構）
+        String gameMode = lottery.getPlayMode();
         int totalTickets = lottery.getMaxDraws();
         
         if (totalTickets <= 0) {
             throw new BusinessException("總抽數必須大於 0");
         }
+
+        log.info("🎮 遊戲模式: {}, 總籤位數: {}", gameMode, totalTickets);
 
         // 根據遊戲模式生成籤位
         switch (gameMode != null ? gameMode : "LOTTERY_MODE") {

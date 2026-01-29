@@ -132,11 +132,14 @@ public class LotteryWithPrizesRes {
     
     // ==================== 統計資訊 ====================
     
-    @Schema(description = "獎品總數量", example = "26")
+    @Schema(description = "獎品總數量（中獎籤位數）", example = "28")
     private Integer totalPrizeCount;
     
     @Schema(description = "剩餘獎品數量", example = "18")
     private Integer remainingPrizeCount;
+    
+    @Schema(description = "謝謝惠顧數量（maxDraws - totalPrizeCount）", example = "72")
+    private Integer thanksgivingCount;
     
     @Schema(description = "抽獎進度百分比", example = "30.77")
     private Double progressPercentage;

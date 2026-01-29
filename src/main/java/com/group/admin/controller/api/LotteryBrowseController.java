@@ -50,18 +50,24 @@ public class LotteryBrowseController {
     private final LotteryTicketService lotteryTicketService;
 
     /**
-     * 查詢商品列表（前台）- 簡化版
+     * 查詢商品列表（前台）- 🆕 統一回應格式
      * 
      * ✅ 只查詢上架中的商品
-     * ✅ 返回 LotteryListItemRes（只包含列表需要的資訊）
+     * ✅ 返回 LotteryDetailRes（與詳情頁相同結構）
+     * ✅ 不包含 tickets（列表不需要顯示籤位）
      * ✅ 前端做分頁
      * 
+     * 🆕 新架構（2025-12-25）：
+     * - List 和 Detail API 返回相同結構
+     * - 唯一差異：List 不包含 tickets 欄位
+     * - 這樣前端可以統一處理資料結構
+     * 
      * @param req 查詢請求（可選）
-     * @return 商品列表（簡化版）
+     * @return 商品列表（LotteryDetailRes，不含 tickets）
      */
     @PostMapping("/list")
-    @Operation(summary = "查詢商品列表（簡化版）", description = "前台查詢上架中的商品，返回列表所需的基本資訊")
-    public ResponseEntity<List<LotteryListItemRes>> queryLotteries(
+    @Operation(summary = "查詢商品列表", description = "前台查詢上架中的商品，返回與詳情頁相同結構（不含 tickets）")
+    public ResponseEntity<List<LotteryDetailRes>> queryLotteries(
             @RequestBody(required = false) QueryReq<LotteryCondition> req) {
         
         log.info("🔍 [前台] 查詢商品列表: condition={}", req);
@@ -77,9 +83,20 @@ public class LotteryBrowseController {
         
         List<LotteryRes> fullList = lotteryService.queryLotteries(req);
         
-        // 轉換為簡化版
-        List<LotteryListItemRes> result = fullList.stream()
-                .map(LotteryListItemRes::from)
+        // 🆕 轉換為 LotteryDetailRes（不含 tickets）
+        List<LotteryDetailRes> result = fullList.stream()
+                .map(lotteryRes -> {
+                    // 取得獎品列表
+                    List<LotteryPrizeRes> prizes = lotteryService.getPrizesByLotteryId(lotteryRes.getId());
+                    
+                    // 組裝回應（不包含 tickets 和 session）
+                    return LotteryDetailRes.builder()
+                            .lottery(lotteryRes)
+                            .prizes(prizes)
+                            .tickets(null)  // 🆕 列表不返回 tickets
+                            .session(null)  // 🆕 列表不返回 session
+                            .build();
+                })
                 .collect(Collectors.toList());
         
         log.info("✅ 查詢成功: 共 {} 筆", result.size());
