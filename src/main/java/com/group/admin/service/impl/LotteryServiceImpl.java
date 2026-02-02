@@ -1681,6 +1681,40 @@ public class LotteryServiceImpl implements LotteryService {
         return result;
     }
     
+    // ==================== 熱度管理 ====================
+    
+    /**
+     * 增加商品熱度（hotCount +1）
+     * 
+     * @param lotteryId 商品 ID
+     * @return 更新後的 hotCount
+     */
+    @Override
+    public int incrementHotCount(String lotteryId) {
+        log.info("🔥 增加商品熱度: lotteryId={}", lotteryId);
+        
+        // 查詢商品
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            log.error("❌ 商品不存在: lotteryId={}", lotteryId);
+            throw new BusinessException("商品不存在");
+        }
+        
+        // 更新 hotCount（原子性操作）
+        int currentHotCount = lottery.getHotCount() != null ? lottery.getHotCount() : 0;
+        int newHotCount = currentHotCount + 1;
+        
+        lottery.setHotCount(newHotCount);
+        lottery.setUpdatedAt(LocalDateTime.now());
+        
+        lotteryMapper.updateByPrimaryKey(lottery);
+        
+        log.info("✅ 熱度更新成功: lotteryId={}, oldCount={}, newCount={}", 
+                lotteryId, currentHotCount, newHotCount);
+        
+        return newHotCount;
+    }
+    
     // ==================== 輔助方法 ====================
     
     /**

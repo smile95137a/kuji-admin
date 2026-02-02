@@ -112,7 +112,7 @@ public class LotteryBrowseController {
      * @param id 商品 ID
      * @return 商品詳情（包含獎品列表、籤位列表、場次資訊）
      */
-    @GetMapping("/{id}")
+    @GetMapping("/{id}/detail")
     @Operation(summary = "取得商品詳情（完整版）", description = "包含商品資訊、獎品列表、籤位列表（安全版）、場次資訊")
     public ResponseEntity<LotteryDetailRes> getLotteryDetail(@PathVariable String id) {
         
@@ -208,5 +208,31 @@ public class LotteryBrowseController {
         
         log.info("✅ 查詢成功: 店家 {} 共 {} 筆商品", storeId, result.size());
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 增加商品熱度（hotCount +1）
+     * 
+     * 使用情境：
+     * - 使用者進入商品詳情頁時呼叫
+     * - 使用者點擊商品時呼叫
+     * 
+     * @param id 商品 ID
+     * @return 更新後的 hotCount
+     */
+    @PostMapping("/{id}/hot")
+    @Operation(summary = "增加商品熱度", description = "使商品的 hotCount 加 1，用於追蹤商品熱門程度")
+    public ResponseEntity<Integer> incrementHotCount(@PathVariable String id) {
+        
+        log.info("🔥 [前台] 增加商品熱度: lotteryId={}", id);
+        
+        try {
+            int newHotCount = lotteryService.incrementHotCount(id);
+            log.info("✅ 熱度更新成功: lotteryId={}, newHotCount={}", id, newHotCount);
+            return ResponseEntity.ok(newHotCount);
+        } catch (Exception e) {
+            log.error("❌ 熱度更新失敗: lotteryId={}, error={}", id, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

@@ -305,4 +305,18 @@ public interface LotteryService {
      */
     List<com.group.admin.res.lottery.LotteryWithPrizesRes> getAllLotteriesWithPrizes(
             com.group.admin.req.common.QueryReq<com.group.admin.req.lottery.LotteryCondition> req);
+    
+    // ==================== 熱度管理 ====================
+    
+    /**
+     * 增加商品熱度（hotCount +1）
+     * 
+     * 使用情境：
+     * - 使用者進入商品詳情頁時呼叫
+     * - 使用者點擊商品時呼叫
+     * 
+     * @param lotteryId 商品 ID
+     * @return 更新後的 hotCount
+     */
+    int incrementHotCount(String lotteryId);
 }
