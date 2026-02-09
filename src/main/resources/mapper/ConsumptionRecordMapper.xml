@@ -83,7 +83,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "consumption_record"
+    from `consumption_record`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -94,21 +94,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "consumption_record"
+    from `consumption_record`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "consumption_record"
+    delete from `consumption_record`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.ConsumptionRecordExample">
-    delete from "consumption_record"
+    delete from `consumption_record`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.ConsumptionRecord">
-    insert into "consumption_record" (id, user_id, type, 
+    insert into `consumption_record` (id, user_id, type, 
       lottery_id, lottery_title, order_id, 
       order_number, gold_amount, bonus_amount, 
       description, created_at)
@@ -118,7 +118,7 @@
       #{description,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.ConsumptionRecord">
-    insert into "consumption_record"
+    insert into `consumption_record`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -191,13 +191,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.ConsumptionRecordExample" resultType="java.lang.Long">
-    select count(*) from "consumption_record"
+    select count(*) from `consumption_record`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "consumption_record"
+    update `consumption_record`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -238,7 +238,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "consumption_record"
+    update `consumption_record`
     set id = #{row.id,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       type = #{row.type,jdbcType=VARCHAR},
@@ -255,7 +255,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ConsumptionRecord">
-    update "consumption_record"
+    update `consumption_record`
     <set>
       <if test="userId != null">
         user_id = #{userId,jdbcType=VARCHAR},
@@ -291,7 +291,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ConsumptionRecord">
-    update "consumption_record"
+    update `consumption_record`
     set user_id = #{userId,jdbcType=VARCHAR},
       type = #{type,jdbcType=VARCHAR},
       lottery_id = #{lotteryId,jdbcType=VARCHAR},
@@ -304,21 +304,4 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  
-  <!-- ==================== 自定義查詢 ==================== -->
-  
-  <select id="selectByUserId" resultMap="BaseResultMap" parameterType="java.lang.String">
-    select id, user_id, type, lottery_id, lottery_title, order_id, order_number, 
-           gold_amount, bonus_amount, description, created_at
-    from "consumption_record"
-    where user_id = #{userId,jdbcType=VARCHAR}
-    order by created_at DESC
-  </select>
-  
-  <select id="selectAll" resultMap="BaseResultMap">
-    select id, user_id, type, lottery_id, lottery_title, order_id, order_number, 
-           gold_amount, bonus_amount, description, created_at
-    from "consumption_record"
-    order by created_at DESC
-  </select>
 </mapper>

@@ -82,7 +82,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "wallet_transaction"
+    from `wallet_transaction`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -93,21 +93,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "wallet_transaction"
+    from `wallet_transaction`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "wallet_transaction"
+    delete from `wallet_transaction`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.WalletTransactionExample">
-    delete from "wallet_transaction"
+    delete from `wallet_transaction`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.WalletTransaction">
-    insert into "wallet_transaction" (id, user_id, transaction_type, 
+    insert into `wallet_transaction` (id, user_id, transaction_type, 
       coin_type, amount, balance_after, 
       related_id, description, created_by, 
       created_at)
@@ -117,7 +117,7 @@
       #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.WalletTransaction">
-    insert into "wallet_transaction"
+    insert into `wallet_transaction`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -184,13 +184,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.WalletTransactionExample" resultType="java.lang.Long">
-    select count(*) from "wallet_transaction"
+    select count(*) from `wallet_transaction`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "wallet_transaction"
+    update `wallet_transaction`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -228,7 +228,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "wallet_transaction"
+    update `wallet_transaction`
     set id = #{row.id,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       transaction_type = #{row.transactionType,jdbcType=VARCHAR},
@@ -244,7 +244,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.WalletTransaction">
-    update "wallet_transaction"
+    update `wallet_transaction`
     <set>
       <if test="userId != null">
         user_id = #{userId,jdbcType=VARCHAR},
@@ -277,7 +277,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.WalletTransaction">
-    update "wallet_transaction"
+    update `wallet_transaction`
     set user_id = #{userId,jdbcType=VARCHAR},
       transaction_type = #{transactionType,jdbcType=VARCHAR},
       coin_type = #{coinType,jdbcType=VARCHAR},

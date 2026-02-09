@@ -83,7 +83,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "banner"
+    from `banner`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -94,21 +94,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "banner"
+    from `banner`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "banner"
+    delete from `banner`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.BannerExample">
-    delete from "banner"
+    delete from `banner`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Banner">
-    insert into "banner" (id, store_id, title, 
+    insert into `banner` (id, store_id, title, 
       image_url, link_url, order_num, 
       status, start_time, end_time, 
       created_at, updated_at)
@@ -118,7 +118,7 @@
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Banner">
-    insert into "banner"
+    insert into `banner`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -191,13 +191,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.BannerExample" resultType="java.lang.Long">
-    select count(*) from "banner"
+    select count(*) from `banner`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "banner"
+    update `banner`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -238,7 +238,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "banner"
+    update `banner`
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
@@ -255,7 +255,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Banner">
-    update "banner"
+    update `banner`
     <set>
       <if test="storeId != null">
         store_id = #{storeId,jdbcType=VARCHAR},
@@ -291,7 +291,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Banner">
-    update "banner"
+    update `banner`
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},

@@ -95,7 +95,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "email_log"
+    from `email_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -110,7 +110,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "email_log"
+    from `email_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -123,21 +123,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "email_log"
+    from `email_log`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "email_log"
+    delete from `email_log`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.EmailLogExample">
-    delete from "email_log"
+    delete from `email_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.EmailLog">
-    insert into "email_log" (id, email_type, to_email, 
+    insert into `email_log` (id, email_type, to_email, 
       to_name, subject, template_name, 
       status, sent_at, retry_count, 
       related_type, related_id, created_at, 
@@ -151,7 +151,7 @@
       #{errorMessage,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.EmailLog">
-    insert into "email_log"
+    insert into `email_log`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -254,13 +254,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.EmailLogExample" resultType="java.lang.Long">
-    select count(*) from "email_log"
+    select count(*) from `email_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "email_log"
+    update `email_log`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -316,7 +316,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update "email_log"
+    update `email_log`
     set id = #{row.id,jdbcType=VARCHAR},
       email_type = #{row.emailType,jdbcType=VARCHAR},
       to_email = #{row.toEmail,jdbcType=VARCHAR},
@@ -338,7 +338,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "email_log"
+    update `email_log`
     set id = #{row.id,jdbcType=VARCHAR},
       email_type = #{row.emailType,jdbcType=VARCHAR},
       to_email = #{row.toEmail,jdbcType=VARCHAR},
@@ -357,7 +357,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.EmailLog">
-    update "email_log"
+    update `email_log`
     <set>
       <if test="emailType != null">
         email_type = #{emailType,jdbcType=VARCHAR},
@@ -408,7 +408,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.EmailLog">
-    update "email_log"
+    update `email_log`
     set email_type = #{emailType,jdbcType=VARCHAR},
       to_email = #{toEmail,jdbcType=VARCHAR},
       to_name = #{toName,jdbcType=VARCHAR},
@@ -427,7 +427,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.EmailLog">
-    update "email_log"
+    update `email_log`
     set email_type = #{emailType,jdbcType=VARCHAR},
       to_email = #{toEmail,jdbcType=VARCHAR},
       to_name = #{toName,jdbcType=VARCHAR},

@@ -75,7 +75,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "admin_user_role"
+    from `admin_user_role`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -86,27 +86,27 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "admin_user_role"
+    from `admin_user_role`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "admin_user_role"
+    delete from `admin_user_role`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.AdminUserRoleExample">
-    delete from "admin_user_role"
+    delete from `admin_user_role`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.AdminUserRole">
-    insert into "admin_user_role" (id, admin_user_id, role_id, 
+    insert into `admin_user_role` (id, admin_user_id, role_id, 
       created_at)
     values (#{id,jdbcType=VARCHAR}, #{adminUserId,jdbcType=VARCHAR}, #{roleId,jdbcType=VARCHAR}, 
       #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.AdminUserRole">
-    insert into "admin_user_role"
+    insert into `admin_user_role`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -137,13 +137,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.AdminUserRoleExample" resultType="java.lang.Long">
-    select count(*) from "admin_user_role"
+    select count(*) from `admin_user_role`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "admin_user_role"
+    update `admin_user_role`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -163,7 +163,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "admin_user_role"
+    update `admin_user_role`
     set id = #{row.id,jdbcType=VARCHAR},
       admin_user_id = #{row.adminUserId,jdbcType=VARCHAR},
       role_id = #{row.roleId,jdbcType=VARCHAR},
@@ -173,7 +173,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.AdminUserRole">
-    update "admin_user_role"
+    update `admin_user_role`
     <set>
       <if test="adminUserId != null">
         admin_user_id = #{adminUserId,jdbcType=VARCHAR},
@@ -188,7 +188,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.AdminUserRole">
-    update "admin_user_role"
+    update `admin_user_role`
     set admin_user_id = #{adminUserId,jdbcType=VARCHAR},
       role_id = #{roleId,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP}

@@ -101,7 +101,7 @@ public class NewsServiceImpl implements NewsService {
             }
             if (condition.getImportant() != null && condition.getImportant()) {
                 newsList = newsList.stream()
-                    .filter(n -> n.getImportant() != null && n.getImportant() == true)
+                    .filter(n -> n.getImportant() != null && n.getImportant())
                     .collect(java.util.stream.Collectors.toList());
             }
         }
@@ -192,7 +192,7 @@ public class NewsServiceImpl implements NewsService {
             news.setCategory(req.getCategory());
         }
         if (req.getImportant() != null) {
-            news.setImportant(req.getImportant() ? true : false);
+            news.setImportant(req.getImportant());
         }
         if (req.getScheduledAt() != null) {
             news.setScheduledAt(req.getScheduledAt());
@@ -329,7 +329,7 @@ public class NewsServiceImpl implements NewsService {
                 .statusName(getStatusName(news.getStatus()))
                 .category(news.getCategory())
                 .categoryName(getCategoryName(news.getCategory()))
-                .important(news.getImportant() != null && news.getImportant() == true)
+                .important(news.getImportant() != null && news.getImportant())
                 .scheduledAt(news.getScheduledAt())
                 .endTime(news.getEndTime())
                 .createdBy(news.getCreatedBy())

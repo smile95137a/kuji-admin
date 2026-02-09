@@ -92,7 +92,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "contact_inquiry"
+    from `contact_inquiry`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -107,7 +107,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "contact_inquiry"
+    from `contact_inquiry`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -120,21 +120,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "contact_inquiry"
+    from `contact_inquiry`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "contact_inquiry"
+    delete from `contact_inquiry`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.ContactInquiryExample">
-    delete from "contact_inquiry"
+    delete from `contact_inquiry`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.ContactInquiry">
-    insert into "contact_inquiry" (id, company_name, contact_name, 
+    insert into `contact_inquiry` (id, company_name, contact_name, 
       email, phone, cooperation_type, 
       status, processed_by, processed_at, 
       created_at, updated_at, description, 
@@ -146,7 +146,7 @@
       #{remark,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.ContactInquiry">
-    insert into "contact_inquiry"
+    insert into `contact_inquiry`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -231,13 +231,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.ContactInquiryExample" resultType="java.lang.Long">
-    select count(*) from "contact_inquiry"
+    select count(*) from `contact_inquiry`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "contact_inquiry"
+    update `contact_inquiry`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -284,7 +284,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update "contact_inquiry"
+    update `contact_inquiry`
     set id = #{row.id,jdbcType=VARCHAR},
       company_name = #{row.companyName,jdbcType=VARCHAR},
       contact_name = #{row.contactName,jdbcType=VARCHAR},
@@ -303,7 +303,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "contact_inquiry"
+    update `contact_inquiry`
     set id = #{row.id,jdbcType=VARCHAR},
       company_name = #{row.companyName,jdbcType=VARCHAR},
       contact_name = #{row.contactName,jdbcType=VARCHAR},
@@ -320,7 +320,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ContactInquiry">
-    update "contact_inquiry"
+    update `contact_inquiry`
     <set>
       <if test="companyName != null">
         company_name = #{companyName,jdbcType=VARCHAR},
@@ -362,7 +362,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.ContactInquiry">
-    update "contact_inquiry"
+    update `contact_inquiry`
     set company_name = #{companyName,jdbcType=VARCHAR},
       contact_name = #{contactName,jdbcType=VARCHAR},
       email = #{email,jdbcType=VARCHAR},
@@ -378,7 +378,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ContactInquiry">
-    update "contact_inquiry"
+    update `contact_inquiry`
     set company_name = #{companyName,jdbcType=VARCHAR},
       contact_name = #{contactName,jdbcType=VARCHAR},
       email = #{email,jdbcType=VARCHAR},
@@ -389,25 +389,6 @@
       processed_at = #{processedAt,jdbcType=TIMESTAMP},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
-    where id = #{id,jdbcType=VARCHAR}
-  </update>
-  
-  <!-- ==================== 自定義查詢 ==================== -->
-  
-  <select id="selectAll" resultMap="ResultMapWithBLOBs">
-    select id, company_name, contact_name, email, phone, cooperation_type, status, 
-           processed_by, processed_at, created_at, updated_at, description, remark
-    from "contact_inquiry"
-    order by created_at DESC
-  </select>
-  
-  <update id="updateStatus" parameterType="com.group.admin.entity.ContactInquiry">
-    update "contact_inquiry"
-    set status = #{status,jdbcType=VARCHAR},
-        remark = #{remark,jdbcType=LONGVARCHAR},
-        processed_by = #{processedBy,jdbcType=VARCHAR},
-        processed_at = #{processedAt,jdbcType=TIMESTAMP},
-        updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

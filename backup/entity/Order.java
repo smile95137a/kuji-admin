@@ -14,3 +14,4 @@ public class Order {
     private java.time.LocalDateTime createDate;
     private java.time.LocalDateTime updateDate;
 }
+

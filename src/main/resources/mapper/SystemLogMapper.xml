@@ -97,7 +97,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "system_log"
+    from `system_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -112,7 +112,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "system_log"
+    from `system_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -125,21 +125,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "system_log"
+    from `system_log`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "system_log"
+    delete from `system_log`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.SystemLogExample">
-    delete from "system_log"
+    delete from `system_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.SystemLog">
-    insert into "system_log" (id, log_type, action, 
+    insert into `system_log` (id, log_type, action, 
       user_id, user_type, target_type, 
       target_id, request_ip, request_url, 
       request_method, response_status, duration_ms, 
@@ -155,7 +155,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.SystemLog">
-    insert into "system_log"
+    insert into `system_log`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -270,13 +270,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.SystemLogExample" resultType="java.lang.Long">
-    select count(*) from "system_log"
+    select count(*) from `system_log`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "system_log"
+    update `system_log`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -338,7 +338,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update "system_log"
+    update `system_log`
     set id = #{row.id,jdbcType=VARCHAR},
       log_type = #{row.logType,jdbcType=VARCHAR},
       action = #{row.action,jdbcType=VARCHAR},
@@ -362,7 +362,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "system_log"
+    update `system_log`
     set id = #{row.id,jdbcType=VARCHAR},
       log_type = #{row.logType,jdbcType=VARCHAR},
       action = #{row.action,jdbcType=VARCHAR},
@@ -381,7 +381,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.SystemLog">
-    update "system_log"
+    update `system_log`
     <set>
       <if test="logType != null">
         log_type = #{logType,jdbcType=VARCHAR},
@@ -438,7 +438,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.SystemLog">
-    update "system_log"
+    update `system_log`
     set log_type = #{logType,jdbcType=VARCHAR},
       action = #{action,jdbcType=VARCHAR},
       user_id = #{userId,jdbcType=VARCHAR},
@@ -459,7 +459,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.SystemLog">
-    update "system_log"
+    update `system_log`
     set log_type = #{logType,jdbcType=VARCHAR},
       action = #{action,jdbcType=VARCHAR},
       user_id = #{userId,jdbcType=VARCHAR},

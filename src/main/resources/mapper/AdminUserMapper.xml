@@ -93,7 +93,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "admin_user"
+    from `admin_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -108,7 +108,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "admin_user"
+    from `admin_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -121,21 +121,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "admin_user"
+    from `admin_user`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "admin_user"
+    delete from `admin_user`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.AdminUserExample">
-    delete from "admin_user"
+    delete from `admin_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.AdminUser">
-    insert into "admin_user" (id, username, password, 
+    insert into `admin_user` (id, username, password, 
       email, display_name, phone, 
       status, force_change_password, last_login_at, 
       created_by, created_at, updated_by, 
@@ -147,7 +147,7 @@
       #{updatedAt,jdbcType=TIMESTAMP}, #{remark,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.AdminUser">
-    insert into "admin_user"
+    insert into `admin_user`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -238,13 +238,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.AdminUserExample" resultType="java.lang.Long">
-    select count(*) from "admin_user"
+    select count(*) from `admin_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "admin_user"
+    update `admin_user`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -294,7 +294,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update "admin_user"
+    update `admin_user`
     set id = #{row.id,jdbcType=VARCHAR},
       username = #{row.username,jdbcType=VARCHAR},
       password = #{row.password,jdbcType=VARCHAR},
@@ -314,7 +314,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "admin_user"
+    update `admin_user`
     set id = #{row.id,jdbcType=VARCHAR},
       username = #{row.username,jdbcType=VARCHAR},
       password = #{row.password,jdbcType=VARCHAR},
@@ -333,7 +333,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.AdminUser">
-    update "admin_user"
+    update `admin_user`
     <set>
       <if test="username != null">
         username = #{username,jdbcType=VARCHAR},
@@ -378,7 +378,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.AdminUser">
-    update "admin_user"
+    update `admin_user`
     set username = #{username,jdbcType=VARCHAR},
       password = #{password,jdbcType=VARCHAR},
       email = #{email,jdbcType=VARCHAR},
@@ -395,7 +395,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.AdminUser">
-    update "admin_user"
+    update `admin_user`
     set username = #{username,jdbcType=VARCHAR},
       password = #{password,jdbcType=VARCHAR},
       email = #{email,jdbcType=VARCHAR},

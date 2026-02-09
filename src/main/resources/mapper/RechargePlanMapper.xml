@@ -85,7 +85,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "recharge_plan"
+    from `recharge_plan`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -96,21 +96,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "recharge_plan"
+    from `recharge_plan`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "recharge_plan"
+    delete from `recharge_plan`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.RechargePlanExample">
-    delete from "recharge_plan"
+    delete from `recharge_plan`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.RechargePlan">
-    insert into "recharge_plan" (id, name, description, 
+    insert into `recharge_plan` (id, name, description, 
       amount, gold_coins, bonus_coins, 
       is_active, order_num, start_date, 
       end_date, created_at, updated_at, 
@@ -122,7 +122,7 @@
       #{deletedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.RechargePlan">
-    insert into "recharge_plan"
+    insert into `recharge_plan`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -207,13 +207,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.RechargePlanExample" resultType="java.lang.Long">
-    select count(*) from "recharge_plan"
+    select count(*) from `recharge_plan`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "recharge_plan"
+    update `recharge_plan`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -260,7 +260,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "recharge_plan"
+    update `recharge_plan`
     set id = #{row.id,jdbcType=VARCHAR},
       name = #{row.name,jdbcType=VARCHAR},
       description = #{row.description,jdbcType=VARCHAR},
@@ -279,7 +279,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RechargePlan">
-    update "recharge_plan"
+    update `recharge_plan`
     <set>
       <if test="name != null">
         name = #{name,jdbcType=VARCHAR},
@@ -321,7 +321,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RechargePlan">
-    update "recharge_plan"
+    update `recharge_plan`
     set name = #{name,jdbcType=VARCHAR},
       description = #{description,jdbcType=VARCHAR},
       amount = #{amount,jdbcType=BIGINT},

@@ -76,7 +76,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "store_user"
+    from `store_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -87,27 +87,27 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "store_user"
+    from `store_user`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "store_user"
+    delete from `store_user`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.StoreUserExample">
-    delete from "store_user"
+    delete from `store_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.StoreUser">
-    insert into "store_user" (id, store_id, admin_user_id, 
+    insert into `store_user` (id, store_id, admin_user_id, 
       role_type, created_at)
     values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{adminUserId,jdbcType=VARCHAR}, 
       #{roleType,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.StoreUser">
-    insert into "store_user"
+    insert into `store_user`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -144,13 +144,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.StoreUserExample" resultType="java.lang.Long">
-    select count(*) from "store_user"
+    select count(*) from `store_user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "store_user"
+    update `store_user`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -173,7 +173,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "store_user"
+    update `store_user`
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
       admin_user_id = #{row.adminUserId,jdbcType=VARCHAR},
@@ -184,7 +184,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.StoreUser">
-    update "store_user"
+    update `store_user`
     <set>
       <if test="storeId != null">
         store_id = #{storeId,jdbcType=VARCHAR},
@@ -202,7 +202,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.StoreUser">
-    update "store_user"
+    update `store_user`
     set store_id = #{storeId,jdbcType=VARCHAR},
       admin_user_id = #{adminUserId,jdbcType=VARCHAR},
       role_type = #{roleType,jdbcType=VARCHAR},

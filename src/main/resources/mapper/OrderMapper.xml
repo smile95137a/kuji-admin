@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.OrderMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.Order">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="order_number" jdbcType="VARCHAR" property="orderNumber" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="total_items" jdbcType="INTEGER" property="totalItems" />
+    <result column="shipping_method" jdbcType="VARCHAR" property="shippingMethod" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="payment_status" jdbcType="VARCHAR" property="paymentStatus" />
+    <result column="recipient_name" jdbcType="VARCHAR" property="recipientName" />
+    <result column="recipient_phone" jdbcType="VARCHAR" property="recipientPhone" />
+    <result column="recipient_address" jdbcType="VARCHAR" property="recipientAddress" />
+    <result column="store_code" jdbcType="VARCHAR" property="storeCode" />
+    <result column="store_name" jdbcType="VARCHAR" property="storeName" />
+    <result column="store_address" jdbcType="VARCHAR" property="storeAddress" />
+    <result column="tracking_no" jdbcType="VARCHAR" property="trackingNo" />
+    <result column="remark" jdbcType="VARCHAR" property="remark" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="shipped_at" jdbcType="TIMESTAMP" property="shippedAt" />
+    <result column="completed_at" jdbcType="TIMESTAMP" property="completedAt" />
+    <result column="cancelled_at" jdbcType="TIMESTAMP" property="cancelledAt" />
+    <result column="cancelled_by" jdbcType="VARCHAR" property="cancelledBy" />
+    <result column="cancel_reason" jdbcType="VARCHAR" property="cancelReason" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, order_number, user_id, store_id, total_items, shipping_method, status, payment_status, 
+    recipient_name, recipient_phone, recipient_address, store_code, store_name, store_address, 
+    tracking_no, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at, 
+    cancelled_by, cancel_reason
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.OrderExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from `order`
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from `order`
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from `order`
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.OrderExample">
+    delete from `order`
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.Order">
+    insert into `order` (id, order_number, user_id, 
+      store_id, total_items, shipping_method, 
+      status, payment_status, recipient_name, 
+      recipient_phone, recipient_address, store_code, 
+      store_name, store_address, tracking_no, 
+      remark, created_at, updated_at, 
+      shipped_at, completed_at, cancelled_at, 
+      cancelled_by, cancel_reason)
+    values (#{id,jdbcType=VARCHAR}, #{orderNumber,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, 
+      #{storeId,jdbcType=VARCHAR}, #{totalItems,jdbcType=INTEGER}, #{shippingMethod,jdbcType=VARCHAR}, 
+      #{status,jdbcType=VARCHAR}, #{paymentStatus,jdbcType=VARCHAR}, #{recipientName,jdbcType=VARCHAR}, 
+      #{recipientPhone,jdbcType=VARCHAR}, #{recipientAddress,jdbcType=VARCHAR}, #{storeCode,jdbcType=VARCHAR}, 
+      #{storeName,jdbcType=VARCHAR}, #{storeAddress,jdbcType=VARCHAR}, #{trackingNo,jdbcType=VARCHAR}, 
+      #{remark,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, 
+      #{shippedAt,jdbcType=TIMESTAMP}, #{completedAt,jdbcType=TIMESTAMP}, #{cancelledAt,jdbcType=TIMESTAMP}, 
+      #{cancelledBy,jdbcType=VARCHAR}, #{cancelReason,jdbcType=VARCHAR})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.Order">
+    insert into `order`
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="orderNumber != null">
+        order_number,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="totalItems != null">
+        total_items,
+      </if>
+      <if test="shippingMethod != null">
+        shipping_method,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="paymentStatus != null">
+        payment_status,
+      </if>
+      <if test="recipientName != null">
+        recipient_name,
+      </if>
+      <if test="recipientPhone != null">
+        recipient_phone,
+      </if>
+      <if test="recipientAddress != null">
+        recipient_address,
+      </if>
+      <if test="storeCode != null">
+        store_code,
+      </if>
+      <if test="storeName != null">
+        store_name,
+      </if>
+      <if test="storeAddress != null">
+        store_address,
+      </if>
+      <if test="trackingNo != null">
+        tracking_no,
+      </if>
+      <if test="remark != null">
+        remark,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+      <if test="shippedAt != null">
+        shipped_at,
+      </if>
+      <if test="completedAt != null">
+        completed_at,
+      </if>
+      <if test="cancelledAt != null">
+        cancelled_at,
+      </if>
+      <if test="cancelledBy != null">
+        cancelled_by,
+      </if>
+      <if test="cancelReason != null">
+        cancel_reason,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNumber != null">
+        #{orderNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="totalItems != null">
+        #{totalItems,jdbcType=INTEGER},
+      </if>
+      <if test="shippingMethod != null">
+        #{shippingMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="paymentStatus != null">
+        #{paymentStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientName != null">
+        #{recipientName,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientPhone != null">
+        #{recipientPhone,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientAddress != null">
+        #{recipientAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="storeCode != null">
+        #{storeCode,jdbcType=VARCHAR},
+      </if>
+      <if test="storeName != null">
+        #{storeName,jdbcType=VARCHAR},
+      </if>
+      <if test="storeAddress != null">
+        #{storeAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="trackingNo != null">
+        #{trackingNo,jdbcType=VARCHAR},
+      </if>
+      <if test="remark != null">
+        #{remark,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="shippedAt != null">
+        #{shippedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="completedAt != null">
+        #{completedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="cancelledAt != null">
+        #{cancelledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="cancelledBy != null">
+        #{cancelledBy,jdbcType=VARCHAR},
+      </if>
+      <if test="cancelReason != null">
+        #{cancelReason,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.OrderExample" resultType="java.lang.Long">
+    select count(*) from `order`
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update `order`
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.orderNumber != null">
+        order_number = #{row.orderNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.totalItems != null">
+        total_items = #{row.totalItems,jdbcType=INTEGER},
+      </if>
+      <if test="row.shippingMethod != null">
+        shipping_method = #{row.shippingMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.paymentStatus != null">
+        payment_status = #{row.paymentStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="row.recipientName != null">
+        recipient_name = #{row.recipientName,jdbcType=VARCHAR},
+      </if>
+      <if test="row.recipientPhone != null">
+        recipient_phone = #{row.recipientPhone,jdbcType=VARCHAR},
+      </if>
+      <if test="row.recipientAddress != null">
+        recipient_address = #{row.recipientAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeCode != null">
+        store_code = #{row.storeCode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeName != null">
+        store_name = #{row.storeName,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeAddress != null">
+        store_address = #{row.storeAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="row.trackingNo != null">
+        tracking_no = #{row.trackingNo,jdbcType=VARCHAR},
+      </if>
+      <if test="row.remark != null">
+        remark = #{row.remark,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.shippedAt != null">
+        shipped_at = #{row.shippedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.completedAt != null">
+        completed_at = #{row.completedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.cancelledAt != null">
+        cancelled_at = #{row.cancelledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.cancelledBy != null">
+        cancelled_by = #{row.cancelledBy,jdbcType=VARCHAR},
+      </if>
+      <if test="row.cancelReason != null">
+        cancel_reason = #{row.cancelReason,jdbcType=VARCHAR},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update `order`
+    set id = #{row.id,jdbcType=VARCHAR},
+      order_number = #{row.orderNumber,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      total_items = #{row.totalItems,jdbcType=INTEGER},
+      shipping_method = #{row.shippingMethod,jdbcType=VARCHAR},
+      status = #{row.status,jdbcType=VARCHAR},
+      payment_status = #{row.paymentStatus,jdbcType=VARCHAR},
+      recipient_name = #{row.recipientName,jdbcType=VARCHAR},
+      recipient_phone = #{row.recipientPhone,jdbcType=VARCHAR},
+      recipient_address = #{row.recipientAddress,jdbcType=VARCHAR},
+      store_code = #{row.storeCode,jdbcType=VARCHAR},
+      store_name = #{row.storeName,jdbcType=VARCHAR},
+      store_address = #{row.storeAddress,jdbcType=VARCHAR},
+      tracking_no = #{row.trackingNo,jdbcType=VARCHAR},
+      remark = #{row.remark,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      shipped_at = #{row.shippedAt,jdbcType=TIMESTAMP},
+      completed_at = #{row.completedAt,jdbcType=TIMESTAMP},
+      cancelled_at = #{row.cancelledAt,jdbcType=TIMESTAMP},
+      cancelled_by = #{row.cancelledBy,jdbcType=VARCHAR},
+      cancel_reason = #{row.cancelReason,jdbcType=VARCHAR}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Order">
+    update `order`
+    <set>
+      <if test="orderNumber != null">
+        order_number = #{orderNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="totalItems != null">
+        total_items = #{totalItems,jdbcType=INTEGER},
+      </if>
+      <if test="shippingMethod != null">
+        shipping_method = #{shippingMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="paymentStatus != null">
+        payment_status = #{paymentStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientName != null">
+        recipient_name = #{recipientName,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientPhone != null">
+        recipient_phone = #{recipientPhone,jdbcType=VARCHAR},
+      </if>
+      <if test="recipientAddress != null">
+        recipient_address = #{recipientAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="storeCode != null">
+        store_code = #{storeCode,jdbcType=VARCHAR},
+      </if>
+      <if test="storeName != null">
+        store_name = #{storeName,jdbcType=VARCHAR},
+      </if>
+      <if test="storeAddress != null">
+        store_address = #{storeAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="trackingNo != null">
+        tracking_no = #{trackingNo,jdbcType=VARCHAR},
+      </if>
+      <if test="remark != null">
+        remark = #{remark,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="shippedAt != null">
+        shipped_at = #{shippedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="completedAt != null">
+        completed_at = #{completedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="cancelledAt != null">
+        cancelled_at = #{cancelledAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="cancelledBy != null">
+        cancelled_by = #{cancelledBy,jdbcType=VARCHAR},
+      </if>
+      <if test="cancelReason != null">
+        cancel_reason = #{cancelReason,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Order">
+    update `order`
+    set order_number = #{orderNumber,jdbcType=VARCHAR},
+      user_id = #{userId,jdbcType=VARCHAR},
+      store_id = #{storeId,jdbcType=VARCHAR},
+      total_items = #{totalItems,jdbcType=INTEGER},
+      shipping_method = #{shippingMethod,jdbcType=VARCHAR},
+      status = #{status,jdbcType=VARCHAR},
+      payment_status = #{paymentStatus,jdbcType=VARCHAR},
+      recipient_name = #{recipientName,jdbcType=VARCHAR},
+      recipient_phone = #{recipientPhone,jdbcType=VARCHAR},
+      recipient_address = #{recipientAddress,jdbcType=VARCHAR},
+      store_code = #{storeCode,jdbcType=VARCHAR},
+      store_name = #{storeName,jdbcType=VARCHAR},
+      store_address = #{storeAddress,jdbcType=VARCHAR},
+      tracking_no = #{trackingNo,jdbcType=VARCHAR},
+      remark = #{remark,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      shipped_at = #{shippedAt,jdbcType=TIMESTAMP},
+      completed_at = #{completedAt,jdbcType=TIMESTAMP},
+      cancelled_at = #{cancelledAt,jdbcType=TIMESTAMP},
+      cancelled_by = #{cancelledBy,jdbcType=VARCHAR},
+      cancel_reason = #{cancelReason,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>

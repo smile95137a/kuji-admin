@@ -86,7 +86,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "prize_box"
+    from `prize_box`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -97,21 +97,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "prize_box"
+    from `prize_box`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "prize_box"
+    delete from `prize_box`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.PrizeBoxExample">
-    delete from "prize_box"
+    delete from `prize_box`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.PrizeBox">
-    insert into "prize_box" (id, user_id, lottery_id, 
+    insert into `prize_box` (id, user_id, lottery_id, 
       prize_id, store_id, draw_result_id, 
       status, is_recyclable, recycle_bonus, 
       recycled_at, shipped_at, order_id, 
@@ -123,7 +123,7 @@
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.PrizeBox">
-    insert into "prize_box"
+    insert into `prize_box`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -214,13 +214,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.PrizeBoxExample" resultType="java.lang.Long">
-    select count(*) from "prize_box"
+    select count(*) from `prize_box`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "prize_box"
+    update `prize_box`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -270,7 +270,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "prize_box"
+    update `prize_box`
     set id = #{row.id,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
@@ -290,7 +290,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.PrizeBox">
-    update "prize_box"
+    update `prize_box`
     <set>
       <if test="userId != null">
         user_id = #{userId,jdbcType=VARCHAR},
@@ -335,7 +335,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.PrizeBox">
-    update "prize_box"
+    update `prize_box`
     set user_id = #{userId,jdbcType=VARCHAR},
       lottery_id = #{lotteryId,jdbcType=VARCHAR},
       prize_id = #{prizeId,jdbcType=VARCHAR},

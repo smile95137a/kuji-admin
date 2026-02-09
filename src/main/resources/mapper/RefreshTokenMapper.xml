@@ -80,7 +80,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "refresh_token"
+    from `refresh_token`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -91,21 +91,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "refresh_token"
+    from `refresh_token`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "refresh_token"
+    delete from `refresh_token`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.RefreshTokenExample">
-    delete from "refresh_token"
+    delete from `refresh_token`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.RefreshToken">
-    insert into "refresh_token" (id, user_type, user_id, 
+    insert into `refresh_token` (id, user_type, user_id, 
       token, device_info, ip_address, 
       expires_at, is_revoked, created_at
       )
@@ -115,7 +115,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.RefreshToken">
-    insert into "refresh_token"
+    insert into `refresh_token`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -176,13 +176,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.RefreshTokenExample" resultType="java.lang.Long">
-    select count(*) from "refresh_token"
+    select count(*) from `refresh_token`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "refresh_token"
+    update `refresh_token`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -217,7 +217,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "refresh_token"
+    update `refresh_token`
     set id = #{row.id,jdbcType=VARCHAR},
       user_type = #{row.userType,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
@@ -232,7 +232,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RefreshToken">
-    update "refresh_token"
+    update `refresh_token`
     <set>
       <if test="userType != null">
         user_type = #{userType,jdbcType=VARCHAR},
@@ -262,7 +262,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RefreshToken">
-    update "refresh_token"
+    update `refresh_token`
     set user_type = #{userType,jdbcType=VARCHAR},
       user_id = #{userId,jdbcType=VARCHAR},
       token = #{token,jdbcType=VARCHAR},

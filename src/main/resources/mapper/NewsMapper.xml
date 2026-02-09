@@ -91,7 +91,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "news"
+    from `news`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -106,7 +106,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "news"
+    from `news`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -119,21 +119,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from "news"
+    from `news`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "news"
+    delete from `news`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.NewsExample">
-    delete from "news"
+    delete from `news`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.News">
-    insert into "news" (id, title, image_url, 
+    insert into `news` (id, title, image_url, 
       status, category, important, 
       scheduled_at, end_time, created_by, 
       created_at, updated_at, content
@@ -145,7 +145,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.News">
-    insert into "news"
+    insert into `news`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -224,13 +224,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.NewsExample" resultType="java.lang.Long">
-    select count(*) from "news"
+    select count(*) from `news`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "news"
+    update `news`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -274,7 +274,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update "news"
+    update `news`
     set id = #{row.id,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
       image_url = #{row.imageUrl,jdbcType=VARCHAR},
@@ -292,7 +292,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "news"
+    update `news`
     set id = #{row.id,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
       image_url = #{row.imageUrl,jdbcType=VARCHAR},
@@ -309,7 +309,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.News">
-    update "news"
+    update `news`
     <set>
       <if test="title != null">
         title = #{title,jdbcType=VARCHAR},
@@ -348,7 +348,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.News">
-    update "news"
+    update `news`
     set title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},
@@ -363,7 +363,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.News">
-    update "news"
+    update `news`
     set title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},

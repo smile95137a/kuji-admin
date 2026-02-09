@@ -110,7 +110,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from "user"
+    from `user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -121,21 +121,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from "user"
+    from `user`
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from "user"
+    delete from `user`
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.UserExample">
-    delete from "user"
+    delete from `user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.User">
-    insert into "user" (id, email, nickname, 
+    insert into `user` (id, email, nickname, 
       password, avatar, provider, 
       provider_id, gold_coins, bonus_coins, 
       status, email_verified, phone_number, 
@@ -163,7 +163,7 @@
       #{version,jdbcType=INTEGER})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.User">
-    insert into "user"
+    insert into `user`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -374,13 +374,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.UserExample" resultType="java.lang.Long">
-    select count(*) from "user"
+    select count(*) from `user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update "user"
+    update `user`
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -490,7 +490,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update "user"
+    update `user`
     set id = #{row.id,jdbcType=VARCHAR},
       email = #{row.email,jdbcType=VARCHAR},
       nickname = #{row.nickname,jdbcType=VARCHAR},
@@ -530,7 +530,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.User">
-    update "user"
+    update `user`
     <set>
       <if test="email != null">
         email = #{email,jdbcType=VARCHAR},
@@ -635,7 +635,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.User">
-    update "user"
+    update `user`
     set email = #{email,jdbcType=VARCHAR},
       nickname = #{nickname,jdbcType=VARCHAR},
       password = #{password,jdbcType=VARCHAR},
