@@ -70,6 +70,8 @@ public class UserServiceImpl implements UserService {
         user.setProvider("EMAIL"); // 本地註冊
         user.setGoldCoins(0L);
         user.setBonusCoins(0L);
+        user.setTotalRecharged(0L);
+        user.setVersion(0);
         user.setStatus("ACTIVE");
         user.setEmailVerified((byte) 0);
         
@@ -191,6 +193,8 @@ public class UserServiceImpl implements UserService {
                 user.setProviderId(googleId); // 存儲 Google 用戶 ID
                 user.setGoldCoins(0L);
                 user.setBonusCoins(0L);
+                user.setTotalRecharged(0L);
+                user.setVersion(0);
                 user.setStatus("ACTIVE");
                 user.setEmailVerified((byte) 1); // Google 已驗證 Email
                 user.setLastLoginAt(LocalDateTime.now());

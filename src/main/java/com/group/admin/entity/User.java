@@ -67,6 +67,10 @@ public class User {
 
     private LocalDateTime updatedAt;
 
+    private Long totalRecharged;
+
+    private Integer version;
+
     public String getId() {
         return id;
     }
@@ -321,5 +325,21 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getTotalRecharged() {
+        return totalRecharged;
+    }
+
+    public void setTotalRecharged(Long totalRecharged) {
+        this.totalRecharged = totalRecharged;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
     }
 }

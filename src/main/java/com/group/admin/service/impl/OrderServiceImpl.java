@@ -42,6 +42,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderStatusLogMapper orderStatusLogMapper;
     private final PrizeBoxMapper prizeBoxMapper;
     private final LotteryMapper lotteryMapper;
+    private final LotteryPrizeMapper lotteryPrizeMapper;
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
 
@@ -96,18 +97,20 @@ public class OrderServiceImpl implements OrderService {
             // 建立訂單項目
             for (PrizeBox prizeBox : storePrizeBoxes) {
                 Lottery lottery = lotteryMapper.selectByPrimaryKey(prizeBox.getLotteryId());
+                LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeBox.getPrizeId());
 
                 OrderItem item = new OrderItem();
                 item.setId(UUID.randomUUID().toString());
                 item.setOrderId(order.getId());
                 item.setPrizeBoxId(prizeBox.getId());
                 item.setLotteryId(prizeBox.getLotteryId());
-                item.setLotteryTitle(lottery != null ? lottery.getTitle() : null);
+                item.setLotteryTitle(lottery != null ? lottery.getTitle() : "未知商品");
+                item.setLotteryImageUrl(lottery != null ? lottery.getImageUrl() : null);
                 item.setPrizeId(prizeBox.getPrizeId());
-                // Prize 欄位需要從 Lottery 的 Prize 關聯查詢
-                item.setPrizeName(null); // 待補充
-                item.setPrizeGrade(null); // 待補充
-                item.setPrizeImage(null); // 待補充
+                // ✅ 從 LotteryPrize 獲取獎品信息
+                item.setPrizeName(prize != null ? prize.getName() : "未知獎品");
+                item.setPrizeImageUrl(prize != null ? prize.getImageUrl() : null);
+                item.setPrizeLevel(prize != null ? prize.getLevel() : null);
                 item.setCreatedAt(LocalDateTime.now());
 
                 orderItemMapper.insert(item);

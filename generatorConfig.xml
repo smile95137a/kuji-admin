@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE generatorConfiguration PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN" "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
 <generatorConfiguration>
-    <context id="MySQLTables" targetRuntime="MyBatis3" defaultModelType="flat">
+    <context id="MySQLTables" targetRuntime="MyBatis3">
 
         <!-- 註解生成器：不生成日期與註解 -->
         <commentGenerator>
@@ -94,9 +94,7 @@
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="order" domainObjectName="Order" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
-            <!-- order 是 MySQL 保留字，需要加反引號 -->
-            <property name="beginningDelimiter" value="`"/>
-            <property name="endingDelimiter" value="`"/>
+            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="order_item" domainObjectName="OrderItem" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
@@ -147,9 +145,6 @@
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="user_address" domainObjectName="UserAddress" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
-            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
-        </table>
-        <table tableName="user_wallet" domainObjectName="UserWallet" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
             <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->
         </table>
         <table tableName="wallet_transaction" domainObjectName="WalletTransaction" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">

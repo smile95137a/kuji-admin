@@ -71,10 +71,16 @@ public class LotteryDrawController {
 
     /**
      * 執行抽獎
+     * 
+     * <p>支援兩種模式：</p>
+     * <ul>
+     *   <li>指定票券：提供 ticket UUID 列表（推薦）</li>
+     *   <li>隨機抽獎：不提供 ticket 列表，系統隨機選擇</li>
+     * </ul>
      */
     @PostMapping("/{lotteryId}/draw")
-    @Operation(summary = "執行抽獎", description = "執行一次抽獎，可選擇籤位或隨機抽")
-    public ResponseEntity<DrawResult> draw(
+    @Operation(summary = "執行抽獎", description = "支援批次抽獎：指定票券 UUID 列表或隨機抽獎")
+    public ResponseEntity<?> draw(
             @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId,
             @RequestBody DrawRequest request) {
         
@@ -83,17 +89,75 @@ public class LotteryDrawController {
             return ResponseEntity.status(401).build();
         }
         
-        log.info("🎰 執行抽獎: lotteryId={}, userId={}, ticketNumber={}", 
-                lotteryId, userId, request.ticketNumber());
+        log.info("🎰 抽獎請求: lotteryId={}, userId={}, count={}, ticket列表長度={}", 
+                lotteryId, userId, request.getCount(), 
+                request.getTickets() != null ? request.getTickets().size() : 0);
         
-        DrawResult result = ticketService.draw(
-                lotteryId, 
-                userId, 
-                request.ticketNumber(), 
-                request.drawCount() != null ? request.drawCount() : 1
-        );
+        // 驗證 count
+        Integer count = request.getCount();
+        if (count == null || count < 1) {
+            return ResponseEntity.badRequest().body("count 必須至少為 1");
+        }
+        if (count > 10) {
+            return ResponseEntity.badRequest().body("單次最多只能抽 10 張票券");
+        }
         
-        return ResponseEntity.ok(result);
+        // 模式 1：指定票券 UUID（推薦）
+        if (request.getTickets() != null && !request.getTickets().isEmpty()) {
+            List<String> tickets = request.getTickets();
+            
+            // 驗證：長度必須等於 count
+            if (tickets.size() != count) {
+                log.warn("❌ 票券列表長度不符: count={}, actual={}", count, tickets.size());
+                return ResponseEntity.badRequest().body("ticket 列表的長度必須等於 count");
+            }
+            
+            // 驗證：不可包含重複
+            long distinct = tickets.stream().distinct().count();
+            if (distinct != tickets.size()) {
+                log.warn("❌ 票券列表包含重複項目");
+                return ResponseEntity.badRequest().body("ticket 列表不可包含重複項目");
+            }
+            
+            // 驗證：UUID 格式
+            try {
+                for (String t : tickets) {
+                    java.util.UUID.fromString(t);
+                }
+            } catch (IllegalArgumentException ex) {
+                log.warn("❌ UUID 格式錯誤: {}", ex.getMessage());
+                return ResponseEntity.badRequest().body("ticket 列表必須包含有效的 UUID 格式");
+            }
+            
+            log.info("✅ 驗證通過，開始執行批次抽獎: 票券={}", tickets);
+            
+            // 執行批次抽獎
+            List<com.group.admin.service.LotteryTicketService.DrawResult> results = new java.util.ArrayList<>();
+            for (String ticketId : tickets) {
+                log.info("🎯 處理票券: {}", ticketId);
+                com.group.admin.service.LotteryTicketService.DrawResult r = 
+                    ticketService.drawByTicketId(lotteryId, userId, ticketId);
+                results.add(r);
+                log.info("📊 抽獎結果: success={}, message={}", r.success(), r.message());
+            }
+            
+            log.info("✅ 批次抽獎完成，共 {} 張，成功 {} 張", 
+                    results.size(), 
+                    results.stream().filter(r -> r.success()).count());
+            
+            return ResponseEntity.ok(results);
+        }
+        
+        // 模式 2：隨機抽獎（不指定票券）
+        log.info("🎲 隨機抽獎模式: count={}", count);
+        List<com.group.admin.service.LotteryTicketService.DrawResult> results = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            com.group.admin.service.LotteryTicketService.DrawResult r = 
+                ticketService.draw(lotteryId, userId, null, 1);
+            results.add(r);
+        }
+        
+        return ResponseEntity.ok(results);
     }
 
     /**
@@ -135,10 +199,27 @@ public class LotteryDrawController {
 
     // ==================== Request/Response DTOs ====================
 
-    public record DrawRequest(
-        Integer ticketNumber,  // null = 隨機抽
-        Integer drawCount      // 連抽次數，預設 1
-    ) {}
+    /**
+     * 抽獎請求
+     * 
+     * <p>兩種模式：</p>
+     * <ul>
+     *   <li>指定票券：提供 count + ticket（UUID 列表）</li>
+     *   <li>隨機抽獎：只提供 count（系統隨機選票）</li>
+     * </ul>
+     */
+    public static class DrawRequest {
+        private Integer count;  // 必填：抽獎次數（1-10）
+        
+        @com.fasterxml.jackson.annotation.JsonProperty("ticket")
+        private List<String> tickets;  // 選填：指定票券的 UUID 列表
+
+        public Integer getCount() { return count; }
+        public void setCount(Integer count) { this.count = count; }
+
+        public List<String> getTickets() { return tickets; }
+        public void setTickets(List<String> tickets) { this.tickets = tickets; }
+    }
 
     public record DesignateRequest(
         List<Integer> prizeNumbers

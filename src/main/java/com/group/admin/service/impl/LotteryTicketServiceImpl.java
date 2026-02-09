@@ -487,6 +487,109 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     }
 
     @Override
+    @Transactional
+    public DrawResult drawByTicketId(String lotteryId, String userId, String ticketId) {
+        log.info("🎰 執行指定票券抽獎: lotteryId={}, userId={}, ticketId={}", lotteryId, userId, ticketId);
+
+        // 1. 檢查商品狀態
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L, "商品不存在");
+        }
+        if (!"ON_SHELF".equals(lottery.getStatus())) {
+            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L, "商品未上架");
+        }
+
+        // 2. 檢查保護時間
+        if (!canDrawNow(lotteryId, userId)) {
+            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L,
+                    "商品正在被其他玩家抽獎中，請稍後再試");
+        }
+
+        // 3. 查詢該票券
+        LotteryTicket ticket = lotteryTicketMapper.selectByPrimaryKey(ticketId);
+        if (ticket == null || ticket.getLotteryId() == null || !ticket.getLotteryId().equals(lotteryId)) {
+            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L, "該票券不存在於此抽獎活動");
+        }
+        if (!"AVAILABLE".equals(ticket.getStatus())) {
+            return new DrawResult(false, ticketId, ticket.getTicketNumber() != null ? ticket.getTicketNumber() : 0,
+                    null, null, null, null, false, false, 0L, "該票券已被抽走或不可用");
+        }
+
+        int actualTicketNumber = ticket.getTicketNumber() != null ? ticket.getTicketNumber() : 0;
+
+        // 4. 更新籤位狀態為已抽
+        ticket.setStatus("DRAWN");
+        ticket.setDrawnBy(userId);
+        ticket.setDrawnAt(LocalDateTime.now());
+        ticket.setUpdatedAt(LocalDateTime.now());
+        lotteryTicketMapper.updateByPrimaryKey(ticket);
+
+        log.info("✅ 籤位更新成功: ticketId={}, ticketNumber={}, prizeLevel={}", ticketId, actualTicketNumber, ticket.getPrizeLevel());
+
+        // 5. 取得獎品資訊
+        String prizeId = ticket.getPrizeId();
+        String prizeLevel = ticket.getPrizeLevel();
+        String prizeName = null;
+        String prizeImageUrl = null;
+        boolean isGrandPrize = false;
+
+        if (prizeId != null) {
+            LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeId);
+            if (prize != null) {
+                prizeName = prize.getName();
+                prizeImageUrl = prize.getImageUrl();
+                isGrandPrize = prize.getIsGrandPrize() != null && prize.getIsGrandPrize() == 1;
+
+                // 減少獎品剩餘數量
+                if (prize.getRemaining() != null && prize.getRemaining() > 0) {
+                    prize.setRemaining(prize.getRemaining() - 1);
+                    prize.setUpdatedAt(LocalDateTime.now());
+                    lotteryPrizeMapper.updateByPrimaryKey(prize);
+                }
+            }
+        } else {
+            prizeName = "謝謝惠顧";
+        }
+
+        // 6. 更新商品的 totalDraws
+        if (lottery.getTotalDraws() == null) {
+            lottery.setTotalDraws(1);
+        } else {
+            lottery.setTotalDraws(lottery.getTotalDraws() + 1);
+        }
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+
+        // 7. 將獎品加入賞品盒（如果不是謝謝惠顧）
+        if (prizeId != null) {
+            try {
+                Long recycleBonus = lottery.getPricePerDraw() != null ? lottery.getPricePerDraw() / 2 : 0L;
+                prizeBoxService.addToPrizeBox(userId, lotteryId, prizeId, lottery.getStoreId(), recycleBonus);
+                log.info("✅ 獎品已加入賞品盒: userId={}, prizeId={}", userId, prizeId);
+            } catch (Exception e) {
+                log.error("⚠️ 獎品加入賞品盒失敗: {}", e.getMessage());
+            }
+        }
+
+        // TODO: 扣款、記錄抽獎紀錄、檢查免單
+
+        return new DrawResult(
+                true,
+                ticketId,
+                actualTicketNumber,
+                prizeId,
+                prizeLevel,
+                prizeName,
+                prizeImageUrl,
+                isGrandPrize,
+                false,
+                0L,
+                "抽獎成功！恭喜獲得 " + prizeName
+        );
+    }
+
+    @Override
     public Integer getRandomAvailableTicket(String lotteryId) {
         // 查詢所有 AVAILABLE 狀態的籤位
         LotteryTicketExample example = new LotteryTicketExample();

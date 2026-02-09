@@ -25,7 +25,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/admin/order")
+@RequestMapping("/admin/orders")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
 public class AdminOrderController {

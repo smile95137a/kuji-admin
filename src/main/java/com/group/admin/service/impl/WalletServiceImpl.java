@@ -2,15 +2,12 @@ package com.group.admin.service.impl;
 
 import com.group.admin.condition.WalletTransactionCondition;
 import com.group.admin.entity.User;
-import com.group.admin.entity.UserWallet;
 import com.group.admin.entity.WalletTransaction;
 import com.group.admin.enums.CoinTypeEnum;
 import com.group.admin.enums.TransactionTypeEnum;
-import com.group.admin.example.UserWalletExample;
 import com.group.admin.example.WalletTransactionExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.UserMapper;
-import com.group.admin.mapper.UserWalletMapper;
 import com.group.admin.mapper.WalletTransactionMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.wallet.WalletAdjustReq;
@@ -28,7 +25,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 錢包服務實作
+ * 錢包服務實作（直接使用 user 表的 gold_coins / bonus_coins）
+ * 
+ * <p>架構變更說明（2026-02-08）：</p>
+ * <p>原本使用獨立的 user_wallet 表存放金幣/紅利，
+ * 但 user 表本身已有 gold_coins 和 bonus_coins 欄位，
+ * 造成資料冗餘和不一致的風險。</p>
+ * <p>現在統一從 user 表讀寫金幣/紅利，不再依賴 user_wallet 表。</p>
  * 
  * @author Kuji Admin
  * @since 2026-01-09
@@ -38,55 +41,56 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class WalletServiceImpl implements WalletService {
     
-    private final UserWalletMapper userWalletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
     private final UserMapper userMapper;
     
     @Override
     @Transactional
     public UserWalletRes createWallet(String userId) {
-        log.info("🔍 建立錢包：userId={}", userId);
+        log.info("🔍 初始化錢包欄位：userId={}", userId);
         
-        // 檢查是否已存在
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> existing = userWalletMapper.selectByExample(example);
-        
-        if (!existing.isEmpty()) {
-            log.warn("⚠️ 錢包已存在：userId={}", userId);
-            return convertToRes(existing.get(0));
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        // 建立錢包
-        UserWallet wallet = new UserWallet();
-        wallet.setId(UUID.randomUUID().toString());
-        wallet.setUserId(userId);
-        wallet.setGoldCoins(0L);
-        wallet.setBonusCoins(0L);
-        wallet.setTotalRecharged(0L);
-        wallet.setVersion(0);
-        wallet.setCreatedAt(LocalDateTime.now());
-        wallet.setUpdatedAt(LocalDateTime.now());
+        // 如果已經有初始值就直接返回
+        if (user.getGoldCoins() != null && user.getBonusCoins() != null) {
+            log.info("✅ 使用者已有金幣欄位：userId={}", userId);
+            return convertToRes(user);
+        }
         
-        userWalletMapper.insert(wallet);
+        // 初始化金幣欄位
+        user.setGoldCoins(0L);
+        user.setBonusCoins(0L);
+        user.setTotalRecharged(0L);
+        user.setVersion(0);
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKey(user);
         
-        log.info("✅ 錢包建立成功：walletId={}", wallet.getId());
-        return convertToRes(wallet);
+        log.info("✅ 錢包初始化成功：userId={}", userId);
+        return convertToRes(user);
     }
     
     @Override
     public UserWalletRes getWallet(String userId) {
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
+        User user = userMapper.selectByPrimaryKey(userId);
         
-        if (wallets.isEmpty()) {
-            // 自動建立錢包
-            log.info("💡 錢包不存在，自動建立：userId={}", userId);
-            return createWallet(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        return convertToRes(wallets.get(0));
+        // 如果金幣欄位未初始化，自動初始化
+        if (user.getGoldCoins() == null) {
+            user.setGoldCoins(0L);
+            user.setBonusCoins(0L);
+            user.setTotalRecharged(0L);
+            user.setVersion(0);
+            user.setUpdatedAt(LocalDateTime.now());
+            userMapper.updateByPrimaryKey(user);
+        }
+        
+        return convertToRes(user);
     }
     
     @Override
@@ -98,29 +102,25 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("扣除金額必須大於 0");
         }
         
-        // 查詢錢包
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
-        
-        if (wallets.isEmpty()) {
-            throw new BusinessException("錢包不存在");
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        UserWallet wallet = wallets.get(0);
+        Long currentGold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
         
         // 檢查餘額
-        if (wallet.getGoldCoins() < amount) {
+        if (currentGold < amount) {
             throw new BusinessException("金幣餘額不足");
         }
         
-        // 使用樂觀鎖更新
-        Long newBalance = wallet.getGoldCoins() - amount;
-        wallet.setGoldCoins(newBalance);
-        wallet.setVersion(wallet.getVersion() + 1);
-        wallet.setUpdatedAt(LocalDateTime.now());
+        // 更新餘額
+        Long newBalance = currentGold - amount;
+        user.setGoldCoins(newBalance);
+        user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
+        user.setUpdatedAt(LocalDateTime.now());
         
-        int rows = userWalletMapper.updateByPrimaryKey(wallet);
+        int rows = userMapper.updateByPrimaryKey(user);
         if (rows == 0) {
             throw new BusinessException("點數扣除失敗，請重試");
         }
@@ -141,29 +141,26 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("增加金額必須大於 0");
         }
         
-        // 查詢錢包
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
-        
-        if (wallets.isEmpty()) {
-            throw new BusinessException("錢包不存在");
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        UserWallet wallet = wallets.get(0);
+        Long currentGold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
         
         // 更新餘額
-        Long newBalance = wallet.getGoldCoins() + amount;
-        wallet.setGoldCoins(newBalance);
-        wallet.setVersion(wallet.getVersion() + 1);
-        wallet.setUpdatedAt(LocalDateTime.now());
+        Long newBalance = currentGold + amount;
+        user.setGoldCoins(newBalance);
+        user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
+        user.setUpdatedAt(LocalDateTime.now());
         
         // 如果是儲值，更新累計儲值金額
         if (TransactionTypeEnum.RECHARGE.getCode().equals(transactionType)) {
-            wallet.setTotalRecharged(wallet.getTotalRecharged() + amount);
+            Long totalRecharged = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
+            user.setTotalRecharged(totalRecharged + amount);
         }
         
-        int rows = userWalletMapper.updateByPrimaryKey(wallet);
+        int rows = userMapper.updateByPrimaryKey(user);
         if (rows == 0) {
             throw new BusinessException("點數增加失敗，請重試");
         }
@@ -184,24 +181,20 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("增加金額必須大於 0");
         }
         
-        // 查詢錢包
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
-        
-        if (wallets.isEmpty()) {
-            throw new BusinessException("錢包不存在");
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        UserWallet wallet = wallets.get(0);
+        Long currentBonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
         
         // 更新餘額
-        Long newBalance = wallet.getBonusCoins() + amount;
-        wallet.setBonusCoins(newBalance);
-        wallet.setVersion(wallet.getVersion() + 1);
-        wallet.setUpdatedAt(LocalDateTime.now());
+        Long newBalance = currentBonus + amount;
+        user.setBonusCoins(newBalance);
+        user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
+        user.setUpdatedAt(LocalDateTime.now());
         
-        int rows = userWalletMapper.updateByPrimaryKey(wallet);
+        int rows = userMapper.updateByPrimaryKey(user);
         if (rows == 0) {
             throw new BusinessException("點數增加失敗，請重試");
         }
@@ -222,29 +215,25 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("扣除金額必須大於 0");
         }
         
-        // 查詢錢包
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
-        
-        if (wallets.isEmpty()) {
-            throw new BusinessException("錢包不存在");
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        UserWallet wallet = wallets.get(0);
+        Long currentBonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
         
         // 檢查餘額
-        if (wallet.getBonusCoins() < amount) {
+        if (currentBonus < amount) {
             throw new BusinessException("紅利點數不足");
         }
         
         // 更新餘額
-        Long newBalance = wallet.getBonusCoins() - amount;
-        wallet.setBonusCoins(newBalance);
-        wallet.setVersion(wallet.getVersion() + 1);
-        wallet.setUpdatedAt(LocalDateTime.now());
+        Long newBalance = currentBonus - amount;
+        user.setBonusCoins(newBalance);
+        user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
+        user.setUpdatedAt(LocalDateTime.now());
         
-        int rows = userWalletMapper.updateByPrimaryKey(wallet);
+        int rows = userMapper.updateByPrimaryKey(user);
         if (rows == 0) {
             throw new BusinessException("點數扣除失敗，請重試");
         }
@@ -329,15 +318,12 @@ public class WalletServiceImpl implements WalletService {
     
     @Override
     public boolean hasEnoughGold(String userId, Long amount) {
-        UserWalletExample example = new UserWalletExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(example);
-        
-        if (wallets.isEmpty()) {
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
             return false;
         }
-        
-        return wallets.get(0).getGoldCoins() >= amount;
+        Long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
+        return gold >= amount;
     }
     
     /**
@@ -362,22 +348,19 @@ public class WalletServiceImpl implements WalletService {
     }
     
     /**
-     * 轉換為回應 DTO
+     * 轉換 User 為錢包回應 DTO（直接從 user 表取金幣/紅利）
      */
-    private UserWalletRes convertToRes(UserWallet wallet) {
-        // 查詢玩家資訊
-        User user = userMapper.selectByPrimaryKey(wallet.getUserId());
-        
+    private UserWalletRes convertToRes(User user) {
         return UserWalletRes.builder()
-                .id(wallet.getId())
-                .userId(wallet.getUserId())
-                .userNickname(user != null ? user.getNickname() : null)
-                .userEmail(user != null ? user.getEmail() : null)
-                .goldCoins(wallet.getGoldCoins())
-                .bonusCoins(wallet.getBonusCoins())
-                .totalRecharged(wallet.getTotalRecharged())
-                .createdAt(wallet.getCreatedAt())
-                .updatedAt(wallet.getUpdatedAt())
+                .id(user.getId())
+                .userId(user.getId())
+                .userNickname(user.getNickname())
+                .userEmail(user.getEmail())
+                .goldCoins(user.getGoldCoins() != null ? user.getGoldCoins() : 0L)
+                .bonusCoins(user.getBonusCoins() != null ? user.getBonusCoins() : 0L)
+                .totalRecharged(user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L)
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
     

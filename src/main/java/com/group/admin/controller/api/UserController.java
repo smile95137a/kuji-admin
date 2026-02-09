@@ -17,10 +17,8 @@ import com.group.admin.entity.User;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.UserRes;
-import com.group.admin.res.wallet.UserWalletRes;
 import com.group.admin.service.S3Service;
 import com.group.admin.service.UserService;
-import com.group.admin.service.WalletService;
 import com.group.admin.util.SecurityUtils;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 public class UserController {
 
     private final UserService userService;
-    private final WalletService walletService;
     private final UserMapper userMapper;
     private final S3Service s3Service;
 
@@ -76,15 +73,13 @@ public class UserController {
         }
         
         // 查詢錢包餘額
-        UserWalletRes wallet = walletService.getWallet(userId);
+        // ✅ 金幣/紅利已直接存在 user 表，不再需要查詢 user_wallet
         
-        // 組合回應（包含使用者資訊 + 錢包餘額）
+        // 組合回應（包含使用者資訊 + 金幣餘額）
         UserRes res = UserRes.from(user);
-        res.setGoldCoins(wallet.getGoldCoins());
-        res.setBonusCoins(wallet.getBonusCoins());
         
         log.info("✅ 查詢成功: userId={}, email={}, gold={}, bonus={}", 
-                userId, user.getEmail(), wallet.getGoldCoins(), wallet.getBonusCoins());
+                userId, user.getEmail(), user.getGoldCoins(), user.getBonusCoins());
         
         // ✅ 回傳 DTO，不包含密碼等敏感資訊
         return ResponseEntity.ok(res);
@@ -206,12 +201,10 @@ public class UserController {
         }
         
         // 查詢錢包餘額
-        UserWalletRes wallet = walletService.getWallet(userId);
+        // ✅ 金幣/紅利已直接存在 user 表，不再需要查詢 user_wallet
         
         // 組合回應
         UserRes res = UserRes.from(user);
-        res.setGoldCoins(wallet.getGoldCoins());
-        res.setBonusCoins(wallet.getBonusCoins());
         
         return ResponseEntity.ok(res);
     }
@@ -314,13 +307,10 @@ public class UserController {
         
         log.info("✅ 頭像更新成功：userId={}, imageUrl={}", userId, newImageUrl);
         
-        // 查詢錢包餘額
-        UserWalletRes wallet = walletService.getWallet(userId);
+        // ✅ 金幣/紅利已直接存在 user 表，不再需要查詢 user_wallet
         
         // 組合回應
         UserRes res = UserRes.from(user);
-        res.setGoldCoins(wallet.getGoldCoins());
-        res.setBonusCoins(wallet.getBonusCoins());
         
         return ResponseEntity.ok(res);
     }

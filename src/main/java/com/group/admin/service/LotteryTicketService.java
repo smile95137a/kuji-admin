@@ -99,6 +99,16 @@ public interface LotteryTicketService {
     DrawResult draw(String lotteryId, String userId, Integer ticketNumber, int drawCount);
 
     /**
+     * 依照 ticketId 抽籤（玩家指定特定票券的情況）
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @param userId 玩家 ID
+     * @param ticketId 籤位 UUID
+     * @return 抽獎結果
+     */
+    DrawResult drawByTicketId(String lotteryId, String userId, String ticketId);
+
+    /**
      * 隨機抽一個可用籤位
      * 
      * @param lotteryId 抽獎活動 ID

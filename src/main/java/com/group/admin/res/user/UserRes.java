@@ -41,11 +41,14 @@ public class UserRes {
     /** 狀態：ACTIVE, INACTIVE, BANNED */
     private String status;
     
-    /** 金幣餘額（從 user_wallet 表取得）*/
+    /** 金幣餘額（直接存在 user 表）*/
     private Long goldCoins;
     
-    /** 紅利幣餘額（從 user_wallet 表取得）*/
+    /** 紅利幣餘額（直接存在 user 表）*/
     private Long bonusCoins;
+    
+    /** 累計儲值金額（直接存在 user 表）*/
+    private Long totalRecharged;
     
     /** 手機號碼 */
     private String phoneNumber;
@@ -102,7 +105,7 @@ public class UserRes {
     private LocalDateTime updatedAt;
     
     /**
-     * 從 Entity 轉換為 DTO（不含錢包資訊，由 Controller 設定）
+     * 從 Entity 轉換為 DTO（金幣/紅利直接從 User 讀取）
      */
     public static UserRes from(User user) {
         if (user == null) {
@@ -116,8 +119,9 @@ public class UserRes {
                 .avatarUrl(user.getAvatar())
                 .provider(user.getProvider())
                 .status(user.getStatus())
-                .goldCoins(null)  // ← 由 Controller 從 user_wallet 查詢設定
-                .bonusCoins(null)  // ← 由 Controller 從 user_wallet 查詢設定
+                .goldCoins(user.getGoldCoins() != null ? user.getGoldCoins() : 0L)
+                .bonusCoins(user.getBonusCoins() != null ? user.getBonusCoins() : 0L)
+                .totalRecharged(user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L)
                 .phoneNumber(user.getPhoneNumber())
                 .lineId(user.getLineId())
                 .recipientName(user.getRecipientName())

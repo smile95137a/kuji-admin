@@ -66,10 +66,13 @@ public class MBGAutoRunner {
             while (tables.next()) {
                 String tableName = tables.getString("TABLE_NAME");
 
+                // ✅ 自動檢查並為 MySQL 保留字加上反引號
+                String escapedTableName = escapeTableName(tableName);
+
                 // 只生成普通 table，不用 WithBLOBs，也不加 <generatedKey>
                 // modelType="flat" 確保所有欄位（包含 BLOB）都在同一個 Entity 類別中
                 String tableXml = String.format(
-                        "        <table tableName=\"%s\" domainObjectName=\"%s\" " +
+                        "        <table tableName=\"%s\" delimitIdentifiers=\"true\" domainObjectName=\"%s\" " +
                                 "enableCountByExample=\"true\" " +
                                 "enableUpdateByExample=\"true\" " +
                                 "enableDeleteByExample=\"true\" " +
@@ -78,7 +81,7 @@ public class MBGAutoRunner {
                                 "modelType=\"flat\">\n" +
                                 "            <!-- 不使用 generatedKey，UUID 主鍵由程式碼生成 -->\n" +
                                 "        </table>",
-                        tableName, toPascalCase(tableName));
+                        escapedTableName, toPascalCase(tableName));
                 tableConfigs.add(tableXml);
             }
         }
@@ -269,5 +272,53 @@ public class MBGAutoRunner {
             }
         }
         return result.toString();
+    }
+
+    /**
+     * 檢查表名是否為 MySQL 保留字，如是則用反引號包起來
+     * 
+     * ⚠️ 這樣做是為了讓生成的 SQL 能正常使用保留字作為表名
+     */
+    private static String escapeTableName(String tableName) {
+        // MySQL 保留字列表（常用）
+        String[] mysqlReservedWords = {
+                "ACCESSIBLE", "ADD", "ALL", "ALTER", "ANALYZE", "AND", "AS", "ASC", "ASENSITIVE",
+                "BEFORE", "BETWEEN", "BIGINT", "BINARY", "BLOB", "BOTH", "BY",
+                "CALL", "CASCADE", "CASE", "CHANGE", "CHAR", "CHARACTER", "CHECK", "COLLATE", "COLUMN", "CONDITION", "CONSTRAINT", "CONTINUE", "CONVERT", "CREATE", "CROSS", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "CURRENT_USER", "CURSOR",
+                "DATABASE", "DATABASES", "DAY_HOUR", "DAY_MICROSECOND", "DAY_MINUTE", "DAY_SECOND", "DEC", "DECIMAL", "DECLARE", "DEFAULT", "DELAYED", "DELETE", "DESC", "DESCRIBE", "DETERMINISTIC", "DISTINCT", "DISTINCTROW", "DIV", "DOUBLE", "DROP", "DUAL",
+                "EACH", "ELSE", "ELSEIF", "ENCLOSED", "ESCAPED", "EXISTS", "EXIT", "EXPLAIN",
+                "FALSE", "FETCH", "FLOAT", "FLOAT4", "FLOAT8", "FOR", "FORCE", "FOREIGN", "FROM", "FULLTEXT",
+                "GRANT", "GROUP",
+                "HAVING", "HIGH_PRIORITY", "HOUR_MICROSECOND", "HOUR_MINUTE", "HOUR_SECOND",
+                "IF", "IGNORE", "IGNORE_SERVER_IDS", "IN", "INDEX", "INFILE", "INNER", "INOUT", "INSENSITIVE", "INSERT", "INT", "INT1", "INT2", "INT3", "INT4", "INT8", "INTEGER", "INTERVAL", "INTO", "IO_AFTER_GTIDS", "IO_BEFORE_GTIDS", "IS", "ITERATE",
+                "JOIN",
+                "KEY", "KEYS", "KILL",
+                "LEADING", "LEAVE", "LEFT", "LIKE", "LIMIT", "LINEAR", "LINES", "LOAD", "LOCALTIME", "LOCALTIMESTAMP", "LOCK", "LONG", "LONGBLOB", "LONGTEXT", "LOOP",
+                "MATCH", "MEDIUMBLOB", "MEDIUMINT", "MEDIUMTEXT", "MIDDLEINT", "MINUTE_MICROSECOND", "MINUTE_SECOND", "MOD", "MODIFIES",
+                "NATURAL", "NOT", "NO_WRITE_TO_BINLOG", "NULL",
+                "NUMERIC",
+                "ON", "ONE_SHOT", "OR", "ORDER", "OUT", "OUTER", "OUTFILE",
+                "PARTITION", "PRECISION", "PRIMARY", "PROCEDURE", "PURGE",
+                "READ", "READ_WRITE", "READS", "REAL", "REFERENCES", "REGEXP", "RELEASE", "RENAME", "REPEAT", "REPLACE", "REQUIRE", "RESIGNAL", "RESTRICT", "RETURN", "REVOKE", "RIGHT",
+                "SCHEMA", "SCHEMAS", "SECOND_MICROSECOND", "SELECT", "SENSITIVE", "SEPARATOR", "SET", "SHOW", "SIGNAL", "SLOW", "SMALLINT", "SPATIAL", "SPECIFIC", "SQL", "SQL_BIG_RESULT", "SQL_CALC_FOUND_ROWS", "SQL_SMALL_RESULT", "SSL", "STARTING", "STRAIGHT_JOIN",
+                "TABLE", "TERMINATED", "THEN", "TINYBLOB", "TINYINT", "TINYTEXT", "TO", "TRAILING", "TRIGGER", "TRUE",
+                "UNDO", "UNION", "UNIQUE", "UNLOCK", "UNSIGNED", "UPDATE", "USAGE", "USE", "USING",
+                "UTC_DATE", "UTC_TIME", "UTC_TIMESTAMP",
+                "VALUES", "VARBINARY", "VARCHAR", "VARCHARACTER",
+                "WHEN", "WHERE", "WHILE", "WITH", "WRITE",
+                "X509",
+                "XOR",
+                "YEAR_MONTH",
+                "ZEROFILL"
+        };
+
+        // 檢查表名是否為保留字（不分大小寫）
+        for (String reserved : mysqlReservedWords) {
+            if (reserved.equalsIgnoreCase(tableName)) {
+                return "`" + tableName + "`";
+            }
+        }
+        
+        return tableName;
     }
 }

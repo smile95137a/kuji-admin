@@ -111,19 +111,45 @@ public class RechargePlanServiceImpl implements RechargePlanService {
     @Override
     public List<RechargePlanRes> getActivePlans() {
         RechargePlanExample example = new RechargePlanExample();
-        RechargePlanExample.Criteria criteria = example.createCriteria();
-        
-        // 過濾條件：啟用、未刪除
-        criteria.andIsActiveEqualTo((byte) 1);
-        criteria.andDeletedAtIsNull();
-        
-        // 活動期間篩選
         LocalDateTime now = LocalDateTime.now();
-        criteria.andStartDateLessThanOrEqualTo(now);
         
-        RechargePlanExample.Criteria criteria2 = example.createCriteria();
-        criteria2.andEndDateIsNull();
-        example.or(criteria2.andEndDateGreaterThanOrEqualTo(now));
+        // 條件1：沒有設定活動期間（永久方案）
+        // startDate IS NULL AND endDate IS NULL
+        RechargePlanExample.Criteria noPeriodCriteria = example.createCriteria();
+        noPeriodCriteria.andIsActiveEqualTo((byte) 1);
+        noPeriodCriteria.andDeletedAtIsNull();
+        noPeriodCriteria.andStartDateIsNull();
+        noPeriodCriteria.andEndDateIsNull();
+        
+        // 條件2：只設定開始日期，沒有結束日期
+        // startDate <= NOW AND endDate IS NULL
+        RechargePlanExample.Criteria onlyStartCriteria = example.createCriteria();
+        onlyStartCriteria.andIsActiveEqualTo((byte) 1);
+        onlyStartCriteria.andDeletedAtIsNull();
+        onlyStartCriteria.andStartDateLessThanOrEqualTo(now);
+        onlyStartCriteria.andEndDateIsNull();
+        
+        // 條件3：設定完整活動期間
+        // startDate <= NOW AND endDate >= NOW
+        RechargePlanExample.Criteria fullPeriodCriteria = example.createCriteria();
+        fullPeriodCriteria.andIsActiveEqualTo((byte) 1);
+        fullPeriodCriteria.andDeletedAtIsNull();
+        fullPeriodCriteria.andStartDateLessThanOrEqualTo(now);
+        fullPeriodCriteria.andEndDateGreaterThanOrEqualTo(now);
+        
+        // 條件4：只設定結束日期，沒有開始日期
+        // startDate IS NULL AND endDate >= NOW
+        RechargePlanExample.Criteria onlyEndCriteria = example.createCriteria();
+        onlyEndCriteria.andIsActiveEqualTo((byte) 1);
+        onlyEndCriteria.andDeletedAtIsNull();
+        onlyEndCriteria.andStartDateIsNull();
+        onlyEndCriteria.andEndDateGreaterThanOrEqualTo(now);
+        
+        // 用 OR 連接所有條件
+        example.or(noPeriodCriteria);
+        example.or(onlyStartCriteria);
+        example.or(fullPeriodCriteria);
+        example.or(onlyEndCriteria);
         
         example.setOrderByClause("order_num ASC, created_at DESC");
         

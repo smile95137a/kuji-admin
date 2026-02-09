@@ -2,15 +2,14 @@ package com.group.admin.service.impl;
 
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
-import com.group.admin.entity.UserWallet;
+import com.group.admin.entity.User;
 import com.group.admin.enums.LotteryStatusEnum;
 import com.group.admin.enums.TransactionTypeEnum;
 import com.group.admin.example.LotteryPrizeExample;
-import com.group.admin.example.UserWalletExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
-import com.group.admin.mapper.UserWalletMapper;
+import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.draw.DrawReq;
 import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
@@ -47,7 +46,7 @@ public class DrawServiceImpl implements DrawService {
     
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
-    private final UserWalletMapper userWalletMapper;
+    private final UserMapper userMapper;
     private final WalletService walletService;
     private final PrizeBoxService prizeBoxService;
     private final Random random = new Random();
@@ -89,18 +88,15 @@ public class DrawServiceImpl implements DrawService {
         Long totalCost = pricePerDraw * count;
         log.info("💰 總消費金額：{} (單抽: {}, 數量: {})", totalCost, pricePerDraw, count);
         
-        // ========== Step 4: 驗證錢包餘額 ==========
-        UserWalletExample walletExample = new UserWalletExample();
-        walletExample.createCriteria().andUserIdEqualTo(userId);
-        List<UserWallet> wallets = userWalletMapper.selectByExample(walletExample);
+        // ========== Step 4: 驗證錢包餘額（直接從 user 表讀取）==========
+        User user = userMapper.selectByPrimaryKey(userId);
         
-        if (wallets.isEmpty()) {
-            throw new BusinessException("錢包不存在");
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
         }
         
-        UserWallet wallet = wallets.get(0);
-        Long gold = wallet.getGoldCoins() != null ? wallet.getGoldCoins() : 0L;
-        Long bonus = wallet.getBonusCoins() != null ? wallet.getBonusCoins() : 0L;
+        Long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
+        Long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
         Long totalBalance = gold + bonus;
         
         if (totalBalance < totalCost) {

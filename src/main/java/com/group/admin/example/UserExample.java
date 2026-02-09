@@ -2264,6 +2264,126 @@ public class UserExample {
             addCriterion("updated_at not between", value1, value2, "updatedAt");
             return (Criteria) this;
         }
+
+        public Criteria andTotalRechargedIsNull() {
+            addCriterion("total_recharged is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedIsNotNull() {
+            addCriterion("total_recharged is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedEqualTo(Long value) {
+            addCriterion("total_recharged =", value, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedNotEqualTo(Long value) {
+            addCriterion("total_recharged <>", value, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedGreaterThan(Long value) {
+            addCriterion("total_recharged >", value, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedGreaterThanOrEqualTo(Long value) {
+            addCriterion("total_recharged >=", value, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedLessThan(Long value) {
+            addCriterion("total_recharged <", value, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedLessThanOrEqualTo(Long value) {
+            addCriterion("total_recharged <=", value, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedIn(List<Long> values) {
+            addCriterion("total_recharged in", values, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedNotIn(List<Long> values) {
+            addCriterion("total_recharged not in", values, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedBetween(Long value1, Long value2) {
+            addCriterion("total_recharged between", value1, value2, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andTotalRechargedNotBetween(Long value1, Long value2) {
+            addCriterion("total_recharged not between", value1, value2, "totalRecharged");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionIsNull() {
+            addCriterion("version is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionIsNotNull() {
+            addCriterion("version is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionEqualTo(Integer value) {
+            addCriterion("version =", value, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionNotEqualTo(Integer value) {
+            addCriterion("version <>", value, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionGreaterThan(Integer value) {
+            addCriterion("version >", value, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionGreaterThanOrEqualTo(Integer value) {
+            addCriterion("version >=", value, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionLessThan(Integer value) {
+            addCriterion("version <", value, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionLessThanOrEqualTo(Integer value) {
+            addCriterion("version <=", value, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionIn(List<Integer> values) {
+            addCriterion("version in", values, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionNotIn(List<Integer> values) {
+            addCriterion("version not in", values, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionBetween(Integer value1, Integer value2) {
+            addCriterion("version between", value1, value2, "version");
+            return (Criteria) this;
+        }
+
+        public Criteria andVersionNotBetween(Integer value1, Integer value2) {
+            addCriterion("version not between", value1, value2, "version");
+            return (Criteria) this;
+        }
     }
 
     public static class Criteria extends GeneratedCriteria {
