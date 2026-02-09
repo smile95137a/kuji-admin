@@ -126,9 +126,17 @@ public class UserController {
             updated = true;
         }
         
-        if (req.getAvatar() != null && !req.getAvatar().isEmpty()) {
-            user.setAvatar(req.getAvatar());
-            updated = true;
+        // ✅ 支援移除頭像：傳空字串或 null 清空頭像
+        if (req.getAvatar() != null) {
+            if (req.getAvatar().isEmpty()) {
+                log.info("🗑️ 移除頭像");
+                user.setAvatar(null);  // 清空頭像
+                updated = true;
+            } else if (!req.getAvatar().equals(user.getAvatar())) {
+                log.info("🖼️ 更新頭像: {}", req.getAvatar());
+                user.setAvatar(req.getAvatar());
+                updated = true;
+            }
         }
         
         if (req.getPhoneNumber() != null && !req.getPhoneNumber().isEmpty()) {
