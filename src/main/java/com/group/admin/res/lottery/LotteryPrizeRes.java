@@ -40,6 +40,12 @@ public class LotteryPrizeRes {
     private String description;
 
     /**
+     * 獎項詳細內容
+     */
+    @Schema(description = "獎項詳細內容（HTML 或富文本）")
+    private String content;
+
+    /**
      * 獎項圖片URL
      */
     @Schema(description = "獎項圖片URL", example = "https://example.com/images/tanjiro.jpg")

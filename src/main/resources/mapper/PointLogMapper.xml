@@ -84,7 +84,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from point_log
+    from "point_log"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -95,21 +95,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from point_log
+    from "point_log"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from point_log
+    delete from "point_log"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.PointLogExample">
-    delete from point_log
+    delete from "point_log"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.PointLog">
-    insert into point_log (id, user_id, point_type, 
+    insert into "point_log" (id, user_id, point_type, 
       operation_type, amount, before_balance, 
       after_balance, reference_type, reference_id, 
       remark, expire_at, created_at
@@ -121,7 +121,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.PointLog">
-    insert into point_log
+    insert into "point_log"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -200,13 +200,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.PointLogExample" resultType="java.lang.Long">
-    select count(*) from point_log
+    select count(*) from "point_log"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update point_log
+    update "point_log"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -250,7 +250,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update point_log
+    update "point_log"
     set id = #{row.id,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       point_type = #{row.pointType,jdbcType=VARCHAR},
@@ -268,7 +268,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.PointLog">
-    update point_log
+    update "point_log"
     <set>
       <if test="userId != null">
         user_id = #{userId,jdbcType=VARCHAR},
@@ -307,7 +307,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.PointLog">
-    update point_log
+    update "point_log"
     set user_id = #{userId,jdbcType=VARCHAR},
       point_type = #{pointType,jdbcType=VARCHAR},
       operation_type = #{operationType,jdbcType=VARCHAR},

@@ -79,7 +79,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from order_status_log
+    from "order_status_log"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -90,21 +90,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from order_status_log
+    from "order_status_log"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from order_status_log
+    delete from "order_status_log"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.OrderStatusLogExample">
-    delete from order_status_log
+    delete from "order_status_log"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.OrderStatusLog">
-    insert into order_status_log (id, order_id, from_status, 
+    insert into "order_status_log" (id, order_id, from_status, 
       to_status, operator_id, operator_type, 
       remark, created_at)
     values (#{id,jdbcType=VARCHAR}, #{orderId,jdbcType=VARCHAR}, #{fromStatus,jdbcType=VARCHAR}, 
@@ -112,7 +112,7 @@
       #{remark,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.OrderStatusLog">
-    insert into order_status_log
+    insert into "order_status_log"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -167,13 +167,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.OrderStatusLogExample" resultType="java.lang.Long">
-    select count(*) from order_status_log
+    select count(*) from "order_status_log"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update order_status_log
+    update "order_status_log"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -205,7 +205,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update order_status_log
+    update "order_status_log"
     set id = #{row.id,jdbcType=VARCHAR},
       order_id = #{row.orderId,jdbcType=VARCHAR},
       from_status = #{row.fromStatus,jdbcType=VARCHAR},
@@ -219,7 +219,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.OrderStatusLog">
-    update order_status_log
+    update "order_status_log"
     <set>
       <if test="orderId != null">
         order_id = #{orderId,jdbcType=VARCHAR},
@@ -246,7 +246,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.OrderStatusLog">
-    update order_status_log
+    update "order_status_log"
     set order_id = #{orderId,jdbcType=VARCHAR},
       from_status = #{fromStatus,jdbcType=VARCHAR},
       to_status = #{toStatus,jdbcType=VARCHAR},

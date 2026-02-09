@@ -27,6 +27,12 @@ public class NewsUpdateReq {
     @Schema(description = "狀態（DRAFT/PUBLISHED/ARCHIVED）", example = "PUBLISHED")
     private String status;
     
+    @Schema(description = "分類（ANNOUNCEMENT/EVENT/SYSTEM）", example = "EVENT")
+    private String category;
+    
+    @Schema(description = "是否為重要提醒", example = "true")
+    private Boolean important;
+    
     @Schema(description = "上架時間", example = "2026-01-10T10:00:00")
     private LocalDateTime scheduledAt;
     

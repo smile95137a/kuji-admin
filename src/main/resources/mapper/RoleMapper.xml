@@ -77,7 +77,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from role
+    from "role"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -88,21 +88,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from role
+    from "role"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from role
+    delete from "role"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.RoleExample">
-    delete from role
+    delete from "role"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Role">
-    insert into role (id, name, code, 
+    insert into "role" (id, name, code, 
       description, created_at, updated_at
       )
     values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR}, 
@@ -110,7 +110,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Role">
-    insert into role
+    insert into "role"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -153,13 +153,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.RoleExample" resultType="java.lang.Long">
-    select count(*) from role
+    select count(*) from "role"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update role
+    update "role"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -185,7 +185,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update role
+    update "role"
     set id = #{row.id,jdbcType=VARCHAR},
       name = #{row.name,jdbcType=VARCHAR},
       code = #{row.code,jdbcType=VARCHAR},
@@ -197,7 +197,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Role">
-    update role
+    update "role"
     <set>
       <if test="name != null">
         name = #{name,jdbcType=VARCHAR},
@@ -218,7 +218,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Role">
-    update role
+    update "role"
     set name = #{name,jdbcType=VARCHAR},
       code = #{code,jdbcType=VARCHAR},
       description = #{description,jdbcType=VARCHAR},

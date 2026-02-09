@@ -81,7 +81,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from menu
+    from "menu"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -92,21 +92,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from menu
+    from "menu"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from menu
+    delete from "menu"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.MenuExample">
-    delete from menu
+    delete from "menu"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Menu">
-    insert into menu (id, name, code, 
+    insert into "menu" (id, name, code, 
       path, parent_id, icon, 
       order_num, is_visible, created_at, 
       updated_at)
@@ -116,7 +116,7 @@
       #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Menu">
-    insert into menu
+    insert into "menu"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -183,13 +183,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.MenuExample" resultType="java.lang.Long">
-    select count(*) from menu
+    select count(*) from "menu"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update menu
+    update "menu"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -227,7 +227,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update menu
+    update "menu"
     set id = #{row.id,jdbcType=VARCHAR},
       name = #{row.name,jdbcType=VARCHAR},
       code = #{row.code,jdbcType=VARCHAR},
@@ -243,7 +243,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Menu">
-    update menu
+    update "menu"
     <set>
       <if test="name != null">
         name = #{name,jdbcType=VARCHAR},
@@ -276,7 +276,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Menu">
-    update menu
+    update "menu"
     set name = #{name,jdbcType=VARCHAR},
       code = #{code,jdbcType=VARCHAR},
       path = #{path,jdbcType=VARCHAR},

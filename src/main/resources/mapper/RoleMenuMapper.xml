@@ -78,7 +78,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from role_menu
+    from "role_menu"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -89,21 +89,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from role_menu
+    from "role_menu"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from role_menu
+    delete from "role_menu"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.RoleMenuExample">
-    delete from role_menu
+    delete from "role_menu"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.RoleMenu">
-    insert into role_menu (id, role_id, menu_id, 
+    insert into "role_menu" (id, role_id, menu_id, 
       can_view, can_edit, can_delete, created_at
       )
     values (#{id,jdbcType=VARCHAR}, #{roleId,jdbcType=VARCHAR}, #{menuId,jdbcType=VARCHAR}, 
@@ -111,7 +111,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.RoleMenu">
-    insert into role_menu
+    insert into "role_menu"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -160,13 +160,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.RoleMenuExample" resultType="java.lang.Long">
-    select count(*) from role_menu
+    select count(*) from "role_menu"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update role_menu
+    update "role_menu"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -195,7 +195,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update role_menu
+    update "role_menu"
     set id = #{row.id,jdbcType=VARCHAR},
       role_id = #{row.roleId,jdbcType=VARCHAR},
       menu_id = #{row.menuId,jdbcType=VARCHAR},
@@ -208,7 +208,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RoleMenu">
-    update role_menu
+    update "role_menu"
     <set>
       <if test="roleId != null">
         role_id = #{roleId,jdbcType=VARCHAR},
@@ -232,7 +232,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RoleMenu">
-    update role_menu
+    update "role_menu"
     set role_id = #{roleId,jdbcType=VARCHAR},
       menu_id = #{menuId,jdbcType=VARCHAR},
       can_view = #{canView,jdbcType=BIT},

@@ -6,6 +6,8 @@
     <result column="title" jdbcType="VARCHAR" property="title" />
     <result column="image_url" jdbcType="VARCHAR" property="imageUrl" />
     <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="important" jdbcType="BIT" property="important" />
     <result column="scheduled_at" jdbcType="TIMESTAMP" property="scheduledAt" />
     <result column="end_time" jdbcType="TIMESTAMP" property="endTime" />
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
@@ -74,7 +76,8 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, title, image_url, status, scheduled_at, end_time, created_by, created_at, updated_at
+    id, title, image_url, status, category, important, scheduled_at, end_time, created_by, 
+    created_at, updated_at
   </sql>
   <sql id="Blob_Column_List">
     content
@@ -88,7 +91,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from news
+    from "news"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -103,7 +106,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from news
+    from "news"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -116,31 +119,33 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from news
+    from "news"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from news
+    delete from "news"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.NewsExample">
-    delete from news
+    delete from "news"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.News">
-    insert into news (id, title, image_url, 
-      status, scheduled_at, end_time, 
-      created_by, created_at, updated_at, 
-      content)
+    insert into "news" (id, title, image_url, 
+      status, category, important, 
+      scheduled_at, end_time, created_by, 
+      created_at, updated_at, content
+      )
     values (#{id,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, #{imageUrl,jdbcType=VARCHAR}, 
-      #{status,jdbcType=VARCHAR}, #{scheduledAt,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, 
-      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, 
-      #{content,jdbcType=LONGVARCHAR})
+      #{status,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{important,jdbcType=BIT}, 
+      #{scheduledAt,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, #{createdBy,jdbcType=VARCHAR}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{content,jdbcType=LONGVARCHAR}
+      )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.News">
-    insert into news
+    insert into "news"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -153,6 +158,12 @@
       </if>
       <if test="status != null">
         status,
+      </if>
+      <if test="category != null">
+        category,
+      </if>
+      <if test="important != null">
+        important,
       </if>
       <if test="scheduledAt != null">
         scheduled_at,
@@ -186,6 +197,12 @@
       <if test="status != null">
         #{status,jdbcType=VARCHAR},
       </if>
+      <if test="category != null">
+        #{category,jdbcType=VARCHAR},
+      </if>
+      <if test="important != null">
+        #{important,jdbcType=BIT},
+      </if>
       <if test="scheduledAt != null">
         #{scheduledAt,jdbcType=TIMESTAMP},
       </if>
@@ -207,13 +224,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.NewsExample" resultType="java.lang.Long">
-    select count(*) from news
+    select count(*) from "news"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update news
+    update "news"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -226,6 +243,12 @@
       </if>
       <if test="row.status != null">
         status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.category != null">
+        category = #{row.category,jdbcType=VARCHAR},
+      </if>
+      <if test="row.important != null">
+        important = #{row.important,jdbcType=BIT},
       </if>
       <if test="row.scheduledAt != null">
         scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
@@ -251,11 +274,13 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update news
+    update "news"
     set id = #{row.id,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
       image_url = #{row.imageUrl,jdbcType=VARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
+      category = #{row.category,jdbcType=VARCHAR},
+      important = #{row.important,jdbcType=BIT},
       scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
       end_time = #{row.endTime,jdbcType=TIMESTAMP},
       created_by = #{row.createdBy,jdbcType=VARCHAR},
@@ -267,11 +292,13 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update news
+    update "news"
     set id = #{row.id,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
       image_url = #{row.imageUrl,jdbcType=VARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
+      category = #{row.category,jdbcType=VARCHAR},
+      important = #{row.important,jdbcType=BIT},
       scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
       end_time = #{row.endTime,jdbcType=TIMESTAMP},
       created_by = #{row.createdBy,jdbcType=VARCHAR},
@@ -282,7 +309,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.News">
-    update news
+    update "news"
     <set>
       <if test="title != null">
         title = #{title,jdbcType=VARCHAR},
@@ -292,6 +319,12 @@
       </if>
       <if test="status != null">
         status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="category != null">
+        category = #{category,jdbcType=VARCHAR},
+      </if>
+      <if test="important != null">
+        important = #{important,jdbcType=BIT},
       </if>
       <if test="scheduledAt != null">
         scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
@@ -315,10 +348,12 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.News">
-    update news
+    update "news"
     set title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},
+      category = #{category,jdbcType=VARCHAR},
+      important = #{important,jdbcType=BIT},
       scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
       end_time = #{endTime,jdbcType=TIMESTAMP},
       created_by = #{createdBy,jdbcType=VARCHAR},
@@ -328,10 +363,12 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.News">
-    update news
+    update "news"
     set title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},
+      category = #{category,jdbcType=VARCHAR},
+      important = #{important,jdbcType=BIT},
       scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
       end_time = #{endTime,jdbcType=TIMESTAMP},
       created_by = #{createdBy,jdbcType=VARCHAR},

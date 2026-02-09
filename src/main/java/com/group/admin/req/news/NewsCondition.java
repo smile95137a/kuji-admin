@@ -21,4 +21,10 @@ public class NewsCondition extends BaseCondition {
     
     @Schema(description = "狀態（DRAFT/PUBLISHED/ARCHIVED）", example = "PUBLISHED")
     private String status;
+    
+    @Schema(description = "分類（ANNOUNCEMENT/EVENT/SYSTEM）", example = "ANNOUNCEMENT")
+    private String category;
+    
+    @Schema(description = "是否為重要提醒", example = "true")
+    private Boolean important;
 }

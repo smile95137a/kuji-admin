@@ -85,7 +85,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from lottery_draw_record
+    from "lottery_draw_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -96,21 +96,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from lottery_draw_record
+    from "lottery_draw_record"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from lottery_draw_record
+    delete from "lottery_draw_record"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryDrawRecordExample">
-    delete from lottery_draw_record
+    delete from "lottery_draw_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.LotteryDrawRecord">
-    insert into lottery_draw_record (id, lottery_id, user_id, 
+    insert into "lottery_draw_record" (id, lottery_id, user_id, 
       prize_id, ticket_id, session_id, 
       is_opener_draw, triggered_free_draw, selected_number, 
       cost_type, cost_amount, status, 
@@ -122,7 +122,7 @@
       #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryDrawRecord">
-    insert into lottery_draw_record
+    insert into "lottery_draw_record"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -207,13 +207,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.LotteryDrawRecordExample" resultType="java.lang.Long">
-    select count(*) from lottery_draw_record
+    select count(*) from "lottery_draw_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update lottery_draw_record
+    update "lottery_draw_record"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -260,7 +260,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update lottery_draw_record
+    update "lottery_draw_record"
     set id = #{row.id,jdbcType=VARCHAR},
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
@@ -279,7 +279,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryDrawRecord">
-    update lottery_draw_record
+    update "lottery_draw_record"
     <set>
       <if test="lotteryId != null">
         lottery_id = #{lotteryId,jdbcType=VARCHAR},
@@ -321,7 +321,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.LotteryDrawRecord">
-    update lottery_draw_record
+    update "lottery_draw_record"
     set lottery_id = #{lotteryId,jdbcType=VARCHAR},
       user_id = #{userId,jdbcType=VARCHAR},
       prize_id = #{prizeId,jdbcType=VARCHAR},

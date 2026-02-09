@@ -21,6 +21,7 @@
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.LotteryPrize">
     <result column="description" jdbcType="LONGVARCHAR" property="description" />
+    <result column="content" jdbcType="LONGVARCHAR" property="content" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -85,7 +86,7 @@
     prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
   </sql>
   <sql id="Blob_Column_List">
-    description
+    description, content
   </sql>
   <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.LotteryPrizeExample" resultMap="ResultMapWithBLOBs">
     select
@@ -96,7 +97,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from lottery_prize
+    from "lottery_prize"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -111,7 +112,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from lottery_prize
+    from "lottery_prize"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -124,35 +125,37 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from lottery_prize
+    from "lottery_prize"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from lottery_prize
+    delete from "lottery_prize"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryPrizeExample">
-    delete from lottery_prize
+    delete from "lottery_prize"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.LotteryPrize">
-    insert into lottery_prize (id, lottery_id, name, 
+    insert into "lottery_prize" (id, lottery_id, name, 
       image_url, level, prize_number, 
       quantity, remaining, weight, 
       prize_type, point_value, is_last_prize, 
       is_grand_prize, order_num, created_at, 
-      updated_at, description)
+      updated_at, description, content
+      )
     values (#{id,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
       #{imageUrl,jdbcType=VARCHAR}, #{level,jdbcType=VARCHAR}, #{prizeNumber,jdbcType=VARCHAR}, 
       #{quantity,jdbcType=INTEGER}, #{remaining,jdbcType=INTEGER}, #{weight,jdbcType=INTEGER}, 
       #{prizeType,jdbcType=VARCHAR}, #{pointValue,jdbcType=BIGINT}, #{isLastPrize,jdbcType=TINYINT}, 
       #{isGrandPrize,jdbcType=TINYINT}, #{orderNum,jdbcType=INTEGER}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR})
+      #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR}
+      )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryPrize">
-    insert into lottery_prize
+    insert into "lottery_prize"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -204,6 +207,9 @@
       </if>
       <if test="description != null">
         description,
+      </if>
+      <if test="content != null">
+        content,
       </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
@@ -258,16 +264,19 @@
       <if test="description != null">
         #{description,jdbcType=LONGVARCHAR},
       </if>
+      <if test="content != null">
+        #{content,jdbcType=LONGVARCHAR},
+      </if>
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.LotteryPrizeExample" resultType="java.lang.Long">
-    select count(*) from lottery_prize
+    select count(*) from "lottery_prize"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update lottery_prize
+    update "lottery_prize"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -320,13 +329,16 @@
       <if test="row.description != null">
         description = #{row.description,jdbcType=LONGVARCHAR},
       </if>
+      <if test="row.content != null">
+        content = #{row.content,jdbcType=LONGVARCHAR},
+      </if>
     </set>
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update lottery_prize
+    update "lottery_prize"
     set id = #{row.id,jdbcType=VARCHAR},
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
       name = #{row.name,jdbcType=VARCHAR},
@@ -343,13 +355,14 @@
       order_num = #{row.orderNum,jdbcType=INTEGER},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
-      description = #{row.description,jdbcType=LONGVARCHAR}
+      description = #{row.description,jdbcType=LONGVARCHAR},
+      content = #{row.content,jdbcType=LONGVARCHAR}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update lottery_prize
+    update "lottery_prize"
     set id = #{row.id,jdbcType=VARCHAR},
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
       name = #{row.name,jdbcType=VARCHAR},
@@ -371,7 +384,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryPrize">
-    update lottery_prize
+    update "lottery_prize"
     <set>
       <if test="lotteryId != null">
         lottery_id = #{lotteryId,jdbcType=VARCHAR},
@@ -421,11 +434,14 @@
       <if test="description != null">
         description = #{description,jdbcType=LONGVARCHAR},
       </if>
+      <if test="content != null">
+        content = #{content,jdbcType=LONGVARCHAR},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.LotteryPrize">
-    update lottery_prize
+    update "lottery_prize"
     set lottery_id = #{lotteryId,jdbcType=VARCHAR},
       name = #{name,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},
@@ -441,11 +457,12 @@
       order_num = #{orderNum,jdbcType=INTEGER},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
-      description = #{description,jdbcType=LONGVARCHAR}
+      description = #{description,jdbcType=LONGVARCHAR},
+      content = #{content,jdbcType=LONGVARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.LotteryPrize">
-    update lottery_prize
+    update "lottery_prize"
     set lottery_id = #{lotteryId,jdbcType=VARCHAR},
       name = #{name,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},

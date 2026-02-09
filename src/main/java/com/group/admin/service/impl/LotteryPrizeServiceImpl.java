@@ -62,6 +62,7 @@ public class LotteryPrizeServiceImpl implements LotteryPrizeService {
         prize.setLotteryId(req.getLotteryId());
         prize.setName(req.getName());
         prize.setDescription(req.getDescription());
+        prize.setContent(req.getContent());
         prize.setImageUrl(req.getImageUrl());
         prize.setLevel(req.getLevel());
         prize.setPrizeNumber(req.getPrizeNumber());
@@ -122,6 +123,7 @@ public class LotteryPrizeServiceImpl implements LotteryPrizeService {
         
         if (req.getName() != null) prize.setName(req.getName());
         if (req.getDescription() != null) prize.setDescription(req.getDescription());
+        if (req.getContent() != null) prize.setContent(req.getContent());
         if (req.getImageUrl() != null) prize.setImageUrl(req.getImageUrl());
         if (req.getLevel() != null) prize.setLevel(req.getLevel());
         if (req.getPrizeNumber() != null) prize.setPrizeNumber(req.getPrizeNumber());
@@ -247,6 +249,7 @@ public class LotteryPrizeServiceImpl implements LotteryPrizeService {
         res.setLotteryId(prize.getLotteryId());
         res.setName(prize.getName());
         res.setDescription(prize.getDescription());
+        res.setContent(prize.getContent());
         res.setImageUrl(prize.getImageUrl());
         res.setLevel(prize.getLevel());
         res.setLevelName(PrizeLevelEnum.getNameByCode(prize.getLevel()));

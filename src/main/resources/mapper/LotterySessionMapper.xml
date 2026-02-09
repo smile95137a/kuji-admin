@@ -92,7 +92,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from lottery_session
+    from "lottery_session"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -103,21 +103,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from lottery_session
+    from "lottery_session"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from lottery_session
+    delete from "lottery_session"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.LotterySessionExample">
-    delete from lottery_session
+    delete from "lottery_session"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.LotterySession">
-    insert into lottery_session (id, lottery_id, opener_user_id, 
+    insert into "lottery_session" (id, lottery_id, opener_user_id, 
       protection_draws, protection_start_time, 
       protection_end_time, opener_draw_count, opener_total_cost, 
       free_draw_enabled, free_draw_triggered, free_draw_refund_amount, 
@@ -133,7 +133,7 @@
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.LotterySession">
-    insert into lottery_session
+    insert into "lottery_session"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -248,13 +248,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.LotterySessionExample" resultType="java.lang.Long">
-    select count(*) from lottery_session
+    select count(*) from "lottery_session"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update lottery_session
+    update "lottery_session"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -316,7 +316,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update lottery_session
+    update "lottery_session"
     set id = #{row.id,jdbcType=VARCHAR},
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
       opener_user_id = #{row.openerUserId,jdbcType=VARCHAR},
@@ -340,7 +340,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotterySession">
-    update lottery_session
+    update "lottery_session"
     <set>
       <if test="lotteryId != null">
         lottery_id = #{lotteryId,jdbcType=VARCHAR},
@@ -397,7 +397,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.LotterySession">
-    update lottery_session
+    update "lottery_session"
     set lottery_id = #{lotteryId,jdbcType=VARCHAR},
       opener_user_id = #{openerUserId,jdbcType=VARCHAR},
       protection_draws = #{protectionDraws,jdbcType=INTEGER},

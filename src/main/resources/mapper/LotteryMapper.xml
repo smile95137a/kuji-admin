@@ -122,7 +122,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from lottery
+    from "lottery"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -137,7 +137,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from lottery
+    from "lottery"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -150,21 +150,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from lottery
+    from "lottery"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from lottery
+    delete from "lottery"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryExample">
-    delete from lottery
+    delete from "lottery"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Lottery">
-    insert into lottery (id, store_id, title, 
+    insert into "lottery" (id, store_id, title, 
       image_url, category, sub_category, 
       game_mode, price_per_draw, discounted_price, 
       auto_discount_enabled, allow_multi_draw, multi_draw_options, 
@@ -194,7 +194,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Lottery">
-    insert into lottery
+    insert into "lottery"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -435,13 +435,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
-    select count(*) from lottery
+    select count(*) from "lottery"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update lottery
+    update "lottery"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -566,7 +566,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update lottery
+    update "lottery"
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
@@ -611,7 +611,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update lottery
+    update "lottery"
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
       title = #{row.title,jdbcType=VARCHAR},
@@ -652,7 +652,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Lottery">
-    update lottery
+    update "lottery"
     <set>
       <if test="storeId != null">
         store_id = #{storeId,jdbcType=VARCHAR},
@@ -772,7 +772,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.Lottery">
-    update lottery
+    update "lottery"
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},
@@ -814,7 +814,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Lottery">
-    update lottery
+    update "lottery"
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
       image_url = #{imageUrl,jdbcType=VARCHAR},

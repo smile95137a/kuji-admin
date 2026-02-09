@@ -93,7 +93,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from recharge_record
+    from "recharge_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -108,7 +108,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from recharge_record
+    from "recharge_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -121,21 +121,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from recharge_record
+    from "recharge_record"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from recharge_record
+    delete from "recharge_record"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.RechargeRecordExample">
-    delete from recharge_record
+    delete from "recharge_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.RechargeRecord">
-    insert into recharge_record (id, user_id, plan_id, 
+    insert into "recharge_record" (id, user_id, plan_id, 
       amount, gold_coins, bonus_coins, 
       payment_method, payment_status, payment_gateway, 
       transaction_id, fail_reason, created_at, 
@@ -147,7 +147,7 @@
       #{paidAt,jdbcType=TIMESTAMP}, #{paymentInfo,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.RechargeRecord">
-    insert into recharge_record
+    insert into "recharge_record"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -238,13 +238,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.RechargeRecordExample" resultType="java.lang.Long">
-    select count(*) from recharge_record
+    select count(*) from "recharge_record"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update recharge_record
+    update "recharge_record"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -294,7 +294,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update recharge_record
+    update "recharge_record"
     set id = #{row.id,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       plan_id = #{row.planId,jdbcType=VARCHAR},
@@ -314,7 +314,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update recharge_record
+    update "recharge_record"
     set id = #{row.id,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
       plan_id = #{row.planId,jdbcType=VARCHAR},
@@ -333,7 +333,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RechargeRecord">
-    update recharge_record
+    update "recharge_record"
     <set>
       <if test="userId != null">
         user_id = #{userId,jdbcType=VARCHAR},
@@ -378,7 +378,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.RechargeRecord">
-    update recharge_record
+    update "recharge_record"
     set user_id = #{userId,jdbcType=VARCHAR},
       plan_id = #{planId,jdbcType=VARCHAR},
       amount = #{amount,jdbcType=BIGINT},
@@ -395,7 +395,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RechargeRecord">
-    update recharge_record
+    update "recharge_record"
     set user_id = #{userId,jdbcType=VARCHAR},
       plan_id = #{planId,jdbcType=VARCHAR},
       amount = #{amount,jdbcType=BIGINT},

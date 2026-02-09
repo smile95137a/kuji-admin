@@ -99,7 +99,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from store
+    from "store"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -114,7 +114,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from store
+    from "store"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -127,21 +127,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from store
+    from "store"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from store
+    delete from "store"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.StoreExample">
-    delete from store
+    delete from "store"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Store">
-    insert into store (id, owner_id, store_name, 
+    insert into "store" (id, owner_id, store_name, 
       short_description, logo_url, cover_image_url, 
       email, phone, address, 
       facebook_url, instagram_url, line_id, 
@@ -157,7 +157,7 @@
       #{remark,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Store">
-    insert into store
+    insert into "store"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -278,13 +278,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.StoreExample" resultType="java.lang.Long">
-    select count(*) from store
+    select count(*) from "store"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update store
+    update "store"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -349,7 +349,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update store
+    update "store"
     set id = #{row.id,jdbcType=VARCHAR},
       owner_id = #{row.ownerId,jdbcType=VARCHAR},
       store_name = #{row.storeName,jdbcType=VARCHAR},
@@ -374,7 +374,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update store
+    update "store"
     set id = #{row.id,jdbcType=VARCHAR},
       owner_id = #{row.ownerId,jdbcType=VARCHAR},
       store_name = #{row.storeName,jdbcType=VARCHAR},
@@ -397,7 +397,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Store">
-    update store
+    update "store"
     <set>
       <if test="ownerId != null">
         owner_id = #{ownerId,jdbcType=VARCHAR},
@@ -457,7 +457,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.Store">
-    update store
+    update "store"
     set owner_id = #{ownerId,jdbcType=VARCHAR},
       store_name = #{storeName,jdbcType=VARCHAR},
       short_description = #{shortDescription,jdbcType=VARCHAR},
@@ -479,7 +479,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Store">
-    update store
+    update "store"
     set owner_id = #{ownerId,jdbcType=VARCHAR},
       store_name = #{storeName,jdbcType=VARCHAR},
       short_description = #{shortDescription,jdbcType=VARCHAR},

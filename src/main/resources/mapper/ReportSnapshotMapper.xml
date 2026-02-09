@@ -87,7 +87,7 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from report_snapshot
+    from "report_snapshot"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -102,7 +102,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from report_snapshot
+    from "report_snapshot"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -115,21 +115,21 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
-    from report_snapshot
+    from "report_snapshot"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from report_snapshot
+    delete from "report_snapshot"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.ReportSnapshotExample">
-    delete from report_snapshot
+    delete from "report_snapshot"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.ReportSnapshot">
-    insert into report_snapshot (id, report_type, period_type, 
+    insert into "report_snapshot" (id, report_type, period_type, 
       period_start, period_end, store_id, 
       created_at, data, summary
       )
@@ -139,7 +139,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.ReportSnapshot">
-    insert into report_snapshot
+    insert into "report_snapshot"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -200,13 +200,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.ReportSnapshotExample" resultType="java.lang.Long">
-    select count(*) from report_snapshot
+    select count(*) from "report_snapshot"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update report_snapshot
+    update "report_snapshot"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -241,7 +241,7 @@
     </if>
   </update>
   <update id="updateByExampleWithBLOBs" parameterType="map">
-    update report_snapshot
+    update "report_snapshot"
     set id = #{row.id,jdbcType=VARCHAR},
       report_type = #{row.reportType,jdbcType=VARCHAR},
       period_type = #{row.periodType,jdbcType=VARCHAR},
@@ -256,7 +256,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update report_snapshot
+    update "report_snapshot"
     set id = #{row.id,jdbcType=VARCHAR},
       report_type = #{row.reportType,jdbcType=VARCHAR},
       period_type = #{row.periodType,jdbcType=VARCHAR},
@@ -269,7 +269,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ReportSnapshot">
-    update report_snapshot
+    update "report_snapshot"
     <set>
       <if test="reportType != null">
         report_type = #{reportType,jdbcType=VARCHAR},
@@ -299,7 +299,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.ReportSnapshot">
-    update report_snapshot
+    update "report_snapshot"
     set report_type = #{reportType,jdbcType=VARCHAR},
       period_type = #{periodType,jdbcType=VARCHAR},
       period_start = #{periodStart,jdbcType=DATE},
@@ -311,7 +311,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ReportSnapshot">
-    update report_snapshot
+    update "report_snapshot"
     set report_type = #{reportType,jdbcType=VARCHAR},
       period_type = #{periodType,jdbcType=VARCHAR},
       period_start = #{periodStart,jdbcType=DATE},

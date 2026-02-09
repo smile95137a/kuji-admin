@@ -85,7 +85,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from marquee
+    from "marquee"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -96,21 +96,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from marquee
+    from "marquee"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from marquee
+    delete from "marquee"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.MarqueeExample">
-    delete from marquee
+    delete from "marquee"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Marquee">
-    insert into marquee (id, content, link_url, 
+    insert into "marquee" (id, content, link_url, 
       link_type, priority, bg_color, 
       text_color, start_time, end_time, 
       is_active, created_by, created_at, 
@@ -122,7 +122,7 @@
       #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Marquee">
-    insert into marquee
+    insert into "marquee"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -207,13 +207,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.MarqueeExample" resultType="java.lang.Long">
-    select count(*) from marquee
+    select count(*) from "marquee"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update marquee
+    update "marquee"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -260,7 +260,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update marquee
+    update "marquee"
     set id = #{row.id,jdbcType=VARCHAR},
       content = #{row.content,jdbcType=VARCHAR},
       link_url = #{row.linkUrl,jdbcType=VARCHAR},
@@ -279,7 +279,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Marquee">
-    update marquee
+    update "marquee"
     <set>
       <if test="content != null">
         content = #{content,jdbcType=VARCHAR},
@@ -321,7 +321,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Marquee">
-    update marquee
+    update "marquee"
     set content = #{content,jdbcType=VARCHAR},
       link_url = #{linkUrl,jdbcType=VARCHAR},
       link_type = #{linkType,jdbcType=VARCHAR},

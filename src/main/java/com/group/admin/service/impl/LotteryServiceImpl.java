@@ -1278,6 +1278,7 @@ public class LotteryServiceImpl implements LotteryService {
                 prize.setLotteryId(lotteryId);
                 prize.setName(prizeReq.getName());
                 prize.setDescription(prizeReq.getDescription());
+                prize.setContent(prizeReq.getContent());
                 prize.setImageUrl(prizeReq.getImageUrl());
                 prize.setLevel(prizeReq.getLevel());
                 prize.setPrizeNumber(prizeReq.getPrizeNumber());
@@ -1424,6 +1425,7 @@ public class LotteryServiceImpl implements LotteryService {
                     // 更新欄位（只更新非 null 的欄位）
                     if (prizeReq.getName() != null) existingPrize.setName(prizeReq.getName());
                     if (prizeReq.getDescription() != null) existingPrize.setDescription(prizeReq.getDescription());
+                    if (prizeReq.getContent() != null) existingPrize.setContent(prizeReq.getContent());
                     if (prizeReq.getImageUrl() != null) existingPrize.setImageUrl(prizeReq.getImageUrl());
                     if (prizeReq.getLevel() != null) existingPrize.setLevel(prizeReq.getLevel());
                     if (prizeReq.getPrizeNumber() != null) existingPrize.setPrizeNumber(prizeReq.getPrizeNumber());
@@ -1447,6 +1449,7 @@ public class LotteryServiceImpl implements LotteryService {
                     newPrize.setLotteryId(lotteryId);
                     newPrize.setName(prizeReq.getName());
                     newPrize.setDescription(prizeReq.getDescription());
+                    newPrize.setContent(prizeReq.getContent());
                     newPrize.setImageUrl(prizeReq.getImageUrl());
                     newPrize.setLevel(prizeReq.getLevel());
                     newPrize.setPrizeNumber(prizeReq.getPrizeNumber());
@@ -1594,6 +1597,7 @@ public class LotteryServiceImpl implements LotteryService {
         res.setLotteryId(prize.getLotteryId());
         res.setName(prize.getName());
         res.setDescription(prize.getDescription());
+        res.setContent(prize.getContent());
         res.setImageUrl(prize.getImageUrl());
         res.setLevel(prize.getLevel());
         res.setPrizeNumber(prize.getPrizeNumber());

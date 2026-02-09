@@ -39,6 +39,15 @@ public class NewsRes {
     @Schema(description = "狀態中文", example = "已上架")
     private String statusName;
     
+    @Schema(description = "分類", example = "ANNOUNCEMENT")
+    private String category;
+    
+    @Schema(description = "分類中文", example = "公告")
+    private String categoryName;
+    
+    @Schema(description = "是否為重要提醒", example = "false")
+    private Boolean important;
+    
     @Schema(description = "上架時間", example = "2026-01-10T10:00:00")
     private LocalDateTime scheduledAt;
     

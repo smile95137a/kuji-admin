@@ -75,6 +75,9 @@ public class NewsServiceImpl implements NewsService {
             if (isNotBlank(condition.getKeyword())) {
                 criteria.andTitleLike("%" + condition.getKeyword() + "%");
             }
+            
+            // ⚠️ category 與 important 為新增欄位，NewsExample 尚未更新
+            // 改為查詢後在 Java 層篩選
         }
         
         // 排序
@@ -87,6 +90,22 @@ public class NewsServiceImpl implements NewsService {
         }
         
         List<News> newsList = newsMapper.selectByExampleWithBLOBs(example);
+        
+        // Java 層篩選 category 與 important
+        if (condition != null) {
+            if (isNotBlank(condition.getCategory())) {
+                String cat = condition.getCategory();
+                newsList = newsList.stream()
+                    .filter(n -> cat.equals(n.getCategory()))
+                    .collect(java.util.stream.Collectors.toList());
+            }
+            if (condition.getImportant() != null && condition.getImportant()) {
+                newsList = newsList.stream()
+                    .filter(n -> n.getImportant() != null && n.getImportant() == true)
+                    .collect(java.util.stream.Collectors.toList());
+            }
+        }
+        
         log.info("✅ 查詢到 {} 則最新消息", newsList.size());
         
         return newsList.stream()
@@ -128,6 +147,8 @@ public class NewsServiceImpl implements NewsService {
         news.setContent(req.getContent());
         news.setImageUrl(req.getImageUrl());
         news.setStatus(req.getStatus() != null ? req.getStatus() : "DRAFT");
+        news.setCategory(req.getCategory() != null ? req.getCategory() : "ANNOUNCEMENT");
+        news.setImportant(req.getImportant() != null && req.getImportant() ? true : false);
         news.setScheduledAt(req.getScheduledAt());
         news.setEndTime(req.getEndTime());
         news.setCreatedBy(currentUserId);
@@ -166,6 +187,12 @@ public class NewsServiceImpl implements NewsService {
         }
         if (req.getStatus() != null) {
             news.setStatus(req.getStatus());
+        }
+        if (req.getCategory() != null) {
+            news.setCategory(req.getCategory());
+        }
+        if (req.getImportant() != null) {
+            news.setImportant(req.getImportant() ? true : false);
         }
         if (req.getScheduledAt() != null) {
             news.setScheduledAt(req.getScheduledAt());
@@ -300,6 +327,9 @@ public class NewsServiceImpl implements NewsService {
                 .imageUrl(news.getImageUrl())
                 .status(news.getStatus())
                 .statusName(getStatusName(news.getStatus()))
+                .category(news.getCategory())
+                .categoryName(getCategoryName(news.getCategory()))
+                .important(news.getImportant() != null && news.getImportant() == true)
                 .scheduledAt(news.getScheduledAt())
                 .endTime(news.getEndTime())
                 .createdBy(news.getCreatedBy())
@@ -321,6 +351,23 @@ public class NewsServiceImpl implements NewsService {
                 return "已下架";
             default:
                 return status;
+        }
+    }
+
+    /**
+     * 取得分類名稱
+     */
+    private String getCategoryName(String category) {
+        if (category == null) return "公告";
+        switch (category) {
+            case "ANNOUNCEMENT":
+                return "公告";
+            case "EVENT":
+                return "活動";
+            case "SYSTEM":
+                return "系統";
+            default:
+                return category;
         }
     }
 

@@ -3,11 +3,11 @@ package com.group.admin.service.impl;
 import com.group.admin.condition.OrderCondition;
 import com.group.admin.entity.*;
 import com.group.admin.enums.OrderStatusEnum;
-import com.group.admin.enums.PaymentStatusEnum;
 import com.group.admin.example.OrderExample;
 import com.group.admin.example.OrderItemExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.*;
+import com.group.admin.repository.OrderRepository;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
@@ -45,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
     private final LotteryPrizeMapper lotteryPrizeMapper;
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
+    private final OrderRepository orderRepository;
 
     @Override
     @Transactional
@@ -78,7 +79,6 @@ public class OrderServiceImpl implements OrderService {
             order.setUserId(userId);
             order.setStoreId(storeId);
             order.setStatus(OrderStatusEnum.PENDING.getCode());
-            order.setPaymentStatus(PaymentStatusEnum.SUCCESS.getCode()); // 已扣點數
             order.setTotalItems(storePrizeBoxes.size());
             order.setShippingMethod(shippingMethod);
             order.setRecipientName(recipientName);
@@ -135,38 +135,48 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderRes> getOrders(QueryReq<OrderCondition> req) {
         OrderCondition condition = req != null ? req.getCondition() : null;
 
-        OrderExample example = new OrderExample();
-        OrderExample.Criteria criteria = example.createCriteria();
+        // 使用 Repository 查詢所有訂單（避免 OrderExample 問題）
+        List<Order> orders = orderRepository.selectAll();
 
+        // Java 層過濾
         if (condition != null) {
-            if (isNotBlank(condition.getUserId())) {
-                criteria.andUserIdEqualTo(condition.getUserId());
-            }
-            if (isNotBlank(condition.getStoreId())) {
-                criteria.andStoreIdEqualTo(condition.getStoreId());
-            }
-            if (isNotBlank(condition.getShippingStatus())) {
-                criteria.andStatusEqualTo(condition.getShippingStatus());
-            }
-            if (isNotBlank(condition.getOrderNo())) {
-                criteria.andOrderNumberLike("%" + condition.getOrderNo() + "%");
-            }
-            // 日期範圍（LocalDate 轉 LocalDateTime）
-            if (condition.getCreatedAtStart() != null) {
-                criteria.andCreatedAtGreaterThanOrEqualTo(
-                    condition.getCreatedAtStart().atStartOfDay()
-                );
-            }
-            if (condition.getCreatedAtEnd() != null) {
-                criteria.andCreatedAtLessThanOrEqualTo(
-                    condition.getCreatedAtEnd().atTime(23, 59, 59)
-                );
-            }
+            orders = orders.stream()
+                    .filter(order -> {
+                        // 使用者 ID 過濾
+                        if (isNotBlank(condition.getUserId()) && 
+                            !condition.getUserId().equals(order.getUserId())) {
+                            return false;
+                        }
+                        // 店家 ID 過濾
+                        if (isNotBlank(condition.getStoreId()) && 
+                            !condition.getStoreId().equals(order.getStoreId())) {
+                            return false;
+                        }
+                        // 出貨狀態過濾
+                        if (isNotBlank(condition.getShippingStatus()) && 
+                            !condition.getShippingStatus().equals(order.getStatus())) {
+                            return false;
+                        }
+                        // 訂單編號模糊查詢
+                        if (isNotBlank(condition.getOrderNo()) && 
+                            !order.getOrderNumber().contains(condition.getOrderNo())) {
+                            return false;
+                        }
+                        // 建立日期範圍
+                        if (condition.getCreatedAtStart() != null && 
+                            order.getCreatedAt().isBefore(condition.getCreatedAtStart().atStartOfDay())) {
+                            return false;
+                        }
+                        if (condition.getCreatedAtEnd() != null && 
+                            order.getCreatedAt().isAfter(condition.getCreatedAtEnd().atTime(23, 59, 59))) {
+                            return false;
+                        }
+                        return true;
+                    })
+                    .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())) // DESC
+                    .collect(Collectors.toList());
         }
 
-        example.setOrderByClause("created_at DESC");
-
-        List<Order> orders = orderMapper.selectByExample(example);
         return orders.stream().map(this::convertToRes).collect(Collectors.toList());
     }
 

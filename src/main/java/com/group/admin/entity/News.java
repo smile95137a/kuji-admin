@@ -11,6 +11,10 @@ public class News {
 
     private String status;
 
+    private String category;
+
+    private Boolean important;
+
     private LocalDateTime scheduledAt;
 
     private LocalDateTime endTime;
@@ -53,6 +57,22 @@ public class News {
 
     public void setStatus(String status) {
         this.status = status == null ? null : status.trim();
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category == null ? null : category.trim();
+    }
+
+    public Boolean getImportant() {
+        return important;
+    }
+
+    public void setImportant(Boolean important) {
+        this.important = important;
     }
 
     public LocalDateTime getScheduledAt() {

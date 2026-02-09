@@ -78,7 +78,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from lottery_lock
+    from "lottery_lock"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -89,21 +89,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from lottery_lock
+    from "lottery_lock"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from lottery_lock
+    delete from "lottery_lock"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.LotteryLockExample">
-    delete from lottery_lock
+    delete from "lottery_lock"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.LotteryLock">
-    insert into lottery_lock (id, lottery_id, user_id, 
+    insert into "lottery_lock" (id, lottery_id, user_id, 
       lock_start_time, lock_end_time, is_active, 
       created_at)
     values (#{id,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, 
@@ -111,7 +111,7 @@
       #{createdAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryLock">
-    insert into lottery_lock
+    insert into "lottery_lock"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -160,13 +160,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.LotteryLockExample" resultType="java.lang.Long">
-    select count(*) from lottery_lock
+    select count(*) from "lottery_lock"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update lottery_lock
+    update "lottery_lock"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -195,7 +195,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update lottery_lock
+    update "lottery_lock"
     set id = #{row.id,jdbcType=VARCHAR},
       lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
       user_id = #{row.userId,jdbcType=VARCHAR},
@@ -208,7 +208,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryLock">
-    update lottery_lock
+    update "lottery_lock"
     <set>
       <if test="lotteryId != null">
         lottery_id = #{lotteryId,jdbcType=VARCHAR},
@@ -232,7 +232,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.LotteryLock">
-    update lottery_lock
+    update "lottery_lock"
     set lottery_id = #{lotteryId,jdbcType=VARCHAR},
       user_id = #{userId,jdbcType=VARCHAR},
       lock_start_time = #{lockStartTime,jdbcType=TIMESTAMP},

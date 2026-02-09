@@ -87,7 +87,7 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
-    from referral_code
+    from "referral_code"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
@@ -98,21 +98,21 @@
   <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
-    from referral_code
+    from "referral_code"
     where id = #{id,jdbcType=VARCHAR}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from referral_code
+    delete from "referral_code"
     where id = #{id,jdbcType=VARCHAR}
   </delete>
   <delete id="deleteByExample" parameterType="com.group.admin.example.ReferralCodeExample">
-    delete from referral_code
+    delete from "referral_code"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.ReferralCode">
-    insert into referral_code (id, code, store_id, 
+    insert into "referral_code" (id, code, store_id, 
       description, owner_id, owner_type, 
       reward_gold, reward_bonus, max_usage, 
       used_count, valid_from, valid_until, 
@@ -126,7 +126,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.ReferralCode">
-    insert into referral_code
+    insert into "referral_code"
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
         id,
@@ -223,13 +223,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.group.admin.example.ReferralCodeExample" resultType="java.lang.Long">
-    select count(*) from referral_code
+    select count(*) from "referral_code"
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map">
-    update referral_code
+    update "referral_code"
     <set>
       <if test="row.id != null">
         id = #{row.id,jdbcType=VARCHAR},
@@ -282,7 +282,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map">
-    update referral_code
+    update "referral_code"
     set id = #{row.id,jdbcType=VARCHAR},
       code = #{row.code,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
@@ -303,7 +303,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ReferralCode">
-    update referral_code
+    update "referral_code"
     <set>
       <if test="code != null">
         code = #{code,jdbcType=VARCHAR},
@@ -351,7 +351,7 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ReferralCode">
-    update referral_code
+    update "referral_code"
     set code = #{code,jdbcType=VARCHAR},
       store_id = #{storeId,jdbcType=VARCHAR},
       description = #{description,jdbcType=VARCHAR},
