@@ -93,6 +93,17 @@ public class LotteryDrawController {
                 lotteryId, userId, request.getCount(), 
                 request.getTickets() != null ? request.getTickets().size() : 0);
         
+        // 檢查是否需要玩家指定大獎（SCRATCH_MODE 且開套者未指定）
+        SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
+        if (session.isOpener()) {
+            // 只有開套者需要檢查
+            DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
+            if (designationCheck != null) {
+                log.info("⚠️ 需要先指定大獎位置");
+                return ResponseEntity.ok(designationCheck);
+            }
+        }
+        
         // 驗證 count
         Integer count = request.getCount();
         if (count == null || count < 1) {
@@ -252,5 +263,45 @@ public class LotteryDrawController {
                     info.status()
             );
         }
+    }
+
+    /**
+     * 指定大獎要求回應
+     */
+    public record DesignationRequiredResponse(
+        boolean designationRequired,
+        String message,
+        List<Integer> availableNumbers
+    ) {}
+
+    // ==================== 私有輔助方法 ====================
+
+    /**
+     * 檢查是否需要玩家指定大獎
+     */
+    private DesignationRequiredResponse checkDesignationRequired(String lotteryId, SessionInfo session) {
+        // 檢查 Session 是否已指定
+        if (session.playerDesignatedNumbers() != null && !session.playerDesignatedNumbers().trim().isEmpty()) {
+            return null; // 已指定，不需要
+        }
+        
+        // 檢查是否為 SCRATCH_MODE
+        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
+        if (lottery == null || lottery.getPlayMode() == null) {
+            return null;
+        }
+        
+        String playMode = lottery.getPlayMode();
+        if ("SCRATCH_MODE".equals(playMode) || "SCRATCH_CARD_MODE".equals(playMode)) {
+            // 需要指定，取得可用號碼
+            List<Integer> availableNumbers = ticketService.getAvailableTicketNumbers(lotteryId);
+            return new DesignationRequiredResponse(
+                    true,
+                    "請先指定大獎位置",
+                    availableNumbers
+            );
+        }
+        
+        return null; // 不是 SCRATCH_MODE，不需要
     }
 }

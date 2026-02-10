@@ -48,6 +48,8 @@ public class EnumController {
         result.put("storeUserRoleType", getStoreUserRoleTypeOptions());
         result.put("newsStatus", getNewsStatusOptions());
         result.put("bannerStatus", getBannerStatusOptions());
+        result.put("lotteryCategory", getLotteryCategoryOptions());
+        result.put("lotterySubCategory", getLotterySubCategoryOptions());
         
         log.info("✅ 返回 {} 種 Enum 類型", result.size());
         return ResponseEntity.ok(result);
@@ -123,6 +125,36 @@ public class EnumController {
     @Operation(summary = "Banner 狀態選項", description = "取得 Banner 狀態選項")
     public ResponseEntity<List<EnumOption>> getBannerStatus() {
         return ResponseEntity.ok(getBannerStatusOptions());
+    }
+
+    /**
+     * 商品類別選項（前台）
+     * 
+     * <p>返回商品主類別選項，最多 20 筆</p>
+     * <p>實際資料：官方一番賞、扭蛋、卡牌、自製賞</p>
+     */
+    @GetMapping("/lottery-category")
+    @Operation(summary = "商品類別選項", description = "取得商品類別選項（最多 20 筆）")
+    public ResponseEntity<List<EnumOption>> getLotteryCategory() {
+        List<EnumOption> options = getLotteryCategoryOptions();
+        int maxSize = Math.min(options.size(), 20);
+        log.info("📋 返回商品類別選項：{} 筆（最大 20）", maxSize);
+        return ResponseEntity.ok(options.subList(0, maxSize));
+    }
+
+    /**
+     * 商品子類型選項（前台）
+     * 
+     * <p>返回商品子類型選項（適用於自製賞），最多 20 筆</p>
+     * <p>實際資料：抽籤型、刮刮樂型、刮刮卡型</p>
+     */
+    @GetMapping("/lottery-sub-category")
+    @Operation(summary = "商品子類型選項", description = "取得商品子類型選項（最多 20 筆）")
+    public ResponseEntity<List<EnumOption>> getLotterySubCategory() {
+        List<EnumOption> options = getLotterySubCategoryOptions();
+        int maxSize = Math.min(options.size(), 20);
+        log.info("📋 返回商品子類型選項：{} 筆（最大 20）", maxSize);
+        return ResponseEntity.ok(options.subList(0, maxSize));
     }
 
     // ==================== Private Helper Methods ====================
@@ -229,6 +261,28 @@ public class EnumController {
                 .value("UNPUBLISHED")
                 .description("前台不顯示")
                 .build());
+        return options;
+    }
+
+    private List<EnumOption> getLotteryCategoryOptions() {
+        List<EnumOption> options = new ArrayList<>();
+        for (LotteryCategoryEnum category : LotteryCategoryEnum.values()) {
+            options.add(EnumOption.builder()
+                    .label(category.getName())
+                    .value(category.getCode())
+                    .build());
+        }
+        return options;
+    }
+
+    private List<EnumOption> getLotterySubCategoryOptions() {
+        List<EnumOption> options = new ArrayList<>();
+        for (LotterySubCategoryEnum subCategory : LotterySubCategoryEnum.values()) {
+            options.add(EnumOption.builder()
+                    .label(subCategory.getName())
+                    .value(subCategory.getCode())
+                    .build());
+        }
         return options;
     }
 }

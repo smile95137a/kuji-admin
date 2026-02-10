@@ -15,6 +15,7 @@ import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
 import com.group.admin.service.PrizeBoxService;
 import com.group.admin.service.WalletService;
+import com.group.admin.service.ConsumptionRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,7 @@ public class DrawServiceImpl implements DrawService {
     private final UserMapper userMapper;
     private final WalletService walletService;
     private final PrizeBoxService prizeBoxService;
+    private final ConsumptionRecordService consumptionRecordService;
     private final Random random = new Random();
     
     @Override
@@ -190,6 +192,35 @@ public class DrawServiceImpl implements DrawService {
         }
         
         log.info("✅ 抽獎完成：共 {} 次，消費 Gold={}, Bonus={}", count, goldUsed, bonusUsed);
+        
+        // ========== Step 7: 記錄消費記錄 ==========
+        if (goldUsed > 0) {
+            consumptionRecordService.recordConsumption(
+                userId, 
+                "DRAW_GOLD", 
+                lotteryId, 
+                lottery.getTitle(),
+                null,  // orderId
+                null,  // orderNumber
+                goldUsed, 
+                0L,
+                String.format("使用金幣抽獎：%s x%d", lottery.getTitle(), count)
+            );
+        }
+        
+        if (bonusUsed > 0) {
+            consumptionRecordService.recordConsumption(
+                userId, 
+                "DRAW_BONUS", 
+                lotteryId, 
+                lottery.getTitle(),
+                null,  // orderId
+                null,  // orderNumber
+                0L,
+                bonusUsed,
+                String.format("使用紅利抽獎：%s x%d", lottery.getTitle(), count)
+            );
+        }
         
         return results;
     }

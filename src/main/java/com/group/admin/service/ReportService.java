@@ -1,6 +1,8 @@
 package com.group.admin.service;
 
+import com.group.admin.condition.report.*;
 import com.group.admin.dto.res.report.*;
+import com.group.admin.req.common.QueryReq;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,45 +14,33 @@ public interface ReportService {
     
     /**
      * 營業額報表
-     * @param storeId 店家ID（可選，null 表示全部）
-     * @param startDate 開始日期
-     * @param endDate 結束日期
+     * @param req 查詢條件（包含店家ID、時間範圍等）
      */
-    RevenueReportRes getRevenueReport(String storeId, LocalDate startDate, LocalDate endDate);
+    RevenueReportRes getRevenueReport(QueryReq<RevenueReportCondition> req);
     
     /**
      * 推薦碼報表
-     * @param storeId 店家ID（可選）
-     * @param startDate 開始日期
-     * @param endDate 結束日期
+     * @param req 查詢條件
      */
-    ReferralReportRes getReferralReport(String storeId, LocalDate startDate, LocalDate endDate);
+    ReferralReportRes getReferralReport(QueryReq<ReferralReportCondition> req);
     
     /**
      * 開獎結果報表
-     * @param storeId 店家ID（可選）
-     * @param lotteryId 一番賞ID（可選）
-     * @param startDate 開始日期
-     * @param endDate 結束日期
+     * @param req 查詢條件（包含店家ID、一番賞ID、時間範圍等）
      */
-    LotteryResultReportRes getLotteryResultReport(String storeId, String lotteryId, 
-                                                   LocalDate startDate, LocalDate endDate);
+    LotteryResultReportRes getLotteryResultReport(QueryReq<LotteryResultReportCondition> req);
     
     /**
      * 儲值報表
-     * @param storeId 店家ID（可選）
-     * @param startDate 開始日期
-     * @param endDate 結束日期
+     * @param req 查詢條件
      */
-    RechargeReportRes getRechargeReport(String storeId, LocalDate startDate, LocalDate endDate);
+    RechargeReportRes getRechargeReport(QueryReq<RechargeReportCondition> req);
     
     /**
      * 贈送點數報表
-     * @param storeId 店家ID（可選）
-     * @param startDate 開始日期
-     * @param endDate 結束日期
+     * @param req 查詢條件
      */
-    BonusReportRes getBonusReport(String storeId, LocalDate startDate, LocalDate endDate);
+    BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req);
     
     /**
      * 儲存報表快照

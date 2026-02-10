@@ -1,11 +1,12 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.condition.report.*;
 import com.group.admin.dto.res.report.*;
+import com.group.admin.req.common.QueryReq;
 import com.group.admin.service.ReportService;
 import com.group.admin.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,92 +27,91 @@ public class AdminReportController {
     /**
      * 營業額報表
      */
-    @GetMapping("/revenue")
+    @PostMapping("/revenue")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<RevenueReportRes> getRevenueReport(
-            @RequestParam(required = false) String storeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestBody QueryReq<RevenueReportCondition> req) {
         
         // 非 Admin 只能查自己店家的報表
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null && storeId == null) {
-            storeId = currentStoreId;
+        if (currentStoreId != null) {
+           if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new RevenueReportCondition());
+            req.getCondition().setStoreId(currentStoreId);
         }
         
-        return ResponseEntity.ok(reportService.getRevenueReport(storeId, startDate, endDate));
+        return ResponseEntity.ok(reportService.getRevenueReport(req));
     }
     
     /**
      * 推薦碼報表
      */
-    @GetMapping("/referral")
+    @PostMapping("/referral")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<ReferralReportRes> getReferralReport(
-            @RequestParam(required = false) String storeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestBody QueryReq<ReferralReportCondition> req) {
         
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null && storeId == null) {
-            storeId = currentStoreId;
+        if (currentStoreId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new ReferralReportCondition());
+            req.getCondition().setStoreId(currentStoreId);
         }
         
-        return ResponseEntity.ok(reportService.getReferralReport(storeId, startDate, endDate));
+        return ResponseEntity.ok(reportService.getReferralReport(req));
     }
     
     /**
      * 開獎結果報表
      */
-    @GetMapping("/lottery-result")
+    @PostMapping("/lottery-result")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<LotteryResultReportRes> getLotteryResultReport(
-            @RequestParam(required = false) String storeId,
-            @RequestParam(required = false) String lotteryId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestBody QueryReq<LotteryResultReportCondition> req) {
         
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null && storeId == null) {
-            storeId = currentStoreId;
+        if (currentStoreId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new LotteryResultReportCondition());
+            req.getCondition().setStoreId(currentStoreId);
         }
         
-        return ResponseEntity.ok(reportService.getLotteryResultReport(storeId, lotteryId, startDate, endDate));
+        return ResponseEntity.ok(reportService.getLotteryResultReport(req));
     }
     
     /**
      * 儲值報表
      */
-    @GetMapping("/recharge")
+    @PostMapping("/recharge")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<RechargeReportRes> getRechargeReport(
-            @RequestParam(required = false) String storeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestBody QueryReq<RechargeReportCondition> req) {
         
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null && storeId == null) {
-            storeId = currentStoreId;
+        if (currentStoreId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new RechargeReportCondition());
+            req.getCondition().setStoreId(currentStoreId);
         }
         
-        return ResponseEntity.ok(reportService.getRechargeReport(storeId, startDate, endDate));
+        return ResponseEntity.ok(reportService.getRechargeReport(req));
     }
     
     /**
      * 贈送點數報表
      */
-    @GetMapping("/bonus")
+    @PostMapping("/bonus")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<BonusReportRes> getBonusReport(
-            @RequestParam(required = false) String storeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestBody QueryReq<BonusReportCondition> req) {
         
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null && storeId == null) {
-            storeId = currentStoreId;
+        if (currentStoreId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new BonusReportCondition());
+            req.getCondition().setStoreId(currentStoreId);
         }
         
-        return ResponseEntity.ok(reportService.getBonusReport(storeId, startDate, endDate));
+        return ResponseEntity.ok(reportService.getBonusReport(req));
     }
 }

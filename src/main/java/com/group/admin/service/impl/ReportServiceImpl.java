@@ -1,10 +1,12 @@
 package com.group.admin.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.group.admin.condition.report.*;
 import com.group.admin.dto.res.report.*;
 import com.group.admin.entity.ReportSnapshot;
 import com.group.admin.mapper.ReportSnapshotMapper;
 import com.group.admin.repository.ReportSnapshotRepository;
+import com.group.admin.req.common.QueryReq;
 import com.group.admin.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +33,14 @@ public class ReportServiceImpl implements ReportService {
     private final ObjectMapper objectMapper;
     
     @Override
-    public RevenueReportRes getRevenueReport(String storeId, LocalDate startDate, LocalDate endDate) {
+    public RevenueReportRes getRevenueReport(QueryReq<RevenueReportCondition> req) {
+        RevenueReportCondition condition = req != null && req.getCondition() != null ? 
+            req.getCondition() : new RevenueReportCondition();
+        
+        String storeId = condition.getStoreId();
+        LocalDate startDate = condition.getStartDate();
+        LocalDate endDate = condition.getEndDate();
+        
         log.info("📊 產生營業額報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
         
         // 基本統計
@@ -142,7 +151,14 @@ public class ReportServiceImpl implements ReportService {
     }
     
     @Override
-    public ReferralReportRes getReferralReport(String storeId, LocalDate startDate, LocalDate endDate) {
+    public ReferralReportRes getReferralReport(QueryReq<ReferralReportCondition> req) {
+        ReferralReportCondition condition = req != null && req.getCondition() != null ? 
+            req.getCondition():new ReferralReportCondition();
+        
+        String storeId = condition.getStoreId();
+        LocalDate startDate = condition.getStartDate();
+        LocalDate endDate = condition.getEndDate();
+        
         log.info("📊 產生推薦碼報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
         
         // 基本統計
@@ -219,10 +235,14 @@ public class ReportServiceImpl implements ReportService {
     }
     
     @Override
-    public LotteryResultReportRes getLotteryResultReport(String storeId, String lotteryId,
-                                                          LocalDate startDate, LocalDate endDate) {
-        log.info("📊 產生開獎結果報表: storeId={}, lotteryId={}, {} ~ {}", 
-                 storeId, lotteryId, startDate, endDate);
+    public LotteryResultReportRes getLotteryResultReport(QueryReq<LotteryResultReportCondition> req) {
+        LotteryResultReportCondition condition = req != null && req.getCondition() != null ? 
+            req.getCondition() : new LotteryResultReportCondition();
+        
+        String storeId = condition.getStoreId();
+        String lotteryId = condition.getLotteryId();
+        LocalDate startDate = condition.getStartDate();
+        LocalDate endDate = condition.getEndDate();
         
         // 基本統計
         String baseSql = """
@@ -354,7 +374,14 @@ public class ReportServiceImpl implements ReportService {
     }
     
     @Override
-    public RechargeReportRes getRechargeReport(String storeId, LocalDate startDate, LocalDate endDate) {
+    public RechargeReportRes getRechargeReport(QueryReq<RechargeReportCondition> req) {
+        RechargeReportCondition condition = req != null && req.getCondition() != null ? 
+            req.getCondition() : new RechargeReportCondition();
+        
+        String storeId = condition.getStoreId();
+        LocalDate startDate = condition.getStartDate();
+        LocalDate endDate = condition.getEndDate();
+        
         log.info("📊 產生儲值報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
         
         // 基本統計
@@ -454,7 +481,14 @@ public class ReportServiceImpl implements ReportService {
     }
     
     @Override
-    public BonusReportRes getBonusReport(String storeId, LocalDate startDate, LocalDate endDate) {
+    public BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req) {
+        BonusReportCondition condition = req != null && req.getCondition() != null ? 
+            req.getCondition() : new BonusReportCondition();
+        
+        String storeId = condition.getStoreId();
+        LocalDate startDate = condition.getStartDate();
+        LocalDate endDate = condition.getEndDate();
+        
         log.info("📊 產生贈送點數報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
         
         // 基本統計（贈送類型交易）

@@ -126,6 +126,31 @@ public class OrderDetailRes {
     private List<OrderItemRes> items;
     
     /**
+     * 商品小計（元）
+     */
+    private Long subtotal;
+    
+    /**
+     * 運費（元）
+     */
+    private Long shippingFee;
+    
+    /**
+     * 折扣（元）
+     */
+    private Long discount;
+    
+    /**
+     * 總金額（元）
+     */
+    private Long totalAmount;
+    
+    /**
+     * 付款方式（GOLD/BONUS）
+     */
+    private String paymentMethod;
+    
+    /**
      * 建立時間
      */
     private LocalDateTime createdAt;

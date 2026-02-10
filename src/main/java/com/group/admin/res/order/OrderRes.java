@@ -95,6 +95,16 @@ public class OrderRes {
     private String trackingNo;
     
     /**
+     * 總金額（元）
+     */
+    private Long totalAmount;
+    
+    /**
+     * 付款方式（GOLD/BONUS）
+     */
+    private String paymentMethod;
+    
+    /**
      * 建立時間
      */
     private LocalDateTime createdAt;

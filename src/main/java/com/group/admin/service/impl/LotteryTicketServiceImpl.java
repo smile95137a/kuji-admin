@@ -12,16 +12,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
+import com.group.admin.entity.LotterySession;
 import com.group.admin.entity.LotteryTicket;
 import com.group.admin.example.LotteryPrizeExample;
+import com.group.admin.example.LotterySessionExample;
 import com.group.admin.example.LotteryTicketExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
+import com.group.admin.mapper.LotterySessionMapper;
 import com.group.admin.mapper.LotteryTicketMapper;
 import com.group.admin.res.lottery.LotteryTicketRes;
+import com.group.admin.service.ConsumptionRecordService;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.PrizeBoxService;
+import com.group.admin.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +52,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
     private final LotteryTicketMapper lotteryTicketMapper;
+    private final LotterySessionMapper lotterySessionMapper;
     private final PrizeBoxService prizeBoxService;
+    private final WalletService walletService;
+    private final ConsumptionRecordService consumptionRecordService;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -467,10 +475,63 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             }
         }
         
-        // 8. TODO: 扣款、記錄抽獎紀錄、檢查免單
-        // 這些需要與錢包系統整合
+        // 8. 扣款、記錄抽獎紀錄、檢查免單
+        Long pricePerDraw = lottery.getPricePerDraw() != null ? lottery.getPricePerDraw() : 0L;
+        boolean triggeredFreeDraw = false;
+        Long refundAmount = 0L;
         
-        // 8. 返回結果
+        // 取得或建立 Session
+        SessionInfo sessionInfo = getOrCreateSession(lotteryId, userId);
+        
+        // 扣款（先扣金幣）
+        try {
+            walletService.deductGold(
+                    userId, 
+                    pricePerDraw, 
+                    "DRAW", 
+                    lotteryId, 
+                    "抽獎消費: " + lottery.getTitle()
+            );
+            
+            // 記錄消費
+            consumptionRecordService.recordConsumption(
+                    userId,
+                    "DRAW_GOLD",
+                    lotteryId,
+                    lottery.getTitle(),
+                    null,
+                    null,
+                    pricePerDraw,
+                    0L,
+                    "金幣抽獎"
+            );
+            
+            log.info("💰 扣款成功: userId={}, amount={}", userId, pricePerDraw);
+        } catch (BusinessException e) {
+            log.error("⚠️ 扣款失敗: {}", e.getMessage());
+            throw e;
+        }
+        
+        // 更新 Session 的開套者抽數和花費（只更新開套者）
+        if (sessionInfo.isOpener()) {
+            LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionInfo.sessionId());
+            if (session != null) {
+                session.setOpenerDrawCount((session.getOpenerDrawCount() != null ? session.getOpenerDrawCount() : 0) + 1);
+                session.setOpenerTotalCost((session.getOpenerTotalCost() != null ? session.getOpenerTotalCost() : 0L) + pricePerDraw);
+                session.setUpdatedAt(LocalDateTime.now());
+                lotterySessionMapper.updateByPrimaryKey(session);
+                
+                // 檢查免單
+                if (prizeId != null && isGrandPrize) {
+                    triggeredFreeDraw = checkAndTriggerFreeDraw(sessionInfo.sessionId(), prizeId);
+                    if (triggeredFreeDraw) {
+                        refundAmount = session.getOpenerTotalCost();
+                    }
+                }
+            }
+        }
+        
+        // 9. 返回結果
         return new DrawResult(
                 true, 
                 targetTicket.getId(), 
@@ -480,9 +541,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 prizeName, 
                 prizeImageUrl, 
                 isGrandPrize, 
-                false,  // triggeredFreeDraw - TODO: 實作免單檢查
-                0L,     // refundAmount
-                "抽獎成功！恭喜獲得 " + prizeName
+                triggeredFreeDraw,
+                refundAmount,
+                triggeredFreeDraw 
+                        ? "恭喜中獲 " + prizeName + "！開套免單，退還 " + refundAmount + " 元！"
+                        : "抽獎成功！恭喜獲得 " + prizeName
         );
     }
 
@@ -572,7 +635,61 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             }
         }
 
-        // TODO: 扣款、記錄抽獎紀錄、檢查免單
+        // 8. 扣款、記錄抽獎紀錄、檢查免單
+        Long pricePerDraw = lottery.getPricePerDraw() != null ? lottery.getPricePerDraw() : 0L;
+        boolean triggeredFreeDraw = false;
+        Long refundAmount = 0L;
+        
+        // 取得或建立 Session
+        SessionInfo sessionInfo = getOrCreateSession(lotteryId, userId);
+        
+        // 扣款（先扣金幣）
+        try {
+            walletService.deductGold(
+                    userId, 
+                    pricePerDraw, 
+                    "DRAW", 
+                    lotteryId, 
+                    "抽獎消費: " + lottery.getTitle()
+            );
+            
+            // 記錄消費
+            consumptionRecordService.recordConsumption(
+                    userId,
+                    "DRAW_GOLD",
+                    lotteryId,
+                    lottery.getTitle(),
+                    null,
+                    null,
+                    pricePerDraw,
+                    0L,
+                    "金幣抽獎"
+            );
+            
+            log.info("💰 扣款成功: userId={}, amount={}", userId, pricePerDraw);
+        } catch (BusinessException e) {
+            log.error("⚠️ 扣款失敗: {}", e.getMessage());
+            throw e;
+        }
+        
+        // 更新 Session 的開套者抽數和花費（只更新開套者）
+        if (sessionInfo.isOpener()) {
+            LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionInfo.sessionId());
+            if (session != null) {
+                session.setOpenerDrawCount((session.getOpenerDrawCount() != null ? session.getOpenerDrawCount() : 0) + 1);
+                session.setOpenerTotalCost((session.getOpenerTotalCost() != null ? session.getOpenerTotalCost() : 0L) + pricePerDraw);
+                session.setUpdatedAt(LocalDateTime.now());
+                lotterySessionMapper.updateByPrimaryKey(session);
+                
+                // 檢查免單
+                if (prizeId != null && isGrandPrize) {
+                    triggeredFreeDraw = checkAndTriggerFreeDraw(sessionInfo.sessionId(), prizeId);
+                    if (triggeredFreeDraw) {
+                        refundAmount = session.getOpenerTotalCost();
+                    }
+                }
+            }
+        }
 
         return new DrawResult(
                 true,
@@ -583,9 +700,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 prizeName,
                 prizeImageUrl,
                 isGrandPrize,
-                false,
-                0L,
-                "抽獎成功！恭喜獲得 " + prizeName
+                triggeredFreeDraw,
+                refundAmount,
+                triggeredFreeDraw 
+                        ? "恭喜中獲 " + prizeName + "！開套免單，退還 " + refundAmount + " 元！"
+                        : "抽獎成功！恭喜獲得 " + prizeName
         );
     }
 
@@ -610,57 +729,126 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     // ==================== 開套場次管理 ====================
 
     @Override
+    @Transactional
     public SessionInfo getOrCreateSession(String lotteryId, String userId) {
-        // TODO: 查詢是否有進行中的場次
-        // LotterySession activeSession = sessionMapper.findActiveSession(lotteryId);
-        // 
-        // if (activeSession != null) {
-        //     // 有進行中的場次
-        //     boolean isOpener = activeSession.getOpenerUserId().equals(userId);
-        //     return new SessionInfo(...);
-        // }
-        //
-        // // 建立新場次（當前使用者成為開套者）
-        // Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
-        // LotterySession newSession = new LotterySession();
-        // newSession.setId(UUID.randomUUID().toString());
-        // newSession.setLotteryId(lotteryId);
-        // newSession.setOpenerUserId(userId);
-        // newSession.setProtectionDraws(lottery.getProtectionDraws());
-        // newSession.setProtectionStartTime(LocalDateTime.now());
-        // newSession.setProtectionEndTime(LocalDateTime.now().plusMinutes(lottery.getProtectionMinutes()));
-        // newSession.setFreeDrawEnabled(lottery.getFreeDrawEnabled());
-        // newSession.setStatus("ACTIVE");
-        // sessionMapper.insert(newSession);
+        log.info("🎭 查詢或建立場次: lotteryId={}, userId={}", lotteryId, userId);
+        
+        // 查詢是否有進行中的場次
+        LotterySessionExample example = new LotterySessionExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andStatusEqualTo("ACTIVE");
+        List<LotterySession> activeSessions = lotterySessionMapper.selectByExample(example);
+        
+        if (!activeSessions.isEmpty()) {
+            // 有進行中的場次
+            LotterySession activeSession = activeSessions.get(0);
+            boolean isOpener = activeSession.getOpenerUserId().equals(userId);
+            
+            log.info("✅ 找到進行中場次: sessionId={}, isOpener={}", activeSession.getId(), isOpener);
+            
+            return new SessionInfo(
+                    activeSession.getId(),
+                    activeSession.getLotteryId(),
+                    activeSession.getOpenerUserId(),
+                    isOpener,
+                    activeSession.getProtectionDraws() != null ? activeSession.getProtectionDraws() : 0,
+                    activeSession.getProtectionEndTime(),
+                    activeSession.getOpenerDrawCount() != null ? activeSession.getOpenerDrawCount() : 0,
+                    activeSession.getFreeDrawEnabled() != null && activeSession.getFreeDrawEnabled() == 1,
+                    activeSession.getStatus(),
+                    activeSession.getPlayerDesignatedNumbers()  // 新增欄位
+            );
+        }
+        
+        // 建立新場次（當前使用者成為開套者）
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            throw new BusinessException("抽獎活動不存在");
+        }
+        
+        LotterySession newSession = new LotterySession();
+        newSession.setId(UUID.randomUUID().toString());
+        newSession.setLotteryId(lotteryId);
+        newSession.setOpenerUserId(userId);
+        newSession.setProtectionDraws(lottery.getProtectionDraws() != null ? lottery.getProtectionDraws() : 0);
+        newSession.setProtectionStartTime(LocalDateTime.now());
+        
+        // 計算保護結束時間
+        Integer protectionMinutes = lottery.getProtectionMinutes() != null ? lottery.getProtectionMinutes() : 5;
+        newSession.setProtectionEndTime(LocalDateTime.now().plusMinutes(protectionMinutes));
+        
+        newSession.setOpenerDrawCount(0);
+        newSession.setOpenerTotalCost(0L);
+        newSession.setFreeDrawEnabled(lottery.getFreeDrawEnabled() != null ? lottery.getFreeDrawEnabled() : (byte) 0);
+        newSession.setFreeDrawTriggered((byte) 0);
+        newSession.setFreeDrawRefundAmount(0L);
+        newSession.setStatus("ACTIVE");
+        newSession.setCreatedAt(LocalDateTime.now());
+        newSession.setUpdatedAt(LocalDateTime.now());
+        
+        lotterySessionMapper.insert(newSession);
+        
+        log.info("🆕 建立新場次: sessionId={}, opener={}, protectionEnd={}", 
+                newSession.getId(), userId, newSession.getProtectionEndTime());
         
         return new SessionInfo(
-                UUID.randomUUID().toString(),
+                newSession.getId(),
                 lotteryId,
                 userId,
                 true,
-                5,
-                LocalDateTime.now().plusMinutes(5),
+                newSession.getProtectionDraws(),
+                newSession.getProtectionEndTime(),
                 0,
-                true,
-                "ACTIVE"
+                newSession.getFreeDrawEnabled() == 1,
+                "ACTIVE",
+                null  // 新建場次還未指定
         );
     }
 
     @Override
+    @Transactional
     public boolean canDrawNow(String lotteryId, String userId) {
-        // TODO: 檢查是否有其他玩家的進行中場次
-        // LotterySession activeSession = sessionMapper.findActiveSession(lotteryId);
-        // if (activeSession == null) return true;
-        // if (activeSession.getOpenerUserId().equals(userId)) return true;
-        // if (activeSession.getProtectionEndTime().isBefore(LocalDateTime.now())) {
-        //     // 保護時間已過，設為過期
-        //     activeSession.setStatus("EXPIRED");
-        //     sessionMapper.updateByPrimaryKey(activeSession);
-        //     return true;
-        // }
-        // return false;
+        log.info("🔍 檢查是否可抽獎: lotteryId={}, userId={}", lotteryId, userId);
         
-        return true; // TODO: 實作
+        // 查詢是否有進行中的場次
+        LotterySessionExample example = new LotterySessionExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andStatusEqualTo("ACTIVE");
+        List<LotterySession> activeSessions = lotterySessionMapper.selectByExample(example);
+        
+        if (activeSessions.isEmpty()) {
+            log.info("✅ 無進行中場次，可以抽獎");
+            return true;
+        }
+        
+        LotterySession activeSession = activeSessions.get(0);
+        
+        // 如果是開套者，永遠可以抽
+        if (activeSession.getOpenerUserId().equals(userId)) {
+            log.info("✅ 是開套者，可以抽獎");
+            return true;
+        }
+        
+        // 檢查保護時間是否已過
+        LocalDateTime now = LocalDateTime.now();
+        if (activeSession.getProtectionEndTime() != null && 
+                activeSession.getProtectionEndTime().isBefore(now)) {
+            // 保護時間已過，設為過期
+            activeSession.setStatus("EXPIRED");
+            activeSession.setCompletedAt(now);
+            activeSession.setUpdatedAt(now);
+            lotterySessionMapper.updateByPrimaryKey(activeSession);
+            
+            log.info("⏰ 保護時間已過，場次過期: sessionId={}", activeSession.getId());
+            return true;
+        }
+        
+        // 其他玩家且保護時間未過，不能抽
+        log.warn("❌ 保護時間未過，其他玩家不能抽: opener={}, protectionEnd={}", 
+                activeSession.getOpenerUserId(), activeSession.getProtectionEndTime());
+        return false;
     }
 
     @Override
@@ -673,30 +861,134 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     // ==================== 免單機制 ====================
 
     @Override
+    @Transactional
     public boolean checkAndTriggerFreeDraw(String sessionId, String prizeId) {
-        // TODO: 實作免單檢查
-        // LotterySession session = sessionMapper.selectByPrimaryKey(sessionId);
-        // if (session == null) return false;
-        // if (session.getFreeDrawEnabled() != 1) return false;
-        // if (session.getOpenerDrawCount() > session.getProtectionDraws()) return false;
-        //
-        // // 檢查是否中大獎
-        // LotteryPrize prize = prizeMapper.selectByPrimaryKey(prizeId);
-        // if (prize == null || prize.getIsGrandPrize() != 1) return false;
-        //
-        // // 觸發免單：退款
-        // Long refundAmount = session.getOpenerTotalCost();
-        // session.setFreeDrawTriggered((byte) 1);
-        // session.setFreeDrawRefundAmount(refundAmount);
-        // session.setFreeDrawTriggeredAt(LocalDateTime.now());
-        // session.setFreeDrawPrizeId(prizeId);
-        // sessionMapper.updateByPrimaryKey(session);
-        //
-        // // 退款給使用者
-        // userService.addGoldCoins(session.getOpenerUserId(), refundAmount, "開套免單退款");
-        // return true;
+        log.info("🎁 檢查免單機制: sessionId={}, prizeId={}", sessionId, prizeId);
         
-        return false; // TODO: 實作
+        // 查詢 Session
+        LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionId);
+        if (session == null) {
+            log.warn("⚠️ Session 不存在: {}", sessionId);
+            return false;
+        }
+        
+        // 檢查是否啟用免單
+        if (session.getFreeDrawEnabled() == null || session.getFreeDrawEnabled() != 1) {
+            log.info("❌ 未啟用免單機制");
+            return false;
+        }
+        
+        // 檢查是否已觸發過免單
+        if (session.getFreeDrawTriggered() != null && session.getFreeDrawTriggered() == 1) {
+            log.info("❌ 已觸發過免單");
+            return false;
+        }
+        
+        // 檢查是否在保護抽數內
+        Integer openerDrawCount = session.getOpenerDrawCount() != null ? session.getOpenerDrawCount() : 0;
+        Integer protectionDraws = session.getProtectionDraws() != null ? session.getProtectionDraws() : 0;
+        
+        if (openerDrawCount > protectionDraws) {
+            log.info("❌ 超過保護抽數: {} > {}", openerDrawCount, protectionDraws);
+            return false;
+        }
+        
+        // 檢查是否中大獎
+        if (prizeId == null) {
+            log.info("❌ 未中獎（謝謝惠顧）");
+            return false;
+        }
+        
+        LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeId);
+        if (prize == null || prize.getIsGrandPrize() == null || prize.getIsGrandPrize() != 1) {
+            log.info("❌ 不是大獎: prizeId={}", prizeId);
+            return false;
+        }
+        
+        // 觸發免單！
+        Long refundAmount = session.getOpenerTotalCost() != null ? session.getOpenerTotalCost() : 0L;
+        
+        if (refundAmount > 0) {
+            // 退款給使用者
+            try {
+                walletService.addGold(
+                        session.getOpenerUserId(), 
+                        refundAmount, 
+                        "FREE_DRAW_REFUND", 
+                        sessionId, 
+                        "開套免單退款"
+                );
+                
+                // 記錄退款消費
+                Lottery lottery = lotteryMapper.selectByPrimaryKey(session.getLotteryId());
+                consumptionRecordService.recordConsumption(
+                        session.getOpenerUserId(),
+                        "FREE_DRAW_REFUND",
+                        session.getLotteryId(),
+                        lottery != null ? lottery.getTitle() : null,
+                        null,
+                        null,
+                        -refundAmount,  // 負數表示退款
+                        0L,
+                        "開套免單退款"
+                );
+                
+                log.info("💰 退款成功: userId={}, amount={}", session.getOpenerUserId(), refundAmount);
+            } catch (Exception e) {
+                log.error("⚠️ 退款失敗: {}", e.getMessage(), e);
+                return false;
+            }
+        }
+        
+        // 更新 Session 狀態
+        session.setFreeDrawTriggered((byte) 1);
+        session.setFreeDrawRefundAmount(refundAmount);
+        session.setFreeDrawTriggeredAt(LocalDateTime.now());
+        session.setFreeDrawPrizeId(prizeId);
+        session.setUpdatedAt(LocalDateTime.now());
+        lotterySessionMapper.updateByPrimaryKey(session);
+        
+        log.info("✅ 免單觸發成功: sessionId={}, refundAmount={}", sessionId, refundAmount);
+        return true;
+    }
+
+    // ==================== 公共輔助方法 ====================
+
+    @Override
+    public List<Integer> getAvailableTicketNumbers(String lotteryId) {
+        log.info("🔍 查詢可用籤位編號: lotteryId={}", lotteryId);
+        
+        LotteryTicketExample example = new LotteryTicketExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andStatusEqualTo("AVAILABLE");
+        example.setOrderByClause("ticket_number ASC");
+        
+        List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
+        return tickets.stream()
+                .map(LotteryTicket::getTicketNumber)
+                .toList();
+    }
+
+    @Override
+    public void markPlayerDesignated(String sessionId, List<Integer> prizeNumbers) {
+        log.info("✏️ 標記玩家已指定大獎: sessionId={}, numbers={}", sessionId, prizeNumbers);
+        
+        LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionId);
+        if (session != null) {
+            // 將 List<Integer> 轉為 JSON 字串
+            String numbersJson = prizeNumbers.toString();  // 簡單格式：[1,2,3]
+            session.setPlayerDesignatedNumbers(numbersJson);
+            session.setUpdatedAt(LocalDateTime.now());
+            lotterySessionMapper.updateByPrimaryKey(session);
+            
+            log.info("✅ 標記完成");
+        }
+    }
+
+    @Override
+    public com.group.admin.entity.Lottery getLottery(String lotteryId) {
+        return lotteryMapper.selectByPrimaryKey(lotteryId);
     }
 
     // ==================== 內部輔助 ====================

@@ -27,6 +27,13 @@ public class ApiResponse<T> {
     private Boolean success;
     
     /**
+     * 簡短訊息（成功或錯誤的摘要）
+     * <p>錯誤時：此欄位為必填，包含錯誤摘要</p>
+     * <p>成功時：可選，包含操作結果說明</p>
+     */
+    private String message;
+    
+    /**
      * 回應資料（成功時才有）
      */
     private T data;
@@ -92,6 +99,7 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> error(String code, String message) {
         return ApiResponse.<T>builder()
                 .success(false)
+                .message(message)  // ← Root-level message
                 .error(ErrorInfo.of(code, message))
                 .meta(MetaInfo.now())
                 .build();
@@ -103,6 +111,7 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> error(String code, String message, Object details) {
         return ApiResponse.<T>builder()
                 .success(false)
+                .message(message)  // ← Root-level message
                 .error(ErrorInfo.builder()
                         .code(code)
                         .message(message)

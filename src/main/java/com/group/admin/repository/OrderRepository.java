@@ -16,9 +16,9 @@ public interface OrderRepository {
     /**
      * 根據使用者 ID 查詢所有訂單
      */
-    @Select("SELECT id, order_no AS orderNo, user_id AS userId, store_id AS storeId, " +
+    @Select("SELECT id, order_number AS orderNumber, user_id AS userId, store_id AS storeId, " +
             "total_items AS totalItems, shipping_method AS shippingMethod, " +
-            "shipping_status AS shippingStatus, recipient_name AS recipientName, " +
+            "status, payment_status AS paymentStatus, recipient_name AS recipientName, " +
             "recipient_phone AS recipientPhone, recipient_address AS recipientAddress, " +
             "store_code AS storeCode, store_name AS storeName, store_address AS storeAddress, " +
             "tracking_no AS trackingNo, remark, created_at AS createdAt, updated_at AS updatedAt, " +
@@ -30,9 +30,9 @@ public interface OrderRepository {
     /**
      * 查詢所有訂單
      */
-    @Select("SELECT id, order_no AS orderNo, user_id AS userId, store_id AS storeId, " +
+    @Select("SELECT id, order_number AS orderNumber, user_id AS userId, store_id AS storeId, " +
             "total_items AS totalItems, shipping_method AS shippingMethod, " +
-            "shipping_status AS shippingStatus, recipient_name AS recipientName, " +
+            "status, payment_status AS paymentStatus, recipient_name AS recipientName, " +
             "recipient_phone AS recipientPhone, recipient_address AS recipientAddress, " +
             "store_code AS storeCode, store_name AS storeName, store_address AS storeAddress, " +
             "tracking_no AS trackingNo, remark, created_at AS createdAt, updated_at AS updatedAt, " +

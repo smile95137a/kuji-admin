@@ -15,6 +15,7 @@ import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderItemRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.service.OrderService;
+import com.group.admin.service.ConsumptionRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,10 @@ public class OrderServiceImpl implements OrderService {
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
     private final OrderRepository orderRepository;
+    private final ConsumptionRecordService consumptionRecordService;
+
+    // 運費常數（統一運費 60 元）
+    private static final Long SHIPPING_FEE = 60L;
 
     @Override
     @Transactional
@@ -124,10 +129,23 @@ public class OrderServiceImpl implements OrderService {
             recordStatusLog(order.getId(), OrderStatusEnum.PENDING.getCode(),
                     OrderStatusEnum.PENDING.getName(), null, null);
 
+            // 記錄運費消費（每個訂單都需要支付運費）
+            consumptionRecordService.recordConsumption(
+                userId,
+                "SHIPPING_FEE",
+                null,  // lotteryId
+                null,  // lotteryTitle
+                order.getId(),
+                order.getOrderNumber(),
+                SHIPPING_FEE,  // 假設用金幣支付運費
+                0L,
+                String.format("訂單運費：%s（配送方式：%s）", order.getOrderNumber(), order.getShippingMethod())
+            );
+
             orderIds.add(order.getId());
         }
 
-        log.info("✅ 訂單建立完成：orderCount={}", orderIds.size());
+        log.info("✅ 訂單建立完成：orderCount={}，總運費={}元", orderIds.size(), orderIds.size() * SHIPPING_FEE);
         return orderIds;
     }
 
@@ -218,8 +236,18 @@ public class OrderServiceImpl implements OrderService {
                 .trackingNo(order.getTrackingNo())
                 .remark(order.getRemark())
                 .items(items.stream().map(this::convertItemToRes).collect(Collectors.toList()))
+                .subtotal(0L)  // 商品小計（獎品不計價）
+                .shippingFee(SHIPPING_FEE)  // 運費
+                .discount(0L)  // 折扣
+                .totalAmount(SHIPPING_FEE)  // 總金額 = 運費
+                .paymentMethod("GOLD")  // 付款方式
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .shippedAt(order.getShippedAt())
+                .completedAt(order.getCompletedAt())
+                .cancelledAt(order.getCancelledAt())
+                .cancelledBy(order.getCancelledBy())
+                .cancelReason(order.getCancelReason())
                 .build();
     }
 
@@ -390,7 +418,11 @@ public class OrderServiceImpl implements OrderService {
                 .recipientName(order.getRecipientName())
                 .recipientPhone(order.getRecipientPhone())
                 .trackingNo(order.getTrackingNo())
+                .totalAmount(SHIPPING_FEE)  // 總金額 = 運費
+                .paymentMethod("GOLD")  // 付款方式（金幣）
                 .createdAt(order.getCreatedAt())
+                .shippedAt(order.getShippedAt())
+                .completedAt(order.getCompletedAt())
                 .build();
     }
 

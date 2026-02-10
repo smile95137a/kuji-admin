@@ -115,6 +115,30 @@ public interface LotteryTicketService {
      * @return 抽中的籤位編號
      */
     Integer getRandomAvailableTicket(String lotteryId);
+    
+    /**
+     * 取得可用籤位編號列表（劃劃樂指定用）
+     * 
+     * @param lotteryId 抽獎活動 ID
+     * @return 可用籤位編號列表
+     */
+    List<Integer> getAvailableTicketNumbers(String lotteryId);
+    
+    /**
+     * 標記玩家已指定大獎位置
+     * 
+     * @param sessionId 場次 ID
+     * @param prizeNumbers 指定的大獎編號列表
+     */
+    void markPlayerDesignated(String sessionId, List<Integer> prizeNumbers);
+    
+    /**
+     * 取得抽獎活動資訊
+     * 
+     * @param lotteryId 抽獎活動 ID
+     * @return 抽獎活動實體
+     */
+    com.group.admin.entity.Lottery getLottery(String lotteryId);
 
     // ==================== 開套場次管理 ====================
 
@@ -187,6 +211,7 @@ public interface LotteryTicketService {
         java.time.LocalDateTime protectionEndTime,
         int openerDrawCount,
         boolean freeDrawEnabled,
-        String status
+        String status,
+        String playerDesignatedNumbers  // 玩家指定的大獎位置（JSON 格式）
     ) {}
 }
