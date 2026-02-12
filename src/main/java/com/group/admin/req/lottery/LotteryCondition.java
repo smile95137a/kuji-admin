@@ -46,6 +46,12 @@ public class LotteryCondition extends BaseCondition {
     private String category;
     
     /**
+     * 主題（模糊查詢）
+     * 例如：火影忍者、進擊的巨人、排球少年等
+     */
+    private String theme;
+    
+    /**
      * 每抽價格（最小值）
      */
     private Long priceMin;

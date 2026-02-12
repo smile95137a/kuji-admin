@@ -173,6 +173,12 @@ public class LotteryDrawController {
 
     /**
      * 刮刮樂(玩家指定)：開套玩家指定大獎位置
+     * 
+     * <p>支援兩種模式：</p>
+     * <ul>
+     *   <li>簡易模式：只傳號碼列表，系統自動依序分配大獎</li>
+     *   <li>精確模式：明確指定每個號碼對應的獎品 ID</li>
+     * </ul>
      */
     @PostMapping("/{lotteryId}/designate")
     @Operation(summary = "指定大獎位置", description = "刮刮樂模式：開套玩家指定大獎位置")
@@ -185,10 +191,10 @@ public class LotteryDrawController {
             return ResponseEntity.status(401).build();
         }
         
-        log.info("🎯 指定大獎位置: lotteryId={}, userId={}, numbers={}", 
-                lotteryId, userId, request.prizeNumbers());
+        log.info("🎯 指定大獎位置: lotteryId={}, userId={}, designations={}", 
+                lotteryId, userId, request.designations());
         
-        ticketService.designatePrizePositions(lotteryId, userId, request.prizeNumbers());
+        ticketService.designatePrizePositions(lotteryId, userId, request.designations());
         
         return ResponseEntity.ok().build();
     }
@@ -232,8 +238,14 @@ public class LotteryDrawController {
         public void setTickets(List<String> tickets) { this.tickets = tickets; }
     }
 
+    /**
+     * 大獎指定請求
+     * 
+     * <p>包含籤位號碼與對應的獎品 ID 映射</p>
+     */
     public record DesignateRequest(
-        List<Integer> prizeNumbers
+        @Parameter(description = "大獎指定列表")
+        List<LotteryTicketService.PrizeDesignation> designations
     ) {}
 
     public record TicketListResponse(

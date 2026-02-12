@@ -227,29 +227,36 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
 
     @Override
     @Transactional
-    public void designatePrizePositions(String lotteryId, String userId, List<Integer> prizeNumbers) {
-        log.info("🎯 開套玩家指定大獎位置: lotteryId={}, userId={}, numbers={}", 
-                lotteryId, userId, prizeNumbers);
+    public void designatePrizePositions(String lotteryId, String userId, List<LotteryTicketService.PrizeDesignation> designations) {
+        log.info("🎯 開套玩家指定大獎位置: lotteryId={}, userId={}, designations={}", 
+                lotteryId, userId, designations);
         
-        if (prizeNumbers == null || prizeNumbers.isEmpty()) {
+        if (designations == null || designations.isEmpty()) {
             throw new BusinessException("請指定大獎位置");
         }
         
-        // 取得大獎獎品
-        LotteryPrizeExample prizeExample = new LotteryPrizeExample();
-        prizeExample.createCriteria()
-                .andLotteryIdEqualTo(lotteryId)
-                .andIsGrandPrizeEqualTo((byte) 1);
-        List<LotteryPrize> grandPrizes = lotteryPrizeMapper.selectByExample(prizeExample);
-        
-        if (grandPrizes.isEmpty()) {
-            throw new BusinessException("商品未設定大獎獎品");
-        }
-        
-        LotteryPrize grandPrize = grandPrizes.get(0);
-        
-        // 更新指定籤位為大獎
-        for (Integer ticketNumber : prizeNumbers) {
+        // 驗證每個指定是否有效
+        for (LotteryTicketService.PrizeDesignation designation : designations) {
+            Integer ticketNumber = designation.ticketNumber();
+            String prizeId = designation.prizeId();
+            
+            if (ticketNumber == null || prizeId == null) {
+                throw new BusinessException("籤位號碼和獎品 ID 不可為空");
+            }
+            
+            // 驗證獎品是否存在且為大獎
+            LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeId);
+            if (prize == null) {
+                throw new BusinessException("獎品不存在: " + prizeId);
+            }
+            if (!lotteryId.equals(prize.getLotteryId())) {
+                throw new BusinessException("獎品不屬於此商品");
+            }
+            if (prize.getIsGrandPrize() == null || prize.getIsGrandPrize() != 1) {
+                throw new BusinessException("獎品 " + prize.getName() + " 不是大獎");
+            }
+            
+            // 查詢籤位
             LotteryTicketExample ticketExample = new LotteryTicketExample();
             ticketExample.createCriteria()
                     .andLotteryIdEqualTo(lotteryId)
@@ -257,18 +264,30 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                     .andStatusEqualTo("AVAILABLE");
             
             List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(ticketExample);
-            if (!tickets.isEmpty()) {
-                LotteryTicket ticket = tickets.get(0);
-                ticket.setPrizeId(grandPrize.getId());
-                ticket.setPrizeLevel(grandPrize.getLevel());
-                ticket.setIsDesignatedPrize((byte) 1);
-                ticket.setDesignatedBy(userId);
-                ticket.setUpdatedAt(LocalDateTime.now());
-                lotteryTicketMapper.updateByPrimaryKey(ticket);
+            if (tickets.isEmpty()) {
+                throw new BusinessException("籤位 #" + ticketNumber + " 不存在或已被抽走");
             }
+            
+            // 更新籤位為指定的大獎
+            LotteryTicket ticket = tickets.get(0);
+            ticket.setPrizeId(prizeId);
+            ticket.setPrizeLevel(prize.getLevel());
+            ticket.setIsDesignatedPrize((byte) 1);
+            ticket.setDesignatedBy("PLAYER");  // ✅ 存儲類型而非 userId
+            ticket.setUpdatedAt(LocalDateTime.now());
+            lotteryTicketMapper.updateByPrimaryKey(ticket);
+            
+            log.info("✅ 籤位 #{} 指定為 {} ({})", ticketNumber, prize.getName(), prize.getLevel());
         }
         
-        log.info("✅ 大獎位置指定完成: {}", prizeNumbers);
+        // 標記 Session 已指定
+        SessionInfo session = getOrCreateSession(lotteryId, userId);
+        List<Integer> numbers = designations.stream()
+                .map(LotteryTicketService.PrizeDesignation::ticketNumber)
+                .toList();
+        markPlayerDesignated(session.sessionId(), numbers);
+        
+        log.info("✅ 大獎位置指定完成，共 {} 個", designations.size());
     }
 
     // ==================== 前台籤位查詢 ====================

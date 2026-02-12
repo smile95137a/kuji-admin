@@ -32,6 +32,12 @@ public class LotteryQueryReq {
     private String category;
 
     /**
+     * 商品主題
+     */
+    @Schema(description = "商品主題（火影忍者、進擊的巨人等）", example = "火影忍者")
+    private String theme;
+
+    /**
      * 商品狀態
      */
     @Schema(description = "商品狀態：ON_SHELF/OFF_SHELF", example = "ON_SHELF")

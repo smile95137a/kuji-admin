@@ -43,9 +43,14 @@ public interface LotteryTicketService {
      * 
      * @param lotteryId 抽獎活動 ID
      * @param userId 開套玩家 ID
-     * @param prizeNumbers 指定的大獎編號列表
+     * @param designations 大獎指定列表（籤位號碼 → 獎品 ID）
      */
-    void designatePrizePositions(String lotteryId, String userId, List<Integer> prizeNumbers);
+    void designatePrizePositions(String lotteryId, String userId, List<PrizeDesignation> designations);
+    
+    /**
+     * 大獎指定 DTO
+     */
+    record PrizeDesignation(Integer ticketNumber, String prizeId) {}
 
     // ==================== 前台籤位查詢（安全版本）====================
 

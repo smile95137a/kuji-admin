@@ -261,6 +261,9 @@ public class LotteryServiceImpl implements LotteryService {
         if (isNotBlank(req.getCategory())) {
             criteria.andCategoryEqualTo(req.getCategory());
         }
+        if (isNotBlank(req.getTheme())) {
+            criteria.andThemeEqualTo(req.getTheme());
+        }
         if (isNotBlank(req.getStatus())) {
             criteria.andStatusEqualTo(req.getStatus());
         }
@@ -802,6 +805,11 @@ public class LotteryServiceImpl implements LotteryService {
             // category：精確匹配
             if (isNotBlank(condition.getCategory())) {
                 criteria.andCategoryEqualTo(condition.getCategory());
+            }
+            
+            // theme：精確匹配
+            if (isNotBlank(condition.getTheme())) {
+                criteria.andThemeEqualTo(condition.getTheme());
             }
             
             // 價格範圍
