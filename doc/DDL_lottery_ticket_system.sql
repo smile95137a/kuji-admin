@@ -29,7 +29,7 @@ ALTER TABLE lottery ADD COLUMN free_draw_enabled TINYINT DEFAULT 0
 
 -- 刮刮樂店家指定大獎欄位
 ALTER TABLE lottery ADD COLUMN designated_prize_numbers VARCHAR(500) 
-    COMMENT '店家指定大獎籤位編號 (JSON Array，例如 [15,45,78]，刮刮樂-店家指定模式用)' 
+    COMMENT '店家指定大獎的 revealed_number 列表 (JSON Array，例如 [15,45,78]，刮刮樂-店家指定模式用)' 
     AFTER free_draw_enabled;
 
 -- 是否已生成籤位（用於判斷商品是否可以開始抽獎）
@@ -47,12 +47,17 @@ ALTER TABLE lottery ADD COLUMN tickets_generated TINYINT DEFAULT 0
 CREATE TABLE lottery_ticket (
     id VARCHAR(36) PRIMARY KEY COMMENT '籤位 ID (UUID)',
     lottery_id VARCHAR(36) NOT NULL COMMENT '所屬抽獎活動 ID',
-    ticket_number INT NOT NULL COMMENT '籤位編號 (從 1 開始)',
-    
+    ticket_number INT NOT NULL COMMENT '籤位編號 (從 1 開始)；刮刮樂=實體卡物理序號',
+
+    -- ========== 刮刮樂專用：刮開後顯示的亂數號碼 ==========
+    -- 一番賞/扭蛋/卡牌：NULL（不適用）
+    -- 刮刮樂：1-N 亂數，與 ticket_number 無關，建立時 shuffle 分配
+    revealed_number INT NULL COMMENT '刮刮樂：刮開後揭露的號碼；一番賞/扭蛋為 NULL',
+
     -- ========== 獎品分配 ==========
     -- 一番賞/扭蛋/卡牌：建立時隨機分配
-    -- 刮刮樂(店家)：建立時店家指定
-    -- 刮刮樂(玩家)：開套時玩家指定
+    -- 刮刮樂(店家)：依 revealed_number 是否在得獎名單內決定
+    -- 刮刮樂(玩家)：開套時玩家指定 revealed_number 後再更新
     prize_id VARCHAR(36) COMMENT '分配到的獎項 ID (NULL=謝謝惠顧/安慰獎)',
     prize_level VARCHAR(20) COMMENT '獎品等級快取 (A/B/C/.../LAST/THANKS)',
     
@@ -118,7 +123,7 @@ CREATE TABLE lottery_session (
     
     -- ========== 刮刮樂(玩家指定)專用 ==========
     player_designated_numbers VARCHAR(500) 
-        COMMENT '玩家指定的大獎編號 (JSON Array，例如 [50])',
+        COMMENT '玩家指定的大獎 revealed_number 列表 (JSON Array，例如 [50])',
     
     -- ========== 場次狀態 ==========
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' 

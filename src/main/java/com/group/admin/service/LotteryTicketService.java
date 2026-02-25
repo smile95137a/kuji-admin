@@ -49,8 +49,9 @@ public interface LotteryTicketService {
     
     /**
      * 大獎指定 DTO
+     * ticketNumber 已變更為 revealedNumber：玩家指定對應瀏樂 revealed_number 欄位的大獎
      */
-    record PrizeDesignation(Integer ticketNumber, String prizeId) {}
+    record PrizeDesignation(Integer revealedNumber, String prizeId) {}
 
     // ==================== 前台籤位查詢（安全版本）====================
 
@@ -138,6 +139,23 @@ public interface LotteryTicketService {
     void markPlayerDesignated(String sessionId, List<Integer> prizeNumbers);
     
     /**
+     * 取得可用的 revealedNumber 列表（刮刮樂玩家指定大獎用）
+     * 回傳所有 status=AVAILABLE 的籤位的 revealedNumber（去重排序）
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @return revealedNumber 列表
+     */
+    List<Integer> getAvailableRevealedNumbers(String lotteryId);
+
+    /**
+     * 取得大獎獎品清單（isGrandPrize=1）
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @return 大獎獎品列表
+     */
+    List<com.group.admin.entity.LotteryPrize> getGrandPrizes(String lotteryId);
+
+    /**
      * 取得抽獎活動資訊
      * 
      * @param lotteryId 抽獎活動 ID
@@ -194,6 +212,7 @@ public interface LotteryTicketService {
         boolean success,
         String ticketId,
         int ticketNumber,
+        Integer revealedNumber,   // 刮刮樂專用：刮開後揭露的號碼；一番賞/扭蛋為 null
         String prizeId,
         String prizeLevel,
         String prizeName,

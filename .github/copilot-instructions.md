@@ -482,3 +482,39 @@ if (condition.getStoreId() != null) {  // ← 一定要檢查 null
 - ❌ 不要忘記檢查 Condition 欄位是否為 null
 - ❌ 不要在查詢 API 要求所有條件必填（全部可選）
 
+
+
+---
+
+# 刮刮樂架構規範（2026-02-10 更新）
+
+## 雙號碼機制（關鍵！）
+
+ticketNumber = 物理序號（1~N），玩家選的格子；revealedNumber = 刮開後顯示的亂數，用於大獎指定。
+兩者不可混用。前端指定大獎時傳的是 revealedNumber，不是 ticketNumber。
+AVAILABLE 狀態下，revealedNumber 不回傳給前端（安全隱藏）。
+
+## gameMode vs playMode 速查
+
+playMode = LOTTERY_MODE / SCRATCH_MODE（路由層）。
+gameMode = SCRATCH_STORE（店家預先指定大獎 revealedNumber）/ SCRATCH_PLAYER（開套玩家呼叫 /designate 指定）/ RANDOM（全隨機）。
+
+## autoAssignNonGrandPrizes() 說明
+
+在 generateScratchTickets（SCRATCH_STORE）和 designatePrizePositions（SCRATCH_PLAYER）結束後自動呼叫。
+對所有 isDesignatedPrize=0 且 status=AVAILABLE 的籤位，隨機分配非大獎獎品。
+多餘籤位保持 prizeId=null，視同謝謝惠顧。
+
+## checkDesignationRequired() 回傳格式
+
+只有 gameMode=SCRATCH_PLAYER 且 session 未完成指定時才攔截，回傳：
+{ designationRequired: true, availableNumbers: [revealedNumber...], grandPrizes: [{prizeId, prizeName, prizeLevel, quantity, prizeImageUrl}...] }
+前端用 grandPrizes[].quantity 加總，決定要提交幾個指定位置。
+
+## 不得隨意更動（刮刮樂篇）
+
+不要在 getAvailableRevealedNumbers() 返回 ticketNumber。
+不要對 isDesignatedPrize=1 的籤位執行 autoAssignNonGrandPrizes。
+不要在 designatePrizePositions 後忘記呼叫 autoAssignNonGrandPrizes。
+不要讓前端傳 ticketNumber 給 /designate（應傳 revealedNumber）。
+不要把 designationRequired 邏輯套用到 SCRATCH_STORE。

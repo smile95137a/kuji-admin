@@ -4,7 +4,12 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -162,67 +167,91 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     }
 
     /**
-     * 生成刮刮樂籤位
-     * 
-     * <p>規則：</p>
+     * 生成刮刮樂籤位（雙號碼機制）
+     *
+     * <p>設計原則：</p>
      * <ul>
-     *   <li>獎品會按照獎品數量分配到隨機位置</li>
-     *   <li>剩餘的籤位自動設為「謝謝惠顧」</li>
-     *   <li>店家指定模式：可以在建立時指定大獎位置</li>
-     *   <li>玩家指定模式：等開套玩家指定大獎位置</li>
+     *   <li>ticket_number = 實體卡物理序號（1-N）</li>
+     *   <li>revealed_number = 刮開後顯示的亂數號碼（shuffle [1..N] 分配）</li>
+     *   <li>SCRATCH_STORE：店家指定哪些 revealed_number 是大獎</li>
+     *   <li>SCRATCH_PLAYER：專建立 revealed_number，等開套玩家呼叫 /designate 指定</li>
      * </ul>
      */
     private void generateScratchTickets(String lotteryId, int totalTickets, Lottery lottery) {
-        log.info("🎫 生成刮刮樂籤位: lotteryId={}, total={}", lotteryId, totalTickets);
+        log.info("🎫 生成刮刮樂籤位(雙號碼機制): lotteryId={}, total={}", lotteryId, totalTickets);
 
-        // 取得所有獎品
+        // 步驔1: 建立 1..N 的 revealed_number 列表並打亂
+        List<Integer> revealedNumbers = new ArrayList<>();
+        for (int i = 1; i <= totalTickets; i++) revealedNumbers.add(i);
+        Collections.shuffle(revealedNumbers, random);
+
+        // 步驔2: 收集大獎對應的 revealed_number 集合
+        // 只有 SCRATCH_STORE 在建立時解析店家預設的得獎號碼
+        // SCRATCH_PLAYER 此時 designated_prize_numbers 為 null，等開套玩家呼叫 /designate 再指定
+        Set<Integer> winningRevealedNumbers = new HashSet<>();
+        String gameMode = lottery.getGameMode(); // SCRATCH_STORE / SCRATCH_PLAYER / RANDOM
+        if ("SCRATCH_STORE".equals(gameMode)) {
+            String designatedJson = lottery.getDesignatedPrizeNumbers();
+            if (designatedJson != null && !designatedJson.trim().isEmpty()) {
+                String cleaned = designatedJson.trim().replaceAll("[\\[\\]\\s]", "");
+                for (String numStr : cleaned.split(",")) {
+                    try { winningRevealedNumbers.add(Integer.parseInt(numStr.trim())); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        // 步驔3: 取得獎品清單，建立 revealed_number → prize 映射
         LotteryPrizeExample prizeExample = new LotteryPrizeExample();
         prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
         prizeExample.setOrderByClause("order_num ASC");
         List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
-        
-        // 建立獎品池
+
         List<PrizeSlot> prizePool = new ArrayList<>();
-        int totalPrizeCount = 0;
-        
         for (LotteryPrize prize : prizes) {
             int quantity = prize.getQuantity() != null ? prize.getQuantity() : 0;
-            totalPrizeCount += quantity;
             for (int i = 0; i < quantity; i++) {
                 prizePool.add(new PrizeSlot(prize.getId(), prize.getLevel()));
             }
         }
-        
-        log.info("📦 刮刮樂獎品池: 獎品數={}, 謝謝惠顧數={}, 總籤位={}", 
-                totalPrizeCount, totalTickets - totalPrizeCount, totalTickets);
-        
-        // 補齊「謝謝惠顧」
-        int thanksCount = totalTickets - totalPrizeCount;
-        for (int i = 0; i < thanksCount; i++) {
-            prizePool.add(new PrizeSlot(null, "THANKS"));
+
+        // 將大獎 revealed_number 與獎品池一一對應
+        Map<Integer, PrizeSlot> revealedToPrize = new HashMap<>();
+        Iterator<PrizeSlot> prizeIter = prizePool.iterator();
+        for (Integer winNum : winningRevealedNumbers) {
+            if (prizeIter.hasNext()) {
+                revealedToPrize.put(winNum, prizeIter.next());
+            }
         }
-        
-        // 打亂順序（隨機分配）
-        Collections.shuffle(prizePool, random);
-        
-        // 批量生成籤位
+
+        // 步驔4: 生成所有籤位
         LocalDateTime now = LocalDateTime.now();
         for (int i = 0; i < totalTickets; i++) {
+            int revealedNumber = revealedNumbers.get(i);
+            PrizeSlot slot = revealedToPrize.get(revealedNumber);
+
             LotteryTicket ticket = new LotteryTicket();
             ticket.setId(UUID.randomUUID().toString());
             ticket.setLotteryId(lotteryId);
-            ticket.setTicketNumber(i + 1);
-            ticket.setPrizeId(prizePool.get(i).prizeId());
-            ticket.setPrizeLevel(prizePool.get(i).level());
+            ticket.setTicketNumber(i + 1);              // 物理序號
+            ticket.setRevealedNumber(revealedNumber);   // 刮開後顯示的亂數號碼
+            ticket.setPrizeId(slot != null ? slot.prizeId() : null);
+            ticket.setPrizeLevel(slot != null ? slot.level() : "THANKS");
             ticket.setStatus("AVAILABLE");
-            ticket.setIsDesignatedPrize((byte) 0);
+            ticket.setIsDesignatedPrize(slot != null ? (byte) 1 : (byte) 0);
+            ticket.setDesignatedBy(slot != null ? "STORE" : null);
             ticket.setCreatedAt(now);
             ticket.setUpdatedAt(now);
             lotteryTicketMapper.insert(ticket);
         }
-        
-        log.info("✅ 刮刮樂籤位生成完成，獎品 {} 個，謝謝惠顧 {} 個", 
-                totalPrizeCount, thanksCount);
+
+        log.info("✅ 刮刮樂籤位生成完成, 大獎 revealed_number: {}, 謝謝惠顧: {}",
+                winningRevealedNumbers, totalTickets - winningRevealedNumbers.size());
+
+        // SCRATCH_STORE: 店家開獎後，將剩餘籤位自動分配非大獎獎品
+        if ("SCRATCH_STORE".equals(gameMode) && !winningRevealedNumbers.isEmpty()) {
+            autoAssignNonGrandPrizes(lotteryId);
+        }
     }
 
     @Override
@@ -237,11 +266,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         // 驗證每個指定是否有效
         for (LotteryTicketService.PrizeDesignation designation : designations) {
-            Integer ticketNumber = designation.ticketNumber();
+            Integer revealedNumber = designation.revealedNumber();
             String prizeId = designation.prizeId();
             
-            if (ticketNumber == null || prizeId == null) {
-                throw new BusinessException("籤位號碼和獎品 ID 不可為空");
+            if (revealedNumber == null || prizeId == null) {
+                throw new BusinessException("揭露號碼和獎品 ID 不可為空");
             }
             
             // 驗證獎品是否存在且為大獎
@@ -256,38 +285,43 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 throw new BusinessException("獎品 " + prize.getName() + " 不是大獎");
             }
             
-            // 查詢籤位
+            // 根據 revealed_number 查找對應籤位
             LotteryTicketExample ticketExample = new LotteryTicketExample();
             ticketExample.createCriteria()
                     .andLotteryIdEqualTo(lotteryId)
-                    .andTicketNumberEqualTo(ticketNumber)
                     .andStatusEqualTo("AVAILABLE");
-            
-            List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(ticketExample);
-            if (tickets.isEmpty()) {
-                throw new BusinessException("籤位 #" + ticketNumber + " 不存在或已被抽走");
+            List<LotteryTicket> allTickets = lotteryTicketMapper.selectByExample(ticketExample);
+            LotteryTicket target = allTickets.stream()
+                    .filter(t -> revealedNumber.equals(t.getRevealedNumber()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (target == null) {
+                throw new BusinessException("revealed_number #" + revealedNumber + " 不存在或已被抽走");
             }
             
             // 更新籤位為指定的大獎
-            LotteryTicket ticket = tickets.get(0);
-            ticket.setPrizeId(prizeId);
-            ticket.setPrizeLevel(prize.getLevel());
-            ticket.setIsDesignatedPrize((byte) 1);
-            ticket.setDesignatedBy("PLAYER");  // ✅ 存儲類型而非 userId
-            ticket.setUpdatedAt(LocalDateTime.now());
-            lotteryTicketMapper.updateByPrimaryKey(ticket);
+            target.setPrizeId(prizeId);
+            target.setPrizeLevel(prize.getLevel());
+            target.setIsDesignatedPrize((byte) 1);
+            target.setDesignatedBy("PLAYER");
+            target.setUpdatedAt(LocalDateTime.now());
+            lotteryTicketMapper.updateByPrimaryKey(target);
             
-            log.info("✅ 籤位 #{} 指定為 {} ({})", ticketNumber, prize.getName(), prize.getLevel());
+            log.info("✅ revealed_number #{} 指定為 {} ({})", revealedNumber, prize.getName(), prize.getLevel());
         }
         
         // 標記 Session 已指定
         SessionInfo session = getOrCreateSession(lotteryId, userId);
         List<Integer> numbers = designations.stream()
-                .map(LotteryTicketService.PrizeDesignation::ticketNumber)
+                .map(LotteryTicketService.PrizeDesignation::revealedNumber)
                 .toList();
         markPlayerDesignated(session.sessionId(), numbers);
         
-        log.info("✅ 大獎位置指定完成，共 {} 個", designations.size());
+        // 大獎指定完成後，自動隨機分配剩餘非大獎獎品
+        autoAssignNonGrandPrizes(lotteryId);
+
+        log.info("✅ 大獎位置指定完成，共 {} 個，非大獎已自動隨機分配", designations.size());
     }
 
     // ==================== 前台籤位查詢 ====================
@@ -313,6 +347,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 res.setPrizeImageUrl(null);           // ← 隱藏圖片 URL
                 res.setIsGrandPrize(null);            // ← 隱藏是否為大獎
                 res.setIsLastPrize(null);             // ← 隱藏是否為最後賞
+                res.setRevealedNumber(null);          // ← 刮刮樂：隱藏刮開號碼（安全關鍵！）
             }
             result.add(res);
         }
@@ -345,6 +380,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         LotteryTicketRes res = new LotteryTicketRes();
         res.setId(ticket.getId());
         res.setTicketNumber(ticket.getTicketNumber());
+        res.setRevealedNumber(ticket.getRevealedNumber());  // 刮刮樂专用；一番賞/扭蛋為 null
         res.setPrizeId(ticket.getPrizeId());
         res.setPrizeLevel(ticket.getPrizeLevel());
         res.setStatus(ticket.getStatus());
@@ -376,15 +412,15 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 1. 檢查商品狀態
         Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
         if (lottery == null) {
-            return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "商品不存在");
+            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "商品不存在");
         }
         if (!"ON_SHELF".equals(lottery.getStatus())) {
-            return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "商品未上架");
+            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "商品未上架");
         }
         
         // 2. 檢查保護時間
         if (!canDrawNow(lotteryId, userId)) {
-            return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, 
+            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
                     "商品正在被其他玩家抽獎中，請稍後再試");
         }
         
@@ -402,7 +438,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
             
             if (tickets.isEmpty()) {
-                return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, 
+                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
                         "該籤位已被抽走或不存在");
             }
             targetTicket = tickets.get(0);
@@ -411,7 +447,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             // 隨機模式
             Integer randomNumber = getRandomAvailableTicket(lotteryId);
             if (randomNumber == null) {
-                return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "已無可抽籤位");
+                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "已無可抽籤位");
             }
             
             // 取得該籤位
@@ -422,7 +458,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
             
             if (tickets.isEmpty()) {
-                return new DrawResult(false, null, 0, null, null, null, null, false, false, 0L, "籤位查詢失敗");
+                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "籤位查詢失敗");
             }
             targetTicket = tickets.get(0);
             actualTicketNumber = randomNumber;
@@ -554,7 +590,8 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         return new DrawResult(
                 true, 
                 targetTicket.getId(), 
-                actualTicketNumber, 
+                actualTicketNumber,
+                targetTicket.getRevealedNumber(),  // 刮刮樂專用；一番賞/扭蛋為 null
                 prizeId, 
                 prizeLevel, 
                 prizeName, 
@@ -576,26 +613,26 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 1. 檢查商品狀態
         Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
         if (lottery == null) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L, "商品不存在");
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "商品不存在");
         }
         if (!"ON_SHELF".equals(lottery.getStatus())) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L, "商品未上架");
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "商品未上架");
         }
 
         // 2. 檢查保護時間
         if (!canDrawNow(lotteryId, userId)) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L,
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L,
                     "商品正在被其他玩家抽獎中，請稍後再試");
         }
 
         // 3. 查詢該票券
         LotteryTicket ticket = lotteryTicketMapper.selectByPrimaryKey(ticketId);
         if (ticket == null || ticket.getLotteryId() == null || !ticket.getLotteryId().equals(lotteryId)) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, false, false, 0L, "該票券不存在於此抽獎活動");
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "該票券不存在於此抽獎活動");
         }
         if (!"AVAILABLE".equals(ticket.getStatus())) {
             return new DrawResult(false, ticketId, ticket.getTicketNumber() != null ? ticket.getTicketNumber() : 0,
-                    null, null, null, null, false, false, 0L, "該票券已被抽走或不可用");
+                    null, null, null, null, null, false, false, 0L, "該票券已被抽走或不可用");
         }
 
         int actualTicketNumber = ticket.getTicketNumber() != null ? ticket.getTicketNumber() : 0;
@@ -714,6 +751,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 true,
                 ticketId,
                 actualTicketNumber,
+                ticket.getRevealedNumber(),   // 刮刮樂專用；一番賞/扭蛋為 null
                 prizeId,
                 prizeLevel,
                 prizeName,
@@ -1008,6 +1046,90 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     @Override
     public com.group.admin.entity.Lottery getLottery(String lotteryId) {
         return lotteryMapper.selectByPrimaryKey(lotteryId);
+    }
+
+    @Override
+    public List<Integer> getAvailableRevealedNumbers(String lotteryId) {
+        log.info("🔍 查詢可用 revealedNumber 清單: lotteryId={}", lotteryId);
+
+        LotteryTicketExample example = new LotteryTicketExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andStatusEqualTo("AVAILABLE");
+        example.setOrderByClause("revealed_number ASC");
+
+        return lotteryTicketMapper.selectByExample(example).stream()
+                .map(LotteryTicket::getRevealedNumber)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public List<com.group.admin.entity.LotteryPrize> getGrandPrizes(String lotteryId) {
+        log.info("🏆 查詢大獎清單: lotteryId={}", lotteryId);
+
+        LotteryPrizeExample example = new LotteryPrizeExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andIsGrandPrizeEqualTo((byte) 1);
+        example.setOrderByClause("order_num ASC");
+        return lotteryPrizeMapper.selectByExample(example);
+    }
+
+    /**
+     * 自動將非大獎獎品隨機分配至尚未指定獎品的 AVAILABLE 籤位。
+     * <p>
+     * 條件：prize_id IS NULL AND is_designated_prize = 0 AND status = AVAILABLE
+     * 流程：
+     *   1. 查詢所有非大獎（isGrandPrize != 1）及其數量，展開成 prizeId 列表
+     *   2. 查詢尚未分配的籤位
+     *   3. 打亂獎品列表，逐一指定
+     *   4. 多餘或不足以賞惠顧落地
+     */
+    private void autoAssignNonGrandPrizes(String lotteryId) {
+        log.info("🎲 自動分配非大獎獎品: lotteryId={}", lotteryId);
+
+        // 1. 查詢非大獎獎品
+        LotteryPrizeExample prizeEx = new LotteryPrizeExample();
+        LotteryPrizeExample.Criteria prizeCriteria = prizeEx.createCriteria()
+                .andLotteryIdEqualTo(lotteryId);
+        // 排除大獎（isGrandPrize = 1）
+        List<LotteryPrize> allPrizes = lotteryPrizeMapper.selectByExample(prizeEx);
+        List<PrizeSlot> nonGrandPool = new ArrayList<>();
+        for (LotteryPrize prize : allPrizes) {
+            if (prize.getIsGrandPrize() != null && prize.getIsGrandPrize() == 1) continue;
+            if ("THANKS".equalsIgnoreCase(prize.getLevel())) continue; // 謝謝惠顧本來就是 null prize
+            int qty = prize.getQuantity() != null ? prize.getQuantity() : 0;
+            for (int i = 0; i < qty; i++) {
+                nonGrandPool.add(new PrizeSlot(prize.getId(), prize.getLevel()));
+            }
+        }
+        Collections.shuffle(nonGrandPool, random);
+
+        // 2. 查詢未指定 prizeId 的 AVAILABLE 籤位（prizeId 為 null 且非大獎）
+        LotteryTicketExample ticketEx = new LotteryTicketExample();
+        ticketEx.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andStatusEqualTo("AVAILABLE")
+                .andIsDesignatedPrizeEqualTo((byte) 0);
+        ticketEx.setOrderByClause("ticket_number ASC");
+        List<LotteryTicket> unassigned = lotteryTicketMapper.selectByExample(ticketEx);
+
+        log.info("🎲 非大獎池: {} 個, 未分配籤位: {} 個", nonGrandPool.size(), unassigned.size());
+
+        // 3. 逐一分配
+        int assignCount = Math.min(nonGrandPool.size(), unassigned.size());
+        for (int i = 0; i < assignCount; i++) {
+            LotteryTicket ticket = unassigned.get(i);
+            PrizeSlot slot = nonGrandPool.get(i);
+            ticket.setPrizeId(slot.prizeId());
+            ticket.setPrizeLevel(slot.level());
+            ticket.setUpdatedAt(LocalDateTime.now());
+            lotteryTicketMapper.updateByPrimaryKey(ticket);
+        }
+
+        log.info("✅ 非大獎自動分配完成: {} 個籤位已分配獎品，剩餘 {} 個籤位保持謝謝惠顧",
+                assignCount, unassigned.size() - assignCount);
     }
 
     // ==================== 內部輔助 ====================

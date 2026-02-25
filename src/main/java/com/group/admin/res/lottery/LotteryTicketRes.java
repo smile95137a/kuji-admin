@@ -30,7 +30,13 @@ public class LotteryTicketRes {
      * 籤位編號 (1-N)
      */
     private Integer ticketNumber;
-    
+
+    /**
+     * 刮刮樂專用：刮開後揭露的號碼（一番賞/扭蛋為 null）
+     * 前台小：僅在 status=DRAWN 時才回傳
+     */
+    private Integer revealedNumber;
+
     /**
      * 狀態：AVAILABLE(可抽)/DRAWN(已抽)/LOCKED(鎖定中)
      */

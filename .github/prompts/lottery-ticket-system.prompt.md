@@ -12,16 +12,23 @@
    - 只有已抽過的籤位才顯示獎品等級
    - 前端只能拿到：籤位編號 + 是否已抽 + (已抽才有的)獎品資訊
 
-### 二、刮刮樂模式（指定大獎位置）
+### 二、刮刮樂模式（雙號碼機制）
 
-#### 模式 A：店家指定大獎位置
-- 店家建立商品時指定大獎籤位（例：45號是大獎）
+> **刮刮樂核心概念**：玩家手上的實體卡有「物理編號」（ticket_number，印在卡上的 1-N 序號），
+> 刮開後露出「中獎號碼」（revealed_number，由系統建立時亂數分配，與物理編號無關）。
+> 後端以 revealed_number 是否落在得獎位置決定是否中獎。
+
+- 例：60 張刮刮樂卡，1 號卡刮開可能顯示 23，15 號卡刮開可能顯示 15（也可能是任何其他數字）
+- `ticket_number` 和 `revealed_number` 是完全獨立的兩個值，均為 1-N 且不重複
+
+#### 模式 A：店家指定大獎位置（SCRATCH_STORE）
+- 店家建立商品時指定哪些 `revealed_number` 是大獎（例：revealed_number 45 是大獎）
 - 其餘號碼為「謝謝惠顧」
 - 可指定多個大獎位置
 
-#### 模式 B：開套玩家指定大獎位置
-- 店家不指定時，第一個抽獎的玩家（開套者）選擇大獎位置
-- 後續玩家必須依照開套者選擇的位置進行
+#### 模式 B：開套玩家指定大獎位置（SCRATCH_PLAYER）
+- 店家不指定時，第一個抽獎的玩家（開套者）選擇哪些 `revealed_number` 是大獎
+- 後續玩家的籤位已預先分配好 revealed_number 但尚未標記為大獎，等開套者指定後才確定
 
 ### 三、開套免單機制
 
@@ -44,15 +51,30 @@
 
 ## 資料庫設計
 
+### 欄位語意對照表
+
+| 欄位 | 一番賞 / 扭蛋 / 卡牌 | 刮刮樂（SCRATCH_STORE / SCRATCH_PLAYER）|
+|------|---------------------|----------------------------------------|
+| `ticket_number` | 抽籤位置編號（1-N，對應獎品位置）| 實體卡片的物理序號（印在卡面上）|
+| `revealed_number` | NULL（不適用此概念）| 刮開後顯示的亂數號碼（決定是否中獎）|
+| `prize_id` | 建立時隨機分配到每個籤位 | 根據 revealed_number 是否為得獎號碼決定 |
+
+> ⚠️ 一番賞/扭蛋：前端直接用 `ticketNumber` 選籤、顯示結果，**不存在** `revealedNumber`。
+> ⚠️ 刮刮樂：前端用 `ticketNumber` 選卡片，**抽完後**才能看到 `revealedNumber` 和獎品資訊。
+
 ### 新增 Table 1：`lottery_ticket`（籤位表）
 ```sql
 -- 核心：每個籤位是一筆資料，記錄分配到的獎品
 CREATE TABLE lottery_ticket (
     id VARCHAR(36) PRIMARY KEY COMMENT '籤位 ID (UUID)',
     lottery_id VARCHAR(36) NOT NULL COMMENT '所屬抽獎活動 ID',
-    ticket_number INT NOT NULL COMMENT '籤位編號 (1-N)',
-    
-    -- 獎品分配（建立時隨機分配，或店家指定）
+    ticket_number INT NOT NULL COMMENT '籤位編號 (1-N)；刮刮樂＝實體卡物理序號',
+
+    -- 刮刮樂專用：刮開後顯示的亂數號碼
+    -- 一番賞/扭蛋：NULL；刮刮樂：1-N 亂數，與 ticket_number 無關，建立時 shuffle 分配
+    revealed_number INT NULL COMMENT '刮刮樂：刮開後揭露的號碼；一番賞/扭蛋為 NULL',
+
+    -- 獎品分配（建立時隨機分配，或依 revealed_number 是否在得獎名單決定）
     prize_id VARCHAR(36) COMMENT '分配到的獎項 ID (NULL=謝謝惠顧)',
     prize_level VARCHAR(20) COMMENT '獎品等級快取 (A/B/C/謝謝惠顧)',
     
@@ -73,6 +95,12 @@ CREATE TABLE lottery_ticket (
     INDEX idx_status (status),
     INDEX idx_prize_id (prize_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽獎籤位表';
+
+-- 若資料庫表已建立，執行以下 ALTER 新增欄位：
+ALTER TABLE lottery_ticket
+    ADD COLUMN revealed_number INT NULL
+    COMMENT '刮刮樂：刮開後揭露的號碼；一番賞/扭蛋為 NULL'
+    AFTER ticket_number;
 ```
 
 ### 新增 Table 2：`lottery_session`（開套場次表）
@@ -97,8 +125,8 @@ CREATE TABLE lottery_session (
     free_draw_refund_amount BIGINT DEFAULT 0 COMMENT '免單退款金額',
     free_draw_at DATETIME COMMENT '觸發免單時間',
     
-    -- 刮刮樂：玩家指定大獎位置
-    player_designated_numbers VARCHAR(255) COMMENT '玩家指定的大獎編號 (JSON Array)',
+    -- 刮刮樂：玩家指定大獎位置（存 revealed_number 列表）
+    player_designated_numbers VARCHAR(255) COMMENT '玩家指定的大獎 revealed_number 列表 (JSON Array)',
     
     -- 狀態
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '狀態：ACTIVE/COMPLETED/EXPIRED',
@@ -127,42 +155,40 @@ ALTER TABLE lottery ADD COLUMN free_draw_enabled TINYINT DEFAULT 0
     COMMENT '是否啟用開套免單：0=否, 1=是' AFTER protection_minutes;
 
 ALTER TABLE lottery ADD COLUMN designated_prize_numbers VARCHAR(500) 
-    COMMENT '店家指定大獎籤位 (JSON Array，刮刮樂用)' AFTER free_draw_enabled;
+    COMMENT '店家指定大獎的 revealed_number 列表 (JSON Array，刮刮樂用)' AFTER free_draw_enabled;
 ```
 
 ## API 設計
 
-### 前台 API（重要：不能洩漏未抽籤位的獎品資訊）
+### 前台 API（重要：不能洩漏未抽籤位的獎品與 revealed_number 資訊）
 
 #### GET /api/lottery/{lotteryId}/tickets
-回傳籤位列表，但**隱藏未抽籤位的獎品資訊**
-```json
-{
-  "data": {
-    "tickets": [
-      { "number": 1, "status": "AVAILABLE" },
-      { "number": 2, "status": "DRAWN", "prizeLevel": "A", "prizeName": "..." },
-      { "number": 3, "status": "AVAILABLE" }
-    ],
-    "session": {
-      "isOpener": false,
-      "currentOpener": "某玩家",
-      "protectionEndTime": "..."
-    }
-  }
-}
-```
+回傳籤位列表，**隱藏未抽籤位的所有獎品資訊與 revealed_number**
 
 #### POST /api/lottery/{lotteryId}/draw
-執行抽獎（選號或隨機）
+執行抽獎（傳入 ticketNumber 指定卡片，或不傳由系統隨機選）
+
+#### POST /api/lottery/{lotteryId}/designate
+刮刮樂 SCRATCH_PLAYER 模式專用：開套玩家指定大獎的 revealedNumber 對應的獎品
+```json
+{ "designations": [
+    { "revealedNumber": 15, "prizeId": "prize-uuid-A1" },
+    { "revealedNumber": 32, "prizeId": "prize-uuid-A1" },
+    { "revealedNumber": 47, "prizeId": "prize-uuid-B1" }
+] }
+```
+✅ 指定完成後，後端自動將剩餘籤位隨機分配非大獎獎品
+
+#### GET /api/lottery/{lotteryId}/session
+查詢目前開套場次資訊
 
 ### 後台 API
 
 #### POST /admin/lottery（建立商品）
 建立時根據 gameMode 生成籤位：
-- RANDOM：自動隨機分配獎品到籤位
-- SCRATCH_STORE：店家指定大獎位置
-- SCRATCH_PLAYER：等待開套玩家指定
+- RANDOM：自動隨機分配獎品到籤位，revealed_number = NULL
+- SCRATCH_STORE：每張卡分配 revealed_number，依 designated_prize_numbers 設定大獎
+- SCRATCH_PLAYER：每張卡分配 revealed_number，獎品等開套玩家指定
 
 ## 抽獎核心邏輯（共用）
 
@@ -172,28 +198,57 @@ ALTER TABLE lottery ADD COLUMN designated_prize_numbers VARCHAR(500)
 2. 檢查保護時間（是否被其他玩家鎖定）
 3. 檢查使用者餘額
 4. 執行抽獎（選號或隨機取一個 AVAILABLE 的籤位）
-5. 更新籤位狀態
+5. 更新籤位狀態 → DRAWN
 6. 扣款
 7. 檢查免單條件（開套玩家 + 保護期內 + 中大獎）
 8. 記錄抽獎紀錄
-9. 回傳結果（此時才揭露獎品資訊）
+9. 回傳結果：
+   - RANDOM 模式：ticketNumber + 獎品資訊（revealedNumber = null）
+   - SCRATCH 模式：ticketNumber + revealedNumber + 獎品資訊
+```
+
+### 票券生成邏輯（後端）
+
+#### RANDOM 模式（一番賞 / 扭蛋 / 卡牌）
+```
+1. 取得所有獎品清單，展開為逐一物件（A賞×3、B賞×5 … → 共 N 個）
+2. 用 SecureRandom shuffle 打亂獎品順序
+3. 依序建立 ticket_number = 1…N，每張對應 shuffle 後的獎品
+4. revealed_number = NULL（不使用）
+```
+
+#### SCRATCH_STORE 模式（店家指定大獎位置）
+```
+1. 建立 ticket_number = 1…N，全部 prize_id = null（謝謝惠顧）
+2. 用 SecureRandom shuffle [1…N]，依序指派為各張卡的 revealed_number（不重複）
+3. 店家指定的 designated_prize_numbers = [45, 23, 7]（這些是 revealed_number）
+4. 遍歷所有 ticket，若 revealed_number 在 designated_prize_numbers 中
+   → 設定 prize_id、is_designated_prize = 1、designated_by = 'STORE'
+```
+
+#### SCRATCH_PLAYER 模式（開套玩家指定大獎位置）
+```
+1. 建立 ticket_number = 1…N，全部 prize_id = null（謝謝惠顧）
+2. 用 SecureRandom shuffle [1…N]，依序指派為各張卡的 revealed_number（不重複）
+3. 所有票均為謝謝惠顧，等待開套玩家呼叫 /designate API 指定大獎 revealed_number
+4. 開套玩家指定後，找到 revealed_number 符合的 ticket，更新 prize_id + is_designated_prize
 ```
 
 ### 不同模式的差異點
-| 模式 | 籤位生成時機 | 獎品分配方式 | 大獎位置 |
-|------|-------------|-------------|----------|
-| 一番賞 | 建立時 | 隨機分配 | 隨機 |
-| 扭蛋 | 建立時 | 隨機分配 | 隨機 |
-| 卡牌 | 建立時 | 隨機分配 | 隨機 |
-| 刮刮樂(店家) | 建立時 | 店家指定 | 固定 |
-| 刮刮樂(玩家) | 開套時 | 開套玩家指定 | 開套玩家決定 |
+| 模式 | 籤位生成時機 | 獎品分配方式 | revealed_number | 免單機制 |
+|------|-------------|-------------|-----------------|----------|
+| 一番賞 | 建立時 | 隨機分配 | 無（NULL）| ✅ 可啟用 |
+| 扭蛋 | 建立時 | 隨機分配 | 無（NULL）| ✅ 可啟用 |
+| 卡牌 | 建立時 | 隨機分配 | 無（NULL）| ✅ 可啟用 |
+| 刮刮樂(店家) | 建立時 | 店家指定 revealed_number | 有，建立時 shuffle | ✅ 可啟用 |
+| 刮刮樂(玩家) | 開套時指定 | 開套玩家指定 revealed_number | 有，建立時 shuffle | ✅ 可啟用 |
 
 ## 安全考量
 
 ### 前端顯示規則
-1. **未抽籤位**：只顯示編號 + 可抽狀態
-2. **已抽籤位**：顯示編號 + 獎品等級 + 獎品名稱 + 獎品圖片
-3. **永不傳送**：未抽籤位的 prize_id、prize_level
+1. **未抽籤位**：只顯示 ticketNumber + 可抽狀態，**絕不傳送** prize_id / prize_level / revealedNumber
+2. **已抽籤位**：顯示 ticketNumber + revealedNumber（刮刮樂）+ 獎品等級 + 獎品名稱 + 獎品圖片
+3. **永不傳送**：未抽籤位的 prize_id、prize_level、revealed_number
 
 ### 後端防護
 1. 前台 API 使用 DTO 過濾敏感欄位
@@ -243,13 +298,13 @@ ALTER TABLE lottery ADD COLUMN designated_prize_numbers VARCHAR(500)
 
 ## 遊戲模式對照表
 
-| 分類 | game_mode | 籤位生成 | 獎品分配 | 大獎位置 | 免單機制 |
-|------|-----------|----------|----------|----------|----------|
-| 一番賞 | RANDOM | 建立時 | 隨機 | 隨機 | ✅ 可啟用 |
-| 扭蛋 | RANDOM | 建立時 | 隨機 | 隨機 | ✅ 可啟用 |
-| 卡牌 | RANDOM | 建立時 | 隨機 | 隨機 | ✅ 可啟用 |
-| 刮刮樂(店家) | SCRATCH_STORE | 建立時 | 店家指定 | 固定 | ✅ 可啟用 |
-| 刮刮樂(玩家) | SCRATCH_PLAYER | 開套時 | 開套玩家指定 | 開套玩家決定 | ✅ 可啟用 |
+| 分類 | game_mode | 籤位生成 | 獎品分配 | revealed_number | 免單機制 |
+|------|-----------|----------|----------|-----------------|----------|
+| 一番賞 | RANDOM | 建立時 | 隨機 | 無（NULL）| ✅ 可啟用 |
+| 扭蛋 | RANDOM | 建立時 | 隨機 | 無（NULL）| ✅ 可啟用 |
+| 卡牌 | RANDOM | 建立時 | 隨機 | 無（NULL）| ✅ 可啟用 |
+| 刮刮樂(店家) | SCRATCH_STORE | 建立時 | 店家指定 revealed_number | 有，建立時 shuffle | ✅ 可啟用 |
+| 刮刮樂(玩家) | SCRATCH_PLAYER | 開套時指定 | 開套玩家指定 revealed_number | 有，建立時 shuffle | ✅ 可啟用 |
 
 ---
 
@@ -298,55 +353,334 @@ ALTER TABLE lottery ADD COLUMN designated_prize_numbers VARCHAR(500)
 
 ```json
 // GET /api/lottery/{id}/tickets
+
+// ── RANDOM 模式（一番賞 / 扭蛋）──
 {
+  "gameMode": "RANDOM",
   "tickets": [
-    // 未抽籤位：只有編號和狀態
     { "ticketNumber": 1, "status": "AVAILABLE" },
     { "ticketNumber": 2, "status": "AVAILABLE" },
-    
-    // 已抽籤位：完整資訊
-    { 
-      "ticketNumber": 3, 
+    {
+      "ticketNumber": 3,
       "status": "DRAWN",
       "prizeLevel": "C",
       "prizeName": "善逸公仔",
       "prizeImageUrl": "https://...",
       "drawnByNickname": "玩家A",
-      "drawnAt": "2025-12-25T10:30:00"
+      "drawnAt": "2026-02-26T10:30:00"
     },
-    
-    // 鎖定中的籤位
     { "ticketNumber": 4, "status": "LOCKED" }
+  ],
+  "session": { ... }
+}
+
+// ── SCRATCH 模式（刮刮樂）──
+{
+  "gameMode": "SCRATCH_STORE",
+  "tickets": [
+    { "ticketNumber": 1, "status": "AVAILABLE" },
+    { "ticketNumber": 2, "status": "AVAILABLE" },
+    {
+      "ticketNumber": 3,
+      "status": "DRAWN",
+      "revealedNumber": 23,
+      "prizeLevel": "A",
+      "prizeName": "炭治郎公仔",
+      "prizeImageUrl": "https://...",
+      "drawnByNickname": "玩家A",
+      "drawnAt": "2026-02-26T10:30:00"
+    }
   ],
   "session": {
     "isOpener": false,
     "openerNickname": "玩家A",
-    "protectionEndTime": "2025-12-25T10:35:00",
+    "protectionEndTime": "2026-02-26T10:35:00",
     "status": "ACTIVE"
   }
 }
 ```
 
+> ✅ RANDOM 模式回應中**沒有** `revealedNumber` 欄位
+> ✅ SCRATCH 模式中，`revealedNumber` 僅在 `status = "DRAWN"` 時才出現
+
 ### 抽獎 API 回應範例
 
+> ⚠️ **Breaking Change（v4.0）**：`POST /api/lottery/{id}/draw` 的回應**不再是裸陣列**。
+> 現在固定包裝為 `DrawBatchResponse`，包含 `playMode`、`gameMode`、`results[]` 三個欄位。
+> 前端**必須**先判斷 `data.playMode` 才能決定顯示模式。
+
 ```json
-// POST /api/lottery/{id}/draw
-// 成功
+// POST /api/lottery/{id}/draw → 固定回傳 DrawBatchResponse
+
+// ── LOTTERY_MODE（一番賞/扭蛋/卡牌）──
 {
   "success": true,
-  "ticketNumber": 45,
-  "prizeLevel": "A",
-  "prizeName": "炭治郎公仔（大）",
-  "prizeImageUrl": "https://...",
-  "isGrandPrize": true,
-  "triggeredFreeDraw": true,
-  "refundAmount": 1500,
-  "message": "恭喜中大獎！開套免單，退還 1500 元！"
+  "data": {
+    "playMode": "LOTTERY_MODE",
+    "gameMode": "RANDOM",
+    "results": [
+      {
+        "success": true,
+        "ticketId": "uuid-of-ticket",
+        "ticketNumber": 45,
+        "revealedNumber": null,
+        "prizeId": "prize-uuid",
+        "prizeLevel": "A",
+        "prizeName": "炭治郎公仔（大）",
+        "prizeImageUrl": "https://...",
+        "isGrandPrize": true,
+        "triggeredFreeDraw": true,
+        "refundAmount": 1500,
+        "message": "恭喜中大獎！開套免單，退還 1500 元！"
+      }
+    ]
+  }
 }
 
-// 失敗
+// ── SCRATCH_MODE（刮刮樂，SCRATCH_STORE 或 SCRATCH_PLAYER）──
 {
-  "success": false,
-  "message": "商品正在被其他玩家抽獎中，請稍後再試"
+  "success": true,
+  "data": {
+    "playMode": "SCRATCH_MODE",
+    "gameMode": "SCRATCH_STORE",
+    "results": [
+      {
+        "success": true,
+        "ticketId": "uuid-of-ticket",
+        "ticketNumber": 5,
+        "revealedNumber": 23,        ← 刮開後顯示的號碼（前端播動畫用）
+        "prizeId": "prize-uuid",
+        "prizeLevel": "A",
+        "prizeName": "炭治郎公仔（大）",
+        "prizeImageUrl": "https://...",
+        "isGrandPrize": true,
+        "triggeredFreeDraw": false,
+        "refundAmount": 0,
+        "message": "抽獎成功！恭喜獲得 炭治郎公仔（大）"
+      }
+    ]
+  }
 }
+
+// ── SCRATCH_PLAYER：尚未指定大獎（攔截回應，非正常 DrawBatchResponse）──
+{
+  "success": true,
+  "data": {
+    "designationRequired": true,
+    "message": "請先指定大獎位置（共需指定 5 個號碼）",
+    "availableNumbers": [3, 7, 15, 22, 41],
+    "grandPrizes": [
+      { "prizeId": "prize-A", "prizeName": "iPhone", "prizeLevel": "A", "quantity": 3, "prizeImageUrl": "..." },
+      { "prizeId": "prize-B", "prizeName": "MacBook", "prizeLevel": "B", "quantity": 2, "prizeImageUrl": "..." }
+    ]
+  }
+}
+
+// ── 失敗（results[0].success = false）──
+{
+  "success": true,
+  "data": {
+    "playMode": "SCRATCH_MODE",
+    "gameMode": "SCRATCH_STORE",
+    "results": [
+      {
+        "success": false,
+        "message": "商品正在被其他玩家抽獎中，請稍後再試"
+      }
+    ]
+  }
+}
+```
+
+#### 前端判斷邏輯（TypeScript）
+
+```typescript
+interface DrawResult {
+  success: boolean;
+  ticketId?: string;
+  ticketNumber?: number;
+  revealedNumber?: number;   // SCRATCH_MODE 才有值
+  prizeId?: string;
+  prizeLevel?: string;
+  prizeName?: string;
+  prizeImageUrl?: string;
+  isGrandPrize?: boolean;
+  triggeredFreeDraw?: boolean;
+  refundAmount?: number;
+  message?: string;
+}
+
+interface DrawBatchResponse {
+  playMode: string;           // 'LOTTERY_MODE' | 'SCRATCH_MODE'
+  gameMode: string;           // 'RANDOM' | 'SCRATCH_STORE' | 'SCRATCH_PLAYER'
+  results: DrawResult[];
+}
+
+interface DesignationRequiredResponse {
+  designationRequired: true;
+  message: string;
+  availableNumbers: number[];
+  grandPrizes: GrandPrizeInfo[];
+}
+
+// 處理 draw 回應
+async function handleDrawResponse(responseData: DrawBatchResponse | DesignationRequiredResponse) {
+  // Step 1: 先判斷是否是「需要指定大獎」攔截
+  if ('designationRequired' in responseData && responseData.designationRequired) {
+    showDesignationUI(responseData);  // 顯示指定大獎 UI
+    return;
+  }
+
+  // Step 2: 正常 DrawBatchResponse
+  const draw = responseData as DrawBatchResponse;
+  const isScratch = draw.playMode === 'SCRATCH_MODE';
+
+  for (const result of draw.results) {
+    if (!result.success) {
+      showError(result.message);
+      continue;
+    }
+
+    if (isScratch && result.revealedNumber != null) {
+      // 播刮卡動畫，然後顯示 revealedNumber + 獎品
+      await playScratchAnimation(result.ticketNumber!);
+      displayScratchResult(result.revealedNumber, result.prizeLevel, result.prizeName);
+    } else {
+      // 一番賞：直接顯示獎品
+      displayPrize(result.prizeLevel, result.prizeName);
+    }
+  }
+}
+```
+
+---
+
+## 前端開發規格（Frontend Spec）
+
+### 一、各遊戲模式行為差異
+
+| 行為 | 一番賞 / 扭蛋 / 卡牌（RANDOM）| 刮刮樂（SCRATCH_STORE / SCRATCH_PLAYER）|
+|------|-------------------------------|----------------------------------------|
+| 籤位選取方式 | 點選籤位格子（ticketNumber）或隨機 | 點選實體卡片（ticketNumber）|
+| 抽完後顯示 | 直接顯示獎品等級 + 名稱 | 先播刮卡動畫 → 顯示 revealedNumber → 顯示獎品 |
+| 是否有 revealedNumber | ❌ 無此欄位（null）| ✅ 有，由後端 response 給出 |
+| 未抽籤位顯示 | 編號 + 可抽狀態 | 卡片背面（不透露任何資訊）|
+| 已抽籤位顯示 | 獎品等級 + 名稱 | revealedNumber + 獎品等級 + 名稱 |
+
+---
+
+### 二、前端 UI 狀態機（每張籤位）
+
+```
+AVAILABLE
+  │ 玩家點擊
+  ▼
+呼叫 POST /draw（送出 ticketNumber）
+  │
+  ├── [RANDOM 模式] Response 回來
+  │     → 直接顯示獎品資訊
+  │     → 更新該 ticketNumber 狀態為 DRAWN
+  │
+  └── [SCRATCH 模式] Response 回來（含 revealedNumber）
+        → 播刮卡動畫（前端自行控制，約 1-2 秒）
+        → 動畫結束後顯示 revealedNumber（大號字）
+        → 再顯示獎品等級 / 名稱 或「謝謝惠顧」
+        → 更新該 ticketNumber 狀態為 DRAWN
+
+LOCKED → 顯示「鎖定中，請稍待」（不可點擊）
+DRAWN  → 顯示已抽結果（不可點擊）
+```
+
+---
+
+### 三、API 端點快速參考
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/lottery/{id}/tickets` | GET | 取得所有籤位（未抽不含獎品 / revealedNumber）|
+| `/api/lottery/{id}/draw` | POST | 執行抽獎（選號或隨機）|
+| `/api/lottery/{id}/designate` | POST | 刮刮樂 SCRATCH_PLAYER：開套玩家指定大獎 revealed_number |
+| `/api/lottery/{id}/session` | GET | 查詢開套場次資訊 |
+
+---
+
+### 四、刮刮樂動畫觸發時序
+
+```
+① 玩家點擊卡片（ticketNumber = 5）
+②   前端 → POST /api/lottery/{id}/draw
+    Request body: { "count": 1, "ticket": ["<ticket-uuid>"] }
+
+③   後端回傳（DrawBatchResponse）：
+    {
+      "playMode": "SCRATCH_MODE",
+      "gameMode": "SCRATCH_STORE",
+      "results": [{
+        "success": true,
+        "ticketNumber": 5,
+        "revealedNumber": 23,   ← 刮開後的號碼（必須從這裡取）
+        "prizeLevel": "A",
+        "prizeName": "炭治郎公仔"
+      }]
+    }
+
+④   前端判斷 data.playMode === "SCRATCH_MODE" → 進入刮卡流程
+⑤   開始播刮開動畫（此時已拿到所有資料，動畫純粹是視覺效果）
+⑥   動畫結束 → 顯示 data.results[0].revealedNumber = 23（大字）
+⑦   顯示 prizeLevel = A / prizeName = 炭治郎公仔（或謝謝惠顧）
+```
+
+> ⚠️ `revealedNumber` 必須從 `data.results[0].revealedNumber` 取得，前端**禁止**自行推算
+> ⚠️ 動畫播完前不得顯示任何獎品資訊（避免快速截圖跳過動畫作弊）
+> ⚠️ `revealedNumber` 為 null 表示此票是 LOTTERY_MODE（舊資料或非刮刮樂），顯示邏輯退回 RANDOM 模式
+
+---
+
+### 五、SCRATCH_PLAYER 開套流程（前端）
+
+```
+① 玩家嘗試抽獎 → 後端回應 designationRequired: true
+   回應內容：
+   {
+     "designationRequired": true,
+     "message": "請先指定大獎位置（共需指定 5 個號碼）",
+     "availableNumbers": [3, 7, 15, 22, 41, ...],   ← revealedNumber 列表（不是 ticketNumber）
+     "grandPrizes": [
+       { "prizeId": "prize-A1", "prizeName": "iPhone", "prizeLevel": "A", "quantity": 3, ... },
+       { "prizeId": "prize-B1", "prizeName": "MacBook", "prizeLevel": "B", "quantity": 2, ... }
+     ]
+   }
+
+② 前端展示「選擇大獎號碼」界面
+   - 讓玩家從 availableNumbers 中選取 revealedNumber
+   - grandPrizes[].quantity 加總 = 需要選擇的總數
+   - たとえば：A賞 × 3，B賞 × 2 → 就要選 5 個 revealedNumber
+
+③ 醫嬣 POST /api/lottery/{id}/designate
+   { "designations": [
+       { "revealedNumber": 15, "prizeId": "prize-A1" },
+       { "revealedNumber": 32, "prizeId": "prize-A1" },
+       { "revealedNumber": 47, "prizeId": "prize-A1" },
+       { "revealedNumber": 8,  "prizeId": "prize-B1" },
+       { "revealedNumber": 63, "prizeId": "prize-B1" }
+   ] }
+
+④ 後端自動將剩餘籤位分配非大獎獎品（前端無需操作）
+⑤ 確認後才能開始抽籤
+⑥ 之後的玩家：場次已建立，直接進入正常抽籤流程
+
+> ⚠️ 項目重要：
+> - 傳給 /designate 的是 **revealedNumber**，不是 物理格子號碼 ticketNumber
+> - availableNumbers 是 revealedNumber 的隨機範圍，不是 1~N 的順序列表
+```
+
+---
+
+### 六、保護時間提示（前端）
+
+```
+session.protectionEndTime 存在 → 顯示倒數計時
+倒數歸零 → 自動重新 GET /tickets（後端此時 session 已 EXPIRED，其他玩家可抽）
+isOpener = true → 顯示「你是開套玩家」提示 + 免單剩餘次數
+isOpener = false + 保護中 → 顯示「等待開套玩家完成保護抽」提示
 ```

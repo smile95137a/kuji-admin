@@ -9,6 +9,9 @@ public class LotteryTicket {
 
     private Integer ticketNumber;
 
+    /** 刮刮樂專用：刮開後揭露的號碼；一番賞/扭蛋為 null */
+    private Integer revealedNumber;
+
     private String prizeId;
 
     private String prizeLevel;
@@ -49,6 +52,14 @@ public class LotteryTicket {
 
     public void setTicketNumber(Integer ticketNumber) {
         this.ticketNumber = ticketNumber;
+    }
+
+    public Integer getRevealedNumber() {
+        return revealedNumber;
+    }
+
+    public void setRevealedNumber(Integer revealedNumber) {
+        this.revealedNumber = revealedNumber;
     }
 
     public String getPrizeId() {

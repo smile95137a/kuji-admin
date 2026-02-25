@@ -986,7 +986,27 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setUpdatedAt(LocalDateTime.now());
         
         lotteryMapper.updateByPrimaryKey(lottery);
-        
+
+        // 🆕 上架時自動生成籤位（若尚未生成）
+        if ("ON_SHELF".equals(status)) {
+            Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
+            if (!generated) {
+                log.info("🎫 籤位尚未生成，自動執行 generateTickets: lotteryId={}", id);
+                try {
+                    lotteryTicketService.generateTickets(id);
+                    // 標記已生成
+                    lottery.setTicketsGenerated((byte) 1);
+                    lottery.setUpdatedAt(java.time.LocalDateTime.now());
+                    lotteryMapper.updateByPrimaryKey(lottery);
+                    log.info("✅ 籤位自動生成完成: lotteryId={}", id);
+                } catch (Exception e) {
+                    log.warn("⚠️ 籤位生成失敗（可能獎品未設定或總數不符）: {}", e.getMessage());
+                }
+            } else {
+                log.info("ℹ️ 籤位已存在，略過生成: lotteryId={}", id);
+            }
+        }
+
         log.info("✅ 狀態更新成功");
         
         return convertToResNew(lottery);

@@ -156,7 +156,10 @@ public class LotteryDrawController {
                     results.size(), 
                     results.stream().filter(r -> r.success()).count());
             
-            return ResponseEntity.ok(results);
+            com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
+            String playMode = lottery != null ? lottery.getPlayMode() : null;
+            String gameMode = lottery != null ? lottery.getGameMode() : null;
+            return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results));
         }
         
         // 模式 2：隨機抽獎（不指定票券）
@@ -168,7 +171,10 @@ public class LotteryDrawController {
             results.add(r);
         }
         
-        return ResponseEntity.ok(results);
+        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
+        String playMode = lottery != null ? lottery.getPlayMode() : null;
+        String gameMode = lottery != null ? lottery.getGameMode() : null;
+        return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results));
     }
 
     /**
@@ -248,6 +254,15 @@ public class LotteryDrawController {
         List<LotteryTicketService.PrizeDesignation> designations
     ) {}
 
+    /**
+     * 批次抽獎回應（包含 playMode/gameMode 讓前端知道顯示模式）
+     */
+    public record DrawBatchResponse(
+        String playMode,   // LOTTERY_MODE / SCRATCH_MODE
+        String gameMode,   // RANDOM / SCRATCH_STORE / SCRATCH_PLAYER
+        List<DrawResult> results
+    ) {}
+
     public record TicketListResponse(
         List<LotteryTicketRes> tickets,
         SessionResponse session
@@ -283,37 +298,68 @@ public class LotteryDrawController {
     public record DesignationRequiredResponse(
         boolean designationRequired,
         String message,
-        List<Integer> availableNumbers
+        List<Integer> availableNumbers,  // 可選的 revealedNumber 列表
+        List<GrandPrizeInfo> grandPrizes  // 大獎清單（告知前端要指定幾個、哪些）
+    ) {}
+
+    /**
+     * 大獎資訊（供前端顯示指定 UI 用）
+     */
+    public record GrandPrizeInfo(
+        String prizeId,
+        String prizeName,
+        String prizeLevel,
+        int quantity,         // 此獎品需要指定幾個 revealedNumber
+        String prizeImageUrl
     ) {}
 
     // ==================== 私有輔助方法 ====================
 
     /**
      * 檢查是否需要玩家指定大獎
+     * 
+     * 只有 gameMode=SCRATCH_PLAYER 的開套者需要指定。
+     * SCRATCH_STORE 由店家在建立商品時已指定，不攔截。
      */
     private DesignationRequiredResponse checkDesignationRequired(String lotteryId, SessionInfo session) {
-        // 檢查 Session 是否已指定
+        // 已指定過，不需要
         if (session.playerDesignatedNumbers() != null && !session.playerDesignatedNumbers().trim().isEmpty()) {
-            return null; // 已指定，不需要
-        }
-        
-        // 檢查是否為 SCRATCH_MODE
-        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
-        if (lottery == null || lottery.getPlayMode() == null) {
             return null;
         }
-        
-        String playMode = lottery.getPlayMode();
-        if ("SCRATCH_MODE".equals(playMode) || "SCRATCH_CARD_MODE".equals(playMode)) {
-            // 需要指定，取得可用號碼
-            List<Integer> availableNumbers = ticketService.getAvailableTicketNumbers(lotteryId);
-            return new DesignationRequiredResponse(
-                    true,
-                    "請先指定大獎位置",
-                    availableNumbers
-            );
+
+        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
+        if (lottery == null || lottery.getGameMode() == null) {
+            return null;
         }
-        
-        return null; // 不是 SCRATCH_MODE，不需要
+
+        // ⚠️ 只有 SCRATCH_PLAYER 才需要玩家指定大獎位置
+        if (!"SCRATCH_PLAYER".equals(lottery.getGameMode())) {
+            return null;
+        }
+
+        // 取得可用 revealedNumber（前端顯示「可選號碼格子」）
+        List<Integer> availableNumbers = ticketService.getAvailableRevealedNumbers(lotteryId);
+
+        // 取得大獎清單，告知前端要指定幾個位置、各類大獎的資訊
+        List<com.group.admin.entity.LotteryPrize> grandPrizes = ticketService.getGrandPrizes(lotteryId);
+        int requiredCount = grandPrizes.stream()
+                .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                .sum();
+
+        List<GrandPrizeInfo> grandPrizeInfos = grandPrizes.stream()
+                .map(p -> new GrandPrizeInfo(
+                        p.getId(),
+                        p.getName(),
+                        p.getLevel(),
+                        p.getQuantity() != null ? p.getQuantity() : 0,
+                        p.getImageUrl()
+                )).toList();
+
+        return new DesignationRequiredResponse(
+                true,
+                "請先指定大獎位置（共需指定 " + requiredCount + " 個號碼）",
+                availableNumbers,
+                grandPrizeInfos
+        );
     }
 }
