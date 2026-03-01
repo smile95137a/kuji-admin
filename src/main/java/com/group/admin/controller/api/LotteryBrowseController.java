@@ -9,6 +9,7 @@ import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
+import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -165,12 +166,16 @@ public class LotteryBrowseController {
                     .build();
         }
         
-        // 5. 組裝回應
+        // 5. 取得已指定的大獎中獎號碼（刮刮樂專用）
+        List<DesignatedWinningNumber> designatedWinningNumbers = lotteryTicketService.getDesignatedWinningNumbers(id);
+
+        // 6. 組裝回應
         LotteryDetailRes result = LotteryDetailRes.builder()
                 .lottery(lottery)
                 .prizes(prizes)
                 .tickets(tickets)
                 .session(sessionInfo)
+                .designatedWinningNumbers(designatedWinningNumbers)
                 .build();
         
         log.info("✅ 查詢成功: lotteryId={}, prizes={}, tickets={}", 

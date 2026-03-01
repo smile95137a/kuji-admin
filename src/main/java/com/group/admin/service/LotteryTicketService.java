@@ -148,6 +148,28 @@ public interface LotteryTicketService {
     List<Integer> getAvailableRevealedNumbers(String lotteryId);
 
     /**
+     * 取得已指定的大獎中獎號碼清單（前台公開顯示用）
+     * <p>
+     * 顯示哪些 revealedNumber 是大獎，以及對應的獎品資訊。
+     * 讓所有玩家知道「刮中幾號能得到大獎」。
+     * </p>
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @return 已指定的中獎號碼清單
+     */
+    List<DesignatedWinningNumber> getDesignatedWinningNumbers(String lotteryId);
+
+    /**
+     * 取得目前進行中的場次（唯讀，不建立新場次）
+     * <p>用於 getTickets 等唯讀場景，避免查看就建立場次/啟動保護時間</p>
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @param userId 當前使用者 ID（判斷是否為開套者）
+     * @return 場次資訊，若無進行中場次則回傳 null
+     */
+    SessionInfo getActiveSession(String lotteryId, String userId);
+
+    /**
      * 取得大獎獎品清單（isGrandPrize=1）
      *
      * @param lotteryId 抽獎活動 ID
@@ -237,5 +259,17 @@ public interface LotteryTicketService {
         boolean freeDrawEnabled,
         String status,
         String playerDesignatedNumbers  // 玩家指定的大獎位置（JSON 格式）
+    ) {}
+
+    /**
+     * 已指定的大獎中獎號碼 DTO（前台顯示用）
+     * <p>告知所有玩家哪些 revealedNumber 是大獎、對應什麼獎品</p>
+     */
+    record DesignatedWinningNumber(
+        Integer revealedNumber,
+        String prizeId,
+        String prizeName,
+        String prizeLevel,
+        String prizeImageUrl
     ) {}
 }

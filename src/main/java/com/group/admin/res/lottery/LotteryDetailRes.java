@@ -1,5 +1,6 @@
 package com.group.admin.res.lottery;
 
+import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,6 +36,9 @@ public class LotteryDetailRes {
 
     @Schema(description = "場次資訊")
     private SessionInfoRes session;
+
+    @Schema(description = "已指定的大獎中獎號碼（刮刮樂專用，其他類型為空列表）")
+    private List<DesignatedWinningNumber> designatedWinningNumbers;
 
     /**
      * 場次資訊
