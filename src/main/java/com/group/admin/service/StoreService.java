@@ -2,55 +2,39 @@ package com.group.admin.service;
 
 import com.group.admin.condition.StoreCondition;
 import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.store.CreateStoreReq;
 import com.group.admin.req.store.UpdateStoreReq;
+import com.group.admin.req.store.UpdateStoreStatusReq;
 import com.group.admin.res.store.StoreRes;
 
 import java.util.List;
 
-/**
- * 店家服務
- * 
- * @author KUJI System
- * @since 1.0.0
- */
 public interface StoreService {
 
-    /**
-     * 查詢店家列表
-     * 
-     * @param req 查詢請求
-     * @return 店家列表
-     */
     List<StoreRes> queryStores(QueryReq<StoreCondition> req);
 
-    /**
-     * 查詢店家詳情
-     * 
-     * @param storeId 店家 ID
-     * @return 店家詳情
-     */
     StoreRes getStoreById(String storeId);
 
-    /**
-     * 更新店家資訊
-     * 
-     * @param storeId 店家 ID
-     * @param req 更新請求
-     * @return 更新後的店家資訊
-     */
     StoreRes updateStore(String storeId, UpdateStoreReq req);
 
-    /**
-     * 啟用店家
-     * 
-     * @param storeId 店家 ID
-     */
     void activateStore(String storeId);
 
-    /**
-     * 停用店家
-     * 
-     * @param storeId 店家 ID
-     */
     void deactivateStore(String storeId);
+
+    // ========== 014-store-management new methods ==========
+
+    /**
+     * 建立店家（含負責人帳號）
+     */
+    StoreRes createStore(CreateStoreReq req, String operatorId);
+
+    /**
+     * 更新店家狀態
+     */
+    void updateStoreStatus(String storeId, UpdateStoreStatusReq req, String operatorId);
+
+    /**
+     * 前台公開店家列表（僅啟用的）
+     */
+    List<StoreRes> getPublicStoreList(int page, int size);
 }

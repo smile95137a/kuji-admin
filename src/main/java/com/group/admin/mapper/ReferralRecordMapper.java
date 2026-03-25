@@ -27,4 +27,12 @@ public interface ReferralRecordMapper {
     int updateByPrimaryKeySelective(ReferralRecord row);
 
     int updateByPrimaryKey(ReferralRecord row);
+
+    // ========== Custom methods ==========
+
+    List<ReferralRecord> selectByReferrerId(@Param("referrerId") String referrerId,
+                                            @Param("offset") int offset,
+                                            @Param("limit") int limit);
+
+    long countByReferrerId(@Param("referrerId") String referrerId);
 }

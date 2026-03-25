@@ -30,8 +30,10 @@ import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
+import com.group.admin.req.admin.UpdateAdminUserReq;
 import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.service.AdminAuthService;
 import com.group.admin.service.AdminUserService;
@@ -328,9 +330,94 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Transactional
     public void deleteAdminUser(String userId) {
         log.info("刪除帳號（停用）：userId={}", userId);
-
-        // 實際上不刪除，而是停用
         deactivateAdminUser(userId);
+    }
+
+    // ========== 013-store-account-mgmt new implementations ==========
+
+    @Override
+    @Transactional
+    public AdminUserRes updateAdminUser(String userId, UpdateAdminUserReq req, String operatorId) {
+        log.info("📝 更新帳號資料：userId={}, operatorId={}", userId, operatorId);
+
+        AdminUser user = adminUserMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
+        }
+
+        if (req.getDisplayName() != null) {
+            user.setDisplayName(req.getDisplayName());
+        }
+        if (req.getEmail() != null) {
+            // Check email uniqueness
+            AdminUserExample emailCheck = new AdminUserExample();
+            emailCheck.createCriteria().andEmailEqualTo(req.getEmail()).andIdNotEqualTo(userId);
+            if (!adminUserMapper.selectByExample(emailCheck).isEmpty()) {
+                throw new BusinessException(ErrorCodes.USER_EMAIL_EXISTS, "Email 已被使用");
+            }
+            user.setEmail(req.getEmail());
+        }
+        if (req.getPhone() != null) {
+            user.setPhone(req.getPhone());
+        }
+        if (req.getStatus() != null) {
+            user.setStatus(req.getStatus());
+        }
+        user.setUpdatedBy(operatorId);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        adminUserMapper.updateByPrimaryKeySelective(user);
+        log.info("✅ 帳號資料更新成功：userId={}", userId);
+
+        return toAdminUserRes(user);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String userId, ChangePasswordReq req) {
+        log.info("🔑 修改密碼：userId={}", userId);
+
+        AdminUser user = adminUserMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
+        }
+
+        if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCodes.USER_OLD_PASSWORD_WRONG, "舊密碼錯誤");
+        }
+
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setForceChangePassword(false);
+        user.setUpdatedAt(LocalDateTime.now());
+        adminUserMapper.updateByPrimaryKeySelective(user);
+
+        log.info("✅ 密碼修改成功：userId={}", userId);
+    }
+
+    @Override
+    public List<AdminUserRes> listAdminUsers(String storeId) {
+        if (storeId != null && !storeId.isEmpty()) {
+            return getAdminUsersByStore(storeId);
+        }
+        return getAllAdminUsers();
+    }
+
+    @Override
+    @Transactional
+    public void disableAdminUser(String userId, String operatorId) {
+        log.info("🚫 停用帳號：userId={}, operatorId={}", userId, operatorId);
+
+        AdminUser user = adminUserMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
+        }
+
+        user.setStatus(AdminUserStatus.INACTIVE.getCode());
+        user.setUpdatedBy(operatorId);
+        user.setUpdatedAt(LocalDateTime.now());
+        adminUserMapper.updateByPrimaryKeySelective(user);
+
+        log.info("✅ 帳號已停用：userId={}", userId);
     }
 
     /**

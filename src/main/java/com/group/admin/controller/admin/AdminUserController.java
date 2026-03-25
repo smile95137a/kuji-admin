@@ -11,9 +11,12 @@ import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
+import com.group.admin.req.admin.UpdateAdminUserReq;
+import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.res.common.EnumOption;
 import com.group.admin.service.AdminUserService;
+import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -180,23 +183,57 @@ public class AdminUserController {
 
     /**
      * 停用帳號
-     * 
-     * @param id 帳號 ID
-     * @return 成功訊息
      */
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "停用帳號", description = "停用指定帳號，停用後無法登入")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "停用成功"),
-        @ApiResponse(responseCode = "404", description = "帳號不存在"),
-        @ApiResponse(responseCode = "401", description = "未認證"),
-        @ApiResponse(responseCode = "403", description = "無權限")
-    })
     public ResponseEntity<Void> deactivateAdminUser(
             @Parameter(description = "帳號 ID") @PathVariable String id) {
         log.info("停用帳號：userId={}", id);
         adminUserService.deactivateAdminUser(id);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 更新帳號資料
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @Operation(summary = "更新帳號資料", description = "更新指定帳號的顯示名稱、Email、電話等")
+    public ResponseEntity<AdminUserRes> updateAdminUser(
+            @Parameter(description = "帳號 ID") @PathVariable String id,
+            @Valid @RequestBody UpdateAdminUserReq req) {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        log.info("更新帳號資料：userId={}, operatorId={}", id, operatorId);
+        AdminUserRes res = adminUserService.updateAdminUser(id, req, operatorId);
+        return ResponseEntity.ok(res);
+    }
+
+    /**
+     * 修改密碼
+     */
+    @PostMapping("/{id}/change-password")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "修改密碼", description = "驗證舊密碼後修改為新密碼")
+    public ResponseEntity<Void> changePassword(
+            @Parameter(description = "帳號 ID") @PathVariable String id,
+            @Valid @RequestBody ChangePasswordReq req) {
+        log.info("修改密碼：userId={}", id);
+        adminUserService.changePassword(id, req);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 停用帳號（帶 operatorId）
+     */
+    @PostMapping("/{id}/disable")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "停用帳號", description = "停用指定帳號（ADMIN 專用）")
+    public ResponseEntity<Void> disableAdminUser(
+            @Parameter(description = "帳號 ID") @PathVariable String id) {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        log.info("停用帳號：userId={}, operatorId={}", id, operatorId);
+        adminUserService.disableAdminUser(id, operatorId);
         return ResponseEntity.ok().build();
     }
 

@@ -27,4 +27,10 @@ public interface ReferralCodeMapper {
     int updateByPrimaryKeySelective(ReferralCode row);
 
     int updateByPrimaryKey(ReferralCode row);
+
+    // ========== Custom methods ==========
+
+    ReferralCode selectByCode(@Param("code") String code);
+
+    int incrementUsageCount(@Param("id") String id);
 }

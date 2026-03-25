@@ -26,8 +26,8 @@ public class StoreRes {
     /**
      * 店家 ID
      */
-    @Schema(description = "店家 ID", example = "1")
-    private Long id;
+    @Schema(description = "店家 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private String id;
 
     /**
      * 店家名稱
@@ -150,8 +150,8 @@ public class StoreRes {
         /**
          * 使用者 ID
          */
-        @Schema(description = "使用者 ID", example = "1")
-        private Long id;
+        @Schema(description = "使用者 ID", example = "550e8400-e29b-41d4-a716-446655440000")
+        private String id;
 
         /**
          * 顯示名稱

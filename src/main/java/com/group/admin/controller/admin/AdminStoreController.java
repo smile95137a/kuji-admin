@@ -8,7 +8,9 @@ import com.group.admin.example.StoreUserExample;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.store.CreateStoreReq;
 import com.group.admin.req.store.UpdateStoreReq;
+import com.group.admin.req.store.UpdateStoreStatusReq;
 import com.group.admin.res.common.EnumOption;
 import com.group.admin.res.store.StoreRes;
 import com.group.admin.service.StoreService;
@@ -19,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -183,6 +186,19 @@ public class AdminStoreController {
     }
 
     /**
+     * 建立店家（含負責人帳號）
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "建立店家", description = "建立店家並可選建立負責人帳號（ADMIN 專用）")
+    public ResponseEntity<StoreRes> createStore(@Valid @RequestBody CreateStoreReq req) {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        log.info("🏪 [後台] 建立店家: storeName={}, operatorId={}", req.getStoreName(), operatorId);
+        StoreRes res = storeService.createStore(req, operatorId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+    }
+
+    /**
      * 取得所有店家選項（不受權限限制，Admin 專用）
      * 
      * @return 所有店家選項
@@ -325,6 +341,23 @@ public class AdminStoreController {
         storeService.deactivateStore(storeId);
         
         log.info("✅ [後台] 店家已停用");
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 更新店家狀態
+     */
+    @PutMapping("/{storeId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "更新店家狀態", description = "啟用或停用店家（ADMIN 專用）")
+    public ResponseEntity<Void> updateStoreStatus(
+            @PathVariable
+            @Parameter(description = "店家 ID", example = "uuid-store-1")
+            String storeId,
+            @Valid @RequestBody UpdateStoreStatusReq req) {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        log.info("🔄 [後台] 更新店家狀態: storeId={}, status={}", storeId, req.getStatus());
+        storeService.updateStoreStatus(storeId, req, operatorId);
         return ResponseEntity.ok().build();
     }
 }
