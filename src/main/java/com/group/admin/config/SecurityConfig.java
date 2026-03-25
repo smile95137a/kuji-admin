@@ -86,6 +86,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
                         .requestMatchers("/api/ws/**").permitAll()        // WebSocket
                         .requestMatchers("/api/recharge-plan/**").permitAll()  // 儲值方案
+                        .requestMatchers("/api/stores/list").permitAll()        // 公開店家列表
+                        .requestMatchers("/api/lottery/list").permitAll()       // 公開商品列表
+                        .requestMatchers("/api/lottery/browse/**").permitAll()  // 公開商品瀏覽
+                        .requestMatchers("/api/news/published").permitAll()     // 公開新聞
+                        .requestMatchers("/api/banners").permitAll()            // 公開輪播
                         // 其他 /api/** 需要 USER 或後台管理角色
                         .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )

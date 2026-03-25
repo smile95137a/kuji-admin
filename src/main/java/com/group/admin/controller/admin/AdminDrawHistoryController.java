@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/admin/lottery")
+@RequestMapping("/admin/lottery-draws")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
 public class AdminDrawHistoryController {
