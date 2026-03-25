@@ -319,4 +319,20 @@ public interface LotteryService {
      * @return 更新後的 hotCount
      */
     int incrementHotCount(String lotteryId);
+    
+    /**
+     * 變更商品狀態（含 FSM 轉換驗證）
+     * 
+     * 合法轉換：
+     * DRAFT → ON_SHELF, ON_SHELF → OFF_SHELF, OFF_SHELF → ON_SHELF,
+     * DRAFT → CONFIGURED, CONFIGURED → ON_SHELF, ANY → FORCED_OFF,
+     * FORCED_OFF → DRAFT
+     * 
+     * @param lotteryId    商品 ID
+     * @param targetStatus 目標狀態
+     * @param reason       原因（強制下架時使用）
+     * @param operatorId   操作者 ID
+     * @return 更新後的商品
+     */
+    LotteryRes changeStatus(String lotteryId, String targetStatus, String reason, String operatorId);
 }

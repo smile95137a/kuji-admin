@@ -480,4 +480,26 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== 自訂 SQL ==================== -->
+
+  <insert id="batchInsertPrizes" parameterType="java.util.List">
+    insert into `lottery_prize` (id, lottery_id, name, image_url, level, prize_number,
+      quantity, remaining, weight, prize_type, point_value, is_last_prize,
+      is_grand_prize, order_num, created_at, updated_at, description, content)
+    values
+    <foreach collection="list" item="item" separator=",">
+      (#{item.id,jdbcType=VARCHAR}, #{item.lotteryId,jdbcType=VARCHAR}, #{item.name,jdbcType=VARCHAR},
+       #{item.imageUrl,jdbcType=VARCHAR}, #{item.level,jdbcType=VARCHAR}, #{item.prizeNumber,jdbcType=VARCHAR},
+       #{item.quantity,jdbcType=INTEGER}, #{item.remaining,jdbcType=INTEGER}, #{item.weight,jdbcType=INTEGER},
+       #{item.prizeType,jdbcType=VARCHAR}, #{item.pointValue,jdbcType=BIGINT}, #{item.isLastPrize,jdbcType=TINYINT},
+       #{item.isGrandPrize,jdbcType=TINYINT}, #{item.orderNum,jdbcType=INTEGER}, #{item.createdAt,jdbcType=TIMESTAMP},
+       #{item.updatedAt,jdbcType=TIMESTAMP}, #{item.description,jdbcType=LONGVARCHAR}, #{item.content,jdbcType=LONGVARCHAR})
+    </foreach>
+  </insert>
+
+  <delete id="deleteByLotteryId">
+    delete from `lottery_prize` where lottery_id = #{lotteryId,jdbcType=VARCHAR}
+  </delete>
+
 </mapper>

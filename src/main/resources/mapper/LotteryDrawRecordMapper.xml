@@ -336,4 +336,37 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- Custom: Admin draw history paged query -->
+  <select id="selectByLotteryIdPaged" resultType="java.util.HashMap">
+    SELECT r.id, r.lottery_id AS lotteryId, r.user_id AS userId,
+           r.prize_id AS prizeId, r.cost_amount AS costAmount, r.cost_type AS costType,
+           r.status, r.created_at AS createdAt, r.session_id AS sessionId,
+           u.nickname AS username, p.name AS prizeName, p.level AS prizeLevel
+    FROM lottery_draw_record r
+    LEFT JOIN users u ON r.user_id = u.id
+    LEFT JOIN lottery_prize p ON r.prize_id = p.id
+    WHERE r.lottery_id = #{lotteryId}
+    <if test="userId != null and userId != ''">AND r.user_id = #{userId}</if>
+    <if test="status != null and status != ''">AND r.status = #{status}</if>
+    <if test="startDate != null">AND r.created_at &gt;= #{startDate}</if>
+    <if test="endDate != null">AND r.created_at &lt;= #{endDate}</if>
+    ORDER BY r.created_at DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countByLotteryIdFiltered" resultType="long">
+    SELECT COUNT(*) FROM lottery_draw_record
+    WHERE lottery_id = #{lotteryId}
+    <if test="userId != null and userId != ''">AND user_id = #{userId}</if>
+    <if test="status != null and status != ''">AND status = #{status}</if>
+    <if test="startDate != null">AND created_at &gt;= #{startDate}</if>
+    <if test="endDate != null">AND created_at &lt;= #{endDate}</if>
+  </select>
+
+  <select id="sumCostAmountByLotteryId" resultType="java.lang.Long">
+    SELECT SUM(cost_amount) FROM lottery_draw_record
+    WHERE lottery_id = #{lotteryId} AND status = 'SUCCESS'
+  </select>
+
 </mapper>

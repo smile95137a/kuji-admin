@@ -8,6 +8,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCopyReq;
 import com.group.admin.req.lottery.LotteryCreateReq;
+import com.group.admin.req.lottery.LotteryStatusChangeReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
@@ -312,6 +313,49 @@ public class AdminLotteryController {
         );
         
         log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 複製商品（路徑參數版）
+     * 
+     * @param id 來源商品 ID（UUID 格式）
+     * @return 複製後的商品
+     */
+    @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/copy")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "複製商品（路徑參數版）", description = "根據商品 ID 複製商品")
+    public ResponseEntity<LotteryRes> copyLotteryById(@PathVariable String id) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("📋 複製商品(path): userId={}, sourceLotteryId={}", userId, id);
+        
+        LotteryRes result = lotteryService.copyLottery(id, null, true, null);
+        
+        log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 變更商品狀態（含 FSM 轉換驗證）
+     * 
+     * @param id  商品 ID（UUID 格式）
+     * @param req 狀態變更請求
+     * @return 更新後的商品
+     */
+    @PutMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @Operation(summary = "變更商品狀態", description = "變更商品狀態，含 FSM 轉換驗證")
+    public ResponseEntity<LotteryRes> changeStatus(
+            @PathVariable String id,
+            @Valid @RequestBody LotteryStatusChangeReq req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("🔄 變更商品狀態: userId={}, lotteryId={}, targetStatus={}", userId, id, req.getTargetStatus());
+        
+        LotteryRes result = lotteryService.changeStatus(id, req.getTargetStatus(), req.getReason(), userId);
+        
+        log.info("✅ 狀態變更成功: newStatus={}", result.getStatus());
         return ResponseEntity.ok(result);
     }
 }

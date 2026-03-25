@@ -31,6 +31,8 @@ public class PrizeBox {
 
     private LocalDateTime updatedAt;
 
+    private Byte isShippable;
+
     public String getId() {
         return id;
     }
@@ -141,5 +143,13 @@ public class PrizeBox {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Byte getIsShippable() {
+        return isShippable;
+    }
+
+    public void setIsShippable(Byte isShippable) {
+        this.isShippable = isShippable;
     }
 }

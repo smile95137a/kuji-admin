@@ -33,4 +33,10 @@ public interface LotteryPrizeMapper {
     int updateByPrimaryKeyWithBLOBs(LotteryPrize row);
 
     int updateByPrimaryKey(LotteryPrize row);
+
+    // ==================== 自訂方法 ====================
+
+    int batchInsertPrizes(@Param("list") List<LotteryPrize> prizes);
+
+    int deleteByLotteryId(@Param("lotteryId") String lotteryId);
 }

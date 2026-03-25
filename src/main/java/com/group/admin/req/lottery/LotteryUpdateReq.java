@@ -110,6 +110,13 @@ public class LotteryUpdateReq {
     private String playMode;
 
     /**
+     * 遊戲子模式（刮刮樂用）
+     * SCRATCH_STORE/SCRATCH_PLAYER/RANDOM
+     */
+    @Schema(description = "遊戲子模式：SCRATCH_STORE/SCRATCH_PLAYER/RANDOM", example = "RANDOM")
+    private String gameMode;
+
+    /**
      * 商品狀態
      */
     @Schema(description = "商品狀態：DRAFT/ON_SHELF/OFF_SHELF/IN_PROGRESS/ENDED", example = "ON_SHELF")
@@ -157,4 +164,34 @@ public class LotteryUpdateReq {
      */
     @Schema(description = "內部備註", example = "這批貨進價較高")
     private String remark;
+
+    /**
+     * 商品主題分類
+     */
+    @Schema(description = "商品主題分類（火影忍者、航海王等）", example = "鬼滅之刃")
+    private String theme;
+
+    /**
+     * 商品詳細內容（HTML 格式）
+     */
+    @Schema(description = "商品詳細內容（HTML 格式）")
+    private String content;
+
+    /**
+     * 熱門程度
+     */
+    @Schema(description = "熱門程度", example = "999")
+    private Integer hotCount;
+
+    /**
+     * 每抽贈送紅利點數
+     */
+    @Schema(description = "每抽贈送紅利點數", example = "10")
+    private Integer bonusPointsPerDraw;
+
+    /**
+     * 每抽消耗紅利點數
+     */
+    @Schema(description = "每抽消耗紅利點數", example = "200")
+    private Integer bonusCostPerDraw;
 }

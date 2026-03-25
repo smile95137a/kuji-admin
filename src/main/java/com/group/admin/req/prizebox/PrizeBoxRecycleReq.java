@@ -16,7 +16,7 @@ import java.util.List;
 public class PrizeBoxRecycleReq {
     
     /**
-     * 要回收的賞品盒項目 ID 列表
+     * 要回收的獎品盒項目 ID 列表
      */
     @NotEmpty(message = "請選擇要回收的獎品")
     private List<String> prizeBoxIds;

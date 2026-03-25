@@ -12,48 +12,17 @@ import lombok.Data;
 @Data
 public class LockStatusRes {
     
-    /**
-     * 商品ID
-     */
-    private Long lotteryId;
-    
-    /**
-     * 是否被鎖定
-     */
+    private String lotteryId;
     private Boolean isLocked;
-    
-    /**
-     * 鎖定者用戶ID（如果被鎖定）
-     */
-    private Long lockedByUserId;
-    
-    /**
-     * 鎖定者用戶名稱
-     */
+    private String lockedByUserId;
     private String lockedByUsername;
-    
-    /**
-     * 是否為當前用戶鎖定
-     */
     private Boolean isLockedByCurrentUser;
-    
-    /**
-     * 鎖定開始時間
-     */
+    private Boolean canDraw;
+    private Boolean isLockedByMe;
+    private Boolean lockedByOther;
+    private Integer protectionMinutes;
     private LocalDateTime lockStartTime;
-    
-    /**
-     * 鎖定結束時間
-     */
     private LocalDateTime lockEndTime;
-    
-    /**
-     * 剩餘鎖定時間（秒）
-     */
     private Long remainingLockSeconds;
-    
-    /**
-     * 提示訊息
-     */
     private String message;
 }

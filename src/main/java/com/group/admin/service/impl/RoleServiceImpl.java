@@ -6,6 +6,7 @@ import com.group.admin.entity.Menu;
 import com.group.admin.entity.PermissionAuditLog;
 import com.group.admin.entity.Role;
 import com.group.admin.entity.RoleMenu;
+import com.group.admin.example.MenuExample;
 import com.group.admin.example.RoleExample;
 import com.group.admin.example.RoleMenuExample;
 import com.group.admin.exception.BusinessException;

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * 賞品盒摘要（按店家分組）
+ * 獎品盒摘要（按店家分組）
  * 
  * @author Kuji Admin
  * @since 2026-01-09

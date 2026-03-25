@@ -164,6 +164,15 @@ public class LotteryCreateReq {
     private String playMode;
 
     /**
+     * 遊戲模式（刮刮樂子模式）
+     * SCRATCH_STORE: 店家預先指定大獎位置
+     * SCRATCH_PLAYER: 玩家開套時指定大獎位置
+     * RANDOM: 完全隨機
+     */
+    @Schema(description = "遊戲模式：SCRATCH_STORE/SCRATCH_PLAYER/RANDOM（僅 SCRATCH_MODE 需要）", example = "RANDOM")
+    private String gameMode;
+
+    /**
      * 商品狀態
      */
     @Schema(description = "商品狀態：DRAFT（草稿）/ ON_SHELF（上架）/ OFF_SHELF（下架）", example = "DRAFT")

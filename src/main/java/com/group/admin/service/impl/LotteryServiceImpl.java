@@ -880,11 +880,38 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setTitle(req.getTitle());
         lottery.setDescription(req.getDescription());
         lottery.setCategory(req.getCategory());
-        lottery.setStatus("OFF_SHELF");  // 預設下架
+        lottery.setSubCategory(req.getSubCategory());
+        lottery.setPlayMode(req.getPlayMode());
+        lottery.setGameMode(req.getGameMode());
+        lottery.setStatus(req.getStatus() != null ? req.getStatus() : "OFF_SHELF");
         lottery.setPricePerDraw(req.getPricePerDraw());
-        // lottery.setTotalQuantity(req.getTotalQuantity());  // 欄位可能不存在
-        // lottery.setRemainingQuantity(req.getTotalQuantity());
+        lottery.setDiscountedPrice(req.getDiscountedPrice());
+        lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        if (req.getMultiDrawOptions() != null && !req.getMultiDrawOptions().isEmpty()) {
+            lottery.setMultiDrawOptions(req.getMultiDrawOptions().stream()
+                    .map(String::valueOf).collect(Collectors.joining(",")));
+        }
+        lottery.setMaxDraws(req.getMaxDraws());
+        lottery.setTotalDraws(0);
         lottery.setImageUrl(req.getImageUrl());
+        lottery.setOrderNum(req.getOrderNum());
+        lottery.setRemark(req.getRemark());
+        lottery.setHotCount(req.getHotCount() != null ? req.getHotCount() : 0);
+        lottery.setTheme(req.getTheme());
+        lottery.setContent(req.getContent());
+        lottery.setScheduledAt(req.getScheduledAt());
+        lottery.setStartTime(req.getStartTime());
+        lottery.setEndTime(req.getEndTime());
+        lottery.setBonusEnabled(req.getBonusEnabled());
+        lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
+        lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
+        if (req.getTags() != null && !req.getTags().isEmpty()) {
+            lottery.setTags(String.join(",", req.getTags()));
+        }
+        if (req.getGalleryImages() != null && !req.getGalleryImages().isEmpty()) {
+            lottery.setGalleryImages(String.join(",", req.getGalleryImages()));
+        }
         lottery.setCreatedAt(LocalDateTime.now());
         lottery.setUpdatedAt(LocalDateTime.now());
         
@@ -908,7 +935,7 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("商品不存在");
         }
         
-        // 更新欄位
+        // 更新欄位（所有欄位都是可選的）
         if (req.getTitle() != null) {
             lottery.setTitle(req.getTitle());
         }
@@ -918,8 +945,81 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getImageUrl() != null) {
             lottery.setImageUrl(req.getImageUrl());
         }
+        if (req.getCategory() != null) {
+            lottery.setCategory(req.getCategory());
+        }
+        if (req.getSubCategory() != null) {
+            lottery.setSubCategory(req.getSubCategory());
+        }
+        if (req.getPlayMode() != null) {
+            lottery.setPlayMode(req.getPlayMode());
+        }
+        if (req.getGameMode() != null) {
+            lottery.setGameMode(req.getGameMode());
+        }
         if (req.getPricePerDraw() != null) {
             lottery.setPricePerDraw(req.getPricePerDraw());
+        }
+        if (req.getDiscountedPrice() != null) {
+            lottery.setDiscountedPrice(req.getDiscountedPrice());
+        }
+        if (req.getAutoDiscountEnabled() != null) {
+            lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        }
+        if (req.getAllowMultiDraw() != null) {
+            lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        }
+        if (req.getMultiDrawOptions() != null) {
+            lottery.setMultiDrawOptions(req.getMultiDrawOptions().stream()
+                    .map(String::valueOf).collect(Collectors.joining(",")));
+        }
+        if (req.getBonusEnabled() != null) {
+            lottery.setBonusEnabled(req.getBonusEnabled());
+        }
+        if (req.getBonusPointsPerDraw() != null) {
+            lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
+        }
+        if (req.getBonusCostPerDraw() != null) {
+            lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
+        }
+        if (req.getMaxDraws() != null) {
+            lottery.setMaxDraws(req.getMaxDraws());
+        }
+        if (req.getOrderNum() != null) {
+            lottery.setOrderNum(req.getOrderNum());
+        }
+        if (req.getWeight() != null) {
+            lottery.setWeight(req.getWeight());
+        }
+        if (req.getRemark() != null) {
+            lottery.setRemark(req.getRemark());
+        }
+        if (req.getTheme() != null) {
+            lottery.setTheme(req.getTheme());
+        }
+        if (req.getContent() != null) {
+            lottery.setContent(req.getContent());
+        }
+        if (req.getHotCount() != null) {
+            lottery.setHotCount(req.getHotCount());
+        }
+        if (req.getStatus() != null) {
+            lottery.setStatus(req.getStatus());
+        }
+        if (req.getScheduledAt() != null) {
+            lottery.setScheduledAt(req.getScheduledAt());
+        }
+        if (req.getStartTime() != null) {
+            lottery.setStartTime(req.getStartTime());
+        }
+        if (req.getEndTime() != null) {
+            lottery.setEndTime(req.getEndTime());
+        }
+        if (req.getTags() != null) {
+            lottery.setTags(req.getTags().stream().collect(Collectors.joining(",")));
+        }
+        if (req.getGalleryImages() != null) {
+            lottery.setGalleryImages(req.getGalleryImages().stream().collect(Collectors.joining(",")));
         }
         
         lottery.setUpdatedAt(LocalDateTime.now());
@@ -1129,7 +1229,7 @@ public class LotteryServiceImpl implements LotteryService {
         // ✅ 新增欄位（前台商品詳情需要）
         res.setProtectionDraws(lottery.getProtectionDraws());
         res.setProtectionMinutes(lottery.getProtectionMinutes());
-        res.setContent(lottery.getDescription()); // content 使用 description 欄位
+        res.setContent(lottery.getContent());
         res.setGameMode(lottery.getGameMode());
         res.setFreeDrawEnabled(lottery.getFreeDrawEnabled() != null && lottery.getFreeDrawEnabled() == 1);
         res.setDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers());
@@ -1745,6 +1845,79 @@ public class LotteryServiceImpl implements LotteryService {
                 lotteryId, currentHotCount, newHotCount);
         
         return newHotCount;
+    }
+    
+    // ==================== 狀態變更（含 FSM 驗證）====================
+    
+    private static final Map<String, List<String>> VALID_TRANSITIONS = Map.of(
+        "DRAFT",       List.of("CONFIGURED", "ON_SHELF", "FORCED_OFF"),
+        "CONFIGURED",  List.of("ON_SHELF", "FORCED_OFF"),
+        "ON_SHELF",    List.of("OFF_SHELF", "DRAWABLE", "FORCED_OFF"),
+        "OFF_SHELF",   List.of("ON_SHELF", "FORCED_OFF"),
+        "DRAWABLE",    List.of("SOLD_OUT", "FORCED_OFF"),
+        "IN_PROGRESS", List.of("SOLD_OUT", "FORCED_OFF"),
+        "SOLD_OUT",    List.of("FORCED_OFF"),
+        "FORCED_OFF",  List.of("DRAFT")
+    );
+    
+    @Override
+    @Transactional
+    public LotteryRes changeStatus(String lotteryId, String targetStatus, String reason, String operatorId) {
+        log.info("🔄 變更商品狀態: lotteryId={}, targetStatus={}, operatorId={}", lotteryId, targetStatus, operatorId);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在: " + lotteryId);
+        }
+        
+        String currentStatus = lottery.getStatus();
+        if (currentStatus == null) {
+            currentStatus = "DRAFT";
+        }
+        
+        // FSM 轉換驗證
+        List<String> allowed = VALID_TRANSITIONS.getOrDefault(currentStatus, List.of());
+        if (!allowed.contains(targetStatus)) {
+            throw new BusinessException(String.format(
+                "不合法的狀態轉換: %s → %s（允許: %s）", currentStatus, targetStatus, allowed));
+        }
+        
+        // FORCED_OFF 需要 reason
+        if ("FORCED_OFF".equals(targetStatus) && (reason == null || reason.isBlank())) {
+            log.warn("⚠️ 強制下架未提供原因");
+        }
+        
+        // 特殊轉換邏輯
+        if ("FORCED_OFF".equals(targetStatus) && reason != null) {
+            lottery.setRemark(reason);
+        }
+        if ("DRAFT".equals(targetStatus) && "FORCED_OFF".equals(currentStatus)) {
+            // 重新啟用：重設相關欄位
+            lottery.setTicketsGenerated((byte) 0);
+        }
+        
+        lottery.setStatus(targetStatus);
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+        
+        // 上架時自動生成籤位
+        if ("ON_SHELF".equals(targetStatus)) {
+            Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
+            if (!generated) {
+                try {
+                    lotteryTicketService.generateTickets(lotteryId);
+                    lottery.setTicketsGenerated((byte) 1);
+                    lottery.setUpdatedAt(LocalDateTime.now());
+                    lotteryMapper.updateByPrimaryKey(lottery);
+                    log.info("✅ 籤位自動生成完成: lotteryId={}", lotteryId);
+                } catch (Exception e) {
+                    log.warn("⚠️ 籤位生成失敗: {}", e.getMessage());
+                }
+            }
+        }
+        
+        log.info("✅ 狀態變更成功: {} → {}", currentStatus, targetStatus);
+        return convertToResNew(lottery);
     }
     
     // ==================== 輔助方法 ====================

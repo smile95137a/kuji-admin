@@ -167,6 +167,9 @@
       <if test="updatedAt != null">
         updated_at,
       </if>
+      <if test="isShippable != null">
+        is_shippable,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -210,6 +213,9 @@
       </if>
       <if test="updatedAt != null">
         #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isShippable != null">
+        #{isShippable,jdbcType=TINYINT},
       </if>
     </trim>
   </insert>
@@ -264,6 +270,9 @@
       <if test="row.updatedAt != null">
         updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
       </if>
+      <if test="row.isShippable != null">
+        is_shippable = #{row.isShippable,jdbcType=TINYINT},
+      </if>
     </set>
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
@@ -284,7 +293,8 @@
       shipped_at = #{row.shippedAt,jdbcType=TIMESTAMP},
       order_id = #{row.orderId,jdbcType=VARCHAR},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      is_shippable = #{row.isShippable,jdbcType=TINYINT}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -331,6 +341,9 @@
       <if test="updatedAt != null">
         updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       </if>
+      <if test="isShippable != null">
+        is_shippable = #{isShippable,jdbcType=TINYINT},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -348,7 +361,8 @@
       shipped_at = #{shippedAt,jdbcType=TIMESTAMP},
       order_id = #{orderId,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
-      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      is_shippable = #{isShippable,jdbcType=TINYINT}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>
