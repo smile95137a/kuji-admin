@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.group.admin.mapper.OrderItemMapper">
   <resultMap id="BaseResultMap" type="com.group.admin.entity.OrderItem">
@@ -336,4 +336,22 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <insert id="batchInsertOrderItems">
+    INSERT INTO order_item (id, order_id, prize_box_id, lottery_id, lottery_title,
+      lottery_image_url, prize_id, prize_name, prize_grade, prize_image, prize_image_url,
+      prize_level, created_at)
+    VALUES
+    <foreach collection="list" item="item" separator=",">
+      (#{item.id,jdbcType=VARCHAR}, #{item.orderId,jdbcType=VARCHAR},
+       #{item.prizeBoxId,jdbcType=VARCHAR}, #{item.lotteryId,jdbcType=VARCHAR},
+       #{item.lotteryTitle,jdbcType=VARCHAR}, #{item.lotteryImageUrl,jdbcType=VARCHAR},
+       #{item.prizeId,jdbcType=VARCHAR}, #{item.prizeName,jdbcType=VARCHAR},
+       #{item.prizeGrade,jdbcType=VARCHAR}, #{item.prizeImage,jdbcType=VARCHAR},
+       #{item.prizeImageUrl,jdbcType=VARCHAR}, #{item.prizeLevel,jdbcType=VARCHAR},
+       #{item.createdAt,jdbcType=TIMESTAMP})
+    </foreach>
+  </insert>
 </mapper>

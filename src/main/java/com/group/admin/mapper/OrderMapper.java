@@ -1,5 +1,6 @@
 package com.group.admin.mapper;
 
+import com.group.admin.condition.OrderCondition;
 import com.group.admin.entity.Order;
 import com.group.admin.example.OrderExample;
 import java.util.List;
@@ -27,4 +28,10 @@ public interface OrderMapper {
     int updateByPrimaryKeySelective(Order row);
 
     int updateByPrimaryKey(Order row);
+
+    // ==================== Custom methods ====================
+
+    List<Order> selectByCondition(@Param("condition") OrderCondition condition);
+
+    long countByCondition(@Param("condition") OrderCondition condition);
 }
