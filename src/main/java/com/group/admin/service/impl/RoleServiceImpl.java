@@ -1,17 +1,23 @@
 package com.group.admin.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.Menu;
+import com.group.admin.entity.PermissionAuditLog;
 import com.group.admin.entity.Role;
 import com.group.admin.entity.RoleMenu;
 import com.group.admin.example.RoleExample;
 import com.group.admin.example.RoleMenuExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.MenuMapper;
+import com.group.admin.mapper.PermissionAuditLogMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.RoleMenuMapper;
+import com.group.admin.req.UpdateRolePermissionsReq;
 import com.group.admin.req.role.RoleCreateReq;
 import com.group.admin.req.role.RoleMenuPermissionReq;
 import com.group.admin.req.role.RoleUpdateReq;
+import com.group.admin.res.RoleWithPermissionsRes;
 import com.group.admin.res.role.RoleDetailRes;
 import com.group.admin.res.role.RoleRes;
 import com.group.admin.service.RoleService;
@@ -21,9 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +46,8 @@ public class RoleServiceImpl implements RoleService {
     private final RoleMapper roleMapper;
     private final RoleMenuMapper roleMenuMapper;
     private final MenuMapper menuMapper;
+    private final PermissionAuditLogMapper auditLogMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -256,5 +262,163 @@ public class RoleServiceImpl implements RoleService {
         res.setCreatedAt(role.getCreatedAt());
         res.setUpdatedAt(role.getUpdatedAt());
         return res;
+    }
+
+    // ===== Feature 009: RBAC Permissions =====
+
+    @Override
+    public List<Role> getAllRoleEntities() {
+        RoleExample example = new RoleExample();
+        example.setOrderByClause("id ASC");
+        return roleMapper.selectByExample(example);
+    }
+
+    @Override
+    public RoleWithPermissionsRes getRolePermissions(String roleId) {
+        Role role = roleMapper.selectByPrimaryKey(roleId);
+        if (role == null) {
+            throw new BusinessException("角色不存在: " + roleId);
+        }
+
+        MenuExample menuExample = new MenuExample();
+        menuExample.createCriteria().andIsVisibleEqualTo(true);
+        menuExample.setOrderByClause("order_num ASC");
+        List<Menu> allMenus = menuMapper.selectByExample(menuExample);
+
+        List<RoleMenu> roleMenus = roleMenuMapper.selectByRoleId(roleId);
+        Map<String, RoleMenu> rmMap = roleMenus.stream()
+                .collect(Collectors.toMap(RoleMenu::getMenuId, rm -> rm, (a, b) -> a));
+
+        List<RoleWithPermissionsRes.MenuPermissionItem> items = allMenus.stream()
+                .map(menu -> {
+                    RoleMenu rm = rmMap.get(menu.getId());
+                    return RoleWithPermissionsRes.MenuPermissionItem.builder()
+                            .menuId(menu.getId())
+                            .menuName(menu.getName())
+                            .menuCode(menu.getCode())
+                            .canView(rm != null ? rm.getCanView() : false)
+                            .canEdit(rm != null ? rm.getCanEdit() : false)
+                            .canDelete(rm != null ? rm.getCanDelete() : false)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return RoleWithPermissionsRes.builder()
+                .id(role.getId())
+                .name(role.getName())
+                .code(role.getCode())
+                .description(role.getDescription())
+                .menuPermissions(items)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public RoleWithPermissionsRes updateRolePermissions(String roleId, UpdateRolePermissionsReq req, String operatorId) {
+        log.info("🔐 更新角色權限: roleId={}, operatorId={}", roleId, operatorId);
+
+        Role role = roleMapper.selectByPrimaryKey(roleId);
+        if (role == null) {
+            throw new BusinessException("角色不存在: " + roleId);
+        }
+
+        // 驗證所有 menuId 存在
+        for (UpdateRolePermissionsReq.MenuPermissionItem item : req.getMenuPermissions()) {
+            Menu menu = menuMapper.selectByPrimaryKey(item.getMenuId());
+            if (menu == null) {
+                throw new BusinessException("選單不存在: " + item.getMenuId());
+            }
+        }
+
+        // 如果是 ROLE_STORE_EDITOR，驗證權限是 ROLE_STORE_OWNER 的子集
+        if ("ROLE_STORE_EDITOR".equals(role.getCode())) {
+            validateEditorPermissionsSubset(req);
+        }
+
+        // 快照：變更前
+        String beforeSnapshot = snapshotPermissions(roleId);
+
+        // Delete-then-insert
+        roleMenuMapper.deleteByRoleId(roleId);
+
+        List<RoleMenu> newRoleMenus = req.getMenuPermissions().stream()
+                .map(item -> {
+                    RoleMenu rm = new RoleMenu();
+                    rm.setId(UUID.randomUUID().toString());
+                    rm.setRoleId(roleId);
+                    rm.setMenuId(item.getMenuId());
+                    rm.setCanView(Boolean.TRUE.equals(item.getCanView()));
+                    rm.setCanEdit(Boolean.TRUE.equals(item.getCanEdit()));
+                    rm.setCanDelete(Boolean.TRUE.equals(item.getCanDelete()));
+                    rm.setCreatedAt(LocalDateTime.now());
+                    return rm;
+                })
+                .collect(Collectors.toList());
+
+        if (!newRoleMenus.isEmpty()) {
+            roleMenuMapper.batchInsert(newRoleMenus);
+        }
+
+        // 快照：變更後
+        String afterSnapshot = snapshotPermissions(roleId);
+
+        // 審計日誌
+        PermissionAuditLog auditLog = PermissionAuditLog.builder()
+                .id(UUID.randomUUID().toString())
+                .operatorId(operatorId)
+                .targetRoleId(roleId)
+                .action("UPDATE_PERMISSIONS")
+                .beforeSnapshot(beforeSnapshot)
+                .afterSnapshot(afterSnapshot)
+                .createdAt(LocalDateTime.now())
+                .build();
+        auditLogMapper.insert(auditLog);
+
+        log.info("✅ 角色權限更新成功: roleId={}, permissions={}", roleId, newRoleMenus.size());
+
+        return getRolePermissions(roleId);
+    }
+
+    private void validateEditorPermissionsSubset(UpdateRolePermissionsReq req) {
+        RoleExample ownerExample = new RoleExample();
+        ownerExample.createCriteria().andCodeEqualTo("ROLE_STORE_OWNER");
+        List<Role> ownerRoles = roleMapper.selectByExample(ownerExample);
+        if (ownerRoles.isEmpty()) {
+            return;
+        }
+
+        String ownerRoleId = ownerRoles.get(0).getId();
+        List<RoleMenu> ownerPerms = roleMenuMapper.selectByRoleId(ownerRoleId);
+        Map<String, RoleMenu> ownerMap = ownerPerms.stream()
+                .collect(Collectors.toMap(RoleMenu::getMenuId, rm -> rm, (a, b) -> a));
+
+        for (UpdateRolePermissionsReq.MenuPermissionItem item : req.getMenuPermissions()) {
+            RoleMenu ownerPerm = ownerMap.get(item.getMenuId());
+            if (ownerPerm == null) {
+                if (Boolean.TRUE.equals(item.getCanView()) || Boolean.TRUE.equals(item.getCanEdit()) || Boolean.TRUE.equals(item.getCanDelete())) {
+                    throw new BusinessException("STORE_EDITOR 的權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+                }
+                continue;
+            }
+            if (Boolean.TRUE.equals(item.getCanView()) && !Boolean.TRUE.equals(ownerPerm.getCanView())) {
+                throw new BusinessException("STORE_EDITOR 的查看權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+            }
+            if (Boolean.TRUE.equals(item.getCanEdit()) && !Boolean.TRUE.equals(ownerPerm.getCanEdit())) {
+                throw new BusinessException("STORE_EDITOR 的編輯權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+            }
+            if (Boolean.TRUE.equals(item.getCanDelete()) && !Boolean.TRUE.equals(ownerPerm.getCanDelete())) {
+                throw new BusinessException("STORE_EDITOR 的刪除權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+            }
+        }
+    }
+
+    private String snapshotPermissions(String roleId) {
+        List<RoleMenu> perms = roleMenuMapper.selectByRoleId(roleId);
+        try {
+            return objectMapper.writeValueAsString(perms);
+        } catch (JsonProcessingException e) {
+            log.warn("無法序列化權限快照: {}", e.getMessage());
+            return "[]";
+        }
     }
 }

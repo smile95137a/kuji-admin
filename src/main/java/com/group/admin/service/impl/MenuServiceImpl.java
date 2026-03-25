@@ -9,6 +9,7 @@ import com.group.admin.mapper.MenuMapper;
 import com.group.admin.mapper.RoleMenuMapper;
 import com.group.admin.req.menu.MenuCreateReq;
 import com.group.admin.req.menu.MenuUpdateReq;
+import com.group.admin.res.MenuPermissionRes;
 import com.group.admin.res.menu.MenuRes;
 import com.group.admin.res.menu.MenuTreeRes;
 import com.group.admin.service.MenuService;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -334,5 +336,90 @@ public class MenuServiceImpl implements MenuService {
         res.setCreatedAt(menu.getCreatedAt());
         res.setUpdatedAt(menu.getUpdatedAt());
         return res;
+    }
+
+    // ===== Feature 009: Dynamic menu with permissions =====
+
+    @Override
+    public List<MenuPermissionRes> getMenusForCurrentUser(String userId) {
+        log.info("🔍 查詢使用者選單權限: userId={}", userId);
+
+        boolean isAdmin = permissionService.isAdmin(userId);
+        if (isAdmin) {
+            MenuExample visibleExample = new MenuExample();
+            visibleExample.createCriteria().andIsVisibleEqualTo(true);
+            visibleExample.setOrderByClause("order_num ASC");
+            List<Menu> allMenus = menuMapper.selectByExample(visibleExample);
+
+            List<MenuPermissionRes> flatList = allMenus.stream()
+                    .map(m -> MenuPermissionRes.builder()
+                            .id(m.getId()).name(m.getName()).code(m.getCode())
+                            .path(m.getPath()).parentId(m.getParentId())
+                            .icon(m.getIcon()).orderNum(m.getOrderNum())
+                            .canView(true).canEdit(true).canDelete(true)
+                            .build())
+                    .collect(Collectors.toList());
+
+            return buildPermissionTree(flatList, null);
+        }
+
+        List<Map<String, Object>> rows = menuMapper.getMenusWithPermissionsForUser(userId);
+        if (rows == null || rows.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<MenuPermissionRes> flatList = rows.stream()
+                .map(row -> MenuPermissionRes.builder()
+                        .id((String) row.get("id"))
+                        .name((String) row.get("name"))
+                        .code((String) row.get("code"))
+                        .path((String) row.get("path"))
+                        .parentId((String) row.get("parentId"))
+                        .icon((String) row.get("icon"))
+                        .orderNum(row.get("orderNum") != null ? ((Number) row.get("orderNum")).intValue() : 0)
+                        .canView(toBoolean(row.get("canView")))
+                        .canEdit(toBoolean(row.get("canEdit")))
+                        .canDelete(toBoolean(row.get("canDelete")))
+                        .build())
+                .filter(m -> Boolean.TRUE.equals(m.getCanView()))
+                .collect(Collectors.toList());
+
+        return buildPermissionTree(flatList, null);
+    }
+
+    private List<MenuPermissionRes> buildPermissionTree(List<MenuPermissionRes> flatList, String parentId) {
+        Map<String, List<MenuPermissionRes>> childrenMap = flatList.stream()
+                .filter(m -> m.getParentId() != null)
+                .collect(Collectors.groupingBy(MenuPermissionRes::getParentId));
+
+        List<MenuPermissionRes> roots = flatList.stream()
+                .filter(m -> (parentId == null && m.getParentId() == null) ||
+                        (parentId != null && parentId.equals(m.getParentId())))
+                .sorted(Comparator.comparingInt(m -> m.getOrderNum() != null ? m.getOrderNum() : 0))
+                .collect(Collectors.toList());
+
+        for (MenuPermissionRes root : roots) {
+            root.setChildren(buildPermissionChildren(root.getId(), childrenMap));
+        }
+        return roots;
+    }
+
+    private List<MenuPermissionRes> buildPermissionChildren(String parentId, Map<String, List<MenuPermissionRes>> childrenMap) {
+        List<MenuPermissionRes> children = childrenMap.get(parentId);
+        if (children == null || children.isEmpty()) {
+            return new ArrayList<>();
+        }
+        children.sort(Comparator.comparingInt(m -> m.getOrderNum() != null ? m.getOrderNum() : 0));
+        for (MenuPermissionRes child : children) {
+            child.setChildren(buildPermissionChildren(child.getId(), childrenMap));
+        }
+        return children;
+    }
+
+    private Boolean toBoolean(Object val) {
+        if (val == null) return false;
+        if (val instanceof Boolean) return (Boolean) val;
+        if (val instanceof Number) return ((Number) val).intValue() != 0;
+        return Boolean.parseBoolean(val.toString());
     }
 }

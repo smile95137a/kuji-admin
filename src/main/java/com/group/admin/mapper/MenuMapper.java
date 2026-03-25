@@ -27,4 +27,8 @@ public interface MenuMapper {
     int updateByPrimaryKeySelective(Menu row);
 
     int updateByPrimaryKey(Menu row);
+
+    // ===== Custom methods (not MBG-generated) =====
+
+    List<java.util.Map<String, Object>> getMenusWithPermissionsForUser(@Param("userId") String userId);
 }

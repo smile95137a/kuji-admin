@@ -2,6 +2,7 @@ package com.group.admin.controller.admin;
 
 import com.group.admin.req.menu.MenuCreateReq;
 import com.group.admin.req.menu.MenuUpdateReq;
+import com.group.admin.res.MenuPermissionRes;
 import com.group.admin.res.menu.MenuRes;
 import com.group.admin.res.menu.MenuTreeRes;
 import com.group.admin.service.MenuService;
@@ -138,6 +139,19 @@ public class MenuController {
     public ResponseEntity<MenuRes> getMenuByCode(
             @Parameter(description = "選單代碼") @PathVariable String code) {
         MenuRes res = menuService.getMenuByCode(code);
+        return ResponseEntity.ok(res);
+    }
+
+    // ===== Feature 009: Dynamic menu with permissions =====
+
+    @Operation(summary = "我的選單權限", description = "查詢當前登入使用者可訪問的選單樹，含 canView/canEdit/canDelete 旗標")
+    @GetMapping("/my-permissions")
+    public ResponseEntity<List<MenuPermissionRes>> getMyMenuPermissions() {
+        String adminUserId = com.group.admin.util.SecurityUtils.getCurrentAdminUserId();
+        if (adminUserId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        List<MenuPermissionRes> res = menuService.getMenusForCurrentUser(adminUserId);
         return ResponseEntity.ok(res);
     }
 }

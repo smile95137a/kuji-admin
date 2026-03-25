@@ -288,4 +288,20 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ===== Custom SQL (not MBG-generated) ===== -->
+
+  <select id="getMenusWithPermissionsForUser" resultType="java.util.HashMap">
+    SELECT m.id, m.name, m.code, m.path, m.parent_id AS parentId, m.icon, m.order_num AS orderNum,
+           MAX(IFNULL(rm.can_view, 0)) AS canView,
+           MAX(IFNULL(rm.can_edit, 0)) AS canEdit,
+           MAX(IFNULL(rm.can_delete, 0)) AS canDelete
+    FROM `menu` m
+    LEFT JOIN `role_menu` rm ON m.id = rm.menu_id
+    LEFT JOIN `admin_user_role` aur ON rm.role_id = aur.role_id
+    WHERE aur.admin_user_id = #{userId,jdbcType=VARCHAR} AND m.is_visible = 1
+    GROUP BY m.id, m.name, m.code, m.path, m.parent_id, m.icon, m.order_num
+    ORDER BY m.order_num ASC
+  </select>
+
 </mapper>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.PermissionAuditLogMapper">
+
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.PermissionAuditLog">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="operator_id" jdbcType="VARCHAR" property="operatorId" />
+    <result column="target_role_id" jdbcType="VARCHAR" property="targetRoleId" />
+    <result column="action" jdbcType="VARCHAR" property="action" />
+    <result column="before_snapshot" jdbcType="LONGVARCHAR" property="beforeSnapshot" />
+    <result column="after_snapshot" jdbcType="LONGVARCHAR" property="afterSnapshot" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.group.admin.entity.PermissionAuditLog">
+    INSERT INTO `permission_audit_log` (id, operator_id, target_role_id, action, before_snapshot, after_snapshot, created_at)
+    VALUES (#{id,jdbcType=VARCHAR}, #{operatorId,jdbcType=VARCHAR}, #{targetRoleId,jdbcType=VARCHAR},
+            #{action,jdbcType=VARCHAR}, #{beforeSnapshot,jdbcType=LONGVARCHAR}, #{afterSnapshot,jdbcType=LONGVARCHAR},
+            #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <select id="selectByRoleId" resultMap="BaseResultMap">
+    SELECT id, operator_id, target_role_id, action, before_snapshot, after_snapshot, created_at
+    FROM `permission_audit_log`
+    WHERE target_role_id = #{roleId,jdbcType=VARCHAR}
+    ORDER BY created_at DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+</mapper>
