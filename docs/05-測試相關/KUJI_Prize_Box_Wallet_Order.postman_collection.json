@@ -1,0 +1,866 @@
+{
+  "info": {
+    "name": "KUJI Prize Box + Wallet + Order API",
+    "description": "賞品盒 + 金流 + 訂單系統完整測試",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "prize_box_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "plan_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. 前置作業",
+      "item": [
+        {
+          "name": "玩家登入",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.data.token);",
+                  "        pm.collectionVariables.set('user_id', jsonData.data.userId);",
+                  "        console.log('Token 已儲存：' + jsonData.data.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "管理員登入",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('admin_token', jsonData.data.token);",
+                  "        console.log('Admin Token 已儲存：' + jsonData.data.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. 錢包系統 - 前台",
+      "item": [
+        {
+          "name": "1.1 查詢我的錢包",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/wallet",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wallet"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 查詢我的交易記錄",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"transactionType\": \"DRAW\",\n    \"coinType\": \"GOLD\",\n    \"createdAtStart\": \"2026-01-01T00:00:00\",\n    \"createdAtEnd\": \"2026-12-31T23:59:59\"\n  },\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/wallet/transactions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wallet", "transactions"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. 賞品盒系統 - 前台",
+      "item": [
+        {
+          "name": "2.1 查詢我的賞品盒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+                  "        pm.collectionVariables.set('prize_box_id', jsonData.data[0].id);",
+                  "        console.log('Prize Box ID 已儲存：' + jsonData.data[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/prize-box",
+              "host": ["{{base_url}}"],
+              "path": ["api", "prize-box"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 按店家分組查詢",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/prize-box/summary",
+              "host": ["{{base_url}}"],
+              "path": ["api", "prize-box", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 出貨（宅配）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+                  "        pm.collectionVariables.set('order_id', jsonData.data[0]);",
+                  "        console.log('Order ID 已儲存：' + jsonData.data[0]);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prizeBoxIds\": [\"{{prize_box_id}}\"],\n  \"shippingMethod\": \"HOME_DELIVERY\",\n  \"recipientName\": \"王小明\",\n  \"recipientPhone\": \"0912345678\",\n  \"recipientAddress\": \"台北市信義區信義路五段7號\",\n  \"storeCode\": null,\n  \"storeName\": null,\n  \"storeAddress\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/prize-box/ship",
+              "host": ["{{base_url}}"],
+              "path": ["api", "prize-box", "ship"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 出貨（超商取貨）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prizeBoxIds\": [\"{{prize_box_id}}\"],\n  \"shippingMethod\": \"CONVENIENCE_STORE\",\n  \"recipientName\": \"王小明\",\n  \"recipientPhone\": \"0912345678\",\n  \"recipientAddress\": null,\n  \"storeCode\": \"001234\",\n  \"storeName\": \"7-11 信義門市\",\n  \"storeAddress\": \"台北市信義區信義路五段7號\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/prize-box/ship",
+              "host": ["{{base_url}}"],
+              "path": ["api", "prize-box", "ship"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 回收獎品（轉紅利）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prizeBoxIds\": [\"{{prize_box_id}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/prize-box/recycle",
+              "host": ["{{base_url}}"],
+              "path": ["api", "prize-box", "recycle"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. 訂單系統 - 前台",
+      "item": [
+        {
+          "name": "3.1 查詢我的訂單（全部）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {},\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/order/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "order", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 查詢我的訂單（進行中）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"status\": \"PENDING\"\n  },\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/order/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "order", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 查詢訂單詳情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/order/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "order", "{{order_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. 儲值方案 - 前台",
+      "item": [
+        {
+          "name": "4.1 查詢有效方案",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+                  "        pm.collectionVariables.set('plan_id', jsonData.data[0].id);",
+                  "        console.log('Plan ID 已儲存：' + jsonData.data[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recharge-plan/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recharge-plan", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 查詢方案詳情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recharge-plan/{{plan_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recharge-plan", "{{plan_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. 錢包管理 - 後台",
+      "item": [
+        {
+          "name": "5.1 查詢玩家錢包",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/wallet/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "wallet", "{{user_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 手動調整點數（增加 Gold）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"coinType\": \"GOLD\",\n  \"amount\": 1000,\n  \"reason\": \"活動贈送\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/wallet/adjust",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "wallet", "adjust"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 手動調整點數（增加 Bonus）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"coinType\": \"BONUS\",\n  \"amount\": 500,\n  \"reason\": \"簽到獎勵\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/wallet/adjust",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "wallet", "adjust"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 查詢玩家交易記錄",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"userId\": \"{{user_id}}\"\n  },\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/wallet/transactions/list",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "wallet", "transactions", "list"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. 賞品盒管理 - 後台",
+      "item": [
+        {
+          "name": "6.1 查詢玩家賞品盒",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/prize-box/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "prize-box", "{{user_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 查詢玩家賞品盒（按店家分組）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/prize-box/summary/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "prize-box", "summary", "{{user_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. 訂單管理 - 後台",
+      "item": [
+        {
+          "name": "7.1 查詢訂單列表（全部）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {},\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/order/list",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "order", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 查詢訂單詳情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/order/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "order", "{{order_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.3 準備出貨",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/order/{{order_id}}/prepare",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "order", "{{order_id}}", "prepare"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.4 訂單出貨",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackingNo\": \"1234567890\",\n  \"remark\": \"已寄出，預計 3 天送達\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/order/{{order_id}}/ship",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "order", "{{order_id}}", "ship"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.5 完成訂單",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/order/{{order_id}}/complete",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "order", "{{order_id}}", "complete"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.6 取消訂單（僅 ADMIN）",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"玩家要求取消\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/order/{{order_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "order", "{{order_id}}", "cancel"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. 儲值方案管理 - 後台",
+      "item": [
+        {
+          "name": "8.1 新增方案",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set('plan_id', jsonData.data.id);",
+                  "        console.log('Plan ID 已儲存：' + jsonData.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"春節特惠包\",\n  \"description\": \"春節限定優惠\",\n  \"amount\": 500,\n  \"goldCoins\": 500,\n  \"bonusCoins\": 200,\n  \"isActive\": true,\n  \"startDate\": \"2026-01-01T00:00:00\",\n  \"endDate\": \"2026-03-31T23:59:59\",\n  \"orderNum\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/recharge-plan",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "recharge-plan"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.2 更新方案",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"春節特惠包（更新）\",\n  \"description\": \"春節限定優惠，再加碼\",\n  \"amount\": 500,\n  \"goldCoins\": 500,\n  \"bonusCoins\": 300,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/recharge-plan/{{plan_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "recharge-plan", "{{plan_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.3 刪除方案（軟刪除）",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/recharge-plan/{{plan_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "recharge-plan", "{{plan_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.4 查詢所有方案",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/recharge-plan/list",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "recharge-plan", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.5 查詢方案詳情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/recharge-plan/{{plan_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "recharge-plan", "{{plan_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

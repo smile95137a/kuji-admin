@@ -1,0 +1,39 @@
+spring:
+  # H2 記憶體資料庫（測試用）
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  # H2 Console（測試時可查看資料）
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # SQL 設定
+  sql:
+    init:
+      mode: never  # 不自動執行 schema.sql（MyBatis Generator 已建立 Entity）
+
+# MyBatis 設定
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.group.admin.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# JWT 設定（測試用）
+jwt:
+  secret: test-secret-key-for-testing-purposes-only-must-be-very-long-string
+  expiration: 3600000  # 1 hour
+  refresh-expiration: 604800000  # 7 days
+
+# Log 設定
+logging:
+  level:
+    com.group.admin: DEBUG
+    org.springframework.security: DEBUG
+    org.mybatis: DEBUG

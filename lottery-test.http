@@ -1,0 +1,118 @@
+### 一番賞抽獎流程測試 HTTP 請求文件
+### 使用 VSCode REST Client 擴展
+
+@baseUrl = http://localhost:8080/api
+
+### Step 1: 管理員登入
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@kuji.com",
+    "password": "admin123"
+}
+
+### 保存管理員 Token
+@adminToken = {{adminLogin.response.body.data.token}}
+
+### Step 2: 查詢店家列表
+# @name getStores
+GET {{baseUrl}}/admin/stores
+Authorization: Bearer {{adminToken}}
+
+### Step 3: 建立一番賞商品（含獎品）
+# @name createLottery
+POST {{baseUrl}}/admin/lottery/with-prizes
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+    "lottery": {
+        "title": "測試鬼滅一番賞",
+        "category": "OFFICIAL",
+        "subCategory": "LOTTERY_MODE",
+        "pricePerDraw": 80,
+        "totalDraws": 10,
+        "maxDraws": 10,
+        "status": "ON_SHELF",
+        "description": "這是一個測試用的一番賞商品",
+        "imageUrl": "https://example.com/test.jpg"
+    },
+    "prizes": [
+        {
+            "name": "A賞 炭治郎公仔",
+            "level": "A",
+            "quantity": 1,
+            "imageUrl": "https://example.com/prize-a.jpg",
+            "pointValue": 500
+        },
+        {
+            "name": "B賞 禰豆子公仔",
+            "level": "B",
+            "quantity": 2,
+            "imageUrl": "https://example.com/prize-b.jpg",
+            "pointValue": 300
+        },
+        {
+            "name": "C賞 掛軸",
+            "level": "C",
+            "quantity": 3,
+            "imageUrl": "https://example.com/prize-c.jpg",
+            "pointValue": 150
+        },
+        {
+            "name": "D賞 色紙",
+            "level": "D",
+            "quantity": 4,
+            "imageUrl": "https://example.com/prize-d.jpg",
+            "pointValue": 80
+        }
+    ]
+}
+
+### 保存商品 ID
+@lotteryId = {{createLottery.response.body.data.id}}
+
+### Step 4: 查詢籤位列表（後台）
+GET {{baseUrl}}/admin/lottery/{{lotteryId}}/tickets
+Authorization: Bearer {{adminToken}}
+
+### Step 5: 前台查詢商品列表
+POST {{baseUrl}}/lottery/browse/list
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### Step 6: 前台查詢商品詳情（含籤位和獎品）
+GET {{baseUrl}}/lottery/browse/{{lotteryId}}/detail
+Authorization: Bearer {{adminToken}}
+
+### Step 7: 抽獎
+POST {{baseUrl}}/lottery/draw
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+    "lotteryId": "{{lotteryId}}",
+    "drawCount": 1
+}
+
+### Step 8: 查詢賞品盒
+GET {{baseUrl}}/prize-box
+Authorization: Bearer {{adminToken}}
+
+### Step 9: 後台查詢訂單
+GET {{baseUrl}}/admin/orders
+Authorization: Bearer {{adminToken}}
+
+### ========================================
+### 額外測試：查詢所有一番賞商品
+GET {{baseUrl}}/admin/lottery
+Authorization: Bearer {{adminToken}}
+
+### 測試：直接呼叫獲取單一商品
+GET {{baseUrl}}/lottery/browse/{{lotteryId}}
+Authorization: Bearer {{adminToken}}
+

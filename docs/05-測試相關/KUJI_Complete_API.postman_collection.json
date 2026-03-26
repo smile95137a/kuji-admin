@@ -1,0 +1,656 @@
+{
+  "info": {
+    "name": "KUJI Complete API Collection",
+    "description": "KUJI 專案完整 API 測試集合（2026-01-16）",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lotteryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "prizeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 認證 Authentication",
+      "item": [
+        {
+          "name": "後台登入 - Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('adminToken', jsonData.data.token);",
+                  "        console.log('Admin Token saved:', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@kuji.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "auth", "login"]
+            },
+            "description": "後台管理員登入，成功後會自動儲存 Token"
+          }
+        },
+        {
+          "name": "前台註冊 - User Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"0912345678\",\n  \"referralCode\": \"WELCOME2024\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "前台登入 - User Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('userToken', jsonData.data.token);",
+                  "        console.log('User Token saved:', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. 後台 - 整合 API（商品+獎品）",
+      "item": [
+        {
+          "name": "建立商品+獎品 - Create Lottery with Prizes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data && jsonData.data.lottery) {",
+                  "        pm.collectionVariables.set('lotteryId', jsonData.data.lottery.id);",
+                  "        console.log('Lottery ID saved:', jsonData.data.lottery.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lottery\": {\n    \"title\": \"鬼滅之刃一番賞\",\n    \"description\": \"超人氣動漫周邊\",\n    \"category\": \"OFFICIAL_ICHIBAN\",\n    \"pricePerDraw\": 80,\n    \"totalDraws\": 100,\n    \"startTime\": \"2026-01-20T00:00:00\",\n    \"endTime\": \"2026-03-20T23:59:59\",\n    \"imageUrl\": \"https://example.com/kimetsu.jpg\",\n    \"status\": \"ON_SHELF\"\n  },\n  \"prizes\": [\n    {\n      \"name\": \"炭治郎公仔\",\n      \"level\": \"A\",\n      \"quantity\": 1,\n      \"weight\": 5,\n      \"prizeType\": \"FIGURE\",\n      \"isGrandPrize\": true,\n      \"description\": \"超級大賞\",\n      \"imageUrl\": \"https://example.com/tanjiro.jpg\"\n    },\n    {\n      \"name\": \"禰豆子公仔\",\n      \"level\": \"B\",\n      \"quantity\": 5,\n      \"weight\": 10,\n      \"prizeType\": \"FIGURE\",\n      \"imageUrl\": \"https://example.com/nezuko.jpg\"\n    },\n    {\n      \"name\": \"善逸公仔\",\n      \"level\": \"C\",\n      \"quantity\": 10,\n      \"weight\": 20,\n      \"prizeType\": \"FIGURE\"\n    },\n    {\n      \"name\": \"伊之助公仔\",\n      \"level\": \"D\",\n      \"quantity\": 20,\n      \"weight\": 30,\n      \"prizeType\": \"FIGURE\"\n    },\n    {\n      \"name\": \"鑰匙圈\",\n      \"level\": \"E\",\n      \"quantity\": 30,\n      \"weight\": 50,\n      \"prizeType\": \"ACCESSORY\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery-with-prizes",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery-with-prizes"]
+            },
+            "description": "一次 API 建立商品和所有獎品"
+          }
+        },
+        {
+          "name": "更新商品+獎品 - Update Lottery with Prizes",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lottery\": {\n    \"status\": \"ON_SHELF\",\n    \"pricePerDraw\": 85\n  },\n  \"prizes\": [\n    {\n      \"name\": \"新增獎品\",\n      \"level\": \"F\",\n      \"quantity\": 50,\n      \"weight\": 100\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery-with-prizes/{{lotteryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery-with-prizes", "{{lotteryId}}"]
+            }
+          }
+        },
+        {
+          "name": "查詢商品含獎品 - Get Lottery with Prizes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery-with-prizes/{{lotteryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery-with-prizes", "{{lotteryId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. 後台 - 商品管理",
+      "item": [
+        {
+          "name": "建立商品 - Create Lottery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"海賊王一番賞\",\n  \"description\": \"航海王周邊商品\",\n  \"category\": \"OFFICIAL_ICHIBAN\",\n  \"pricePerDraw\": 90,\n  \"totalDraws\": 150,\n  \"imageUrl\": \"https://example.com/onepiece.jpg\",\n  \"status\": \"OFF_SHELF\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery"]
+            }
+          }
+        },
+        {
+          "name": "查詢商品列表 - List Lotteries",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"status\": \"ON_SHELF\"\n  },\n  \"sortBy\": \"created_at\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery", "list"]
+            }
+          }
+        },
+        {
+          "name": "查詢商品詳情 - Get Lottery",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery/{{lotteryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery", "{{lotteryId}}"]
+            }
+          }
+        },
+        {
+          "name": "複製商品 - Copy Lottery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"鬼滅之刃一番賞（副本）\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lottery/{{lotteryId}}/copy",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lottery", "{{lotteryId}}", "copy"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 前台 - 抽獎功能",
+      "item": [
+        {
+          "name": "查詢商品列表 - Browse Lotteries",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": {\n    \"status\": \"ON_SHELF\"\n  },\n  \"page\": 1,\n  \"size\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/lottery/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lottery", "list"]
+            }
+          }
+        },
+        {
+          "name": "查詢商品詳情 - Get Lottery Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lottery/{{lotteryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lottery", "{{lotteryId}}"]
+            }
+          }
+        },
+        {
+          "name": "單抽 - Draw Once",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"drawCount\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/lottery/random/{{lotteryId}}/draw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lottery", "random", "{{lotteryId}}", "draw"]
+            },
+            "description": "加權隨機單抽"
+          }
+        },
+        {
+          "name": "十連抽 - Draw Ten Times",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"drawCount\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/lottery/random/{{lotteryId}}/draw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lottery", "random", "{{lotteryId}}", "draw"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 前台 - 獎品池與訂單",
+      "item": [
+        {
+          "name": "查詢我的獎品池 - My Prize Box",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/prize-box/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "prize-box", "my"]
+            }
+          }
+        },
+        {
+          "name": "兌換獎品 - Redeem Prize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientName\": \"王小明\",\n  \"recipientPhone\": \"0912345678\",\n  \"postalCode\": \"100\",\n  \"city\": \"台北市\",\n  \"district\": \"中正區\",\n  \"address\": \"重慶南路一段122號\",\n  \"notes\": \"請於平日送達\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/prize-box/{prizeBoxId}/redeem",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "prize-box", "{prizeBoxId}", "redeem"]
+            }
+          }
+        },
+        {
+          "name": "查詢我的訂單 - My Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/order/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "order", "my"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. 前台 - 錢包",
+      "item": [
+        {
+          "name": "查詢我的錢包 - My Wallet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "my"]
+            }
+          }
+        },
+        {
+          "name": "查詢交易記錄 - Wallet Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/transactions?page=1&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "transactions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "儲值 - Recharge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"paymentMethod\": \"CREDIT_CARD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/recharge",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "recharge"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. 前台 - 用戶地址",
+      "item": [
+        {
+          "name": "建立地址 - Create Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientName\": \"王小明\",\n  \"recipientPhone\": \"0912345678\",\n  \"postalCode\": \"100\",\n  \"city\": \"台北市\",\n  \"district\": \"中正區\",\n  \"address\": \"重慶南路一段122號\",\n  \"isDefault\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user-address",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user-address"]
+            }
+          }
+        },
+        {
+          "name": "查詢我的地址 - My Addresses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user-address/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user-address", "my"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. 推薦碼",
+      "item": [
+        {
+          "name": "驗證推薦碼 - Validate Referral Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME2024\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/referral-code/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "referral-code", "validate"]
+            }
+          }
+        },
+        {
+          "name": "後台建立推薦碼 - Admin Create Referral Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME2024\",\n  \"ownerType\": \"ADMIN\",\n  \"rewardGold\": 100,\n  \"rewardBonus\": 50,\n  \"maxUsage\": 1000,\n  \"validFrom\": \"2026-01-01T00:00:00\",\n  \"validUntil\": \"2026-12-31T23:59:59\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/referral-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "referral-code"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

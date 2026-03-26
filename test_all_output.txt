@@ -1,0 +1,289 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------------< com.group:admin >---------------------------
+[INFO] Building admin 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ admin ---
+[INFO] Copying 39 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ admin ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 371 source files with javac [debug release 21] to target\classes
+[INFO] /c:/Users/user/OneDrive/Desktop/dream/KUJI-Server/admin/src/main/java/com/group/admin/req/news/NewsCreateReq.java: Some input files use or override a deprecated API.
+[INFO] /c:/Users/user/OneDrive/Desktop/dream/KUJI-Server/admin/src/main/java/com/group/admin/req/news/NewsCreateReq.java: Recompile with -Xlint:deprecation for details.
+[INFO] /c:/Users/user/OneDrive/Desktop/dream/KUJI-Server/admin/src/main/java/com/group/admin/result/ApiResponse.java: c:\Users\user\OneDrive\Desktop\dream\KUJI-Server\admin\src\main\java\com\group\admin\result\ApiResponse.java uses unchecked or unsafe operations.
+[INFO] /c:/Users/user/OneDrive/Desktop/dream/KUJI-Server/admin/src/main/java/com/group/admin/result/ApiResponse.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ admin ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ admin ---
+[INFO] Changes detected - recompiling the module! :dependency
+[INFO] Compiling 37 source files with javac [debug release 21] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ admin ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.group.admin.controller.admin.AdminAuthControllerTest
+WARNING: A Java agent has been loaded dynamically (C:\Users\user\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.19\byte-buddy-agent-1.14.19.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+01:41:01.924 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.1.Final
+01:41:02.461 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:02.462 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:02.467 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 3 ms
+01:41:02.717 [main] INFO com.group.admin.controller.admin.AdminAuthController -- 修改密碼請求
+01:41:02.766 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:02.766 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:02.766 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:02.768 [main] INFO com.group.admin.controller.admin.AdminAuthController -- 登出請求
+01:41:02.790 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:02.791 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:02.791 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:02.802 [main] INFO com.group.admin.controller.admin.AdminAuthController -- 後台登入請求：username=admin@kuji.com
+01:41:02.839 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:02.840 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:02.840 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:02.847 [main] INFO com.group.admin.controller.admin.AdminAuthController -- 刷新 Token 請求
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.672 s -- in com.group.admin.controller.admin.AdminAuthControllerTest
+[INFO] Running com.group.admin.controller.admin.AdminBannerControllerTest
+01:41:02.950 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:02.951 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:02.951 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:02.970 [main] INFO com.group.admin.controller.admin.AdminBannerController -- ? 後台新增 Banner：Test Banner
+01:41:03.007 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.007 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.008 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+01:41:03.025 [main] INFO com.group.admin.controller.admin.AdminBannerController -- ?? 後台更新 Banner，ID：test-id
+01:41:03.047 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.047 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.047 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.049 [main] INFO com.group.admin.controller.admin.AdminBannerController -- ?? 後台刪除 Banner，ID：test-id
+01:41:03.068 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.068 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.068 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.084 [main] INFO com.group.admin.controller.admin.AdminBannerController -- ? 後台查詢 Banner 列表
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.236 s -- in com.group.admin.controller.admin.AdminBannerControllerTest
+[INFO] Running com.group.admin.controller.admin.AdminPrizeBoxControllerTest
+01:41:03.164 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.165 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.165 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.167 [main] INFO com.group.admin.controller.admin.AdminPrizeBoxController -- ? [Admin] 查詢玩家賞品盒（按店家分組）：userId=test-user-id
+01:41:03.181 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.182 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.182 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.183 [main] INFO com.group.admin.controller.admin.AdminPrizeBoxController -- ? [Admin] 查詢玩家賞品盒：userId=test-user-id
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in com.group.admin.controller.admin.AdminPrizeBoxControllerTest
+[INFO] Running com.group.admin.controller.admin.AdminStoreControllerTest
+01:41:03.378 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.378 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.378 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.380 [main] INFO com.group.admin.controller.admin.AdminStoreController -- ? [後台] 取得店家選項，userId：test-admin-id，isAdmin：true，activeOnly：true
+01:41:03.389 [main] INFO com.group.admin.controller.admin.AdminStoreController -- ? [後台] Admin 可看所有店家
+01:41:03.390 [main] INFO com.group.admin.controller.admin.AdminStoreController -- ? [後台] 返回 0 個店家選項
+01:41:03.409 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.409 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.409 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.412 [main] INFO com.group.admin.controller.admin.AdminStoreController -- ? [後台] 搜尋店家，keyword：test，userId：test-admin-id，isAdmin：true
+01:41:03.413 [main] INFO com.group.admin.controller.admin.AdminStoreController -- ? [後台] 搜尋到 0 個店家
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.224 s -- in com.group.admin.controller.admin.AdminStoreControllerTest
+[INFO] Running com.group.admin.controller.admin.AdminSystemLogControllerTest
+01:41:03.483 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.484 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.484 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.500 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.500 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.500 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.085 s -- in com.group.admin.controller.admin.AdminSystemLogControllerTest
+[INFO] Running com.group.admin.controller.admin.LotteryPrizeControllerTest
+01:41:03.564 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.564 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.564 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.061 s -- in com.group.admin.controller.admin.LotteryPrizeControllerTest
+[INFO] Running com.group.admin.controller.admin.MenuControllerTest
+01:41:03.634 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.635 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.636 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+01:41:03.657 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.657 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.658 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.090 s -- in com.group.admin.controller.admin.MenuControllerTest
+[INFO] Running com.group.admin.controller.admin.RoleControllerTest
+01:41:03.728 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.728 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.728 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.745 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.745 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.745 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.086 s -- in com.group.admin.controller.admin.RoleControllerTest
+[INFO] Running com.group.admin.controller.api.BannerControllerTest
+01:41:03.775 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.775 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.775 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.776 [main] INFO com.group.admin.controller.api.BannerController -- ? 前台查詢輪播 Banner
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.023 s -- in com.group.admin.controller.api.BannerControllerTest
+[INFO] Running com.group.admin.controller.api.DistrictControllerTest
+01:41:03.845 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.846 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.846 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.847 [main] INFO com.group.admin.controller.api.DistrictController -- ? 查詢所有縣市
+01:41:03.862 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.862 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.862 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.864 [main] INFO com.group.admin.controller.api.DistrictController -- ? 查詢縣市行政區: city=台北市
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.080 s -- in com.group.admin.controller.api.DistrictControllerTest
+[INFO] Running com.group.admin.controller.api.EnumControllerTest
+01:41:03.890 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.890 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.890 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:03.891 [main] INFO com.group.admin.controller.api.EnumController -- ? 取得所有 Enum 選項
+01:41:03.895 [main] INFO com.group.admin.controller.api.EnumController -- ? 返回 8 種 Enum 類型
+01:41:03.918 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.918 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.918 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.053 s -- in com.group.admin.controller.api.EnumControllerTest
+[INFO] Running com.group.admin.controller.api.LotteryBrowseControllerTest
+01:41:03.998 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:03.998 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:03.998 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:04.001 [main] INFO com.group.admin.controller.api.LotteryBrowseController -- ? [前台] 查詢商品詳情: lotteryId=test-id
+01:41:04.027 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:04.027 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:04.027 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:04.034 [main] INFO com.group.admin.controller.api.LotteryBrowseController -- ? [前台] 查詢商品列表: condition=QueryReq(condition=null, page=null, size=null, sortBy=null, sortOrder=null)
+01:41:04.037 [main] INFO com.group.admin.controller.api.LotteryBrowseController -- ? 查詢成功: 共 0 筆
+[ERROR] Tests run: 2, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.114 s <<< FAILURE! -- in com.group.admin.controller.api.LotteryBrowseControllerTest
+[ERROR] com.group.admin.controller.api.LotteryBrowseControllerTest.getLotteryDetail_ShouldReturnLottery -- Time elapsed: 0.085 s <<< ERROR!
+jakarta.servlet.ServletException: Request processing failed: java.lang.NullPointerException: Cannot invoke "com.group.admin.res.lottery.LotteryRes.getStatus()" because "result" is null
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1022)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at org.springframework.test.web.servlet.TestDispatcherServlet.service(TestDispatcherServlet.java:72)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.springframework.mock.web.MockFilterChain$ServletFilterProxy.doFilter(MockFilterChain.java:165)
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132)
+	at org.springframework.test.web.servlet.MockMvc.perform(MockMvc.java:201)
+	at com.group.admin.controller.api.LotteryBrowseControllerTest.getLotteryDetail_ShouldReturnLottery(LotteryBrowseControllerTest.java:59)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.NullPointerException: Cannot invoke "com.group.admin.res.lottery.LotteryRes.getStatus()" because "result" is null
+	at com.group.admin.controller.api.LotteryBrowseController.getLottery(LotteryBrowseController.java:87)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	... 12 more
+
+[INFO] Running com.group.admin.controller.api.MarqueeControllerTest
+01:41:04.090 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:04.091 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:04.091 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.051 s -- in com.group.admin.controller.api.MarqueeControllerTest
+[INFO] Running com.group.admin.controller.api.NewsControllerTest
+01:41:04.153 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:04.153 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:04.153 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:04.155 [main] INFO com.group.admin.controller.api.NewsController -- ? 前台查詢最新消息詳情，ID：test-id
+01:41:04.155 [main] WARN com.group.admin.controller.api.NewsController -- ?? 前台嘗試查看未上架的消息，ID：test-id
+01:41:04.174 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:04.175 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:04.175 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:04.177 [main] INFO com.group.admin.controller.api.NewsController -- ? 前台查詢最新消息列表，limit：null
+[ERROR] Tests run: 2, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.082 s <<< FAILURE! -- in com.group.admin.controller.api.NewsControllerTest
+[ERROR] com.group.admin.controller.api.NewsControllerTest.getNewsDetail_ShouldReturnNews -- Time elapsed: 0.058 s <<< ERROR!
+jakarta.servlet.ServletException: Request processing failed: java.lang.RuntimeException: 該消息不存在或已下架
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1022)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at org.springframework.test.web.servlet.TestDispatcherServlet.service(TestDispatcherServlet.java:72)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.springframework.mock.web.MockFilterChain$ServletFilterProxy.doFilter(MockFilterChain.java:165)
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132)
+	at org.springframework.test.web.servlet.MockMvc.perform(MockMvc.java:201)
+	at com.group.admin.controller.api.NewsControllerTest.getNewsDetail_ShouldReturnNews(NewsControllerTest.java:53)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.RuntimeException: 該消息不存在或已下架
+	at com.group.admin.controller.api.NewsController.getNewsDetail(NewsController.java:67)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	... 12 more
+
+[INFO] Running com.group.admin.controller.api.StoreOptionControllerTest
+01:41:04.192 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:04.193 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:04.193 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+01:41:04.193 [main] INFO com.group.admin.controller.api.StoreOptionController -- ? [前台] 取得店家選項列表
+01:41:04.194 [main] INFO com.group.admin.controller.api.StoreOptionController -- ? [前台] 返回 0 個店家選項
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in com.group.admin.controller.api.StoreOptionControllerTest
+[INFO] Running com.group.admin.controller.api.UserControllerTest
+01:41:04.256 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+01:41:04.256 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+01:41:04.256 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.062 s <<< FAILURE! -- in com.group.admin.controller.api.UserControllerTest
+[ERROR] com.group.admin.controller.api.UserControllerTest.hello_ShouldReturnHello -- Time elapsed: 0.060 s <<< FAILURE!
+java.lang.AssertionError: Response content expected:<Hello World!> but was:<hello world>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.ContentResultMatchers.lambda$string$4(ContentResultMatchers.java:148)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.group.admin.controller.api.UserControllerTest.hello_ShouldReturnHello(UserControllerTest.java:36)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   UserControllerTest.hello_ShouldReturnHello:36 Response content expected:<Hello World!> but was:<hello world>
+[ERROR] Errors: 
+[ERROR]   LotteryBrowseControllerTest.getLotteryDetail_ShouldReturnLottery:59 ? Servlet Request processing failed: java.lang.NullPointerException: Cannot invoke "com.group.admin.res.lottery.LotteryRes.getStatus()" because "result" is null
+[ERROR]   NewsControllerTest.getNewsDetail_ShouldReturnNews:53 ? Servlet Request processing failed: java.lang.RuntimeException: 該消息不存在或已下架
+[INFO] 
+[ERROR] Tests run: 31, Failures: 1, Errors: 2, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  22.368 s
+[INFO] Finished at: 2026-01-23T01:41:04+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project admin: There are test failures.
+[ERROR] 
+[ERROR] Please refer to c:\Users\user\OneDrive\Desktop\dream\KUJI-Server\admin\target\surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

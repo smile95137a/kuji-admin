@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "KUJI Admin - 複製商品功能",
+    "description": "複製商品（一番賞、刮刮樂）API 測試集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "KUJI_Admin"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{adminToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sourceLotteryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "newLotteryId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 登入取得 Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 儲存 Token",
+              "if (pm.response.code === 200) {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data && jsonData.data.token) {",
+              "        pm.collectionVariables.set('adminToken', jsonData.data.token);",
+              "        console.log('✅ Token 已儲存');",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@kuji.com\",\n  \"password\": \"admin123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "auth", "login"]
+        },
+        "description": "登入後台取得 Admin Token"
+      },
+      "response": []
+    },
+    {
+      "name": "2. 查詢商品列表（取得來源 ID）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 儲存第一個商品 ID",
+              "if (pm.response.code === 200) {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+              "        pm.collectionVariables.set('sourceLotteryId', jsonData.data[0].id);",
+              "        console.log('✅ 來源商品 ID 已儲存:', jsonData.data[0].id);",
+              "        console.log('📌 商品標題:', jsonData.data[0].title);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"condition\": {\n    \"category\": \"OFFICIAL_ICHIBAN\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/lottery/list",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "lottery", "list"]
+        },
+        "description": "查詢商品列表，取得要複製的來源商品 ID"
+      },
+      "response": []
+    },
+    {
+      "name": "3. 複製商品（最簡化）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 儲存新商品 ID",
+              "if (pm.response.code === 200) {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data && jsonData.data.id) {",
+              "        pm.collectionVariables.set('newLotteryId', jsonData.data.id);",
+              "        console.log('✅ 複製成功！');",
+              "        console.log('📌 新商品 ID:', jsonData.data.id);",
+              "        console.log('📌 新商品標題:', jsonData.data.title);",
+              "        console.log('📌 狀態:', jsonData.data.status);",
+              "        console.log('📌 總獎項數:', jsonData.data.totalPrizes);",
+              "    }",
+              "}",
+              "",
+              "// 驗證回應",
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success field', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.eql(true);",
+              "});",
+              "",
+              "pm.test('Response has new lottery data', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.have.property('id');",
+              "    pm.expect(jsonData.data).to.have.property('title');",
+              "});",
+              "",
+              "pm.test('New lottery status is OFF_SHELF', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.status).to.eql('OFF_SHELF');",
+              "});",
+              "",
+              "pm.test('Total draws reset to 0', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.totalDraws).to.eql(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sourceLotteryId\": \"{{sourceLotteryId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/lottery/copy",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "lottery", "copy"]
+        },
+        "description": "最簡化複製，只傳來源商品 ID，其他參數使用預設值"
+      },
+      "response": []
+    },
+    {
+      "name": "4. 複製商品（指定新標題）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 儲存新商品 ID",
+              "if (pm.response.code === 200) {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data && jsonData.data.id) {",
+              "        pm.collectionVariables.set('newLotteryId', jsonData.data.id);",
+              "        console.log('✅ 複製成功（自訂標題）！');",
+              "        console.log('📌 新商品 ID:', jsonData.data.id);",
+              "        console.log('📌 新商品標題:', jsonData.data.title);",
+              "    }",
+              "}",
+              "",
+              "pm.test('New title is set correctly', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.title).to.include('2024');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sourceLotteryId\": \"{{sourceLotteryId}}\",\n  \"newTitle\": \"鬼滅之刃一番賞 2024 熱銷再版\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/lottery/copy",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "lottery", "copy"]
+        },
+        "description": "複製商品並指定新標題"
+      },
+      "response": []
+    },
+    {
+      "name": "5. 複製商品（完整參數）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 儲存新商品 ID",
+              "if (pm.response.code === 200) {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data && jsonData.data.id) {",
+              "        pm.collectionVariables.set('newLotteryId', jsonData.data.id);",
+              "        console.log('✅ 複製成功（完整參數）！');",
+              "        console.log('📌 新商品 ID:', jsonData.data.id);",
+              "        console.log('📌 新商品標題:', jsonData.data.title);",
+              "        console.log('📌 狀態:', jsonData.data.status);",
+              "    }",
+              "}",
+              "",
+              "pm.test('New status is ON_SHELF', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.status).to.eql('ON_SHELF');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sourceLotteryId\": \"{{sourceLotteryId}}\",\n  \"newTitle\": \"鬼滅之刃一番賞（熱銷再版）\",\n  \"regenerateTickets\": true,\n  \"newStatus\": \"ON_SHELF\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/lottery/copy",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "lottery", "copy"]
+        },
+        "description": "複製商品並指定所有參數（包含立即上架）"
+      },
+      "response": []
+    },
+    {
+      "name": "6. 查詢新商品詳情",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/lottery/{{newLotteryId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "lottery", "{{newLotteryId}}"]
+        },
+        "description": "查詢剛剛複製的新商品詳情"
+      },
+      "response": []
+    },
+    {
+      "name": "7. 對比原商品與新商品",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/lottery/{{sourceLotteryId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "lottery", "{{sourceLotteryId}}"]
+        },
+        "description": "查詢原商品詳情，對比複製結果"
+      },
+      "response": []
+    }
+  ]
+}
