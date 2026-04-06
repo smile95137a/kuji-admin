@@ -1,53 +1,55 @@
-# kuji-admin 專案 Prompt 檔案總覽
+# kuji-admin `.github/` 目錄總覽
 
-## 📋 Prompt 檔案清單
+## 📁 目錄結構
 
-### 1. 架構與開發規範（必讀）
-- **`architecture-guide.prompt.md`** - 專案架構、MBG 使用規範、開發流程
+```
+.github/
+├── copilot-instructions.md          # 主要 Copilot 指南（自動載入）
+├── instructions/                    # 領域知識（on-demand / applyTo 載入）
+│   ├── architecture.instructions.md     # 架構與 MBG 規範
+│   ├── backend.instructions.md          # 後端開發規範
+│   ├── gacha-random-draw.instructions.md# 扭蛋隨機抽獎
+│   ├── game.instructions.md             # 遊戲獎項規則
+│   ├── permissions.instructions.md      # 權限系統 (RBAC)
+│   ├── scratch-card-flow.instructions.md# 刮刮樂流程
+│   ├── store.instructions.md            # 店家管理
+│   ├── store-user.instructions.md       # 店家帳號管理
+│   └── user.instructions.md             # 會員系統
+├── prompts/                         # 功能需求 Prompt（可透過 / 呼叫）
+│   ├── banner.prompt.md                 # Banner 管理
+│   ├── express.prompt.md                # 運送管理
+│   ├── game-management.prompt.md        # 抽獎遊戲管理
+│   ├── game-to-order.prompt.md          # 抽獎→訂單流程
+│   ├── lottery-ticket-system.prompt.md  # 籤位系統設計
+│   ├── mastercard.prompt.md             # 金流/點數系統
+│   ├── news.prompt.md                   # 最新消息
+│   ├── order.prompt.md                  # 訂單管理
+│   ├── prize-box.prompt.md              # 賞品盒流程
+│   ├── product-lottery.prompt.md        # 一番賞整合平台
+│   ├── referral.prompt.md               # 推薦碼機制
+│   ├── store-account-management.prompt.md # 店家帳號管理
+│   └── speckit.*.prompt.md              # SpecKit 工作流
+├── agents/                          # 自訂 Agent
+│   ├── controller-crud-test.agent.md    # Controller 測試 agent
+│   └── speckit.*.agent.md               # SpecKit agent
+└── skills/                          # 多步驟工作流 Skill
+    └── controller-testing/              # Controller 測試
+```
 
-### 2. 功能需求 Prompt
-- **`game-management.prompt.md`** - 抽獎遊戲管理功能需求
-- **`permissions-rbac.prompt.md`** - 權限管理與商品管理功能需求  
-- **`store-management.prompt.md`** - 店家資料管理功能需求
-- **`store-account-management.prompt.md`** - 店家後台帳號管理功能需求
-- **`user-member-system.prompt.md`** - 前台與後台會員系統功能需求
+## 🎯 各類型用途
 
----
+| 類型 | 載入方式 | 用途 |
+|------|---------|------|
+| **Instructions** | `applyTo` 匹配或 on-demand | 領域知識，編輯相關檔案時自動載入 |
+| **Prompts** | 輸入 `/` 選擇 | 單一功能需求的開發任務模板 |
+| **Agents** | 選擇 Agent 模式 | 自訂 AI Agent |
+| **Skills** | 輸入 `/` 選擇 | 多步驟工作流（含參考文件） |
 
-## 🎯 使用指南
-
-### AI 編碼代理使用順序
-1. **第一步**: 閱讀 `architecture-guide.prompt.md` 了解專案架構
-2. **第二步**: 根據需求閱讀對應的功能 prompt
-3. **第三步**: 遵循 DDL → MBG → Example 的開發流程
-
-### 關鍵開發原則
-1. ✅ **DDL 優先**: 先撰寫資料表定義 SQL
-2. ✅ **MBG 生成**: 執行 MyBatis Generator 自動產生程式碼
-3. ✅ **Example 優先**: 能用 Example 就不手寫 SQL
-4. ✅ **事務管理**: 資料變更操作使用 `@Transactional`
-5. ❌ **禁止**: 手動建立 Entity、繞過 MBG
-
----
-
-## 📂 MyBatis Generator (MBG) 快速參考
-
-### MBG 配置位置
-- 配置檔: `src/main/resources/mapper/generatorConfig.xml`
-- 生成器: `src/main/java/com/group/admin/generator/FullSchemaExampleGenerator.java`
-
-### MBG 生成檔案
-- **Entity**: `com/group/admin/entity/*.java`
-- **Mapper**: `com/group/admin/mapper/*.java`  
-- **Mapper XML**: `src/main/resources/mapper/*.xml`
-- **Example**: `com/group/admin/example/*Example.java`
-
-### Example 使用範例
-```java
-// 單條件查詢
-AdminUserExample example = new AdminUserExample();
-example.createCriteria().andEmailEqualTo("admin@example.com");
-List<AdminUser> users = adminUserMapper.selectByExample(example);
+## 📋 開發流程
+1. 先讀 `copilot-instructions.md` → 核心架構
+2. 再讀 `instructions/` → 領域規則
+3. 使用 `prompts/` → 開始開發
+4. 遵循 DDL → MBG → Example 流程
 
 // 多條件 AND
 example.createCriteria()

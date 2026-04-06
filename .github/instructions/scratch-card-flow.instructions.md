@@ -1,3 +1,7 @@
+---
+description: "Use when working on scratch card lottery, SCRATCH_STORE/SCRATCH_PLAYER modes, grand prize designation, or ticket number mechanics."
+---
+
 # 🎴 刮刮樂完整遊玩流程 API 指南
 
 ## 📋 目錄

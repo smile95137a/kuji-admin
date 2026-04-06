@@ -1,3 +1,7 @@
+---
+description: "Use when working on gacha random draw, weighted random algorithm, or GACHA category lottery. Covers RandomDrawController and DrawService."
+---
+
 # 扭蛋隨機抽獎功能使用說明
 
 ## 📋 概述
