@@ -190,7 +190,11 @@ public class LotteryDrawController {
             return ResponseEntity.ok(null);
         }
         
-        return ResponseEntity.ok(SessionResponse.from(session, userId));
+        // 取得商品 gameMode，用於正確判斷 isDesignationComplete
+        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
+        String gameMode = lottery != null ? lottery.getGameMode() : null;
+        
+        return ResponseEntity.ok(SessionResponse.from(session, gameMode));
     }
 
     // ==================== 私有輔助方法 ====================
@@ -364,13 +368,17 @@ public class LotteryDrawController {
         String designationDeadline,     // ISO-8601；null = 非 SCRATCH_PLAYER 或指定已完成
         boolean isDesignationComplete   // true = 無需指定流程，或指定已完成
     ) {
-        public static SessionResponse from(SessionInfo info, String currentUserId) {
-            // 指定完成判斷：playerDesignatedNumbers 有值，或根本沒有 designationDeadline（非 SCRATCH_PLAYER）
-            boolean designationComplete = (info.playerDesignatedNumbers() != null
-                    && !info.playerDesignatedNumbers().isBlank())
-                    || info.designationDeadline() == null;
+        public static SessionResponse from(SessionInfo info, String gameMode) {
+            // 非 SCRATCH_PLAYER 模式（一番賞、扭蛋、SCRATCH_STORE）預設指定完成
+            boolean designationComplete;
+            if (!"SCRATCH_PLAYER".equals(gameMode)) {
+                designationComplete = true;
+            } else {
+                designationComplete = info.playerDesignatedNumbers() != null
+                        && !info.playerDesignatedNumbers().isBlank();
+            }
 
-            // 只有在指定尚未完成時才回傳截止時間（完成後前端不需要倒數）
+            // 只有在 SCRATCH_PLAYER 且指定未完成時才回傳截止時間
             String deadline = (!designationComplete && info.designationDeadline() != null)
                     ? info.designationDeadline().toString()
                     : null;
