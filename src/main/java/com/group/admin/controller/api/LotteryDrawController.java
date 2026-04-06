@@ -114,6 +114,21 @@ public class LotteryDrawController {
             }
         }
         
+        // 🆕 攔截非開套玩家（SCRATCH_PLAYER 模式且開套者尚未完成指定）
+        if (!session.isOpener() && "SCRATCH_PLAYER".equals(gameMode)) {
+            boolean notDesignated = session.playerDesignatedNumbers() == null
+                    || session.playerDesignatedNumbers().isBlank();
+            if (notDesignated) {
+                String deadline = session.designationDeadline() != null
+                        ? session.designationDeadline().toString() : null;
+                log.info("🚫 非開套玩家等待指定中: lotteryId={}, openerDeadline={}", lotteryId, deadline);
+                return ResponseEntity.ok(new DesignationPendingResponse(
+                        true,
+                        "開套玩家正在指定大獎位置，請稍候",
+                        deadline));
+            }
+        }
+        
         // 執行抽獎
         List<DrawResult> results = executeDraws(lotteryId, userId, request);
         
@@ -369,6 +384,15 @@ public class LotteryDrawController {
         String message,
         List<Integer> availableNumbers,  // 可選的 revealedNumber 列表
         List<GrandPrizeInfo> grandPrizes  // 大獎清單（告知前端要指定幾個、哪些）
+    ) {}
+
+    /**
+     * 等待開套者指定大獎時的回應（非開套玩家用）
+     */
+    public record DesignationPendingResponse(
+        boolean awaitingDesignation,  // 固定 true
+        String message,
+        String openerDeadline  // ISO-8601，前端用來倒數計時
     ) {}
 
     /**

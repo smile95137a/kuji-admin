@@ -258,7 +258,8 @@ public interface LotteryTicketService {
         int openerDrawCount,
         boolean freeDrawEnabled,
         String status,
-        String playerDesignatedNumbers  // 玩家指定的大獎位置（JSON 格式）
+        String playerDesignatedNumbers,  // 玩家指定的大獎位置（JSON 格式）
+        java.time.LocalDateTime designationDeadline  // 開套者指定大獎的截止時間（SCRATCH_PLAYER 模式）
     ) {}
 
     /**

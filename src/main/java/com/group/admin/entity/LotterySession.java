@@ -31,6 +31,8 @@ public class LotterySession {
 
     private String playerDesignatedNumbers;
 
+    private LocalDateTime designationDeadline;
+
     private String status;
 
     private LocalDateTime completedAt;
@@ -149,6 +151,14 @@ public class LotterySession {
 
     public void setPlayerDesignatedNumbers(String playerDesignatedNumbers) {
         this.playerDesignatedNumbers = playerDesignatedNumbers == null ? null : playerDesignatedNumbers.trim();
+    }
+
+    public LocalDateTime getDesignationDeadline() {
+        return designationDeadline;
+    }
+
+    public void setDesignationDeadline(LocalDateTime designationDeadline) {
+        this.designationDeadline = designationDeadline;
     }
 
     public String getStatus() {

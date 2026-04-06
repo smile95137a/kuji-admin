@@ -21,26 +21,35 @@ description: "Use when working on gacha random draw, weighted random algorithm, 
 
 ## 🔧 扭蛋隨機抽獎邏輯
 
+### ⚠️ weight 欄位說明（兩個表，兩種含義）
+
+| 表 | 欄位 | DDL 定義 | 用途 |
+|---|---|---|---|
+| `lottery` | `weight` | `推薦權重` | 首頁排序用，與抽獎無關 |
+| `lottery_prize` | `weight` | `抽中權重（0=不可抽，用於最後賞）` | 扭蛋加權算法使用 |
+
+**`lottery_prize.weight` = 機率權重**，不是商品寬度或顯示排序。
+
 ### 1. 加權隨機演算法
 
-扭蛋使用 **加權隨機演算法**，根據獎品的 `weight` 欄位決定中獎機率：
+扭蛋使用 **加權隨機演算法**，根據 `lottery_prize.weight` 欄位決定中獎機率：
 
 ```java
-// DrawServiceImpl.java
+// DrawServiceImpl.java（實際程式碼）
 private LotteryPrize weightedRandomSelect(List<LotteryPrize> prizes) {
-    // 計算總權重
+    // 計算總權重（weight 未設定時預設 1）
     int totalWeight = prizes.stream()
-            .mapToInt(p -> p.getWeight() != null ? p.getWeight() : 100)
+            .mapToInt(p -> p.getWeight() != null ? p.getWeight() : 1)
             .sum();
     
-    // 產生隨機數（0 ~ totalWeight）
+    // 產生隨機數（0 ~ totalWeight-1）
     int randomValue = random.nextInt(totalWeight);
     
-    // 找出對應的獎品
-    int accumulated = 0;
+    // 累加權重，找到對應的獎品
+    int cumulativeWeight = 0;
     for (LotteryPrize prize : prizes) {
-        accumulated += (prize.getWeight() != null ? prize.getWeight() : 100);
-        if (randomValue < accumulated) {
+        cumulativeWeight += (prize.getWeight() != null ? prize.getWeight() : 1);
+        if (randomValue < cumulativeWeight) {
             return prize;
         }
     }

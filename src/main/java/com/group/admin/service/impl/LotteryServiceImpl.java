@@ -1089,6 +1089,8 @@ public class LotteryServiceImpl implements LotteryService {
 
         // 🆕 上架時自動生成籤位（若尚未生成）
         if ("ON_SHELF".equals(status)) {
+            // 🆕 SCRATCH_STORE 上架前置驗證：必須先指定大獎號碼
+            validateCanGoOnShelf(lottery);
             Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
             if (!generated) {
                 log.info("🎫 籤位尚未生成，自動執行 generateTickets: lotteryId={}", id);
@@ -1395,6 +1397,12 @@ public class LotteryServiceImpl implements LotteryService {
         
         if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
             log.info("🎁 開始批次新增獎品: count={}", req.getPrizes().size());
+            
+            // 🆕 刮刮樂模式：強制驗證只允許 1 個大獎，不允許非大獎獎品
+            String reqGameMode = req.getLottery().getGameMode();
+            if ("SCRATCH_STORE".equals(reqGameMode) || "SCRATCH_PLAYER".equals(reqGameMode)) {
+                validateScratchPrizes(reqGameMode, req.getPrizes());
+            }
             
             for (com.group.admin.req.lottery.LotteryPrizeCreateReq prizeReq : req.getPrizes()) {
                 // 設定 lotteryId
@@ -1902,6 +1910,8 @@ public class LotteryServiceImpl implements LotteryService {
         
         // 上架時自動生成籤位
         if ("ON_SHELF".equals(targetStatus)) {
+            // 🆕 SCRATCH_STORE 上架前置驗證：必須先指定大獎號碼
+            validateCanGoOnShelf(lottery);
             Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
             if (!generated) {
                 try {
@@ -1922,6 +1932,52 @@ public class LotteryServiceImpl implements LotteryService {
     
     // ==================== 輔助方法 ====================
     
+    /**
+     * 🆕 刮刮樂獎品數量驗證：只允許 1 個大獎（quantity=1），不允許非大獎獎品
+     * 
+     * @param gameMode 遊戲模式（SCRATCH_STORE 或 SCRATCH_PLAYER）
+     * @param prizes   獎品列表
+     */
+    private void validateScratchPrizes(String gameMode, 
+            List<com.group.admin.req.lottery.LotteryPrizeCreateReq> prizes) {
+        long grandPrizeTotal = prizes.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsGrandPrize()))
+                .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 1)
+                .sum();
+        
+        if (grandPrizeTotal != 1) {
+            throw new BusinessException(
+                "刮刮樂模式：大獎數量必須剛好為 1（目前設定 " + grandPrizeTotal + " 個）。"
+                    + "其餘籤位系統會自動設為謝謝惠顧，不需額外設定。");
+        }
+        
+        long nonGrandCount = prizes.stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getIsGrandPrize()))
+                .count();
+        
+        if (nonGrandCount > 0) {
+            throw new BusinessException(
+                "刮刮樂模式：不允許設定非大獎獎品（目前設定了 " + nonGrandCount 
+                    + " 個），其餘籤位系統自動為謝謝惠顧。");
+        }
+    }
+    
+    /**
+     * 🆕 SCRATCH_STORE 上架前置驗證：必須先指定大獎號碼才能上架
+     * SCRATCH_PLAYER 和其他模式不受此限制。
+     * 
+     * @param lottery 商品實體
+     */
+    private void validateCanGoOnShelf(Lottery lottery) {
+        if ("SCRATCH_STORE".equals(lottery.getGameMode())) {
+            String d = lottery.getDesignatedPrizeNumbers();
+            if (d == null || d.isBlank()) {
+                throw new BusinessException(
+                    "SCRATCH_STORE 模式：請先在後台指定大獎號碼（designatedPrizeNumbers），才能上架。");
+            }
+        }
+    }
+
     /**
      * 判斷字串是否非空白
      * 空字串 "" 視為空白

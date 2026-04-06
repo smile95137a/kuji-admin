@@ -816,22 +816,42 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         if (!activeSessions.isEmpty()) {
             // 有進行中的場次
             LotterySession activeSession = activeSessions.get(0);
-            boolean isOpener = activeSession.getOpenerUserId().equals(userId);
             
-            log.info("✅ 找到進行中場次: sessionId={}, isOpener={}", activeSession.getId(), isOpener);
+            // 🆕 SCRATCH_PLAYER 逾時檢查：若開套者未在 10 分鐘內指定大獎，自動釋放場次
+            Lottery lotteryForTimeout = lotteryMapper.selectByPrimaryKey(lotteryId);
+            boolean isTimedOut = lotteryForTimeout != null
+                    && "SCRATCH_PLAYER".equals(lotteryForTimeout.getGameMode())
+                    && activeSession.getDesignationDeadline() != null
+                    && activeSession.getDesignationDeadline().isBefore(LocalDateTime.now())
+                    && (activeSession.getPlayerDesignatedNumbers() == null
+                            || activeSession.getPlayerDesignatedNumbers().isBlank());
             
-            return new SessionInfo(
-                    activeSession.getId(),
-                    activeSession.getLotteryId(),
-                    activeSession.getOpenerUserId(),
-                    isOpener,
-                    activeSession.getProtectionDraws() != null ? activeSession.getProtectionDraws() : 0,
-                    activeSession.getProtectionEndTime(),
-                    activeSession.getOpenerDrawCount() != null ? activeSession.getOpenerDrawCount() : 0,
-                    activeSession.getFreeDrawEnabled() != null && activeSession.getFreeDrawEnabled() == 1,
-                    activeSession.getStatus(),
-                    activeSession.getPlayerDesignatedNumbers()  // 新增欄位
-            );
+            if (!isTimedOut) {
+                boolean isOpener = activeSession.getOpenerUserId().equals(userId);
+                log.info("✅ 找到進行中場次: sessionId={}, isOpener={}", activeSession.getId(), isOpener);
+                return new SessionInfo(
+                        activeSession.getId(),
+                        activeSession.getLotteryId(),
+                        activeSession.getOpenerUserId(),
+                        isOpener,
+                        activeSession.getProtectionDraws() != null ? activeSession.getProtectionDraws() : 0,
+                        activeSession.getProtectionEndTime(),
+                        activeSession.getOpenerDrawCount() != null ? activeSession.getOpenerDrawCount() : 0,
+                        activeSession.getFreeDrawEnabled() != null && activeSession.getFreeDrawEnabled() == 1,
+                        activeSession.getStatus(),
+                        activeSession.getPlayerDesignatedNumbers(),
+                        activeSession.getDesignationDeadline()  // 🆕
+                );
+            }
+            
+            // 指定逾時：標記舊場次 EXPIRED，讓當前使用者成為新開套者
+            log.info("⏰ 開套者指定逾時，自動釋放場次: sessionId={}, 期限={}", 
+                    activeSession.getId(), activeSession.getDesignationDeadline());
+            activeSession.setStatus("EXPIRED");
+            activeSession.setCompletedAt(LocalDateTime.now());
+            activeSession.setUpdatedAt(LocalDateTime.now());
+            lotterySessionMapper.updateByPrimaryKey(activeSession);
+            // 繼續往下建立新場次（當前使用者成為新開套者）
         }
         
         // 建立新場次（當前使用者成為開套者）
@@ -858,6 +878,12 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         newSession.setCreatedAt(LocalDateTime.now());
         newSession.setUpdatedAt(LocalDateTime.now());
         
+        // 🆕 SCRATCH_PLAYER 模式：設定 10 分鐘大獎指定截止時間
+        if ("SCRATCH_PLAYER".equals(lottery.getGameMode())) {
+            newSession.setDesignationDeadline(LocalDateTime.now().plusMinutes(10));
+            log.info("⏱️ SCRATCH_PLAYER：設定指定截止時間 = {}", newSession.getDesignationDeadline());
+        }
+        
         lotterySessionMapper.insert(newSession);
         
         log.info("🆕 建立新場次（保護時間待啟動）: sessionId={}, opener={}", 
@@ -873,7 +899,8 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 0,
                 newSession.getFreeDrawEnabled() == 1,
                 "ACTIVE",
-                null  // 新建場次還未指定
+                null,  // 新建場次還未指定
+                newSession.getDesignationDeadline()  // 🆕
         );
     }
 
@@ -1196,7 +1223,8 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 session.getOpenerDrawCount() != null ? session.getOpenerDrawCount() : 0,
                 session.getFreeDrawEnabled() != null && session.getFreeDrawEnabled() == 1,
                 session.getStatus(),
-                session.getPlayerDesignatedNumbers()
+                session.getPlayerDesignatedNumbers(),
+                session.getDesignationDeadline()  // 🆕
         );
     }
 
