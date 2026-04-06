@@ -360,9 +360,21 @@ public class LotteryDrawController {
         String protectionEndTime,
         int openerDrawCount,
         boolean freeDrawEnabled,
-        String status
+        String status,
+        String designationDeadline,     // ISO-8601；null = 非 SCRATCH_PLAYER 或指定已完成
+        boolean isDesignationComplete   // true = 無需指定流程，或指定已完成
     ) {
         public static SessionResponse from(SessionInfo info, String currentUserId) {
+            // 指定完成判斷：playerDesignatedNumbers 有值，或根本沒有 designationDeadline（非 SCRATCH_PLAYER）
+            boolean designationComplete = (info.playerDesignatedNumbers() != null
+                    && !info.playerDesignatedNumbers().isBlank())
+                    || info.designationDeadline() == null;
+
+            // 只有在指定尚未完成時才回傳截止時間（完成後前端不需要倒數）
+            String deadline = (!designationComplete && info.designationDeadline() != null)
+                    ? info.designationDeadline().toString()
+                    : null;
+
             return new SessionResponse(
                     info.sessionId(),
                     info.isOpener(),
@@ -371,7 +383,9 @@ public class LotteryDrawController {
                     info.protectionEndTime() != null ? info.protectionEndTime().toString() : null,
                     info.openerDrawCount(),
                     info.freeDrawEnabled(),
-                    info.status()
+                    info.status(),
+                    deadline,
+                    designationComplete
             );
         }
     }
