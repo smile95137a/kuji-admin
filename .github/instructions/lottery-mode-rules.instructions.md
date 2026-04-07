@@ -179,10 +179,54 @@ category != "GACHA"
 
 ---
 
-## 十、⚠️ 禁止操作
+## 十、刮刮樂獎品設定規則
+
+### 前端傳獎品時的規則
+- 只傳 **1 個** `isGrandPrize: true` 的獎品
+- 謝謝惠顧籤位由後端自動補齊（數量 = `maxDraws` - 1）
+- **不要**再傳其他非大獎獎品，後端會拒絕（`validateScratchPrizes` 驗證）
+
+```json
+// ✅ 正確：只傳 1 個大獎
+"prizes": [
+  { "name": "大獎名稱", "quantity": 1, "level": "A", "isGrandPrize": true }
+]
+
+// ❌ 錯誤：傳了非大獎獎品
+"prizes": [
+  { "name": "大獎", "quantity": 1, "isGrandPrize": true },
+  { "name": "普通獎", "quantity": 5, "isGrandPrize": false }  // ← 會被拒絕
+]
+```
+
+### maxDraws = 總籤位數（含謝謝惠顧）
+```
+maxDraws: 111 + prizes[0].quantity: 1
+→ 生成 1 個大獎籤位 + 110 個謝謝惠顧籤位
+```
+
+---
+
+## 十一、後端 resolvePlayMode() 影響範圍
+
+以下三個方法都已統一使用 `resolvePlayMode()`，行為一致：
+
+| 方法 | 位置 |
+|---|---|
+| `createLottery(req)` | 新架構單獨新增商品 |
+| `createLottery(req, operatorId)` | 舊架構 / `createLotteryWithPrizes` 內部使用 |
+| `updateLottery(req)` / `updateLottery(req, operatorId)` | 更新商品時重新推算 |
+
+> 只要 `category` 或 `subCategory` 其中一個有傳，就會重新計算 `playMode`。
+
+---
+
+## 十二、⚠️ 禁止操作
 
 - ❌ 不要讓前端傳 `playMode`（後端自動推算，傳了也會被覆蓋）
 - ❌ 不要用 `category=SCRATCH`（已廢棄，正確是 `CUSTOM_GACHA` + `subCategory=SCRATCH_MODE`）
 - ❌ 不要在非 SCRATCH_MODE 商品上設定 `gameMode`
 - ❌ 不要用 `subCategory` 做抽獎路由判斷（只有 `playMode` 才是路由依據）
 - ❌ 不要在前台用 `category` 判斷是否顯示刮刮樂 UI（應用 `playMode`）
+- ❌ 不要對刮刮樂商品傳非大獎獎品（`isGrandPrize: false` 的獎品會被 validateScratchPrizes 拒絕）
+- ❌ 不要在 `LotteryTicketServiceImpl` 的 log 語句中直接用 `prizePool.get(1)`（size 可能為 1）
