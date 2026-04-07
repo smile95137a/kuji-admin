@@ -121,7 +121,8 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setEndTime(req.getEndTime());
         lottery.setMaxDraws(req.getMaxDraws());
         lottery.setTotalDraws(0);
-        lottery.setPlayMode(req.getPlayMode());
+        lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory()));
+        lottery.setGameMode(req.getGameMode());
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
         lottery.setHotCount(req.getHotCount());
@@ -197,7 +198,11 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getEndTime() != null) lottery.setEndTime(req.getEndTime());
         if (req.getMaxDraws() != null) lottery.setMaxDraws(req.getMaxDraws());
         if (req.getOrderNum() != null) lottery.setOrderNum(req.getOrderNum());
-        if (req.getPlayMode() != null) lottery.setPlayMode(req.getPlayMode());
+        if (req.getPlayMode() != null || req.getCategory() != null || req.getSubCategory() != null) {
+            String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
+            String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+            lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory));
+        }
         if (req.getStatus() != null) lottery.setStatus(req.getStatus());
         // ✅ 不再設定 weight
         if (req.getRemark() != null) lottery.setRemark(req.getRemark());
@@ -1483,7 +1488,12 @@ public class LotteryServiceImpl implements LotteryService {
                     .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
                     .sum();
             
-            String playMode = req.getLottery().getPlayMode();
+            // 使用與 createLottery 相同的推算邏輯（前端不傳 playMode，需自動推算）
+            String playMode = resolvePlayMode(
+                    req.getLottery().getPlayMode(),
+                    req.getLottery().getCategory(),
+                    req.getLottery().getSubCategory()
+            );
             
             log.info("🎰 籤位生成準備: playMode={}, 獎品總數={}", playMode, totalPrizeQuantity);
             

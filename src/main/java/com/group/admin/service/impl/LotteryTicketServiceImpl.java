@@ -161,11 +161,16 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             lotteryTicketMapper.insert(ticket);
         }
         
-        log.info("✅ 隨機籤位生成完成，獎品分配範例: 1號={}, 2號={}, ...{}號={}", 
-                prizePool.get(0).level(), 
-                prizePool.get(1).level(),
-                totalTickets,
-                prizePool.get(totalTickets - 1).level());
+        // 🆕 安全 log：避免 index out of bounds
+        if (prizePool.size() == 1) {
+            log.info("✅ 隨機籤位生成完成，獎品分配範例: {}個籤位均分配獎品", totalTickets);
+        } else if (prizePool.size() >= 2) {
+            log.info("✅ 隨機籤位生成完成，獎品分配範例: 1號={}, 2號={}, ...{}號={}", 
+                    prizePool.get(0).level(), 
+                    prizePool.get(1).level(),
+                    totalTickets,
+                    prizePool.get(totalTickets - 1).level());
+        }
     }
 
     /**
