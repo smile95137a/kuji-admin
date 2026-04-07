@@ -881,8 +881,12 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setDescription(req.getDescription());
         lottery.setCategory(req.getCategory());
         lottery.setSubCategory(req.getSubCategory());
-        lottery.setPlayMode(req.getPlayMode());
         lottery.setGameMode(req.getGameMode());
+
+        // 自動推算 playMode：前端不需要傳，後端根據 category + subCategory 決定
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
+        lottery.setPlayMode(resolvedPlayMode);
+
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : "OFF_SHELF");
         lottery.setPricePerDraw(req.getPricePerDraw());
         lottery.setDiscountedPrice(req.getDiscountedPrice());
@@ -951,8 +955,11 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getSubCategory() != null) {
             lottery.setSubCategory(req.getSubCategory());
         }
-        if (req.getPlayMode() != null) {
-            lottery.setPlayMode(req.getPlayMode());
+        if (req.getPlayMode() != null || req.getCategory() != null || req.getSubCategory() != null) {
+            // 有任何分類相關欄位更新時，重新推算 playMode
+            String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
+            String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+            lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory));
         }
         if (req.getGameMode() != null) {
             lottery.setGameMode(req.getGameMode());
@@ -1250,9 +1257,43 @@ public class LotteryServiceImpl implements LotteryService {
         int totalDraws = lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0;
         return Math.max(0, lottery.getMaxDraws() - totalDraws);
     }
-    
+
+    /**
+     * 根據 category + subCategory 自動推算 playMode
+     *
+     * <pre>
+     * category                    subCategory      → playMode
+     * GACHA                       -                → LOTTERY_MODE
+     * OFFICIAL_ICHIBAN            -                → LOTTERY_MODE
+     * TRADING_CARD                -                → LOTTERY_MODE
+     * CUSTOM_GACHA                SCRATCH_MODE     → SCRATCH_MODE
+     * CUSTOM_GACHA                LOTTERY_MODE     → LOTTERY_MODE
+     * CUSTOM_GACHA                (null)           → LOTTERY_MODE
+     * SCRATCH（舊值，已棄用）      -                → SCRATCH_MODE
+     * </pre>
+     *
+     * @param explicit    前端明確傳入的 playMode（優先使用，不為 null 時直接採用）
+     * @param category    商品大分類
+     * @param subCategory 自製賞子類型
+     * @return 推算後的 playMode
+     */
+    private String resolvePlayMode(String explicit, String category, String subCategory) {
+        if (explicit != null && !explicit.isBlank()) {
+            return explicit; // 前端明確指定時尊重傳入值
+        }
+        if (category == null) {
+            return "LOTTERY_MODE";
+        }
+        return switch (category) {
+            case "GACHA", "OFFICIAL_ICHIBAN", "TRADING_CARD" -> "LOTTERY_MODE";
+            case "CUSTOM_GACHA" -> "SCRATCH_MODE".equals(subCategory) ? "SCRATCH_MODE" : "LOTTERY_MODE";
+            case "SCRATCH" -> "SCRATCH_MODE"; // 舊資料相容
+            default -> "LOTTERY_MODE";
+        };
+    }
+
     // ==================== 複製商品功能 ====================
-    
+
     @Override
     @Transactional
     public LotteryRes copyLottery(String sourceLotteryId, String newTitle, Boolean regenerateTickets, String newStatus) {
