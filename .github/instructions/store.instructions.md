@@ -105,3 +105,38 @@ List<Store> activeStores = storeMapper.selectByExample(example);
 | **StoreOwner** | ✖ | ✔ (僅自己) | ✖ | ✖ (僅自己) |
 | **StoreEditor** | ✖ | ✖ | ✖ | ✖ |
 | **前台使用者** | ✖ | ✖ | ✖ | ✔ (僅啟用的店家) |
+
+## 七、商品狀態管理規則（Lottery ON_SHELF / OFF_SHELF）
+
+### 7.1 狀態切換永遠允許
+- 上架中（ON_SHELF）商品可隨時切換為下架（OFF_SHELF），不受任何限制。
+- 下架中（OFF_SHELF）商品可隨時切換為上架（ON_SHELF）。
+- 狀態切換（僅傳 `status` 欄位）不視為「內容修改」，永遠放行。
+
+### 7.2 上架中商品禁止修改內容
+當商品狀態為 ON_SHELF 時，以下欄位的任何修改均被拒絕，錯誤訊息為：
+> **「已上架的商品不可修改內容，請先下架再編輯」**
+
+受保護的欄位（`isContentUpdate` 判斷清單）：
+- `title`、`description`、`imageUrl`
+- `category`、`subCategory`
+- `pricePerDraw`、`maxDraws`、`multiDrawOptions`
+- `tags`、`galleryImages`
+
+### 7.3 程式實作（LotteryServiceImpl.updateLottery）
+```java
+boolean isContentUpdate = req.getTitle() != null || req.getDescription() != null
+        || req.getImageUrl() != null || req.getCategory() != null
+        || req.getSubCategory() != null || req.getPricePerDraw() != null
+        || req.getMaxDraws() != null || req.getMultiDrawOptions() != null
+        || req.getTags() != null || req.getGalleryImages() != null;
+if (isContentUpdate
+        && !LotteryStatusEnum.DRAFT.getCode().equals(status)
+        && !LotteryStatusEnum.OFF_SHELF.getCode().equals(status)) {
+    throw new BusinessException("已上架的商品不可修改內容，請先下架再編輯");
+}
+```
+
+### 7.4 禁止操作
+- ❌ 不要用單一「status != DRAFT && != OFF_SHELF」攔截**所有**更新請求，這會導致無法下架商品
+- ❌ 不要把 `status` 欄位加入 `isContentUpdate` 判斷（狀態切換永遠允許）

@@ -123,9 +123,13 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             return;
         }
         
-        // 建立獎品池（每個獎品根據數量重複放入）
+        // 建立獎品池（最後賞不加入籤位池，在最後一抽自動發放）
         List<PrizeSlot> prizePool = new ArrayList<>();
         for (LotteryPrize prize : prizes) {
+            if (prize.getIsLastPrize() != null && prize.getIsLastPrize() == 1) {
+                log.info("⏭️ 跳過最後賞（不加入籤位池）: {} (數量={})", prize.getName(), prize.getQuantity());
+                continue;
+            }
             int quantity = prize.getQuantity() != null ? prize.getQuantity() : 0;
             for (int i = 0; i < quantity; i++) {
                 prizePool.add(new PrizeSlot(prize.getId(), prize.getLevel()));
@@ -134,10 +138,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         log.info("📦 獎品池大小: {}, 總籤位數: {}", prizePool.size(), totalTickets);
         
-        // ⚠️ 一番賞/扭蛋/卡牌模式：獎品總數必須 = 總籤位數（不能有謝謝惠顧）
+        // ⚠️ 一番賞/扭蛋/卡牌模式：非最後賞獎品總數必須 = 總籤位數
         if (prizePool.size() != totalTickets) {
             throw new BusinessException(
-                String.format("一番賞/扭蛋/卡牌模式：獎品總數(%d)必須等於總籤位數(%d)！每個籤位都應該有獎品，不能有謝謝惠顧。",
+                String.format("一番賞/扭蛋/卡牌模式：非最後賞獎品總數(%d)必須等於總籤位數(%d)！",
                     prizePool.size(), totalTickets)
             );
         }
@@ -419,17 +423,17 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 1. 檢查商品狀態
         Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
         if (lottery == null) {
-            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "商品不存在");
+            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "商品不存在", false, null, null, null);
         }
         if (!"ON_SHELF".equals(lottery.getStatus())) {
-            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "商品未上架");
+            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "商品未上架", false, null, null, null);
         }
         
         // 2. 扭蛋不需要保護時間（在 Controller 層使用 synchronized）；其他類別檢查保護時間
         boolean isGacha = "GACHA".equals(lottery.getCategory());
         if (!isGacha && !canDrawNow(lotteryId, userId)) {
             return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                    "商品正在被其他玩家抽獎中，請稍後再試");
+                    "商品正在被其他玩家抽獎中，請稍後再試", false, null, null, null);
         }
         
         // 3. 決定籤位
@@ -447,7 +451,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             
             if (tickets.isEmpty()) {
                 return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "該籤位已被抽走或不存在");
+                        "該籤位已被抽走或不存在", false, null, null, null);
             }
             targetTicket = tickets.get(0);
             actualTicketNumber = ticketNumber;
@@ -455,7 +459,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             // 隨機模式
             Integer randomNumber = getRandomAvailableTicket(lotteryId);
             if (randomNumber == null) {
-                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "已無可抽籤位");
+                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "已無可抽籤位", false, null, null, null);
             }
             
             // 取得該籤位
@@ -466,7 +470,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
             
             if (tickets.isEmpty()) {
-                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "籤位查詢失敗");
+                return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, "籤位查詢失敗", false, null, null, null);
             }
             targetTicket = tickets.get(0);
             actualTicketNumber = randomNumber;
@@ -600,7 +604,20 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             }
         }
         
-        // 9. 返回結果
+        // 9. 最後賞檢查（全套票抽完時自動發放）
+        List<LotteryPrize> lastPrizesAwarded = checkAndAwardLastPrize(lottery, userId);
+        boolean lastPrizeAwarded = !lastPrizesAwarded.isEmpty();
+        String lastPrizeId = null;
+        String lastPrizeName = null;
+        String lastPrizeImageUrl = null;
+        if (lastPrizeAwarded) {
+            LotteryPrize first = lastPrizesAwarded.get(0);
+            lastPrizeId = first.getId();
+            lastPrizeName = first.getName();
+            lastPrizeImageUrl = first.getImageUrl();
+        }
+
+        // 10. 返回結果
         return new DrawResult(
                 true, 
                 targetTicket.getId(), 
@@ -615,7 +632,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 refundAmount,
                 triggeredFreeDraw 
                         ? "恭喜中獲 " + prizeName + "！開套免單，退還 " + refundAmount + " 元！"
-                        : "抽獎成功！恭喜獲得 " + prizeName
+                        : "抽獎成功！恭喜獲得 " + prizeName,
+                lastPrizeAwarded,
+                lastPrizeId,
+                lastPrizeName,
+                lastPrizeImageUrl
         );
     }
 
@@ -627,27 +648,27 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 1. 檢查商品狀態
         Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
         if (lottery == null) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "商品不存在");
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "商品不存在", false, null, null, null);
         }
         if (!"ON_SHELF".equals(lottery.getStatus())) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "商品未上架");
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "商品未上架", false, null, null, null);
         }
 
         // 2. 扭蛋不需要保護時間（在 Controller 層使用 synchronized）；其他類別檢查保護時間
         boolean isGacha = "GACHA".equals(lottery.getCategory());
         if (!isGacha && !canDrawNow(lotteryId, userId)) {
             return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L,
-                    "商品正在被其他玩家抽獎中，請稍後再試");
+                    "商品正在被其他玩家抽獎中，請稍後再試", false, null, null, null);
         }
 
         // 3. 查詢該票券
         LotteryTicket ticket = lotteryTicketMapper.selectByPrimaryKey(ticketId);
         if (ticket == null || ticket.getLotteryId() == null || !ticket.getLotteryId().equals(lotteryId)) {
-            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "該票券不存在於此抽獎活動");
+            return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L, "該票券不存在於此抽獎活動", false, null, null, null);
         }
         if (!"AVAILABLE".equals(ticket.getStatus())) {
             return new DrawResult(false, ticketId, ticket.getTicketNumber() != null ? ticket.getTicketNumber() : 0,
-                    null, null, null, null, null, false, false, 0L, "該票券已被抽走或不可用");
+                    null, null, null, null, null, false, false, 0L, "該票券已被抽走或不可用", false, null, null, null);
         }
 
         int actualTicketNumber = ticket.getTicketNumber() != null ? ticket.getTicketNumber() : 0;
@@ -768,6 +789,19 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             }
         }
 
+        // 最後賞檢查（全套票抽完時自動發放）
+        List<LotteryPrize> lastPrizesAwarded = checkAndAwardLastPrize(lottery, userId);
+        boolean lastPrizeAwarded = !lastPrizesAwarded.isEmpty();
+        String lastPrizeId = null;
+        String lastPrizeName = null;
+        String lastPrizeImageUrl = null;
+        if (lastPrizeAwarded) {
+            LotteryPrize first = lastPrizesAwarded.get(0);
+            lastPrizeId = first.getId();
+            lastPrizeName = first.getName();
+            lastPrizeImageUrl = first.getImageUrl();
+        }
+
         return new DrawResult(
                 true,
                 ticketId,
@@ -782,7 +816,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 refundAmount,
                 triggeredFreeDraw 
                         ? "恭喜中獲 " + prizeName + "！開套免單，退還 " + refundAmount + " 元！"
-                        : "抽獎成功！恭喜獲得 " + prizeName
+                        : "抽獎成功！恭喜獲得 " + prizeName,
+                lastPrizeAwarded,
+                lastPrizeId,
+                lastPrizeName,
+                lastPrizeImageUrl
         );
     }
 
@@ -802,6 +840,65 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 隨機選一個
         LotteryTicket selected = availableTickets.get(random.nextInt(availableTickets.size()));
         return selected.getTicketNumber();
+    }
+
+    // ==================== 最後賞自動發放 ====================
+
+    /**
+     * 最後一抽後，檢查是否需要自動發放最後賞。
+     * 當全套所有 AVAILABLE 籤位已抽完，且商品設有 isLastPrize=1 的獎品時自動觸發。
+     *
+     * @param lottery     商品
+     * @param lastUserId  觸發此次抽獎的用戶 ID（最後賞發放對象）
+     * @return 已發放的最後賞列表（未觸發則為空列表）
+     */
+    private List<LotteryPrize> checkAndAwardLastPrize(Lottery lottery, String lastUserId) {
+        // 1. 確認是否還有 AVAILABLE 籤位
+        LotteryTicketExample availableCheck = new LotteryTicketExample();
+        availableCheck.createCriteria()
+                .andLotteryIdEqualTo(lottery.getId())
+                .andStatusEqualTo("AVAILABLE");
+        long remainingCount = lotteryTicketMapper.countByExample(availableCheck);
+
+        if (remainingCount > 0) {
+            return List.of(); // 還有籤位，不觸發最後賞
+        }
+
+        // 2. 查詢此商品的所有最後賞獎品
+        LotteryPrizeExample lastPrizeExample = new LotteryPrizeExample();
+        lastPrizeExample.createCriteria()
+                .andLotteryIdEqualTo(lottery.getId())
+                .andIsLastPrizeEqualTo((byte) 1);
+        List<LotteryPrize> lastPrizes = lotteryPrizeMapper.selectByExample(lastPrizeExample);
+
+        if (lastPrizes.isEmpty()) {
+            return List.of(); // 此商品沒有最後賞
+        }
+
+        Long recycleBonus = lottery.getPricePerDraw() != null ? lottery.getPricePerDraw() / 2 : 0L;
+        List<LotteryPrize> awarded = new ArrayList<>();
+
+        for (LotteryPrize lastPrize : lastPrizes) {
+            int qty = lastPrize.getQuantity() != null ? lastPrize.getQuantity() : 1;
+            for (int i = 0; i < qty; i++) {
+                try {
+                    prizeBoxService.addToPrizeBox(lastUserId, lottery.getId(), lastPrize.getId(),
+                            lottery.getStoreId(), recycleBonus);
+                } catch (Exception e) {
+                    log.error("⚠️ 最後賞加入賞品盒失敗: prizeId={}, error={}", lastPrize.getId(), e.getMessage());
+                }
+            }
+            // 更新最後賞 remaining 為 0
+            lastPrize.setRemaining(0);
+            lastPrize.setUpdatedAt(LocalDateTime.now());
+            lotteryPrizeMapper.updateByPrimaryKey(lastPrize);
+
+            awarded.add(lastPrize);
+            log.info("🏆 最後賞自動發放: userId={}, prizeId={}, prizeName={}, qty={}",
+                    lastUserId, lastPrize.getId(), lastPrize.getName(), qty);
+        }
+
+        return awarded;
     }
 
     // ==================== 開套場次管理 ====================

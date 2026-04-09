@@ -14,7 +14,7 @@
 |------|----------|----------|----------|---------|---------|
 | **一番賞** | `OFFICIAL_ICHIBAN` | `LOTTERY_MODE` | `POST /api/lottery/draw/{id}/draw` | `LotteryTicketService` | 玩家選籤號 |
 | **扭蛋** | `GACHA` | `LOTTERY_MODE` | `POST /api/lottery/random/{id}/draw?count=N` | `DrawService` | 後端加權隨機 |
-| **刮刮樂** | `SCRATCH_CARD` | `SCRATCH_STORE` / `SCRATCH_PLAYER` | `POST /api/lottery/draw/{id}/draw` | `LotteryTicketService` | 玩家選號碼 |
+| **刮刮樂** | `CUSTOM_GACHA` + `subCategory=SCRATCH_MODE` | `SCRATCH_MODE`（後端自動推算） | `POST /api/lottery/draw/{id}/draw` | `LotteryTicketService` | 玩家選號碼 |
 
 ---
 
@@ -99,7 +99,7 @@ private LotteryPrize weightedRandomSelect(List<LotteryPrize> prizes) {
 
 ---
 
-## 模式三：刮刮樂（SCRATCH_CARD）雙號碼機制
+## 模式三：刮刮樂（CUSTOM_GACHA + subCategory=SCRATCH_MODE）雙號碼機制
 
 ### 雙號碼規則（關鍵！）
 

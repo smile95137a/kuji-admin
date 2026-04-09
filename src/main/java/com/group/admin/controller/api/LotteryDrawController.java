@@ -213,7 +213,7 @@ public class LotteryDrawController {
             if (tickets.size() != count) {
                 log.warn("❌ 票券列表長度不符: count={}, actual={}", count, tickets.size());
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表的長度必須等於 count"));
+                        "ticket 列表的長度必須等於 count", false, null, null, null));
                 return results;
             }
             
@@ -221,7 +221,7 @@ public class LotteryDrawController {
             long distinct = tickets.stream().distinct().count();
             if (distinct != tickets.size()) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表不可包含重複項目"));
+                        "ticket 列表不可包含重複項目", false, null, null, null));
                 return results;
             }
             
@@ -232,7 +232,7 @@ public class LotteryDrawController {
                 }
             } catch (IllegalArgumentException ex) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表必須包含有效的 UUID 格式"));
+                        "ticket 列表必須包含有效的 UUID 格式", false, null, null, null));
                 return results;
             }
             

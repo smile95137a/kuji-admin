@@ -151,11 +151,18 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("商品不存在");
         }
         
-        // 只有草稿和已下架狀態可以修改
+        // 狀態變更（上/下架）永遠允許
+        // 只有內容修改才限制只能在草稿或已下架狀態
         String status = lottery.getStatus();
-        if (!LotteryStatusEnum.DRAFT.getCode().equals(status) 
+        boolean isContentUpdate = req.getTitle() != null || req.getDescription() != null
+                || req.getImageUrl() != null || req.getCategory() != null
+                || req.getSubCategory() != null || req.getPricePerDraw() != null
+                || req.getMaxDraws() != null || req.getMultiDrawOptions() != null
+                || req.getTags() != null || req.getGalleryImages() != null;
+        if (isContentUpdate
+                && !LotteryStatusEnum.DRAFT.getCode().equals(status)
                 && !LotteryStatusEnum.OFF_SHELF.getCode().equals(status)) {
-            throw new BusinessException("只有草稿或已下架狀態的商品可以修改");
+            throw new BusinessException("已上架的商品不可修改內容，請先下架再編輯");
         }
         
         if (req.getTitle() != null) lottery.setTitle(req.getTitle());
@@ -612,6 +619,7 @@ public class LotteryServiceImpl implements LotteryService {
     private int sumRemainingByLotteryId(String lotteryId) {
         List<LotteryPrize> prizes = selectPrizesByLotteryId(lotteryId);
         return prizes.stream()
+                .filter(p -> p.getIsLastPrize() == null || p.getIsLastPrize() != 1) // 最後賞不計入剩餘抽數
                 .mapToInt(p -> p.getRemaining() == null ? 0 : p.getRemaining())
                 .sum();
     }
@@ -1483,8 +1491,13 @@ public class LotteryServiceImpl implements LotteryService {
             log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
             
             // Step 2.5: 🆕 自動計算 maxDraws 並更新商品
-            // 計算獎品總數
+            // 計算非最後賞獎品總數（最後賞不加入籤位池）
             int totalPrizeQuantity = req.getPrizes().stream()
+                    .filter(p -> p.getIsLastPrize() == null || !p.getIsLastPrize())
+                    .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                    .sum();
+            int lastPrizeQuantity = (int) req.getPrizes().stream()
+                    .filter(p -> p.getIsLastPrize() != null && p.getIsLastPrize())
                     .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
                     .sum();
             
@@ -1495,11 +1508,12 @@ public class LotteryServiceImpl implements LotteryService {
                     req.getLottery().getSubCategory()
             );
             
-            log.info("🎰 籤位生成準備: playMode={}, 獎品總數={}", playMode, totalPrizeQuantity);
+            log.info("🎰 籤位生成準備: playMode={}, 非最後賞獎品總數={}, 最後賞數量={}", 
+                    playMode, totalPrizeQuantity, lastPrizeQuantity);
             
-            // ✅ 檢查獎品總數
+            // ✅ 檢查獎品總數（排除最後賞後仍需有獎品）
             if (totalPrizeQuantity <= 0) {
-                String errorMsg = "獎品總數必須大於 0！請至少新增一個獎品。";
+                String errorMsg = "非最後賞獎品總數必須大於 0！請至少新增一個非最後賞獎品。";
                 log.error("❌ {}", errorMsg);
                 throw new BusinessException(errorMsg);
             }
@@ -1509,13 +1523,13 @@ public class LotteryServiceImpl implements LotteryService {
             Integer frontendMaxDraws = req.getLottery().getMaxDraws();
             
             if ("LOTTERY_MODE".equals(playMode)) {
-                // 一番賞/扭蛋/卡牌：maxDraws = 獎品總數（不能有謝謝惠顧）
+                // 一番賞/扭蛋/卡牌：maxDraws = 非最後賞獎品總數
                 calculatedMaxDraws = totalPrizeQuantity;
-                log.info("🎯 一番賞模式：自動設定 maxDraws = 獎品總數 = {}", calculatedMaxDraws);
+                log.info("🎯 一番賞模式：自動設定 maxDraws = 非最後賞獎品總數 = {}", calculatedMaxDraws);
                 
-                // 如果前端傳入的 maxDraws 與獎品總數不符，警告並覆寫
+                // 如果前端傳入的 maxDraws 與計算值不符，警告並覆寫
                 if (frontendMaxDraws != null && frontendMaxDraws != totalPrizeQuantity) {
-                    log.warn("⚠️ 一番賞模式：前端傳入 maxDraws={} 與獎品總數={} 不符，已自動覆寫", 
+                    log.warn("⚠️ 一番賞模式：前端傳入 maxDraws={} 與非最後賞獎品總數={} 不符，已自動覆寫", 
                             frontendMaxDraws, totalPrizeQuantity);
                 }
             } else if ("SCRATCH_MODE".equals(playMode)) {

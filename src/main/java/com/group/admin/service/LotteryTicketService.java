@@ -242,7 +242,11 @@ public interface LotteryTicketService {
         boolean isGrandPrize,
         boolean triggeredFreeDraw,
         Long refundAmount,
-        String message
+        String message,
+        boolean lastPrizeAwarded,    // 最後賞是否已自動發放（此籤為全套最後一抽）
+        String lastPrizeId,          // 自動發放的最後賞 ID（null 表示未觸發）
+        String lastPrizeName,        // 自動發放的最後賞名稱
+        String lastPrizeImageUrl     // 自動發放的最後賞圖片
     ) {}
 
     /**

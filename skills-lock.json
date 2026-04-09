@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "debugging-strategies": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "d23569726da551020f848e2ab6c7b41d8ec16b63f0f2a2ba6f0831fca4cdab43"
+    },
+    "java-pro": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "64302dccef4c1f0ec48ec13146fdd2bb90c4062a4530f8a2b1892479e592c40a"
+    }
+  }
+}
