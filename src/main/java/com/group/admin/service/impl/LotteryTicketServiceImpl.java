@@ -34,7 +34,7 @@ import com.group.admin.service.ConsumptionRecordService;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.PrizeBoxService;
 import com.group.admin.service.SystemConfigService;
-import com.group.admin.service.WalletService;
+import com.group.admin.service.CoinService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,7 +62,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     private final LotteryTicketMapper lotteryTicketMapper;
     private final LotterySessionMapper lotterySessionMapper;
     private final PrizeBoxService prizeBoxService;
-    private final WalletService walletService;
+    private final CoinService walletService;
     private final ConsumptionRecordService consumptionRecordService;
     private final SystemConfigService systemConfigService;
 

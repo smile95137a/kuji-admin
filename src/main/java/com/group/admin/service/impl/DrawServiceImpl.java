@@ -14,7 +14,7 @@ import com.group.admin.req.draw.DrawReq;
 import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
 import com.group.admin.service.PrizeBoxService;
-import com.group.admin.service.WalletService;
+import com.group.admin.service.CoinService;
 import com.group.admin.service.ConsumptionRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +48,7 @@ public class DrawServiceImpl implements DrawService {
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
     private final UserMapper userMapper;
-    private final WalletService walletService;
+    private final CoinService walletService;
     private final PrizeBoxService prizeBoxService;
     private final ConsumptionRecordService consumptionRecordService;
     private final Random random = new Random();
@@ -90,53 +90,49 @@ public class DrawServiceImpl implements DrawService {
         Long totalCost = pricePerDraw * count;
         log.info("💰 總消費金額：{} (單抽: {}, 數量: {})", totalCost, pricePerDraw, count);
         
-        // ========== Step 4: 驗證錢包餘額（直接從 user 表讀取）==========
+        // ========== Step 4: 驗證錢包餘額（依 paymentType）==========
         User user = userMapper.selectByPrimaryKey(userId);
         
         if (user == null) {
             throw new BusinessException("使用者不存在");
         }
         
+        // 讀取 paymentType，預設為 GOLD（spec 019 尚未加此欄位時的安全預設值）
+        String paymentType = "GOLD";
+        
         Long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
         Long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
-        Long totalBalance = gold + bonus;
         
-        if (totalBalance < totalCost) {
-            throw new BusinessException(String.format(
-                "餘額不足！需要 %d，但只有 %d (Gold: %d, Bonus: %d)", 
-                totalCost, totalBalance, gold, bonus
-            ));
+        if ("BONUS".equals(paymentType)) {
+            if (bonus < totalCost) {
+                throw new BusinessException(String.format(
+                    "紅利不足！需要 %d，但只有 %d", totalCost, bonus));
+            }
+        } else {
+            if (gold < totalCost) {
+                throw new BusinessException(String.format(
+                    "金幣不足！需要 %d，但只有 %d", totalCost, gold));
+            }
         }
         
-        log.info("💳 錢包餘額：Gold={}, Bonus={}, Total={}", gold, bonus, totalBalance);
+        log.info("💳 錢包餘額：Gold={}, Bonus={}, paymentType={}", gold, bonus, paymentType);
         
         // ========== Step 5: 扣除點數 ==========
         Long goldUsed = 0L;
         Long bonusUsed = 0L;
         
-        if (gold >= totalCost) {
-            // Gold 足夠，全部從 Gold 扣
-            goldUsed = totalCost;
-            walletService.deductGold(userId, goldUsed, 
-                TransactionTypeEnum.DRAW.getCode(), 
-                lotteryId, 
+        if ("BONUS".equals(paymentType)) {
+            bonusUsed = totalCost;
+            walletService.deductBonus(userId, bonusUsed,
+                TransactionTypeEnum.DRAW.getCode(),
+                lotteryId,
                 String.format("抽獎消費：%s x%d", lottery.getTitle(), count));
         } else {
-            // Gold 不足，先扣完 Gold，再扣 Bonus
-            goldUsed = gold;
-            bonusUsed = totalCost - gold;
-            
-            if (goldUsed > 0) {
-                walletService.deductGold(userId, goldUsed, 
-                    TransactionTypeEnum.DRAW.getCode(), 
-                    lotteryId, 
-                    String.format("抽獎消費（Gold部分）：%s x%d", lottery.getTitle(), count));
-            }
-            
-            walletService.deductBonus(userId, bonusUsed, 
-                TransactionTypeEnum.DRAW.getCode(), 
-                lotteryId, 
-                String.format("抽獎消費（Bonus部分）：%s x%d", lottery.getTitle(), count));
+            goldUsed = totalCost;
+            walletService.deductGold(userId, goldUsed,
+                TransactionTypeEnum.DRAW.getCode(),
+                lotteryId,
+                String.format("抽獎消費：%s x%d", lottery.getTitle(), count));
         }
         
         log.info("💸 扣款成功：Gold={}, Bonus={}", goldUsed, bonusUsed);

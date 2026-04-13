@@ -1,11 +1,11 @@
 package com.group.admin.controller.admin;
 
-import com.group.admin.condition.WalletTransactionCondition;
+import com.group.admin.condition.CoinTransactionCondition;
 import com.group.admin.req.common.QueryReq;
-import com.group.admin.req.wallet.WalletAdjustReq;
-import com.group.admin.res.wallet.UserWalletRes;
-import com.group.admin.res.wallet.WalletTransactionRes;
-import com.group.admin.service.WalletService;
+import com.group.admin.req.wallet.CoinAdjustReq;
+import com.group.admin.res.wallet.UserCoinRes;
+import com.group.admin.res.wallet.CoinTransactionRes;
+import com.group.admin.service.CoinService;
 import com.group.admin.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,40 +17,40 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 後台錢包管理 Controller
+ * 後台金幣管理 Controller
  * 
  * @author Kuji Admin
  * @since 2026-01-09
  */
 @Slf4j
 @RestController
-@RequestMapping("/admin/wallet")
+@RequestMapping("/admin/coin")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-public class AdminWalletController {
+public class AdminCoinController {
     
-    private final WalletService walletService;
+    private final CoinService coinService;
     
     /**
-     * 查詢玩家錢包
+     * 查詢玩家金幣
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<UserWalletRes> getWallet(@PathVariable String userId) {
-        log.info("🔍 [Admin] 查詢玩家錢包：userId={}", userId);
-        UserWalletRes wallet = walletService.getWallet(userId);
-        return ResponseEntity.ok(wallet);
+    public ResponseEntity<UserCoinRes> getWallet(@PathVariable String userId) {
+        log.info("🔍 [Admin] 查詢玩家金幣：userId={}", userId);
+        UserCoinRes coins = coinService.getWallet(userId);
+        return ResponseEntity.ok(coins);
     }
     
     /**
      * 手動調整玩家點數（Admin 專用）
      */
     @PostMapping("/adjust")
-    public ResponseEntity<Void> adjustCoins(@Valid @RequestBody WalletAdjustReq req) {
+    public ResponseEntity<Void> adjustCoins(@Valid @RequestBody CoinAdjustReq req) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
         log.info("🔍 [Admin] 手動調整點數：userId={}, coinType={}, amount={}, operator={}", 
                 req.getUserId(), req.getCoinType(), req.getAmount(), operatorId);
         
-        walletService.adjustCoins(req, operatorId);
+        coinService.adjustCoins(req, operatorId);
         
         return ResponseEntity.ok().build();
     }
@@ -59,11 +59,11 @@ public class AdminWalletController {
      * 查詢交易記錄
      */
     @PostMapping("/transactions/list")
-    public ResponseEntity<List<WalletTransactionRes>> getTransactions(
-            @RequestBody(required = false) QueryReq<WalletTransactionCondition> req) {
+    public ResponseEntity<List<CoinTransactionRes>> getTransactions(
+            @RequestBody(required = false) QueryReq<CoinTransactionCondition> req) {
         log.info("🔍 [Admin] 查詢交易記錄");
         
-        List<WalletTransactionRes> transactions = walletService.getTransactions(req);
+        List<CoinTransactionRes> transactions = coinService.getTransactions(req);
         
         return ResponseEntity.ok(transactions);
     }

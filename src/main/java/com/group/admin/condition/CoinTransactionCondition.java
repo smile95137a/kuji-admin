@@ -5,14 +5,14 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 交易記錄查詢條件
+ * 金幣交易記錄查詢條件
  * 
  * @author Kuji Admin
  * @since 2026-01-09
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class WalletTransactionCondition extends BaseCondition {
+public class CoinTransactionCondition extends BaseCondition {
     
     /**
      * 玩家 ID

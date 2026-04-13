@@ -3,14 +3,13 @@ package com.group.admin.service.impl;
 import com.group.admin.entity.RechargeRecord;
 import com.group.admin.entity.RechargePlan;
 import com.group.admin.entity.User;
-import com.group.admin.entity.WalletTransaction;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.RechargeRecordMapper;
 import com.group.admin.mapper.RechargePlanMapper;
 import com.group.admin.mapper.UserMapper;
-import com.group.admin.mapper.WalletTransactionMapper;
 import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.recharge.RechargeRes;
+import com.group.admin.service.CoinService;
 import com.group.admin.service.RechargeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +36,7 @@ public class RechargeServiceImpl implements RechargeService {
     private final RechargeRecordMapper rechargeRecordMapper;
     private final RechargePlanMapper rechargePlanMapper;
     private final UserMapper userMapper;
-    private final WalletTransactionMapper walletTransactionMapper;
+    private final CoinService coinService;
     
     @Override
     public RechargeRes createRechargeRequest(String userId, RechargeReq req) {
@@ -96,75 +95,33 @@ public class RechargeServiceImpl implements RechargeService {
         
         log.info("✅ [Step 3] 儲值記錄已建立：rechargeId={}, status=COMPLETED", record.getId());
         
-        // Step 4: 立即更新使用者金幣（✨ 新增邏輯）
-        Long goldBefore = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
-        Long bonusBefore = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
-        Long totalBefore = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
+        // Step 4: 透過 CoinService 更新使用者金幣（統一記錄交易流水）
+        log.info("💰 [Step 4] 透過 CoinService 更新金幣...");
         
-        Long goldAfter = goldBefore + record.getGoldCoins();
-        Long bonusAfter = bonusBefore + record.getBonusCoins();
-        Long totalAfter = totalBefore + record.getAmount();
-        
-        user.setGoldCoins(goldAfter);
-        user.setBonusCoins(bonusAfter);
-        user.setTotalRecharged(totalAfter);
-        user.setUpdatedAt(now);
-        
-        log.info("💰 [Step 4] 準備更新使用者金幣...");
-        log.info("   金幣：{} + {} = {}", goldBefore, record.getGoldCoins(), goldAfter);
-        log.info("   紅利：{} + {} = {}", bonusBefore, record.getBonusCoins(), bonusAfter);
-        log.info("   累計儲值：{} + {} = {}", totalBefore, record.getAmount(), totalAfter);
-        
-        int updateCount = userMapper.updateByPrimaryKeySelective(user);
-        
-        log.info("✅ [Step 4] 使用者金幣更新完成！updateCount={}", updateCount);
-        
-        if (updateCount == 0) {
-            log.error("❌ 更新使用者金幣失敗！updateCount=0");
-            throw new BusinessException("更新使用者金幣失敗，請重試");
-        }
-        
-        // 重新查詢驗證
-        User updatedUser = userMapper.selectByPrimaryKey(userId);
-        log.info("� [驗證] 重新查詢使用者金幣：");
-        log.info("   goldCoins={} (預期: {})", updatedUser.getGoldCoins(), goldAfter);
-        log.info("   bonusCoins={} (預期: {})", updatedUser.getBonusCoins(), bonusAfter);
-        log.info("   totalRecharged={} (預期: {})", updatedUser.getTotalRecharged(), totalAfter);
-        
-        // Step 5: 建立 WalletTransaction 記錄（✨ 新增邏輯）
-        if (record.getGoldCoins() != null && record.getGoldCoins() > 0) {
-            WalletTransaction transaction = new WalletTransaction();
-            transaction.setId(UUID.randomUUID().toString());
-            transaction.setUserId(userId);
-            transaction.setTransactionType("RECHARGE");
-            transaction.setCoinType("GOLD");
-            transaction.setAmount(record.getGoldCoins());
-            transaction.setBalanceAfter(goldAfter);
-            transaction.setDescription("儲值：" + plan.getName());
-            transaction.setRelatedId(record.getId());
-            transaction.setCreatedAt(now);
-            walletTransactionMapper.insert(transaction);
-            
-            log.info("✅ [Step 5] 金幣交易記錄已建立：amount={}, balanceAfter={}", 
-                    record.getGoldCoins(), goldAfter);
-        }
+        coinService.addGold(userId, record.getGoldCoins(), "RECHARGE", record.getId(),
+                "儲值：" + plan.getName());
         
         if (record.getBonusCoins() != null && record.getBonusCoins() > 0) {
-            WalletTransaction bonusTransaction = new WalletTransaction();
-            bonusTransaction.setId(UUID.randomUUID().toString());
-            bonusTransaction.setUserId(userId);
-            bonusTransaction.setTransactionType("RECHARGE");
-            bonusTransaction.setCoinType("BONUS");
-            bonusTransaction.setAmount(record.getBonusCoins());
-            bonusTransaction.setBalanceAfter(bonusAfter);
-            bonusTransaction.setDescription("儲值紅利：" + plan.getName());
-            bonusTransaction.setRelatedId(record.getId());
-            bonusTransaction.setCreatedAt(now);
-            walletTransactionMapper.insert(bonusTransaction);
-            
-            log.info("✅ [Step 5] 紅利交易記錄已建立：amount={}, balanceAfter={}", 
-                    record.getBonusCoins(), bonusAfter);
+            coinService.addBonus(userId, record.getBonusCoins(), "RECHARGE", record.getId(),
+                    "儲值紅利：" + plan.getName());
         }
+        
+        // 更新累計儲值金額（非金幣欄位，直接更新 user 表）
+        User updatedUser = userMapper.selectByPrimaryKey(userId);
+        if (updatedUser != null) {
+            Long totalBefore = updatedUser.getTotalRecharged() != null ? updatedUser.getTotalRecharged() : 0L;
+            updatedUser.setTotalRecharged(totalBefore + record.getAmount());
+            updatedUser.setUpdatedAt(now);
+            userMapper.updateByPrimaryKeySelective(updatedUser);
+        }
+        
+        log.info("✅ [Step 4] 金幣更新完成！goldCoins={}, bonusCoins={}",
+                record.getGoldCoins(), record.getBonusCoins());
+        
+        // 重新查詢驗證
+        User verifyUser = userMapper.selectByPrimaryKey(userId);
+        log.info("🔍 [驗證] 重新查詢使用者金幣：goldCoins={}, bonusCoins={}, totalRecharged={}",
+                verifyUser.getGoldCoins(), verifyUser.getBonusCoins(), verifyUser.getTotalRecharged());
         
         log.info("🎉 儲值完成！rechargeId={}, goldCoins={}, bonusCoins={}", 
                 record.getId(), record.getGoldCoins(), record.getBonusCoins());
@@ -235,49 +192,23 @@ public class RechargeServiceImpl implements RechargeService {
             throw new BusinessException("使用者不存在");
         }
         
-        Long goldBefore = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
-        Long bonusBefore = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
+        // 透過 CoinService 更新使用者金幣（統一記錄交易流水）
+        coinService.addGold(record.getUserId(), record.getGoldCoins(), "RECHARGE", rechargeId,
+                "儲值：" + record.getPlanId());
         
-        user.setGoldCoins(goldBefore + record.getGoldCoins());
-        user.setBonusCoins(bonusBefore + record.getBonusCoins());
-        user.setTotalRecharged((user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L) + record.getAmount());
-        user.setUpdatedAt(now);
-        
-        int updateCount = userMapper.updateByPrimaryKeySelective(user);
-        if (updateCount == 0) {
-            throw new BusinessException("更新使用者金幣失敗（並發沖突），請重試");
+        if (record.getBonusCoins() != null && record.getBonusCoins() > 0) {
+            coinService.addBonus(record.getUserId(), record.getBonusCoins(), "RECHARGE", rechargeId,
+                    "儲值紅利：" + record.getPlanId());
         }
+        
+        // 更新累計儲值金額（非金幣欄位）
+        Long totalBefore = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
+        user.setTotalRecharged(totalBefore + record.getAmount());
+        user.setUpdatedAt(now);
+        userMapper.updateByPrimaryKeySelective(user);
         
         log.info("✅ 使用者金幣已更新：userId={}, +goldCoins={}, +bonusCoins={}", 
                 record.getUserId(), record.getGoldCoins(), record.getBonusCoins());
-        
-        // Step 5: 建立 WalletTransaction 記錄（審計用）
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setId(UUID.randomUUID().toString());
-        transaction.setUserId(record.getUserId());
-        transaction.setTransactionType("RECHARGE");
-        transaction.setCoinType("GOLD");  // 主要是金幣
-        transaction.setAmount(record.getGoldCoins());
-        transaction.setBalanceAfter(user.getGoldCoins());
-        transaction.setDescription("儲值：" + record.getPlanId());
-        transaction.setRelatedId(rechargeId);
-        transaction.setCreatedAt(now);
-        walletTransactionMapper.insert(transaction);
-        
-        // 如果有紅利也記錄一筆
-        if (record.getBonusCoins() != null && record.getBonusCoins() > 0) {
-            WalletTransaction bonusTransaction = new WalletTransaction();
-            bonusTransaction.setId(UUID.randomUUID().toString());
-            bonusTransaction.setUserId(record.getUserId());
-            bonusTransaction.setTransactionType("RECHARGE");
-            bonusTransaction.setCoinType("BONUS");
-            bonusTransaction.setAmount(record.getBonusCoins());
-            bonusTransaction.setBalanceAfter(user.getBonusCoins());
-            bonusTransaction.setDescription("儲值紅利：" + record.getPlanId());
-            bonusTransaction.setRelatedId(rechargeId);
-            bonusTransaction.setCreatedAt(now);
-            walletTransactionMapper.insert(bonusTransaction);
-        }
         
         log.info("✅ 交易記錄已建立：userId={}", record.getUserId());
         

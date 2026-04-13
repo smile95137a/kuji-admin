@@ -19,7 +19,7 @@ import com.group.admin.res.referral.ReferralCodeRes;
 import com.group.admin.res.referral.ReferralRecordRes;
 import com.group.admin.res.referral.ReferralStatsRes;
 import com.group.admin.service.ReferralCodeService;
-import com.group.admin.service.WalletService;
+import com.group.admin.service.CoinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,7 +42,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     private final ReferralRecordRepository referralRecordRepository;
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
-    private final WalletService walletService;
+    private final CoinService walletService;
 
     private static final long DEFAULT_BONUS_PER_USE = 50L;
     private static final int DEFAULT_MAX_USAGE = 100;
