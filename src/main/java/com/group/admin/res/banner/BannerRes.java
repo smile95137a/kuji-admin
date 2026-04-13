@@ -29,13 +29,19 @@ public class BannerRes {
     
     @Schema(description = "店家名稱", example = "玩具公仔專賣店")
     private String storeName;
-    
+
+    @Schema(description = "店家 Logo URL", example = "https://example.com/logo.png")
+    private String storeLogoUrl;
+
     @Schema(description = "Banner 標題", example = "春節限時優惠")
     private String title;
-    
+
     @Schema(description = "圖片 URL", example = "https://example.com/banner.jpg")
     private String imageUrl;
-    
+
+    @Schema(description = "連結 URL（計算值：/stores/{storeId}）", example = "/stores/uuid-store-456")
+    private String linkUrl;
+
     @Schema(description = "排序", example = "1")
     private Integer orderNum;
     

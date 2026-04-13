@@ -9,6 +9,7 @@ import com.group.admin.example.StoreExample;
 import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.AdminUserMapper;
+import com.group.admin.mapper.BannerMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
@@ -40,6 +41,7 @@ public class StoreServiceImpl implements StoreService {
     private final StoreMapper storeMapper;
     private final StoreUserMapper storeUserMapper;
     private final AdminUserMapper adminUserMapper;
+    private final BannerMapper bannerMapper;
 
     @Override
     public List<StoreRes> queryStores(QueryReq<StoreCondition> req) {
@@ -210,6 +212,12 @@ public class StoreServiceImpl implements StoreService {
         store.setUpdatedAt(LocalDateTime.now());
         
         storeMapper.updateByPrimaryKey(store);
+        
+        // Cascade: deactivate all ACTIVE banners when store is disabled
+        if ("INACTIVE".equals(status)) {
+            bannerMapper.unpublishBannersByStoreId(storeId);
+            log.info("🏪 店家停用，連帶下架 Banner: storeId={}", storeId);
+        }
         
         log.info("✅ 店家狀態更新：storeId={}，status={}", storeId, status);
     }
