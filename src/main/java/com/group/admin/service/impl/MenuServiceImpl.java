@@ -387,6 +387,57 @@ public class MenuServiceImpl implements MenuService {
         return buildPermissionTree(flatList, null);
     }
 
+    @Override
+    public List<MenuPermissionRes> getAuthorizedMenusForUser(String userId, List<String> roles) {
+        log.info("🔍 查詢授權選單: userId={}, roles={}", userId, roles);
+
+        // ROLE_ADMIN 直接取全部可見選單，所有旗標設為 true（跳過 JOIN）
+        if (roles != null && roles.contains("ROLE_ADMIN")) {
+            MenuExample visibleExample = new MenuExample();
+            visibleExample.createCriteria().andIsVisibleEqualTo(true);
+            visibleExample.setOrderByClause("order_num ASC");
+            List<Menu> allMenus = menuMapper.selectByExample(visibleExample);
+
+            List<MenuPermissionRes> flatList = allMenus.stream()
+                    .map(m -> MenuPermissionRes.builder()
+                            .id(m.getId()).name(m.getName()).code(m.getCode())
+                            .path(m.getPath()).parentId(m.getParentId())
+                            .icon(m.getIcon()).orderNum(m.getOrderNum())
+                            .canView(true).canEdit(true).canDelete(true)
+                            .children(new ArrayList<>())
+                            .build())
+                    .collect(Collectors.toList());
+
+            return buildPermissionTree(flatList, null);
+        }
+
+        // 非 Admin：執行聚合 SQL 取得使用者有效權限
+        List<Map<String, Object>> rows = menuMapper.getMenusWithPermissionsForUser(userId);
+        if (rows == null || rows.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 只保留 canView=true 的選單
+        List<MenuPermissionRes> flatList = rows.stream()
+                .map(row -> MenuPermissionRes.builder()
+                        .id((String) row.get("id"))
+                        .name((String) row.get("name"))
+                        .code((String) row.get("code"))
+                        .path((String) row.get("path"))
+                        .parentId((String) row.get("parentId"))
+                        .icon((String) row.get("icon"))
+                        .orderNum(row.get("orderNum") != null ? ((Number) row.get("orderNum")).intValue() : 0)
+                        .canView(toBoolean(row.get("canView")))
+                        .canEdit(toBoolean(row.get("canEdit")))
+                        .canDelete(toBoolean(row.get("canDelete")))
+                        .children(new ArrayList<>())
+                        .build())
+                .filter(m -> Boolean.TRUE.equals(m.getCanView()))
+                .collect(Collectors.toList());
+
+        return buildPermissionTree(flatList, null);
+    }
+
     private List<MenuPermissionRes> buildPermissionTree(List<MenuPermissionRes> flatList, String parentId) {
         Map<String, List<MenuPermissionRes>> childrenMap = flatList.stream()
                 .filter(m -> m.getParentId() != null)

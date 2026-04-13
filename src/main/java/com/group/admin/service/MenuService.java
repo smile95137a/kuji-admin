@@ -36,4 +36,14 @@ public interface MenuService {
      * 查詢當前使用者可訪問的選單樹（含權限旗標）
      */
     List<MenuPermissionRes> getMenusForCurrentUser(String userId);
+
+    /**
+     * 依 userId 與已知角色列表查詢授權選單樹（T025/T026）
+     * <p>ROLE_ADMIN 直接取全部可見選單，其他角色透過 JOIN 聚合查詢。</p>
+     *
+     * @param userId 使用者 ID
+     * @param roles  使用者角色列表（完整 ROLE_ 前綴）
+     * @return 帶有 canView/canEdit/canDelete 旗標的樹狀選單列表
+     */
+    List<MenuPermissionRes> getAuthorizedMenusForUser(String userId, List<String> roles);
 }

@@ -1,6 +1,7 @@
 package com.group.admin.handler;
 
 import com.group.admin.exception.BusinessException;
+import com.group.admin.exception.UnprocessableEntityException;
 import com.group.admin.result.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,8 +26,25 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     /**
+     * 處理業務規則驗證失敗 (HTTP 422)
+     *
+     * @param ex UnprocessableEntityException
+     * @return 統一錯誤回應
+     */
+    @ExceptionHandler(UnprocessableEntityException.class)
+    public ResponseEntity<ApiResponse<?>> handleUnprocessableEntityException(UnprocessableEntityException ex) {
+        log.warn("⚠️ 業務規則驗證失敗: {}", ex.getMessage());
+        Object details = ex.getErrors() != null && !ex.getErrors().isEmpty()
+                ? java.util.Map.of("errors", ex.getErrors())
+                : null;
+        return ResponseEntity
+                .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.error("VALIDATION_ERROR", ex.getMessage(), details));
+    }
+
+    /**
      * 處理業務邏輯異常
-     * 
+     *
      * @param ex BusinessException
      * @return 統一錯誤回應
      */

@@ -2,6 +2,7 @@ package com.group.admin.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.group.admin.entity.AdminOperationLog;
 import com.group.admin.entity.Menu;
 import com.group.admin.entity.PermissionAuditLog;
 import com.group.admin.entity.Role;
@@ -10,6 +11,8 @@ import com.group.admin.example.MenuExample;
 import com.group.admin.example.RoleExample;
 import com.group.admin.example.RoleMenuExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.exception.UnprocessableEntityException;
+import com.group.admin.mapper.AdminOperationLogMapper;
 import com.group.admin.mapper.MenuMapper;
 import com.group.admin.mapper.PermissionAuditLogMapper;
 import com.group.admin.mapper.RoleMapper;
@@ -48,6 +51,7 @@ public class RoleServiceImpl implements RoleService {
     private final RoleMenuMapper roleMenuMapper;
     private final MenuMapper menuMapper;
     private final PermissionAuditLogMapper auditLogMapper;
+    private final AdminOperationLogMapper adminOperationLogMapper;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -331,6 +335,9 @@ public class RoleServiceImpl implements RoleService {
             }
         }
 
+        // 驗證：canEdit=true 時 canView 必須為 true；canDelete=true 時 canView 必須為 true
+        validateViewRequiredForEditDelete(req);
+
         // 如果是 ROLE_STORE_EDITOR，驗證權限是 ROLE_STORE_OWNER 的子集
         if ("ROLE_STORE_EDITOR".equals(role.getCode())) {
             validateEditorPermissionsSubset(req);
@@ -363,7 +370,7 @@ public class RoleServiceImpl implements RoleService {
         // 快照：變更後
         String afterSnapshot = snapshotPermissions(roleId);
 
-        // 審計日誌
+        // 審計日誌 — permission_audit_log（專用）
         PermissionAuditLog auditLog = PermissionAuditLog.builder()
                 .id(UUID.randomUUID().toString())
                 .operatorId(operatorId)
@@ -375,9 +382,44 @@ public class RoleServiceImpl implements RoleService {
                 .build();
         auditLogMapper.insert(auditLog);
 
+        // 審計日誌 — admin_operation_log（通用）
+        String contentJson;
+        try {
+            contentJson = objectMapper.writeValueAsString(
+                    java.util.Map.of("before", beforeSnapshot, "after", afterSnapshot));
+        } catch (JsonProcessingException e) {
+            contentJson = "{\"before\":[],\"after\":[]}";
+        }
+        AdminOperationLog opLog = new AdminOperationLog();
+        opLog.setId(UUID.randomUUID().toString());
+        opLog.setAdminId(operatorId);
+        opLog.setOperationType("UPDATE_ROLE_PERMISSIONS");
+        opLog.setTargetType("ROLE");
+        opLog.setTargetId(roleId);
+        opLog.setDescription(contentJson);
+        opLog.setCreatedAt(LocalDateTime.now());
+        adminOperationLogMapper.insert(opLog);
+
         log.info("✅ 角色權限更新成功: roleId={}, permissions={}", roleId, newRoleMenus.size());
 
         return getRolePermissions(roleId);
+    }
+
+    private void validateViewRequiredForEditDelete(UpdateRolePermissionsReq req) {
+        List<Map<String, String>> errors = new ArrayList<>();
+        for (UpdateRolePermissionsReq.MenuPermissionItem item : req.getMenuPermissions()) {
+            if (Boolean.TRUE.equals(item.getCanEdit()) && !Boolean.TRUE.equals(item.getCanView())) {
+                errors.add(Map.of("menuId", item.getMenuId(), "field", "canEdit",
+                        "message", "canEdit=true requires canView=true"));
+            }
+            if (Boolean.TRUE.equals(item.getCanDelete()) && !Boolean.TRUE.equals(item.getCanView())) {
+                errors.add(Map.of("menuId", item.getMenuId(), "field", "canDelete",
+                        "message", "canDelete=true requires canView=true"));
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw new UnprocessableEntityException("Validation failed", errors);
+        }
     }
 
     private void validateEditorPermissionsSubset(UpdateRolePermissionsReq req) {
@@ -393,23 +435,31 @@ public class RoleServiceImpl implements RoleService {
         Map<String, RoleMenu> ownerMap = ownerPerms.stream()
                 .collect(Collectors.toMap(RoleMenu::getMenuId, rm -> rm, (a, b) -> a));
 
+        List<Map<String, String>> errors = new ArrayList<>();
         for (UpdateRolePermissionsReq.MenuPermissionItem item : req.getMenuPermissions()) {
             RoleMenu ownerPerm = ownerMap.get(item.getMenuId());
             if (ownerPerm == null) {
                 if (Boolean.TRUE.equals(item.getCanView()) || Boolean.TRUE.equals(item.getCanEdit()) || Boolean.TRUE.equals(item.getCanDelete())) {
-                    throw new BusinessException("STORE_EDITOR 的權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+                    errors.add(Map.of("menuId", item.getMenuId(), "field", "canView",
+                            "message", "StoreEditor cannot have access to a menu that StoreOwner cannot access"));
                 }
                 continue;
             }
             if (Boolean.TRUE.equals(item.getCanView()) && !Boolean.TRUE.equals(ownerPerm.getCanView())) {
-                throw new BusinessException("STORE_EDITOR 的查看權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+                errors.add(Map.of("menuId", item.getMenuId(), "field", "canView",
+                        "message", "StoreEditor cannot have canView=true when StoreOwner has canView=false for this menu"));
             }
             if (Boolean.TRUE.equals(item.getCanEdit()) && !Boolean.TRUE.equals(ownerPerm.getCanEdit())) {
-                throw new BusinessException("STORE_EDITOR 的編輯權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+                errors.add(Map.of("menuId", item.getMenuId(), "field", "canEdit",
+                        "message", "StoreEditor cannot have canEdit=true when StoreOwner has canEdit=false for this menu"));
             }
             if (Boolean.TRUE.equals(item.getCanDelete()) && !Boolean.TRUE.equals(ownerPerm.getCanDelete())) {
-                throw new BusinessException("STORE_EDITOR 的刪除權限不可超過 STORE_OWNER (選單: " + item.getMenuId() + ")");
+                errors.add(Map.of("menuId", item.getMenuId(), "field", "canDelete",
+                        "message", "StoreEditor cannot have canDelete=true when StoreOwner has canDelete=false for this menu"));
             }
+        }
+        if (!errors.isEmpty()) {
+            throw new UnprocessableEntityException("Validation failed", errors);
         }
     }
 

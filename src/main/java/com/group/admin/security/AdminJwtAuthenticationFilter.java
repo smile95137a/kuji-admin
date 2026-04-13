@@ -143,6 +143,7 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
                     .username(adminUser.getUsername())
                     .password(adminUser.getPassword())
                     .isAdmin(true)
+                    .roles(roleNames)    // ← 設定角色名稱列表（完整 ROLE_ 前綴）
                     .storeIds(storeIds)  // ← 設定店家 ID 列表
                     .authorities(authorities)
                     .adminUser(adminUser)
