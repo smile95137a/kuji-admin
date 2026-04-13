@@ -4,28 +4,35 @@ import lombok.Getter;
 
 /**
  * 賞品盒狀態枚舉
- * 
+ *
  * @author Kuji Admin
  * @since 2026-01-09
  */
 @Getter
-public enum PrizeBoxStatusEnum {
-    
+public enum PrizeBoxStatusEnum implements DisplayableEnum {
+
     IN_BOX("IN_BOX", "在賞品盒中"),
     SHIPPED("SHIPPED", "已出貨"),
     RECYCLED("RECYCLED", "已回收");
-    
+
     private final String code;
     private final String name;
-    
+
     PrizeBoxStatusEnum(String code, String name) {
         this.code = code;
         this.name = name;
     }
-    
-    /**
-     * 根據 code 取得對應的枚舉
-     */
+
+    @Override
+    public String getCode() {
+        return this.code;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return this.name;
+    }
+
     public static PrizeBoxStatusEnum fromCode(String code) {
         for (PrizeBoxStatusEnum status : values()) {
             if (status.getCode().equals(code)) {
@@ -34,10 +41,7 @@ public enum PrizeBoxStatusEnum {
         }
         throw new IllegalArgumentException("無效的賞品盒狀態：" + code);
     }
-    
-    /**
-     * 根據 code 取得對應的中文名稱
-     */
+
     public static String getNameByCode(String code) {
         try {
             return fromCode(code).getName();
@@ -45,10 +49,7 @@ public enum PrizeBoxStatusEnum {
             return code;
         }
     }
-    
-    /**
-     * 檢查 code 是否有效
-     */
+
     public static boolean isValid(String code) {
         for (PrizeBoxStatusEnum status : values()) {
             if (status.getCode().equals(code)) {

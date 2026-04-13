@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -157,11 +158,47 @@ public class EnumController {
         return ResponseEntity.ok(options.subList(0, maxSize));
     }
 
+    /**
+     * 依 enumType 取得 Enum 選項（通用端點）
+     */
+    @GetMapping("/{enumType}")
+    @Operation(summary = "依類型取得 Enum 選項", description = "支援：coinType, prizeLevel, lotteryCategory, lotteryStatus, gameMode, paymentType, delistStrategy, orderStatus, prizeBoxStatus, paymentStatus")
+    public ResponseEntity<List<Map<String, String>>> getEnumValues(@PathVariable String enumType) {
+        log.info("📋 取得 Enum 選項：{}", enumType);
+        List<Map<String, String>> result = new ArrayList<>();
+        switch (enumType) {
+            case "coinType" -> buildFromDisplayable(CoinTypeEnum.values(), result);
+            case "prizeLevel" -> buildFromDisplayable(PrizeLevelEnum.values(), result);
+            case "lotteryCategory" -> buildFromDisplayable(LotteryCategoryEnum.values(), result);
+            case "lotteryStatus" -> buildFromDisplayable(LotteryStatusEnum.values(), result);
+            case "gameMode" -> buildFromDisplayable(GameModeEnum.values(), result);
+            case "paymentType" -> buildFromDisplayable(PaymentTypeEnum.values(), result);
+            case "delistStrategy" -> buildFromDisplayable(DelistStrategyEnum.values(), result);
+            case "orderStatus" -> buildFromDisplayable(OrderStatusEnum.values(), result);
+            case "prizeBoxStatus" -> buildFromDisplayable(PrizeBoxStatusEnum.values(), result);
+            case "paymentStatus" -> buildFromDisplayable(PaymentStatusEnum.values(), result);
+            default -> {
+                log.warn("⚠️ 未知的 Enum 類型：{}", enumType);
+                return ResponseEntity.badRequest().build();
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    private void buildFromDisplayable(DisplayableEnum[] values, List<Map<String, String>> result) {
+        for (DisplayableEnum e : values) {
+            Map<String, String> map = new java.util.LinkedHashMap<>();
+            map.put("code", e.getCode());
+            map.put("displayName", e.getDisplayName());
+            result.add(map);
+        }
+    }
+
     // ==================== Private Helper Methods ====================
 
     private List<EnumOption> getPrizeLevelOptions() {
         List<EnumOption> options = new ArrayList<>();
-        for (PrizeLevel level : PrizeLevel.values()) {
+        for (PrizeLevelEnum level : PrizeLevelEnum.values()) {
             options.add(EnumOption.builder()
                     .label(level.getDisplayName())
                     .value(level.getCode())
@@ -268,7 +305,7 @@ public class EnumController {
         List<EnumOption> options = new ArrayList<>();
         for (LotteryCategoryEnum category : LotteryCategoryEnum.values()) {
             options.add(EnumOption.builder()
-                    .label(category.getName())
+                    .label(category.getDisplayName())
                     .value(category.getCode())
                     .build());
         }

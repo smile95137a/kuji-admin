@@ -9,8 +9,8 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-public enum LotteryStatusEnum {
-    
+public enum LotteryStatusEnum implements DisplayableEnum {
+
     DRAFT("DRAFT", "草稿"),
     OFF_SHELF("OFF_SHELF", "已下架"),
     ON_SHELF("ON_SHELF", "已上架"),
@@ -26,9 +26,16 @@ public enum LotteryStatusEnum {
         this.name = name;
     }
 
-    /**
-     * 根據代碼獲取枚舉
-     */
+    @Override
+    public String getCode() {
+        return this.code;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return this.name;
+    }
+
     public static LotteryStatusEnum fromCode(String code) {
         if (code == null) return null;
         for (LotteryStatusEnum e : values()) {
@@ -39,9 +46,6 @@ public enum LotteryStatusEnum {
         return null;
     }
 
-    /**
-     * 獲取中文名稱
-     */
     public static String getNameByCode(String code) {
         LotteryStatusEnum e = fromCode(code);
         return e != null ? e.name : code;

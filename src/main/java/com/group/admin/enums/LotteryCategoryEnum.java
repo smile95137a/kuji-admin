@@ -9,8 +9,8 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-public enum LotteryCategoryEnum {
-    
+public enum LotteryCategoryEnum implements DisplayableEnum {
+
     OFFICIAL_ICHIBAN("OFFICIAL_ICHIBAN", "官方一番賞"),
     GACHA("GACHA", "扭蛋"),
     TRADING_CARD("TRADING_CARD", "卡牌"),
@@ -24,9 +24,16 @@ public enum LotteryCategoryEnum {
         this.name = name;
     }
 
-    /**
-     * 根據代碼獲取枚舉
-     */
+    @Override
+    public String getCode() {
+        return this.code;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return this.name;
+    }
+
     public static LotteryCategoryEnum fromCode(String code) {
         if (code == null) return null;
         for (LotteryCategoryEnum e : values()) {
@@ -37,9 +44,6 @@ public enum LotteryCategoryEnum {
         return null;
     }
 
-    /**
-     * 獲取中文名稱
-     */
     public static String getNameByCode(String code) {
         LotteryCategoryEnum e = fromCode(code);
         return e != null ? e.name : code;
