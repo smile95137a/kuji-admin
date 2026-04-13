@@ -48,4 +48,9 @@ public interface UserService {
      * 驗證重設 token 並重設密碼
      */
     void resetPassword(String token, String newPassword);
+
+    /**
+     * 更新使用者資料
+     */
+    void updateUser(User user);
 }

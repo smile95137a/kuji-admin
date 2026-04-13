@@ -1,9 +1,6 @@
 package com.group.admin.controller.admin;
 
-import com.group.admin.entity.StoreUser;
-import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
-import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCopyReq;
@@ -46,7 +43,6 @@ import java.util.List;
 public class AdminLotteryController {
 
     private final LotteryService lotteryService;
-    private final StoreUserMapper storeUserMapper;
 
     /**
      * 查詢商品列表（後台）
@@ -75,15 +71,8 @@ public class AdminLotteryController {
         
         // 非 Admin 需要過濾店家
         if (!isAdmin) {
-            // 從資料庫查詢使用者的店家列表
-            StoreUserExample storeUserExample = new StoreUserExample();
-            storeUserExample.createCriteria().andAdminUserIdEqualTo(userId);
-            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
-            
-            if (!storeUsers.isEmpty()) {
-                String storeId = storeUsers.get(0).getStoreId();
-                
-                // 自動設定 storeId
+            String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+            if (storeId != null) {
                 if (req == null) {
                     req = new QueryReq<>();
                 }
@@ -91,7 +80,6 @@ public class AdminLotteryController {
                     req.setCondition(new LotteryCondition());
                 }
                 req.getCondition().setStoreId(storeId);
-                
                 log.info("🔒 過濾店家: storeId={}", storeId);
             } else {
                 log.warn("⚠️ 使用者沒有關聯任何店家: userId={}", userId);
@@ -135,16 +123,13 @@ public class AdminLotteryController {
                 throw new BusinessException("Admin 新增商品時必須指定店家 ID");
             }
             
-            // StoreOwner/Editor：自動查詢並使用第一個店家
-            StoreUserExample example = new StoreUserExample();
-            example.createCriteria().andAdminUserIdEqualTo(userId);
-            List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
+            // StoreOwner/Editor：從 JWT principal 取得店家 ID
+            String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
             
-            if (storeUsers.isEmpty()) {
+            if (storeId == null) {
                 throw new BusinessException("無法取得店家資訊，請聯繫管理員");
             }
             
-            String storeId = storeUsers.get(0).getStoreId();
             req.setStoreId(storeId);
             log.info("🔧 [自動帶入] storeId={}", storeId);
         } else {

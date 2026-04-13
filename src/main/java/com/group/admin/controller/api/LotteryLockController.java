@@ -1,11 +1,10 @@
 package com.group.admin.controller.api;
 
-import com.group.admin.entity.Lottery;
-import com.group.admin.exception.BusinessException;
-import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.res.draw.LockStatusRes;
+import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryLockService;
 import com.group.admin.service.LotteryLockService.LockStatus;
+import com.group.admin.service.LotteryService;
 import com.group.admin.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,17 +21,14 @@ import org.springframework.web.bind.annotation.*;
 public class LotteryLockController {
 
     private final LotteryLockService lotteryLockService;
-    private final LotteryMapper lotteryMapper;
+    private final LotteryService lotteryService;
 
     @GetMapping("/{lotteryId}/lock-status")
     public ResponseEntity<LockStatusRes> getLockStatus(@PathVariable String lotteryId) {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("🔍 查詢鎖定狀態: lotteryId={}, userId={}", lotteryId, userId);
 
-        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
-        if (lottery == null) {
-            throw new BusinessException("LOTTERY_NOT_FOUND", "商品不存在");
-        }
+        LotteryRes lottery = lotteryService.getLottery(lotteryId);
 
         LockStatus status = lotteryLockService.checkLockStatus(lotteryId, userId);
 

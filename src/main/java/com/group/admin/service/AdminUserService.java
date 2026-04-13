@@ -49,4 +49,9 @@ public interface AdminUserService {
      * 停用帳號（由操作者指定）
      */
     void disableAdminUser(String userId, String operatorId);
+
+    /**
+     * 取得所有後台用戶選項（用於下拉選單）
+     */
+    List<com.group.admin.res.common.EnumOption> getAllUserOptions();
 }

@@ -1,15 +1,8 @@
 package com.group.admin.controller.admin;
 
-import com.group.admin.entity.AdminUser;
-import com.group.admin.entity.Store;
-import com.group.admin.entity.StoreUser;
-import com.group.admin.example.AdminUserExample;
-import com.group.admin.example.StoreExample;
-import com.group.admin.example.StoreUserExample;
-import com.group.admin.mapper.AdminUserMapper;
-import com.group.admin.mapper.StoreMapper;
-import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.security.UserPrincipal;
+import com.group.admin.service.AdminUserService;
 import com.group.admin.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,9 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DebugController {
 
-    private final AdminUserMapper adminUserMapper;
-    private final StoreMapper storeMapper;
-    private final StoreUserMapper storeUserMapper;
+    private final AdminUserService adminUserService;
 
     /**
      * 診斷當前使用者的 storeId 問題
@@ -45,98 +36,58 @@ public class DebugController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     public ResponseEntity<Map<String, Object>> diagnosisStoreId() {
         Map<String, Object> result = new HashMap<>();
-        
-        // 1. 從 SecurityContext 取得資訊
+
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         result.put("principalType", principal.getClass().getSimpleName());
-        
-        if (principal instanceof UserPrincipal) {
-            UserPrincipal userPrincipal = (UserPrincipal) principal;
+
+        if (principal instanceof UserPrincipal userPrincipal) {
             result.put("userId", userPrincipal.getUserId());
             result.put("username", userPrincipal.getUsername());
             result.put("storeIdsFromPrincipal", userPrincipal.getStoreIds());
             result.put("roles", userPrincipal.getAuthorities().stream()
                     .map(a -> a.getAuthority())
                     .collect(Collectors.toList()));
-            
+
             String adminUserId = userPrincipal.getUserId();
-            
-            // 2. 直接查詢資料庫 admin_user
-            AdminUserExample adminUserExample = new AdminUserExample();
-            adminUserExample.createCriteria().andIdEqualTo(adminUserId);
-            List<AdminUser> adminUsers = adminUserMapper.selectByExample(adminUserExample);
-            if (!adminUsers.isEmpty()) {
-                AdminUser adminUser = adminUsers.get(0);
+            try {
+                AdminUserRes adminUser = adminUserService.getAdminUser(adminUserId);
                 result.put("adminUser_id", adminUser.getId());
                 result.put("adminUser_username", adminUser.getUsername());
                 result.put("adminUser_email", adminUser.getEmail());
-            } else {
-                result.put("adminUser", "NOT FOUND with id: " + adminUserId);
+
+                List<AdminUserRes.StoreInfo> stores = adminUser.getStores();
+                result.put("storeUserCount", stores != null ? stores.size() : 0);
+                if (stores != null && !stores.isEmpty()) {
+                    result.put("stores", stores.stream()
+                            .map(s -> Map.of("id", s.getId(), "storeName", s.getStoreName()))
+                            .collect(Collectors.toList()));
+                } else {
+                    result.put("stores", "EMPTY - 使用者沒有關聯任何店家！");
+                }
+            } catch (Exception e) {
+                result.put("adminUser", "NOT FOUND: " + e.getMessage());
             }
-            
-            // 3. 查詢 store_user 表
-            StoreUserExample storeUserExample = new StoreUserExample();
-            storeUserExample.createCriteria().andAdminUserIdEqualTo(adminUserId);
-            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
-            result.put("storeUserCount", storeUsers.size());
-            
-            if (!storeUsers.isEmpty()) {
-                List<Map<String, String>> storeUserList = storeUsers.stream()
-                        .map(su -> {
-                            Map<String, String> m = new HashMap<>();
-                            m.put("storeId", su.getStoreId());
-                            m.put("adminUserId", su.getAdminUserId());
-                            return m;
-                        })
-                        .collect(Collectors.toList());
-                result.put("storeUsers", storeUserList);
-                
-                // 4. 查詢對應的 store
-                List<String> storeIds = storeUsers.stream()
-                        .map(StoreUser::getStoreId)
-                        .collect(Collectors.toList());
-                
-                StoreExample storeExample = new StoreExample();
-                storeExample.createCriteria().andIdIn(storeIds);
-                List<Store> stores = storeMapper.selectByExample(storeExample);
-                
-                List<Map<String, String>> storeList = stores.stream()
-                        .map(s -> {
-                            Map<String, String> m = new HashMap<>();
-                            m.put("id", s.getId());
-                            m.put("storeName", s.getStoreName());
-                            m.put("status", s.getStatus());
-                            return m;
-                        })
-                        .collect(Collectors.toList());
-                result.put("stores", storeList);
-            } else {
-                result.put("storeUsers", "EMPTY - 使用者沒有關聯任何店家！");
-                result.put("stores", "N/A");
-            }
-            
-            // 5. SecurityUtils 的結果
+
             result.put("SecurityUtils.getCurrentUserId()", SecurityUtils.getCurrentUserId());
             result.put("SecurityUtils.getCurrentUserStoreIds()", SecurityUtils.getCurrentUserStoreIds());
             result.put("SecurityUtils.getCurrentUserPrimaryStoreId()", SecurityUtils.getCurrentUserPrimaryStoreId());
             result.put("SecurityUtils.isAdmin()", SecurityUtils.isAdmin());
-            
         } else {
             result.put("error", "Principal is not UserPrincipal: " + principal);
         }
-        
+
         log.info("🔍 Store 診斷結果: {}", result);
         return ResponseEntity.ok(result);
     }
-    
+
     /**
      * 查詢所有 admin_user 和他們的 store 關聯
      */
     @GetMapping("/all-admin-users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getAllAdminUsers() {
-        List<AdminUser> adminUsers = adminUserMapper.selectByExample(new AdminUserExample());
-        
+        List<AdminUserRes> adminUsers = adminUserService.getAllAdminUsers();
+
         List<Map<String, Object>> result = adminUsers.stream()
                 .map(au -> {
                     Map<String, Object> m = new HashMap<>();
@@ -144,21 +95,15 @@ public class DebugController {
                     m.put("username", au.getUsername());
                     m.put("email", au.getEmail());
                     m.put("status", au.getStatus());
-                    
-                    // 查詢關聯的店家
-                    StoreUserExample sue = new StoreUserExample();
-                    sue.createCriteria().andAdminUserIdEqualTo(au.getId());
-                    List<StoreUser> storeUsers = storeUserMapper.selectByExample(sue);
-                    
-                    m.put("storeCount", storeUsers.size());
-                    m.put("storeIds", storeUsers.stream()
-                            .map(StoreUser::getStoreId)
-                            .collect(Collectors.toList()));
-                    
+                    List<AdminUserRes.StoreInfo> stores = au.getStores();
+                    m.put("storeCount", stores != null ? stores.size() : 0);
+                    m.put("storeIds", stores != null
+                            ? stores.stream().map(AdminUserRes.StoreInfo::getId).collect(Collectors.toList())
+                            : List.of());
                     return m;
                 })
                 .collect(Collectors.toList());
-        
+
         return ResponseEntity.ok(result);
     }
 }
