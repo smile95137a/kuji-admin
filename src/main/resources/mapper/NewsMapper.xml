@@ -376,4 +376,12 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+  <update id="autoPublishNews">
+    UPDATE `news` SET status='PUBLISHED', updated_at=NOW()
+    WHERE status='DRAFT' AND scheduled_at IS NOT NULL AND scheduled_at &lt;= NOW()
+  </update>
+  <update id="autoUnpublishNews">
+    UPDATE `news` SET status='UNPUBLISHED', updated_at=NOW()
+    WHERE status='PUBLISHED' AND end_time IS NOT NULL AND end_time &lt;= NOW()
+  </update>
 </mapper>

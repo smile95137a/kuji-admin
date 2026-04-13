@@ -86,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
                         .requestMatchers("/api/ws/**").permitAll()        // WebSocket
                         .requestMatchers("/api/recharge-plan/**").permitAll()  // 儲值方案
+                        .requestMatchers("/api/news/**").permitAll()           // 最新消息（公開）
                         // 其他 /api/** 需要 USER 或後台管理角色
                         .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )
