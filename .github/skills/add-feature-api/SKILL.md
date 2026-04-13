@@ -1,10 +1,22 @@
-# 新增功能 API Skill
+---
+name: add-feature-api
+description: "新增 API 功能完整流程。從 DDL 到 MBG 生成，再到 Controller / Service / Mapper 三層實作，符合專案分層架構和命名慣例。"
+---
 
-## 適用情境
+# 新增功能 API
+
+## When to Use
 - 從零建立一個完整的 CRUD 功能模組
 - 不知道應該建立哪些檔案、放在哪裡
 - 需要同時支援後台（/admin）和前台（/api）路由
 - 需要建立符合專案慣例的 Req / Res DTO
+
+## 核心原則
+- **DDL-first**：先建資料表，再用 MBG 生成 Entity/Mapper/Example
+- **前後台分離**：Controller 分兩套（admin/ 和 api/），但共用 Service
+- **DTO 分途**：CreateReq / UpdateReq / Res 明確分離，避免混用
+- **查詢條件必選**：所有 Condition 欄位都是可選的，不得強制要求
+- **分層職責**：Controller 只負責路由/驗證，Service 負責業務邏輯，Mapper 負責資料存取
 
 ---
 

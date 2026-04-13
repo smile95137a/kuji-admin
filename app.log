@@ -1,68 +1,0 @@
-[INFO] Scanning for projects...
-Downloading from central: https://repo.maven.apache.org/maven2/org/cyclonedx/maven-metadata.xml
-Downloading from central: https://repo.maven.apache.org/maven2/org/flywaydb/maven-metadata.xml
-Downloading from central: https://repo.maven.apache.org/maven2/org/springframework/boot/maven-metadata.xml
-Downloading from central: https://repo.maven.apache.org/maven2/org/mybatis/generator/maven-metadata.xml
-Progress (1): 249 BProgress (2): 249 B | 243 B                           Downloaded from central: https://repo.maven.apache.org/maven2/org/springframework/boot/maven-metadata.xml (249 B at 587 B/s)
-Downloaded from central: https://repo.maven.apache.org/maven2/org/cyclonedx/maven-metadata.xml (243 B at 573 B/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/jooq/maven-metadata.xml
-Downloading from central: https://repo.maven.apache.org/maven2/io/github/git-commit-id/maven-metadata.xml
-Progress (1): 234 BProgress (2): 234 B | 267 B                           Downloaded from central: https://repo.maven.apache.org/maven2/org/flywaydb/maven-metadata.xml (234 B at 502 B/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/maven-metadata.xml
-Downloaded from central: https://repo.maven.apache.org/maven2/org/mybatis/generator/maven-metadata.xml (267 B at 570 B/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/liquibase/maven-metadata.xml
-Progress (1): 398 BProgress (2): 398 B | 375 B                           Downloaded from central: https://repo.maven.apache.org/maven2/org/jooq/maven-metadata.xml (398 B at 5.6 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/graalvm/buildtools/maven-metadata.xml
-Downloaded from central: https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/maven-metadata.xml (375 B at 11 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml
-Progress (1): 243 B                   Downloaded from central: https://repo.maven.apache.org/maven2/org/liquibase/maven-metadata.xml (243 B at 6.2 kB/s)
-Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml
-Progress (1): 255 B                   Downloaded from central: https://repo.maven.apache.org/maven2/io/github/git-commit-id/maven-metadata.xml (255 B at 2.7 kB/s)
-Progress (1): 3.5 kBProgress (1): 7.3 kBProgress (1): 12 kB Progress (1): 16 kBProgress (1): 20 kBProgress (1): 21 kBProgress (2): 21 kB | 4.6 kBProgress (2): 21 kB | 9.7 kBProgress (2): 21 kB | 14 kB                            Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml (14 kB at 255 kB/s)
-Progress (2): 21 kB | 242 B                           Downloaded from central: https://repo.maven.apache.org/maven2/org/graalvm/buildtools/maven-metadata.xml (242 B at 3.9 kB/s)
-Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml (21 kB at 299 kB/s)
-[INFO] 
-[INFO] --------------------------< com.group:admin >---------------------------
-[INFO] Building admin 1.0.0
-[INFO]   from pom.xml
-[INFO] --------------------------------[ jar ]---------------------------------
-[INFO] 
-[INFO] >>> spring-boot:3.3.3:run (default-cli) > test-compile @ admin >>>
-[INFO] 
-[INFO] --- resources:3.3.1:resources (default-resources) @ admin ---
-[INFO] Copying 3 resources from src\main\resources to target\classes
-[INFO] Copying 67 resources from src\main\resources to target\classes
-[INFO] 
-[INFO] --- compiler:3.11.0:compile (default-compile) @ admin ---
-[INFO] Changes detected - recompiling the module! :source
-[INFO] Compiling 321 source files with javac [debug release 21] to target\classes
-[INFO] /c:/Users/user/OneDrive/Desktop/創業/KUJI-Server/admin/src/main/java/com/group/admin/result/ApiResponse.java: c:\Users\user\OneDrive\Desktop\創業\KUJI-Server\admin\src\main\java\com\group\admin\result\ApiResponse.java uses unchecked or unsafe operations.
-[INFO] /c:/Users/user/OneDrive/Desktop/創業/KUJI-Server/admin/src/main/java/com/group/admin/result/ApiResponse.java: Recompile with -Xlint:unchecked for details.
-[INFO] 
-[INFO] --- resources:3.3.1:testResources (default-testResources) @ admin ---
-[INFO] skip non existing resourceDirectory c:\Users\user\OneDrive\Desktop\創業\KUJI-Server\admin\src\test\resources
-[INFO] 
-[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ admin ---
-[INFO] Changes detected - recompiling the module! :dependency
-[INFO] Compiling 1 source file with javac [debug release 21] to target\test-classes
-[INFO] 
-[INFO] <<< spring-boot:3.3.3:run (default-cli) < test-compile @ admin <<<
-[INFO] 
-[INFO] 
-[INFO] --- spring-boot:3.3.3:run (default-cli) @ admin ---
-[INFO] Attaching agents: []
-錯誤: 找不到或無法載入主要類別 com.group.admin.AdminApplication
-原因: java.lang.ClassNotFoundException: com.group.admin.AdminApplication
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD FAILURE
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time:  11.036 s
-[INFO] Finished at: 2025-12-20T02:38:23+08:00
-[INFO] ------------------------------------------------------------------------
-[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.3.3:run (default-cli) on project admin: Process terminated with exit code: 1 -> [Help 1]
-[ERROR] 
-[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
-[ERROR] Re-run Maven using the -X switch to enable full debug logging.
-[ERROR] 
-[ERROR] For more information about the errors and possible solutions, please read the following articles:
-[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

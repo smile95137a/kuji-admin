@@ -22,6 +22,7 @@ import com.group.admin.entity.LotteryPrize;
 import com.group.admin.entity.PointLog;
 import com.group.admin.entity.Store;
 import com.group.admin.entity.User;
+import com.group.admin.enums.GameModeEnum;
 import com.group.admin.enums.LotteryCategoryEnum;
 import com.group.admin.enums.LotteryStatusEnum;
 import com.group.admin.enums.LotterySubCategoryEnum;
@@ -1454,7 +1455,8 @@ public class LotteryServiceImpl implements LotteryService {
             
             // 🆕 刮刮樂模式：強制驗證只允許 1 個大獎，不允許非大獎獎品
             String reqGameMode = req.getLottery().getGameMode();
-            if ("SCRATCH_STORE".equals(reqGameMode) || "SCRATCH_PLAYER".equals(reqGameMode)) {
+            if (GameModeEnum.SCRATCH_STORE.getCode().equals(reqGameMode)
+                    || GameModeEnum.SCRATCH_PLAYER.getCode().equals(reqGameMode)) {
                 validateScratchPrizes(reqGameMode, req.getPrizes());
             }
             
@@ -2034,7 +2036,7 @@ public class LotteryServiceImpl implements LotteryService {
      * @param lottery 商品實體
      */
     private void validateCanGoOnShelf(Lottery lottery) {
-        if ("SCRATCH_STORE".equals(lottery.getGameMode())) {
+        if (GameModeEnum.SCRATCH_STORE.getCode().equals(lottery.getGameMode())) {
             String d = lottery.getDesignatedPrizeNumbers();
             if (d == null || d.isBlank()) {
                 throw new BusinessException(

@@ -1,10 +1,12 @@
 package com.group.admin.controller.api;
 
+import com.group.admin.enums.GameModeEnum;
 import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.LotteryTicketService.DrawResult;
 import com.group.admin.service.LotteryTicketService.SessionInfo;
 import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
+import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.impl.LotteryTicketServiceImpl;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +44,7 @@ public class LotteryDrawController {
 
     private final LotteryTicketService ticketService;
     private final LotteryTicketServiceImpl ticketServiceImpl;  // 🆕 用於 getGachaLock
+    private final SystemConfigService systemConfigService;
 
     /**
      * 執行抽獎
@@ -79,8 +82,9 @@ public class LotteryDrawController {
         if (count == null || count < 1) {
             return ResponseEntity.badRequest().body("count 必須至少為 1");
         }
-        if (count > 10) {
-            return ResponseEntity.badRequest().body("單次最多只能抽 10 張票券");
+        int maxCount = systemConfigService.getInt(SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST, 10);
+        if (count > maxCount) {
+            return ResponseEntity.badRequest().body("單次最多只能抽 " + maxCount + " 張票券");
         }
         
         // 取得商品資訊
@@ -115,7 +119,7 @@ public class LotteryDrawController {
         }
         
         // 🆕 攔截非開套玩家（SCRATCH_PLAYER 模式且開套者尚未完成指定）
-        if (!session.isOpener() && "SCRATCH_PLAYER".equals(gameMode)) {
+        if (!session.isOpener() && GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
             boolean notDesignated = session.playerDesignatedNumbers() == null
                     || session.playerDesignatedNumbers().isBlank();
             if (notDesignated) {
@@ -272,7 +276,7 @@ public class LotteryDrawController {
         }
 
         // ⚠️ 只有 SCRATCH_PLAYER 才需要玩家指定大獎位置
-        if (!"SCRATCH_PLAYER".equals(lottery.getGameMode())) {
+        if (!GameModeEnum.SCRATCH_PLAYER.getCode().equals(lottery.getGameMode())) {
             return null;
         }
 
@@ -371,7 +375,7 @@ public class LotteryDrawController {
         public static SessionResponse from(SessionInfo info, String gameMode) {
             // 非 SCRATCH_PLAYER 模式（一番賞、扭蛋、SCRATCH_STORE）預設指定完成
             boolean designationComplete;
-            if (!"SCRATCH_PLAYER".equals(gameMode)) {
+            if (!GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
                 designationComplete = true;
             } else {
                 designationComplete = info.playerDesignatedNumbers() != null

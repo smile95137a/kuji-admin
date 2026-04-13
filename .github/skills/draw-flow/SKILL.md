@@ -1,11 +1,20 @@
-# 抽獎流程 Skill（全模式）
+---
+name: draw-flow
+description: "全模式抽獎流程指南。理解 GACHA 加權隨機、OFFICIAL_ICHIBAN 籤位制、SCRATCH_MODE 雙號碼機制、點數扣除規則、PrizeBox 狀態與禁止操作。"
+---
 
-## 適用情境
+# 抽獎流程（全模式）
+
+## When to Use
 - 新增抽獎模式或修改抽獎邏輯
 - 了解三種模式的差異與路由分工
 - 修改 DrawService / LotteryTicketService / 刮刮樂服務
 - 調整點數扣除或庫存邏輯
-
+## 核心原則
+- **三種模式劖雖得佇：** GACHA u52a0杰隨機、OFFICIAL_ICHIBAN 簽位制、SCRATCH_MODE 雙號碼機制
+- **窐動憛扲訝：** 應什胥強制載師新龍倉庫存箕群（不得使用 Bonus 補綱）
+- **事務疓保護：** 打羗科方癹旌是前上--實態務修辰常歛至一流程
+- **水蓮保揌：** 抽獎也不得嘗失滲位避埋彈控物哬毶
 ---
 
 ## 三種抽獎模式速覽

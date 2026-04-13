@@ -20,6 +20,7 @@ import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
 import com.group.admin.entity.LotterySession;
 import com.group.admin.entity.LotteryTicket;
+import com.group.admin.enums.GameModeEnum;
 import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.example.LotterySessionExample;
 import com.group.admin.example.LotteryTicketExample;
@@ -32,6 +33,7 @@ import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.ConsumptionRecordService;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.PrizeBoxService;
+import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -62,6 +64,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     private final PrizeBoxService prizeBoxService;
     private final WalletService walletService;
     private final ConsumptionRecordService consumptionRecordService;
+    private final SystemConfigService systemConfigService;
 
     private final SecureRandom random = new SecureRandom();
     private final ConcurrentHashMap<String, Object> gachaLocks = new ConcurrentHashMap<>();
@@ -201,7 +204,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // SCRATCH_PLAYER 此時 designated_prize_numbers 為 null，等開套玩家呼叫 /designate 再指定
         Set<Integer> winningRevealedNumbers = new HashSet<>();
         String gameMode = lottery.getGameMode(); // SCRATCH_STORE / SCRATCH_PLAYER / RANDOM
-        if ("SCRATCH_STORE".equals(gameMode)) {
+        if (GameModeEnum.SCRATCH_STORE.getCode().equals(gameMode)) {
             String designatedJson = lottery.getDesignatedPrizeNumbers();
             if (designatedJson != null && !designatedJson.trim().isEmpty()) {
                 String cleaned = designatedJson.trim().replaceAll("[\\[\\]\\s]", "");
@@ -260,7 +263,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 winningRevealedNumbers, totalTickets - winningRevealedNumbers.size());
 
         // SCRATCH_STORE: 店家開獎後，將剩餘籤位自動分配非大獎獎品
-        if ("SCRATCH_STORE".equals(gameMode) && !winningRevealedNumbers.isEmpty()) {
+        if (GameModeEnum.SCRATCH_STORE.getCode().equals(gameMode) && !winningRevealedNumbers.isEmpty()) {
             autoAssignNonGrandPrizes(lotteryId);
         }
     }
@@ -554,6 +557,8 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         if (!isGacha && sessionInfo.protectionEndTime() == null) {
             startProtection(sessionInfo.sessionId(), lotteryId);
             log.info("🛡️ 保護時間已啟動: sessionId={}", sessionInfo.sessionId());
+        } else if (!isGacha && sessionInfo.protectionEndTime() != null && sessionInfo.isOpener()) {
+            extendProtection(sessionInfo.sessionId());
         }
         
         // 扣款（先扣金幣）
@@ -739,6 +744,8 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         if (!isGacha && sessionInfo.protectionEndTime() == null) {
             startProtection(sessionInfo.sessionId(), lotteryId);
             log.info("🛡️ 保護時間已啟動: sessionId={}", sessionInfo.sessionId());
+        } else if (!isGacha && sessionInfo.protectionEndTime() != null && sessionInfo.isOpener()) {
+            extendProtection(sessionInfo.sessionId());
         }
         
         // 扣款（先扣金幣）
@@ -921,8 +928,8 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             
             // 🆕 SCRATCH_PLAYER 逾時檢查：若開套者未在 10 分鐘內指定大獎，自動釋放場次
             Lottery lotteryForTimeout = lotteryMapper.selectByPrimaryKey(lotteryId);
-            boolean isTimedOut = lotteryForTimeout != null
-                    && "SCRATCH_PLAYER".equals(lotteryForTimeout.getGameMode())
+                boolean isTimedOut = lotteryForTimeout != null
+                    && GameModeEnum.SCRATCH_PLAYER.getCode().equals(lotteryForTimeout.getGameMode())
                     && activeSession.getDesignationDeadline() != null
                     && activeSession.getDesignationDeadline().isBefore(LocalDateTime.now())
                     && (activeSession.getPlayerDesignatedNumbers() == null
@@ -981,7 +988,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         newSession.setUpdatedAt(LocalDateTime.now());
         
         // 🆕 SCRATCH_PLAYER 模式：設定 10 分鐘大獎指定截止時間
-        if ("SCRATCH_PLAYER".equals(lottery.getGameMode())) {
+        if (GameModeEnum.SCRATCH_PLAYER.getCode().equals(lottery.getGameMode())) {
             newSession.setDesignationDeadline(LocalDateTime.now().plusMinutes(10));
             log.info("⏱️ SCRATCH_PLAYER：設定指定截止時間 = {}", newSession.getDesignationDeadline());
         }
@@ -1387,9 +1394,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             return; // 已啟動或不存在
         }
         
-        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
-        Integer protectionMinutes = (lottery != null && lottery.getProtectionMinutes() != null) 
-                ? lottery.getProtectionMinutes() : 5;
+        Integer protectionMinutes = systemConfigService.getInt(
+            SystemConfigService.KEY_PROTECTION_INITIAL_MINUTES,
+            5
+        );
         
         LocalDateTime now = LocalDateTime.now();
         session.setProtectionStartTime(now);
@@ -1398,6 +1406,37 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         lotterySessionMapper.updateByPrimaryKey(session);
         
         log.info("🛡️ 保護時間啟動: sessionId={}, protectionEnd={}", sessionId, session.getProtectionEndTime());
+    }
+
+    /**
+     * 延長保護時間（每次 API 操作延長一次，最多到上限）
+     */
+    @Transactional
+    public void extendProtection(String sessionId) {
+        LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionId);
+        if (session == null || session.getProtectionStartTime() == null || session.getProtectionEndTime() == null) {
+            return;
+        }
+
+        int extensionMinutes = systemConfigService.getInt(
+                SystemConfigService.KEY_PROTECTION_EXTENSION_MINUTES,
+                2
+        );
+        int maxMinutes = systemConfigService.getInt(
+                SystemConfigService.KEY_PROTECTION_MAX_MINUTES,
+                10
+        );
+
+        LocalDateTime maxEndTime = session.getProtectionStartTime().plusMinutes(maxMinutes);
+        LocalDateTime candidateEndTime = session.getProtectionEndTime().plusMinutes(extensionMinutes);
+        LocalDateTime newEndTime = candidateEndTime.isAfter(maxEndTime) ? maxEndTime : candidateEndTime;
+
+        if (newEndTime.isAfter(session.getProtectionEndTime())) {
+            session.setProtectionEndTime(newEndTime);
+            session.setUpdatedAt(LocalDateTime.now());
+            lotterySessionMapper.updateByPrimaryKey(session);
+            log.info("🛡️ 保護時間延長: sessionId={}, newEndTime={}", sessionId, newEndTime);
+        }
     }
 
     /**

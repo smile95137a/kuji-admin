@@ -1,11 +1,22 @@
-# 前台會員認證流程 Skill
+---
+name: user-auth-flow
+description: "前台會員認證流程。會員註冊、OAuth 登入、注冊淕旋、訊域常覭、金幣 vs 紅利。"
+---
 
-## 適用情境
+# 前台會員認證流程
+
+## When to Use
 - 修改前台會員登入/註冊邏輯
 - 新增 Google OAuth2 登入
 - 修改 Refresh Token 機制
 - 處理忘記密碼/重設密碼
 - 了解 provider 欄位用途
+
+## 核心原則
+- **三種註冊方式**：信箱密碼（Email+Password）、OAuth 供應商（Google 等）、重設密碼流程
+- **Refresh Token 機制**：Token 分 Access Token 和 Refresh Token，分開管理生命週期
+- **OAuth Provider 整合**：支持 provider 欄位標識登入來源（email/google/apple ...等）
+- **密碼重設流程**：發送郵件 Token，用戶驗證後才可重設
 
 ---
 

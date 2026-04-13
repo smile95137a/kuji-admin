@@ -1,11 +1,20 @@
-# 內容管理 Skill（Banner / Marquee / News）
+---
+name: content-management
+description: "塃告/跗寶/新聞内容管理。塃告上傳、誦句配置、新聞發布、內容查詢、前台顯示邏輯。"
+---
 
-## 適用情境
+# 內容管理（Banner / Marquee / News）
+
+## When to Use
 - 新增或修改 Banner（輪播）
 - 修改跑馬燈（Marquee）內容
 - 管理最新消息（News）
 - 了解各模組的欄位與顯示規則
-
+## 核心原則
+- **統一節目變統**：Content 为理江幕、Marquee 等的一般化主設，接受 `contentType` 區分
+- **前後台分離**：上傳排版（店家）與前台顯示（使用者）分離
+- **狀態管理**：Banner 有 Active/Inactive 狀態，前台只顯示 Active
+- **順序控制**：甏配 `order` 或 `sequence` 控制顯示順序
 ---
 
 ## 三個模組速覽

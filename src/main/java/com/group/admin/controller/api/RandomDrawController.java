@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.*;
 import com.group.admin.res.draw.DrawResponseRes;
 import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
+import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.WalletService;
 import com.group.admin.util.SecurityUtils;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,6 +47,9 @@ public class RandomDrawController {
     
     @Autowired
     private WalletService walletService;
+
+        @Autowired
+        private SystemConfigService systemConfigService;
     
     /**
      * 執行加權隨機抽獎
@@ -124,8 +127,12 @@ public class RandomDrawController {
             @PathVariable String lotteryId,
             @RequestParam 
             @Min(value = 1, message = "抽獎次數最少 1 次")
-            @Max(value = 10, message = "抽獎次數最多 10 次")
             Integer count) {
+
+                int maxCount = systemConfigService.getInt(SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST, 10);
+                if (count > maxCount) {
+                        return ResponseEntity.badRequest().build();
+                }
         
         // 🎭 取得當前用戶 ID
         String userId = SecurityUtils.getCurrentUserId();

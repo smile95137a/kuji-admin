@@ -1,10 +1,21 @@
-# 報表統計 Skill
+---
+name: report-analytics
+description: "報表與統計分析指南。銷售報表、訂單分析、用戶統計、數據彙總、報表查詢 API。"
+---
 
-## 適用情境
+# 報表統計
+
+## When to Use
 - 新增報表統計 API
 - 修改 JdbcTemplate 聚合查詢
 - 了解 ReportSnapshot 快照機制
 - 調整報表時間範圍或分組邏輯
+
+## 核心原則
+- **三種報表類別**：銷售報表（窗口商品）、訂單分析（訂單約一月）、用戶統計
+- **分組計算**：按時間粗度分組（日/月/年）、按店家/水平分組
+- **JdbcTemplate 聚合查詢**：使用 JdbcTemplate 而非 MyBatis，跨表必用 SUM/COUNT/GROUP BY
+- **狀態數據轉移**：訂單狀態轉移（不遲/已謝/我）購對狀態數據變更記錄
 
 ---
 

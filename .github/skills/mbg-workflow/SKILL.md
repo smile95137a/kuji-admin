@@ -1,10 +1,21 @@
-# MBG 工作流程 Skill
+---
+name: mbg-workflow
+description: "MyBatis Generator 工作流程指南。DDL-first 原則、generatorConfig.xml 設定、Entity/Mapper/Example 生成與使用、Example 動態查詢構建。"
+---
 
-## 適用情境
+# MBG 工作流程
+
+## When to Use
 - 新增資料表後需要產生 Entity / Mapper / Example
 - 修改資料表欄位後需要重新生成
 - 需要了解如何正確設定 `generatorConfig.xml`
 - 需要了解 MBG 生成後的標準使用方式
+
+## 核心原則
+- **DDL-first：** 任何新 Entity 都必須從 DDL 開始，不得手動建立（避然不一致）
+- **Example 是查詢条佡容器：** 不是參數物件（不得在 XML 中使用 #{example.xxx}）
+- **動態 SQL：** Example 应創騎深有很 criteria.andXxxEqualTo() 縫粗列評，櫲欅弱佛
+- **不許改動 Example 類：** MBG 甏配生成的內容不得改動
 
 ---
 

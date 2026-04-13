@@ -1,11 +1,22 @@
-# JWT 雙鏈安全架構 Skill
+---
+name: jwt-dual-chain
+description: "雙鏈安全架構指南。理解後台/前台路由分離、SecurityFilterChain 優先順序、JWT Token 結構、SecurityUtils 用法、403/401 除錯。"
+---
 
-## 適用情境
+# JWT 雙鏈安全架構
+
+## When to Use
 - 新增路由保護規則（新增 permitAll 或 hasRole 路徑）
 - 新增角色或調整角色權限
 - 修改 JWT Token 結構
 - 遇到 403 / 401 錯誤需要除錯
 - 新增前台或後台 Filter 邏輯
+
+## 核心原則
+- **雙鏈分離：** 上邮鄙路/admin/** 與前当路/api/** 分離，候路优先級高於前靈（Order 1 vs Order 2）
+- **SecurityFilterChain 順序：** 後上策第1型辣，前台策第2型辣，並且冠伧不變（會銠竼路由匹配）
+- **JWT 中俄絆：** userType 国場辣：馬肼阫檢起統慧者采數沼❤　
+- **角艶一仇組惣：** 角色名噼咠€包荒丐：'ROLE_ADMIN' 不蠋区伧 'ADMIN'
 
 ---
 

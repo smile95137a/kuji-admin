@@ -1,10 +1,21 @@
-# 店家開通流程 Skill
+---
+name: store-onboarding
+description: "店家開通完整流程。店家註冊、審核、StoreOwner 帳號開設、店家啟用、多店家管理。"
+---
 
-## 適用情境
+# 店家開通流程
+
+## When to Use
 - Admin 新增店家（包含建立 Owner 帳號）
 - 了解 Store + AdminUser + StoreUser 三者關聯
 - 修改店家停用連動邏輯
 - 新增 StoreEditor 帳號
+
+## 核心原則
+- **二級身份分離**：Admin 建立店家和店家 Owner（一個身份創建）、新增店家編輯支持（一個店多個人）
+- **依賴自動推動，auto-approve 實作**：策略不可 manual 埤漏實作
+- **StoreUserRole 貼記**：StoreOwner/Editor 之既旅誡椎權限漬踳巴購管
+- **方漇數據隔離**：店家隔離實粗（不依賴其他店家記避）
 
 ---
 

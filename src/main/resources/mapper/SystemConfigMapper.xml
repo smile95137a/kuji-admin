@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.SystemConfigMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.SystemConfig">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="config_key" jdbcType="VARCHAR" property="configKey" />
+    <result column="config_value" jdbcType="VARCHAR" property="configValue" />
+    <result column="config_type" jdbcType="VARCHAR" property="configType" />
+    <result column="config_group" jdbcType="VARCHAR" property="configGroup" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, config_key, config_value, config_type, config_group, description, version, created_at, updated_at
+  </sql>
+
+  <insert id="insert" parameterType="com.group.admin.entity.SystemConfig">
+    insert into `system_config` (id, config_key, config_value, config_type, config_group, description, version, created_at, updated_at)
+    values (#{id,jdbcType=VARCHAR}, #{configKey,jdbcType=VARCHAR}, #{configValue,jdbcType=VARCHAR}, #{configType,jdbcType=VARCHAR}, #{configGroup,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{version,jdbcType=INTEGER}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <insert id="insertSelective" parameterType="com.group.admin.entity.SystemConfig">
+    insert into `system_config`
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="configKey != null">config_key,</if>
+      <if test="configValue != null">config_value,</if>
+      <if test="configType != null">config_type,</if>
+      <if test="configGroup != null">config_group,</if>
+      <if test="description != null">description,</if>
+      <if test="version != null">version,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedAt != null">updated_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+      <if test="configKey != null">#{configKey,jdbcType=VARCHAR},</if>
+      <if test="configValue != null">#{configValue,jdbcType=VARCHAR},</if>
+      <if test="configType != null">#{configType,jdbcType=VARCHAR},</if>
+      <if test="configGroup != null">#{configGroup,jdbcType=VARCHAR},</if>
+      <if test="description != null">#{description,jdbcType=VARCHAR},</if>
+      <if test="version != null">#{version,jdbcType=INTEGER},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from `system_config`
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectByConfigKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from `system_config`
+    where config_key = #{configKey,jdbcType=VARCHAR}
+    limit 1
+  </select>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from `system_config`
+    order by config_group asc, config_key asc
+  </select>
+
+  <select id="selectByConfigGroup" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from `system_config`
+    where config_group = #{configGroup,jdbcType=VARCHAR}
+    order by config_key asc
+  </select>
+
+  <select id="countByConfigKey" parameterType="java.lang.String" resultType="java.lang.Integer">
+    select count(1)
+    from `system_config`
+    where config_key = #{configKey,jdbcType=VARCHAR}
+  </select>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.SystemConfig">
+    update `system_config`
+    <set>
+      <if test="configKey != null">config_key = #{configKey,jdbcType=VARCHAR},</if>
+      <if test="configValue != null">config_value = #{configValue,jdbcType=VARCHAR},</if>
+      <if test="configType != null">config_type = #{configType,jdbcType=VARCHAR},</if>
+      <if test="configGroup != null">config_group = #{configGroup,jdbcType=VARCHAR},</if>
+      <if test="description != null">description = #{description,jdbcType=VARCHAR},</if>
+      <if test="version != null">version = #{version,jdbcType=INTEGER},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <update id="updateByPrimaryKeyAndVersion" parameterType="map">
+    update `system_config`
+    <set>
+      <if test="row.configValue != null">config_value = #{row.configValue,jdbcType=VARCHAR},</if>
+      <if test="row.description != null">description = #{row.description,jdbcType=VARCHAR},</if>
+      <if test="row.version != null">version = #{row.version,jdbcType=INTEGER},</if>
+      <if test="row.updatedAt != null">updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{row.id,jdbcType=VARCHAR}
+      and version = #{version,jdbcType=INTEGER}
+  </update>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from `system_config`
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+</mapper>

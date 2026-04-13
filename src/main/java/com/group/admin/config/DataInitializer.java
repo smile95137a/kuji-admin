@@ -17,6 +17,7 @@ import com.group.admin.entity.Role;
 import com.group.admin.entity.RoleMenu;
 import com.group.admin.entity.Store;
 import com.group.admin.entity.StoreUser;
+import com.group.admin.entity.SystemConfig;
 import com.group.admin.entity.User;
 import com.group.admin.example.MenuExample;
 import com.group.admin.example.RoleExample;
@@ -29,6 +30,7 @@ import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.RoleMenuMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.mapper.SystemConfigMapper;
 import com.group.admin.mapper.UserMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -59,6 +61,7 @@ public class DataInitializer implements CommandLineRunner {
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final StoreMapper storeMapper;
     private final StoreUserMapper storeUserMapper;
+    private final SystemConfigMapper systemConfigMapper;
     private final UserMapper userMapper;
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
@@ -90,6 +93,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // 檢查是否已有資料（避免重複初始化）
         if (isDataAlreadyInitialized()) {
+            initializeSystemConfigs();
             log.info("系統資料已存在，跳過初始化");
             return;
         }
@@ -102,6 +106,7 @@ public class DataInitializer implements CommandLineRunner {
             initializeStores();
             initializeTestUsers();
             initializeLotteries();
+            initializeSystemConfigs();
             
             log.info("========================================");
             log.info("系統資料初始化完成！");
@@ -112,6 +117,38 @@ public class DataInitializer implements CommandLineRunner {
             log.error("資料初始化失敗：{}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * 初始化系統參數（可重複執行，具 idempotent）
+     */
+    private void initializeSystemConfigs() {
+        log.info("初始化系統參數...");
+        insertSystemConfigIfAbsent("protection_initial_minutes", "5", "INTEGER", "DRAW", "保護初始時間（分鐘）");
+        insertSystemConfigIfAbsent("protection_extension_minutes", "2", "INTEGER", "DRAW", "每次操作延長時間（分鐘）");
+        insertSystemConfigIfAbsent("protection_max_minutes", "10", "INTEGER", "DRAW", "保護最大時間（分鐘）");
+        insertSystemConfigIfAbsent("max_draws_per_request", "10", "INTEGER", "DRAW", "單次 API 最大抽獎數");
+        log.info("✓ 系統參數初始化完成");
+    }
+
+    private void insertSystemConfigIfAbsent(String key, String value, String type, String group, String description) {
+        SystemConfig existing = systemConfigMapper.selectByConfigKey(key);
+        if (existing != null) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        SystemConfig config = new SystemConfig();
+        config.setId(UUID.randomUUID().toString());
+        config.setConfigKey(key);
+        config.setConfigValue(value);
+        config.setConfigType(type);
+        config.setConfigGroup(group);
+        config.setDescription(description);
+        config.setVersion(0);
+        config.setCreatedAt(now);
+        config.setUpdatedAt(now);
+        systemConfigMapper.insert(config);
     }
 
     /**

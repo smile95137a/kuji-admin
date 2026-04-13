@@ -1,10 +1,21 @@
-# 賞品盒管理 Skill
+---
+name: prize-box-management
+description: "賞品盒管理完整流程。賞品盒獲取、狀態轉移、出貨申請、回收換紅利、PrizeBox 與 Wallet 互動。"
+---
 
-## 適用情境
+# 賞品盒管理
+
+## When to Use
 - 修改賞品盒狀態流轉邏輯
 - 新增回收換紅利功能
 - 了解 PrizeBox 與 Order 的關係
 - 修改申請出貨流程
+
+## 核心原則
+- **三種狀態轉移**：IN_BOX （在賞品盒）→ SHIPPING （已出貨）→ RECYCLED （已回收），單向不可逆
+- **PrizeBox 與 Wallet 互動**：回收時自動扣除庫存並增加 Wallet 紅利點數
+- **出貨申請流程**：玩家申請出貨時建立 Order 並更新 PrizeBox 狀態為 SHIPPING
+- **多賞品盒管理**：一個玩家可能有多個賞品盒，查詢時應檢查所有權
 
 ---
 

@@ -1,10 +1,21 @@
-# RBAC 角色與選單設定 Skill
+---
+name: rbac-menu-setup
+description: "RBAC 權限系統設定指南。角色定義、選單樹構建、權限檢查、@PreAuthorize 使用、DataInitializer 初始化流程。"
+---
 
-## 適用情境
+# RBAC 角色與選單設定
+
+## When to Use
 - 新增選單項目（功能頁面）
 - 新增角色或調整角色所能看的選單
 - 修改選單的 can_view / can_edit / can_delete 權限
 - 了解後台權限架構（Admin / StoreOwner / StoreEditor）
+
+## 核心原則
+- **角色名稱前綴**：記錄為 "ROLE_ADMIN"，不得僅記錄 "ADMIN"
+- **選單樹狀管理**：支援父子層級，子選單權限不可高於父選單
+- **權限檢查一致性**：使用 @PreAuthorize("hasRole('ADMIN')") 時自動加 ROLE_ 前綴
+- **DataInitializer 初始化**：首次啟動自動初始化（角色 + 選單 + 關聯）
 
 ---
 
