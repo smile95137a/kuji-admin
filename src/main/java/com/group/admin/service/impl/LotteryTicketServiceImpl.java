@@ -561,30 +561,25 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             extendProtection(sessionInfo.sessionId());
         }
         
-        // 扣款（先扣金幣）
+        // 讀取 paymentType，預設為 GOLD（Spec 019 尚未加此欄位時的安全預設值）
+        String paymentType = "GOLD";
+
+        // 扣款（依 paymentType 決定扣金幣或紅利，不做混合扣款）
         try {
-            walletService.deductGold(
-                    userId, 
-                    pricePerDraw, 
-                    "DRAW", 
-                    lotteryId, 
-                    "抽獎消費: " + lottery.getTitle()
-            );
-            
-            // 記錄消費
-            consumptionRecordService.recordConsumption(
-                    userId,
-                    "DRAW_GOLD",
-                    lotteryId,
-                    lottery.getTitle(),
-                    null,
-                    null,
-                    pricePerDraw,
-                    0L,
-                    "金幣抽獎"
-            );
-            
-            log.info("💰 扣款成功: userId={}, amount={}", userId, pricePerDraw);
+            if ("BONUS".equals(paymentType)) {
+                walletService.deductBonus(userId, pricePerDraw, "DRAW", lotteryId,
+                        "抽獎消費: " + lottery.getTitle());
+                consumptionRecordService.recordConsumption(
+                        userId, "DRAW_BONUS", lotteryId, lottery.getTitle(),
+                        null, null, 0L, pricePerDraw, "紅利抽獎");
+            } else {
+                walletService.deductGold(userId, pricePerDraw, "DRAW", lotteryId,
+                        "抽獎消費: " + lottery.getTitle());
+                consumptionRecordService.recordConsumption(
+                        userId, "DRAW_GOLD", lotteryId, lottery.getTitle(),
+                        null, null, pricePerDraw, 0L, "金幣抽獎");
+            }
+            log.info("💰 扣款成功: userId={}, amount={}, paymentType={}", userId, pricePerDraw, paymentType);
         } catch (BusinessException e) {
             log.error("⚠️ 扣款失敗: {}", e.getMessage());
             throw e;
@@ -748,30 +743,25 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             extendProtection(sessionInfo.sessionId());
         }
         
-        // 扣款（先扣金幣）
+        // 讀取 paymentType，預設為 GOLD（Spec 019 尚未加此欄位時的安全預設值）
+        String paymentType = "GOLD";
+
+        // 扣款（依 paymentType 決定扣金幣或紅利，不做混合扣款）
         try {
-            walletService.deductGold(
-                    userId, 
-                    pricePerDraw, 
-                    "DRAW", 
-                    lotteryId, 
-                    "抽獎消費: " + lottery.getTitle()
-            );
-            
-            // 記錄消費
-            consumptionRecordService.recordConsumption(
-                    userId,
-                    "DRAW_GOLD",
-                    lotteryId,
-                    lottery.getTitle(),
-                    null,
-                    null,
-                    pricePerDraw,
-                    0L,
-                    "金幣抽獎"
-            );
-            
-            log.info("💰 扣款成功: userId={}, amount={}", userId, pricePerDraw);
+            if ("BONUS".equals(paymentType)) {
+                walletService.deductBonus(userId, pricePerDraw, "DRAW", lotteryId,
+                        "抽獎消費: " + lottery.getTitle());
+                consumptionRecordService.recordConsumption(
+                        userId, "DRAW_BONUS", lotteryId, lottery.getTitle(),
+                        null, null, 0L, pricePerDraw, "紅利抽獎");
+            } else {
+                walletService.deductGold(userId, pricePerDraw, "DRAW", lotteryId,
+                        "抽獎消費: " + lottery.getTitle());
+                consumptionRecordService.recordConsumption(
+                        userId, "DRAW_GOLD", lotteryId, lottery.getTitle(),
+                        null, null, pricePerDraw, 0L, "金幣抽獎");
+            }
+            log.info("💰 扣款成功: userId={}, amount={}, paymentType={}", userId, pricePerDraw, paymentType);
         } catch (BusinessException e) {
             log.error("⚠️ 扣款失敗: {}", e.getMessage());
             throw e;
