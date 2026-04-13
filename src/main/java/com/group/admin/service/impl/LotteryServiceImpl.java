@@ -135,6 +135,14 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setCreatedAt(LocalDateTime.now());
         lottery.setUpdatedAt(LocalDateTime.now());
         lottery.setRemark(req.getRemark());
+        // T007: paymentType / delistStrategy defaults; freeDrawThreshold validation
+        lottery.setPaymentType(req.getPaymentType() != null ? req.getPaymentType() : "GOLD");
+        lottery.setDelistStrategy(req.getDelistStrategy() != null ? req.getDelistStrategy() : "ALL_DRAWN");
+        lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
+        String resolvedPm = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
+        if ("SCRATCH_MODE".equals(resolvedPm) && req.getFreeDrawThreshold() == null) {
+            throw new BusinessException("刮刮樂商品必須設定免費抽門檻");
+        }
         
         lotteryMapper.insert(lottery);
         log.info("抽獎商品創建成功: id={}", lottery.getId());
@@ -212,6 +220,10 @@ public class LotteryServiceImpl implements LotteryService {
             lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory));
         }
         if (req.getStatus() != null) lottery.setStatus(req.getStatus());
+        // T008: new fields update
+        if (req.getPaymentType() != null) lottery.setPaymentType(req.getPaymentType());
+        if (req.getFreeDrawThreshold() != null) lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
+        if (req.getDelistStrategy() != null) lottery.setDelistStrategy(req.getDelistStrategy());
         // ✅ 不再設定 weight
         if (req.getRemark() != null) lottery.setRemark(req.getRemark());
         
@@ -924,6 +936,13 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setBonusEnabled(req.getBonusEnabled());
         lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
         lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
+        // T007: paymentType / delistStrategy defaults; freeDrawThreshold validation
+        lottery.setPaymentType(req.getPaymentType() != null ? req.getPaymentType() : "GOLD");
+        lottery.setDelistStrategy(req.getDelistStrategy() != null ? req.getDelistStrategy() : "ALL_DRAWN");
+        lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
+        if ("SCRATCH_MODE".equals(resolvedPlayMode) && req.getFreeDrawThreshold() == null) {
+            throw new BusinessException("刮刮樂商品必須設定免費抽門檻");
+        }
         if (req.getTags() != null && !req.getTags().isEmpty()) {
             lottery.setTags(String.join(",", req.getTags()));
         }
@@ -1042,6 +1061,10 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getGalleryImages() != null) {
             lottery.setGalleryImages(req.getGalleryImages().stream().collect(Collectors.joining(",")));
         }
+        // T008: new fields update
+        if (req.getPaymentType() != null) lottery.setPaymentType(req.getPaymentType());
+        if (req.getFreeDrawThreshold() != null) lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
+        if (req.getDelistStrategy() != null) lottery.setDelistStrategy(req.getDelistStrategy());
         
         lottery.setUpdatedAt(LocalDateTime.now());
         
@@ -1257,6 +1280,10 @@ public class LotteryServiceImpl implements LotteryService {
         res.setFreeDrawEnabled(lottery.getFreeDrawEnabled() != null && lottery.getFreeDrawEnabled() == 1);
         res.setDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers());
         res.setTicketsGenerated(lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1);
+        // T009: new fields
+        res.setPaymentType(lottery.getPaymentType() != null ? lottery.getPaymentType() : "GOLD");
+        res.setFreeDrawThreshold(lottery.getFreeDrawThreshold());
+        res.setDelistStrategy(lottery.getDelistStrategy() != null ? lottery.getDelistStrategy() : "ALL_DRAWN");
         
         return res;
     }
@@ -2054,5 +2081,36 @@ public class LotteryServiceImpl implements LotteryService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    // ==================== T010: 自動下架（checkAndDelist）====================
+
+    @Override
+    @Transactional
+    public void checkAndDelist(String lotteryId) {
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null || !"ON_SHELF".equals(lottery.getStatus())) return;
+        String strategy = lottery.getDelistStrategy() != null ? lottery.getDelistStrategy() : "ALL_DRAWN";
+        boolean shouldDelist = false;
+        if ("GRAND_PRIZE_DRAWN".equals(strategy)) {
+            LotteryPrizeExample ex = new LotteryPrizeExample();
+            ex.createCriteria().andLotteryIdEqualTo(lotteryId).andIsGrandPrizeEqualTo((byte) 1);
+            List<LotteryPrize> grandPrizes = lotteryPrizeMapper.selectByExample(ex);
+            shouldDelist = !grandPrizes.isEmpty() && grandPrizes.stream()
+                    .allMatch(p -> p.getRemaining() != null && p.getRemaining() <= 0);
+        } else if ("ALL_DRAWN".equals(strategy)) {
+            int maxDraws = lottery.getMaxDraws() != null ? lottery.getMaxDraws() : 0;
+            int totalDraws = lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0;
+            shouldDelist = maxDraws > 0 && totalDraws >= maxDraws;
+        }
+        // MANUAL strategy: never auto-delist
+        if (shouldDelist) {
+            log.info("🏁 自動下架觸發: lotteryId={}, strategy={}", lotteryId, strategy);
+            Lottery upd = new Lottery();
+            upd.setId(lotteryId);
+            upd.setStatus("ENDED");
+            upd.setUpdatedAt(LocalDateTime.now());
+            lotteryMapper.updateByPrimaryKeySelective(upd);
+        }
     }
 }

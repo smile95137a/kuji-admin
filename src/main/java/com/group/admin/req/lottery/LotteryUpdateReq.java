@@ -194,4 +194,22 @@ public class LotteryUpdateReq {
      */
     @Schema(description = "每抽消耗紅利點數", example = "200")
     private Integer bonusCostPerDraw;
+
+    /**
+     * 付款方式：GOLD / BONUS / FREE
+     */
+    @Schema(description = "付款方式：GOLD/BONUS/FREE", example = "GOLD")
+    private String paymentType;
+
+    /**
+     * 免費抽門檻（刮刮樂專用）
+     */
+    @Schema(description = "免費抽門檻（刮刮樂：累計幾次後觸發免費抽）", example = "10")
+    private Integer freeDrawThreshold;
+
+    /**
+     * 下架策略：GRAND_PRIZE_DRAWN / ALL_DRAWN / MANUAL
+     */
+    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
+    private String delistStrategy;
 }

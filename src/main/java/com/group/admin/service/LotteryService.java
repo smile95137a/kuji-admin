@@ -335,4 +335,16 @@ public interface LotteryService {
      * @return 更新後的商品
      */
     LotteryRes changeStatus(String lotteryId, String targetStatus, String reason, String operatorId);
+
+    /**
+     * 根據下架策略自動檢查並下架商品
+     * 
+     * 策略說明：
+     * - GRAND_PRIZE_DRAWN：所有大獎抽完後自動下架
+     * - ALL_DRAWN：全部籤位抽完後自動下架
+     * - MANUAL：不自動下架（手動控制）
+     * 
+     * @param lotteryId 商品 ID
+     */
+    void checkAndDelist(String lotteryId);
 }

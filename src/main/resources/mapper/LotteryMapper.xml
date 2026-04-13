@@ -37,6 +37,9 @@
     <result column="bonus_enabled" jdbcType="BIT" property="bonusEnabled" />
     <result column="bonus_points_per_draw" jdbcType="INTEGER" property="bonusPointsPerDraw" />
     <result column="bonus_cost_per_draw" jdbcType="INTEGER" property="bonusCostPerDraw" />
+    <result column="payment_type" jdbcType="VARCHAR" property="paymentType" />
+    <result column="free_draw_threshold" jdbcType="INTEGER" property="freeDrawThreshold" />
+    <result column="delist_strategy" jdbcType="VARCHAR" property="delistStrategy" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.Lottery">
     <result column="description" jdbcType="LONGVARCHAR" property="description" />
@@ -108,7 +111,7 @@
     start_time, end_time, total_draws, max_draws, protection_draws, protection_minutes, 
     free_draw_enabled, designated_prize_numbers, tickets_generated, status, order_num, 
     weight, created_by, created_at, updated_at, play_mode, hot_count, theme, tags, bonus_enabled, 
-    bonus_points_per_draw, bonus_cost_per_draw
+    bonus_points_per_draw, bonus_cost_per_draw, payment_type, free_draw_threshold, delist_strategy
   </sql>
   <sql id="Blob_Column_List">
     description, remark, gallery_images, content
@@ -176,7 +179,8 @@
       updated_at, play_mode, hot_count, 
       theme, tags, bonus_enabled, 
       bonus_points_per_draw, bonus_cost_per_draw, description, 
-      remark, gallery_images, content
+      remark, gallery_images, content,
+      payment_type, free_draw_threshold, delist_strategy
       )
     values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
       #{imageUrl,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{subCategory,jdbcType=VARCHAR}, 
@@ -190,7 +194,8 @@
       #{updatedAt,jdbcType=TIMESTAMP}, #{playMode,jdbcType=VARCHAR}, #{hotCount,jdbcType=INTEGER}, 
       #{theme,jdbcType=VARCHAR}, #{tags,jdbcType=VARCHAR}, #{bonusEnabled,jdbcType=BIT}, 
       #{bonusPointsPerDraw,jdbcType=INTEGER}, #{bonusCostPerDraw,jdbcType=INTEGER}, #{description,jdbcType=LONGVARCHAR}, 
-      #{remark,jdbcType=LONGVARCHAR}, #{galleryImages,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR}
+      #{remark,jdbcType=LONGVARCHAR}, #{galleryImages,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR},
+      #{paymentType,jdbcType=VARCHAR}, #{freeDrawThreshold,jdbcType=INTEGER}, #{delistStrategy,jdbcType=VARCHAR}
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Lottery">
@@ -313,6 +318,15 @@
       <if test="content != null">
         content,
       </if>
+      <if test="paymentType != null">
+        payment_type,
+      </if>
+      <if test="freeDrawThreshold != null">
+        free_draw_threshold,
+      </if>
+      <if test="delistStrategy != null">
+        delist_strategy,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -432,9 +446,18 @@
       <if test="content != null">
         #{content,jdbcType=LONGVARCHAR},
       </if>
+      <if test="paymentType != null">
+        #{paymentType,jdbcType=VARCHAR},
+      </if>
+      <if test="freeDrawThreshold != null">
+        #{freeDrawThreshold,jdbcType=INTEGER},
+      </if>
+      <if test="delistStrategy != null">
+        #{delistStrategy,jdbcType=VARCHAR},
+      </if>
     </trim>
   </insert>
-  <select id="countByExample" parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
+  <select id="countByExample"parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
     select count(*) from `lottery`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
@@ -560,12 +583,21 @@
       <if test="row.content != null">
         content = #{row.content,jdbcType=LONGVARCHAR},
       </if>
+      <if test="row.paymentType != null">
+        payment_type = #{row.paymentType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.freeDrawThreshold != null">
+        free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
+      </if>
+      <if test="row.delistStrategy != null">
+        delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR},
+      </if>
     </set>
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExampleWithBLOBs" parameterType="map">
+  <update id="updateByExampleWithBLOBs"parameterType="map">
     update `lottery`
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
@@ -605,12 +637,15 @@
       description = #{row.description,jdbcType=LONGVARCHAR},
       remark = #{row.remark,jdbcType=LONGVARCHAR},
       gallery_images = #{row.galleryImages,jdbcType=LONGVARCHAR},
-      content = #{row.content,jdbcType=LONGVARCHAR}
+      content = #{row.content,jdbcType=LONGVARCHAR},
+      payment_type = #{row.paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExample" parameterType="map">
+  <update id="updateByExample"parameterType="map">
     update `lottery`
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
@@ -646,12 +681,15 @@
       tags = #{row.tags,jdbcType=VARCHAR},
       bonus_enabled = #{row.bonusEnabled,jdbcType=BIT},
       bonus_points_per_draw = #{row.bonusPointsPerDraw,jdbcType=INTEGER},
-      bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER}
+      bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER},
+      payment_type = #{row.paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Lottery">
+  <update id="updateByPrimaryKeySelective"parameterType="com.group.admin.entity.Lottery">
     update `lottery`
     <set>
       <if test="storeId != null">
@@ -768,10 +806,19 @@
       <if test="content != null">
         content = #{content,jdbcType=LONGVARCHAR},
       </if>
+      <if test="paymentType != null">
+        payment_type = #{paymentType,jdbcType=VARCHAR},
+      </if>
+      <if test="freeDrawThreshold != null">
+        free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
+      </if>
+      <if test="delistStrategy != null">
+        delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.Lottery">
+  <update id="updateByPrimaryKeyWithBLOBs"parameterType="com.group.admin.entity.Lottery">
     update `lottery`
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
@@ -810,10 +857,13 @@
       description = #{description,jdbcType=LONGVARCHAR},
       remark = #{remark,jdbcType=LONGVARCHAR},
       gallery_images = #{galleryImages,jdbcType=LONGVARCHAR},
-      content = #{content,jdbcType=LONGVARCHAR}
+      content = #{content,jdbcType=LONGVARCHAR},
+      payment_type = #{paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{delistStrategy,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Lottery">
+  <update id="updateByPrimaryKey"parameterType="com.group.admin.entity.Lottery">
     update `lottery`
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
@@ -848,7 +898,10 @@
       tags = #{tags,jdbcType=VARCHAR},
       bonus_enabled = #{bonusEnabled,jdbcType=BIT},
       bonus_points_per_draw = #{bonusPointsPerDraw,jdbcType=INTEGER},
-      bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER}
+      bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER},
+      payment_type = #{paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{delistStrategy,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

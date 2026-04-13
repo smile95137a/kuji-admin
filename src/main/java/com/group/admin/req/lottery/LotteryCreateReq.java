@@ -225,4 +225,22 @@ public class LotteryCreateReq {
      */
     @Schema(description = "每抽消耗紅利點數", example = "200")
     private Integer bonusCostPerDraw;
+
+    /**
+     * 付款方式：GOLD（預設）/ BONUS / FREE
+     */
+    @Schema(description = "付款方式：GOLD/BONUS/FREE（預設 GOLD）", example = "GOLD")
+    private String paymentType;
+
+    /**
+     * 免費抽門檻（刮刮樂專用，累計抽幾次後免費抽一次）
+     */
+    @Schema(description = "免費抽門檻（刮刮樂：累計幾次後觸發免費抽）", example = "10")
+    private Integer freeDrawThreshold;
+
+    /**
+     * 下架策略：GRAND_PRIZE_DRAWN / ALL_DRAWN（預設） / MANUAL
+     */
+    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL（預設 ALL_DRAWN）", example = "ALL_DRAWN")
+    private String delistStrategy;
 }

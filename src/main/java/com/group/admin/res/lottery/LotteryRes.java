@@ -305,4 +305,22 @@ public class LotteryRes {
      */
     @Schema(description = "是否已生成抽籤號碼", example = "true")
     private Boolean ticketsGenerated;
+
+    /**
+     * 付款方式：GOLD / BONUS / FREE
+     */
+    @Schema(description = "付款方式", example = "GOLD")
+    private String paymentType;
+
+    /**
+     * 免費抽門檻（刮刮樂）
+     */
+    @Schema(description = "免費抽門檻", example = "10")
+    private Integer freeDrawThreshold;
+
+    /**
+     * 下架策略
+     */
+    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
+    private String delistStrategy;
 }
