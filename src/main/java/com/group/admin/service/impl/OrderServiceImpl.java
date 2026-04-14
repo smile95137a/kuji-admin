@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.group.admin.condition.OrderCondition;
 import com.group.admin.entity.*;
 import com.group.admin.enums.OrderStatusEnum;
+import com.group.admin.enums.PrizeBoxStatusEnum;
 import com.group.admin.example.OrderExample;
 import com.group.admin.example.OrderItemExample;
 import com.group.admin.exception.BusinessException;
@@ -345,15 +346,35 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(OrderStatusEnum.CANCELLED.getCode());
-        order.setRemark(req.getReason());
+        order.setCancelReason(req.getReason());
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledBy(operatorId);
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateByPrimaryKey(order);
+
+        // 重置關聯的賞品盒狀態：SHIPPED → IN_BOX，清除 orderId 及 shippedAt
+        OrderItemExample cancelItemExample = new OrderItemExample();
+        cancelItemExample.createCriteria().andOrderIdEqualTo(orderId);
+        List<OrderItem> cancelItems = orderItemMapper.selectByExample(cancelItemExample);
+        for (OrderItem item : cancelItems) {
+            if (item.getPrizeBoxId() != null) {
+                PrizeBox prizeBox = prizeBoxMapper.selectByPrimaryKey(item.getPrizeBoxId());
+                if (prizeBox != null) {
+                    prizeBox.setStatus(PrizeBoxStatusEnum.IN_BOX.getCode());
+                    prizeBox.setOrderId(null);
+                    prizeBox.setShippedAt(null);
+                    prizeBox.setUpdatedAt(LocalDateTime.now());
+                    prizeBoxMapper.updateByPrimaryKey(prizeBox);
+                    log.info("🔄 賞品盒狀態重置：prizeBoxId={}", prizeBox.getId());
+                }
+            }
+        }
 
         recordStatusLog(orderId, OrderStatusEnum.CANCELLED.getCode(),
                 OrderStatusEnum.CANCELLED.getName(), operatorId,
                 "取消原因：" + req.getReason());
 
-        log.info("✅ 訂單已取消");
+        log.info("✅ 訂單已取消，已重置 {} 個賞品盒項目", cancelItems.size());
     }
 
     /**

@@ -42,9 +42,14 @@ public class AdminOrderController {
         
         // 店家只能查看自己的訂單
         String currentUserId = SecurityUtils.getCurrentAdminUserId();
-        if (SecurityUtils.hasRole("ROLE_STORE_OWNER")) {
-            // TODO: 從 store_user 查詢店家 ID，設定到 condition
-            log.info("店家負責人查詢：userId={}", currentUserId);
+        if (SecurityUtils.hasRole("ROLE_STORE_OWNER") || SecurityUtils.hasRole("ROLE_STORE_EDITOR")) {
+            String primaryStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
+            if (primaryStoreId != null) {
+                if (req == null) req = new QueryReq<>();
+                if (req.getCondition() == null) req.setCondition(new OrderCondition());
+                req.getCondition().setStoreId(primaryStoreId);
+                log.info("店家負責人查詢：userId={}, storeId={}", currentUserId, primaryStoreId);
+            }
         }
         
         List<OrderRes> orders = orderService.getOrders(req);
