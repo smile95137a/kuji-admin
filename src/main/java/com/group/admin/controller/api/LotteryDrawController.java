@@ -1,6 +1,7 @@
 package com.group.admin.controller.api;
 
-import com.group.admin.res.lottery.LotteryTicketRes;
+import com.group.admin.res.lottery.DesignationCheckResponse;
+import com.group.admin.res.lottery.TicketListResponse;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.LotteryTicketService.DrawResult;
 import com.group.admin.service.LotteryTicketService.SessionInfo;
@@ -106,7 +107,26 @@ public class LotteryDrawController {
         
         // 非扭蛋：檢查是否需要玩家指定大獎（SCRATCH_PLAYER 模式）
         SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
-        if (session.isOpener()) {
+        
+        if ("SCRATCH_PLAYER".equals(gameMode)) {
+            String playerDesignated = session.playerDesignatedNumbers();
+            boolean designationPending = playerDesignated == null || playerDesignated.trim().isEmpty();
+            
+            if (designationPending) {
+                if (session.isOpener()) {
+                    // 開套玩家：回傳 202 requiresDesignation
+                    DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
+                    if (designationCheck != null) {
+                        log.info("⚠️ 需要先指定大獎位置 (開套玩家，HTTP 202)");
+                        return ResponseEntity.status(202).body(designationCheck);
+                    }
+                } else {
+                    // 非開套玩家：回傳 423 DESIGNATION_PENDING
+                    log.warn("❌ 非開套玩家在指定完成前嘗試抽獎，HTTP 423");
+                    return ResponseEntity.status(423).body("DESIGNATION_PENDING: 等待開套玩家指定大獎位置");
+                }
+            }
+        } else if (session.isOpener()) {
             DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
             if (designationCheck != null) {
                 log.info("⚠️ 需要先指定大獎位置");
@@ -159,8 +179,37 @@ public class LotteryDrawController {
     }
 
     /**
-     * 取得目前場次資訊
+     * 取得票券列表（前台安全版）
+     *
+     * <p>嚴格執行資訊隱藏（FR-005, FR-006, SC-001）：</p>
+     * <ul>
+     *   <li>AVAILABLE 票券只顯示 ticketNumber + status</li>
+     *   <li>DRAWN 票券顯示完整獎品資訊</li>
+     * </ul>
      */
+    @GetMapping("/{lotteryId}/tickets")
+    @Operation(summary = "取得票券列表（資訊隱藏已強制執行）", description = "AVAILABLE 票券只顯示號碼與狀態；DRAWN 票券顯示完整獎品資訊。")
+    public ResponseEntity<TicketListResponse> getTickets(
+            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
+        log.info("🔍 查詢票券列表: lotteryId={}", lotteryId);
+        TicketListResponse response = ticketService.getTicketList(lotteryId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 查詢 SCRATCH_PLAYER 大獎指定狀態
+     *
+     * <p>前端用於輪詢或在抽獎前確認是否需要先指定大獎位置。</p>
+     */
+    @GetMapping("/{lotteryId}/designation-check")
+    @Operation(summary = "查詢 SCRATCH_PLAYER 指定狀態", description = "非 SCRATCH_PLAYER 模式固定回傳 required=false。開套玩家收到大獎清單，非開套玩家收到等待訊息。")
+    public ResponseEntity<DesignationCheckResponse> getDesignationCheck(
+            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("🔍 查詢指定狀態: lotteryId={}, userId={}", lotteryId, userId);
+        DesignationCheckResponse response = ticketService.getDesignationStatus(lotteryId, userId);
+        return ResponseEntity.ok(response);
+    }
     @GetMapping("/{lotteryId}/session")
     @Operation(summary = "取得場次資訊", description = "取得目前的開套場次狀態（唯讀）")
     public ResponseEntity<SessionResponse> getSession(
@@ -326,15 +375,6 @@ public class LotteryDrawController {
         String gameMode,   // RANDOM / SCRATCH_STORE / SCRATCH_PLAYER
         List<DrawResult> results,
         String protectionEndTime  // 🆕 保護結束時間（ISO格式），前端用於顯示倒數計時；扭蛋為 null
-    ) {}
-
-    /**
-     * 🆕 籤位列表回應（包含已指定的大獎中獎號碼）
-     */
-    public record TicketListResponse(
-        List<LotteryTicketRes> tickets,
-        SessionResponse session,
-        List<DesignatedWinningNumber> designatedWinningNumbers  // 🆕 已指定的大獎中獎號碼
     ) {}
 
     public record SessionResponse(

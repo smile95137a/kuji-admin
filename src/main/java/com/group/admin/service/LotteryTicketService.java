@@ -1,7 +1,9 @@
 package com.group.admin.service;
 
 import com.group.admin.req.lottery.LotteryCreateReq;
+import com.group.admin.res.lottery.DesignationCheckResponse;
 import com.group.admin.res.lottery.LotteryTicketRes;
+import com.group.admin.res.lottery.TicketListResponse;
 
 import java.util.List;
 
@@ -57,17 +59,45 @@ public interface LotteryTicketService {
 
     /**
      * 取得籤位列表（前台用，隱藏未抽籤位的獎品資訊）
-     * 
+     *
      * <p>⚠️ 安全規則：</p>
      * <ul>
      *   <li>未抽籤位：只返回 number + status</li>
      *   <li>已抽籤位：返回完整獎品資訊</li>
      * </ul>
-     * 
+     *
      * @param lotteryId 抽獎活動 ID
      * @return 籤位列表（已過濾敏感資訊）
      */
     List<LotteryTicketRes> getTicketsForFrontend(String lotteryId);
+
+    /**
+     * 取得帶統計資訊的籤位列表（前台用）
+     *
+     * <p>與 {@link #getTicketsForFrontend} 相同的資訊隱藏規則，
+     * 但回傳結構包含 lotteryId、gameMode、totalTickets、availableCount、drawnCount。</p>
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @return TicketListResponse（含統計與 TicketView 列表）
+     */
+    TicketListResponse getTicketList(String lotteryId);
+
+    /**
+     * 查詢 SCRATCH_PLAYER 模式的大獎指定狀態（前台輪詢用）
+     *
+     * <p>四種情境回應：</p>
+     * <ol>
+     *   <li>非 SCRATCH_PLAYER → required=false</li>
+     *   <li>無 ACTIVE Session 或已指定完成 → required=false, alreadyDesignated</li>
+     *   <li>開套玩家尚未指定 → required=true, isOpener=true，含大獎清單與可選號碼</li>
+     *   <li>非開套玩家尚未指定 → required=true, isOpener=false，含等待訊息</li>
+     * </ol>
+     *
+     * @param lotteryId 抽獎活動 ID
+     * @param userId    當前玩家 ID
+     * @return DesignationCheckResponse
+     */
+    DesignationCheckResponse getDesignationStatus(String lotteryId, String userId);
 
     /**
      * 取得籤位列表（後台用，完整資訊）
