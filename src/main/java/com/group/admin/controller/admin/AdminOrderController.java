@@ -66,20 +66,20 @@ public class AdminOrderController {
      * 準備出貨（店家確認備貨完成）
      */
     @PutMapping("/{orderId}/prepare")
-    public ResponseEntity<Void> prepareShipping(@PathVariable String orderId) {
+    public ResponseEntity<String> prepareShipping(@PathVariable String orderId) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
         log.info("🔍 [Admin] 準備出貨：orderId={}, operator={}", orderId, operatorId);
         
         orderService.prepareShipping(orderId, operatorId);
         
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("訂單已更新為備貨中");
     }
     
     /**
      * 訂單出貨（填寫物流單號）
      */
     @PutMapping("/{orderId}/ship")
-    public ResponseEntity<Void> ship(
+    public ResponseEntity<String> ship(
             @PathVariable String orderId,
             @Valid @RequestBody OrderShipReq req) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
@@ -88,20 +88,20 @@ public class AdminOrderController {
         
         orderService.ship(orderId, req, operatorId);
         
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("訂單已出貨");
     }
     
     /**
      * 完成訂單
      */
     @PutMapping("/{orderId}/complete")
-    public ResponseEntity<Void> complete(@PathVariable String orderId) {
+    public ResponseEntity<String> complete(@PathVariable String orderId) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
         log.info("🔍 [Admin] 完成訂單：orderId={}, operator={}", orderId, operatorId);
         
         orderService.complete(orderId, operatorId);
         
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("訂單已完成");
     }
     
     /**
@@ -109,7 +109,7 @@ public class AdminOrderController {
      */
     @PutMapping("/{orderId}/cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> cancel(
+    public ResponseEntity<String> cancel(
             @PathVariable String orderId,
             @Valid @RequestBody OrderCancelReq req) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
@@ -118,6 +118,6 @@ public class AdminOrderController {
         
         orderService.cancel(orderId, req, operatorId);
         
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("訂單已取消");
     }
 }

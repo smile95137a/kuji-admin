@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.group.admin.condition.OrderCondition;
 import com.group.admin.entity.*;
 import com.group.admin.enums.OrderStatusEnum;
+import com.group.admin.enums.ShippingMethodEnum;
 import com.group.admin.example.OrderExample;
 import com.group.admin.example.OrderItemExample;
 import com.group.admin.exception.BusinessException;
@@ -11,6 +12,7 @@ import com.group.admin.repository.OrderRepository;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
+import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderItemRes;
 import com.group.admin.res.order.OrderRes;
@@ -451,5 +453,63 @@ public class OrderServiceImpl implements OrderService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    @Override
+    @Transactional
+    public void submitShippingInfo(String orderId, ShipInfoReq req, String userId) {
+        log.info("🔍 提交出貨資訊：orderId={}, userId={}", orderId, userId);
+
+        // 1. 訂單存在性守衛
+        Order order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null) {
+            throw new BusinessException("訂單不存在");
+        }
+
+        // 2. 所有權守衛
+        if (!order.getUserId().equals(userId)) {
+            throw new BusinessException("ORDER_ACCESS_DENIED", "無權限操作此訂單");
+        }
+
+        // 3. PENDING 狀態守衛
+        OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
+        if (currentStatus != OrderStatusEnum.PENDING) {
+            throw new BusinessException("ORDER_STATUS_CONFLICT", "訂單已確認，無法修改出貨資訊");
+        }
+
+        // 4. 跨欄位條件式驗證
+        ShippingMethodEnum method = ShippingMethodEnum.fromCode(req.getShippingMethod());
+        if (method == ShippingMethodEnum.HOME_DELIVERY) {
+            if (!isNotBlank(req.getRecipientName())) {
+                throw new BusinessException("宅配需填入收件人姓名");
+            }
+            if (!isNotBlank(req.getRecipientPhone())) {
+                throw new BusinessException("宅配需填入收件人電話");
+            }
+            if (!isNotBlank(req.getRecipientAddress())) {
+                throw new BusinessException("宅配需填入收件地址");
+            }
+        } else if (method == ShippingMethodEnum.SEVEN_ELEVEN || method == ShippingMethodEnum.FAMILY_MART) {
+            if (!isNotBlank(req.getStoreCode())) {
+                throw new BusinessException("超商取貨需填入分店代碼");
+            }
+            if (!isNotBlank(req.getStoreName())) {
+                throw new BusinessException("超商取貨需填入分店名稱");
+            }
+        }
+
+        // 5. 更新出貨資訊
+        order.setShippingMethod(req.getShippingMethod());
+        order.setRecipientName(req.getRecipientName());
+        order.setRecipientPhone(req.getRecipientPhone());
+        order.setRecipientAddress(req.getRecipientAddress());
+        order.setStoreCode(req.getStoreCode());
+        order.setStoreName(req.getStoreName());
+        order.setStoreAddress(req.getStoreAddress());
+        order.setRemark(req.getRemark());
+        order.setUpdatedAt(LocalDateTime.now());
+        orderMapper.updateByPrimaryKeySelective(order);
+
+        log.info("✅ 出貨資訊已更新：orderId={}", orderId);
     }
 }

@@ -26,6 +26,10 @@ public class GlobalExceptionHandler {
 
     /**
      * 處理業務邏輯異常
+     * 根據 errorCode 映射到適當的 HTTP 狀態碼：
+     * - ORDER_ACCESS_DENIED / ACCESS_DENIED → 403
+     * - ORDER_STATUS_CONFLICT / STATUS_CONFLICT → 409
+     * - 其他 → 400
      * 
      * @param ex BusinessException
      * @return 統一錯誤回應
@@ -34,9 +38,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException ex) {
         log.warn("⚠️ 業務邏輯例外: [{}] {}", ex.getErrorCode(), ex.getMessage());
 
+        HttpStatus status = resolveHttpStatus(ex.getErrorCode());
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(status)
                 .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    /**
+     * 根據 errorCode 決定 HTTP 狀態碼
+     */
+    private HttpStatus resolveHttpStatus(String errorCode) {
+        if (errorCode == null) return HttpStatus.BAD_REQUEST;
+        return switch (errorCode) {
+            case "ORDER_ACCESS_DENIED", "ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
+            case "ORDER_STATUS_CONFLICT", "STATUS_CONFLICT" -> HttpStatus.CONFLICT;
+            default -> HttpStatus.BAD_REQUEST;
+        };
     }
 
     /**

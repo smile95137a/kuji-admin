@@ -4,6 +4,7 @@ import com.group.admin.condition.OrderCondition;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
+import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
 
@@ -87,4 +88,13 @@ public interface OrderService {
      * @param operatorId 操作者 ID
      */
     void cancel(String orderId, OrderCancelReq req, String operatorId);
+
+    /**
+     * 玩家提交或更新出貨資訊（僅限 PENDING 狀態）
+     *
+     * @param orderId 訂單 ID
+     * @param req     出貨資訊請求（配送方式及收件人資訊）
+     * @param userId  已認證的玩家 ID（用於所有權驗證）
+     */
+    void submitShippingInfo(String orderId, ShipInfoReq req, String userId);
 }
