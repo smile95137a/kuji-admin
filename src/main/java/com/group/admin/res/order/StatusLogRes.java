@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 訂單狀態變更歷史回應
+ * 訂單狀態歷程回應
  */
 @Data
 @Builder
@@ -20,6 +20,7 @@ public class StatusLogRes {
     private String fromStatusLabel;
     private String toStatus;
     private String toStatusLabel;
+    /** 僅管理端填入，玩家端為 null */
     private String operatorId;
     private String operatorType;
     private String remark;

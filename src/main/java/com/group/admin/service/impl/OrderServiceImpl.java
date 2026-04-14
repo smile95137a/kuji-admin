@@ -6,17 +6,22 @@ import com.group.admin.enums.OrderStatusEnum;
 import com.group.admin.enums.PrizeBoxStatusEnum;
 import com.group.admin.example.OrderExample;
 import com.group.admin.example.OrderItemExample;
+import com.group.admin.example.OrderStatusLogExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.exception.ConflictException;
 import com.group.admin.mapper.*;
 import com.group.admin.repository.OrderRepository;
 import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.order.CreateOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
+import com.group.admin.req.order.UpdateOrderStatusReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderItemRes;
 import com.group.admin.res.order.OrderRes;
-import com.group.admin.service.OrderService;
+import com.group.admin.res.order.StatusLogRes;
 import com.group.admin.service.ConsumptionRecordService;
+import com.group.admin.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,12 +33,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 訂單服務實作
- * 
- * @author Kuji Admin
- * @since 2026-01-09
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -50,8 +49,33 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ConsumptionRecordService consumptionRecordService;
 
-    // 運費常數（統一運費 60 元）
     private static final Long SHIPPING_FEE = 60L;
+
+    // ─── US3: Create order from prize box ────────────────────────────────────
+
+    @Override
+    @Transactional
+    public List<String> createOrder(String userId, CreateOrderReq req) {
+        log.info("🛒 [US3] 玩家建立訂單：userId={}, prizeBoxCount={}", userId, req.getPrizeBoxIds().size());
+
+        // Validate all prize boxes belong to user and are IN_BOX
+        List<String> unavailableIds = new ArrayList<>();
+        for (String boxId : req.getPrizeBoxIds()) {
+            PrizeBox box = prizeBoxMapper.selectByPrimaryKey(boxId);
+            if (box == null || !userId.equals(box.getUserId())
+                    || !PrizeBoxStatusEnum.IN_BOX.getCode().equals(box.getStatus())) {
+                unavailableIds.add(boxId);
+            }
+        }
+        if (!unavailableIds.isEmpty()) {
+            throw new BusinessException("PRIZE_BOX_UNAVAILABLE",
+                    "部分賞品盒已出貨或已回收，無法建立訂單：" + unavailableIds);
+        }
+
+        return createOrdersFromPrizeBox(userId, req.getPrizeBoxIds(),
+                req.getShippingMethod(), req.getRecipientName(), req.getRecipientPhone(),
+                req.getRecipientAddress(), req.getStoreCode(), req.getStoreName(), req.getStoreAddress());
+    }
 
     @Override
     @Transactional
@@ -61,24 +85,21 @@ public class OrderServiceImpl implements OrderService {
             String storeCode, String storeName, String storeAddress) {
         log.info("🔍 從賞品盒建立訂單：userId={}, prizeBoxCount={}", userId, prizeBoxIds.size());
 
-        // 查詢所有賞品盒
         List<PrizeBox> prizeBoxes = prizeBoxIds.stream()
                 .map(prizeBoxMapper::selectByPrimaryKey)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        // 按店家分組
+        // Group by store
         Map<String, List<PrizeBox>> groupedByStore = prizeBoxes.stream()
                 .collect(Collectors.groupingBy(PrizeBox::getStoreId));
 
         List<String> orderIds = new ArrayList<>();
 
-        // 為每個店家建立訂單
         for (Map.Entry<String, List<PrizeBox>> entry : groupedByStore.entrySet()) {
             String storeId = entry.getKey();
             List<PrizeBox> storePrizeBoxes = entry.getValue();
 
-            // 建立訂單
             Order order = new Order();
             order.setId(UUID.randomUUID().toString());
             order.setOrderNumber(generateOrderNumber());
@@ -93,14 +114,12 @@ public class OrderServiceImpl implements OrderService {
             order.setStoreCode(storeCode);
             order.setStoreName(storeName);
             order.setStoreAddress(storeAddress);
-            order.setTrackingNo(null);
-            order.setRemark(null);
             order.setCreatedAt(LocalDateTime.now());
             order.setUpdatedAt(LocalDateTime.now());
 
             orderMapper.insert(order);
 
-            // 建立訂單項目
+            // Create order items + update prize box status
             for (PrizeBox prizeBox : storePrizeBoxes) {
                 Lottery lottery = lotteryMapper.selectByPrimaryKey(prizeBox.getLotteryId());
                 LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeBox.getPrizeId());
@@ -113,86 +132,69 @@ public class OrderServiceImpl implements OrderService {
                 item.setLotteryTitle(lottery != null ? lottery.getTitle() : "未知商品");
                 item.setLotteryImageUrl(lottery != null ? lottery.getImageUrl() : null);
                 item.setPrizeId(prizeBox.getPrizeId());
-                // ✅ 從 LotteryPrize 獲取獎品信息
                 item.setPrizeName(prize != null ? prize.getName() : "未知獎品");
                 item.setPrizeImageUrl(prize != null ? prize.getImageUrl() : null);
                 item.setPrizeLevel(prize != null ? prize.getLevel() : null);
                 item.setCreatedAt(LocalDateTime.now());
-
                 orderItemMapper.insert(item);
 
-                // 更新賞品盒的訂單 ID
+                // ✅ Update prize box: SHIPPED + set order_id
+                prizeBox.setStatus(PrizeBoxStatusEnum.SHIPPED.getCode());
                 prizeBox.setOrderId(order.getId());
+                prizeBox.setShippedAt(LocalDateTime.now());
                 prizeBoxMapper.updateByPrimaryKey(prizeBox);
             }
 
-            // 記錄狀態變更
-            recordStatusLog(order.getId(), OrderStatusEnum.PENDING.getCode(),
-                    OrderStatusEnum.PENDING.getName(), null, null);
+            // Log initial status
+            insertStatusLog(order.getId(), null, OrderStatusEnum.PENDING.getCode(),
+                    userId, "PLAYER", "訂單建立");
 
-            // 記錄運費消費（每個訂單都需要支付運費）
+            // Record shipping fee consumption
             consumptionRecordService.recordConsumption(
-                userId,
-                "SHIPPING_FEE",
-                null,  // lotteryId
-                null,  // lotteryTitle
-                order.getId(),
-                order.getOrderNumber(),
-                SHIPPING_FEE,  // 假設用金幣支付運費
-                0L,
-                String.format("訂單運費：%s（配送方式：%s）", order.getOrderNumber(), order.getShippingMethod())
-            );
+                    userId, "SHIPPING_FEE", null, null,
+                    order.getId(), order.getOrderNumber(),
+                    SHIPPING_FEE, 0L,
+                    String.format("訂單運費：%s（%s）", order.getOrderNumber(), shippingMethod));
 
             orderIds.add(order.getId());
         }
 
-        log.info("✅ 訂單建立完成：orderCount={}，總運費={}元", orderIds.size(), orderIds.size() * SHIPPING_FEE);
+        log.info("✅ 訂單建立完成：orderCount={}", orderIds.size());
         return orderIds;
     }
+
+    // ─── US1 / US4: List and detail ──────────────────────────────────────────
 
     @Override
     public List<OrderRes> getOrders(QueryReq<OrderCondition> req) {
         OrderCondition condition = req != null ? req.getCondition() : null;
 
-        // 使用 Repository 查詢所有訂單（避免 OrderExample 問題）
         List<Order> orders = orderRepository.selectAll();
 
-        // Java 層過濾
         if (condition != null) {
-            orders = orders.stream()
-                    .filter(order -> {
-                        // 使用者 ID 過濾
-                        if (isNotBlank(condition.getUserId()) && 
-                            !condition.getUserId().equals(order.getUserId())) {
-                            return false;
-                        }
-                        // 店家 ID 過濾
-                        if (isNotBlank(condition.getStoreId()) && 
-                            !condition.getStoreId().equals(order.getStoreId())) {
-                            return false;
-                        }
-                        // 出貨狀態過濾
-                        if (isNotBlank(condition.getShippingStatus()) && 
-                            !condition.getShippingStatus().equals(order.getStatus())) {
-                            return false;
-                        }
-                        // 訂單編號模糊查詢
-                        if (isNotBlank(condition.getOrderNo()) && 
-                            !order.getOrderNumber().contains(condition.getOrderNo())) {
-                            return false;
-                        }
-                        // 建立日期範圍
-                        if (condition.getCreatedAtStart() != null && 
-                            order.getCreatedAt().isBefore(condition.getCreatedAtStart().atStartOfDay())) {
-                            return false;
-                        }
-                        if (condition.getCreatedAtEnd() != null && 
-                            order.getCreatedAt().isAfter(condition.getCreatedAtEnd().atTime(23, 59, 59))) {
-                            return false;
-                        }
-                        return true;
-                    })
-                    .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())) // DESC
+            orders = orders.stream().filter(order -> {
+                if (isNotBlank(condition.getUserId())
+                        && !condition.getUserId().equals(order.getUserId())) return false;
+                if (isNotBlank(condition.getStoreId())
+                        && !condition.getStoreId().equals(order.getStoreId())) return false;
+
+                // Support both `status` and `shippingStatus` fields
+                String statusFilter = isNotBlank(condition.getStatus())
+                        ? condition.getStatus() : condition.getShippingStatus();
+                if (isNotBlank(statusFilter)
+                        && !statusFilter.equals(order.getStatus())) return false;
+
+                if (isNotBlank(condition.getShippingMethod())
+                        && !condition.getShippingMethod().equals(order.getShippingMethod())) return false;
+                if (isNotBlank(condition.getOrderNo())
+                        && !order.getOrderNumber().contains(condition.getOrderNo())) return false;
+                if (condition.getCreatedAtStart() != null
+                        && order.getCreatedAt().isBefore(condition.getCreatedAtStart().atStartOfDay())) return false;
+                if (condition.getCreatedAtEnd() != null
+                        && order.getCreatedAt().isAfter(condition.getCreatedAtEnd().atTime(23, 59, 59))) return false;
+                return true;
+            })
+                    .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
                     .collect(Collectors.toList());
         }
 
@@ -203,17 +205,25 @@ public class OrderServiceImpl implements OrderService {
     public OrderDetailRes getOrderDetail(String orderId) {
         Order order = orderMapper.selectByPrimaryKey(orderId);
         if (order == null) {
-            throw new BusinessException("訂單不存在");
+            throw new BusinessException("NOT_FOUND", "訂單不存在");
         }
 
-        // 查詢訂單項目
         OrderItemExample itemExample = new OrderItemExample();
         itemExample.createCriteria().andOrderIdEqualTo(orderId);
         List<OrderItem> items = orderItemMapper.selectByExample(itemExample);
 
-        // 查詢相關資料
+        // Load status history
+        OrderStatusLogExample logExample = new OrderStatusLogExample();
+        logExample.createCriteria().andOrderIdEqualTo(orderId);
+        logExample.setOrderByClause("created_at ASC");
+        List<OrderStatusLog> logs = orderStatusLogMapper.selectByExample(logExample);
+
         User user = userMapper.selectByPrimaryKey(order.getUserId());
         Store store = storeMapper.selectByPrimaryKey(order.getStoreId());
+
+        List<StatusLogRes> statusHistory = logs.stream()
+                .map(this::convertLogToRes)
+                .collect(Collectors.toList());
 
         return OrderDetailRes.builder()
                 .id(order.getId())
@@ -227,21 +237,22 @@ public class OrderServiceImpl implements OrderService {
                 .shippingStatusName(OrderStatusEnum.getNameByCode(order.getStatus()))
                 .totalItems(order.getTotalItems())
                 .shippingMethod(order.getShippingMethod())
-                .shippingMethodName(order.getShippingMethod()) // TODO: 轉換為名稱
+                .shippingMethodName(getShippingMethodLabel(order.getShippingMethod()))
                 .recipientName(order.getRecipientName())
                 .recipientPhone(order.getRecipientPhone())
                 .recipientAddress(order.getRecipientAddress())
                 .storeCode(order.getStoreCode())
-                .storeName(order.getStoreName())
+                .storeName2(order.getStoreName())
                 .storeAddress(order.getStoreAddress())
                 .trackingNo(order.getTrackingNo())
                 .remark(order.getRemark())
                 .items(items.stream().map(this::convertItemToRes).collect(Collectors.toList()))
-                .subtotal(0L)  // 商品小計（獎品不計價）
-                .shippingFee(SHIPPING_FEE)  // 運費
-                .discount(0L)  // 折扣
-                .totalAmount(SHIPPING_FEE)  // 總金額 = 運費
-                .paymentMethod("GOLD")  // 付款方式
+                .statusHistory(statusHistory)
+                .subtotal(0L)
+                .shippingFee(SHIPPING_FEE)
+                .discount(0L)
+                .totalAmount(SHIPPING_FEE)
+                .paymentMethod("GOLD")
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .shippedAt(order.getShippedAt())
@@ -252,173 +263,173 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
+    // ─── US1: Update order status (unified state machine) ────────────────────
+
     @Override
     @Transactional
-    public void prepareShipping(String orderId, String operatorId) {
-        log.info("🔍 準備出貨：orderId={}", orderId);
+    public OrderRes updateOrderStatus(String orderId, UpdateOrderStatusReq req,
+                                      String operatorId, String operatorType) {
+        log.info("🔄 更新訂單狀態：orderId={}, targetStatus={}", orderId, req.getTargetStatus());
 
         Order order = orderMapper.selectByPrimaryKey(orderId);
         if (order == null) {
-            throw new BusinessException("訂單不存在");
+            throw new BusinessException("NOT_FOUND", "訂單不存在");
+        }
+
+        OrderStatusEnum current = OrderStatusEnum.fromCode(order.getStatus());
+        OrderStatusEnum target = OrderStatusEnum.fromCode(req.getTargetStatus());
+
+        // Idempotency: same status is a no-op
+        if (current == target) {
+            log.info("ℹ️ 訂單狀態相同，無操作：{}", current);
+            return convertToRes(order);
+        }
+
+        validateTransition(current, target);
+
+        String fromStatus = order.getStatus();
+        order.setStatus(target.getCode());
+        order.setUpdatedAt(LocalDateTime.now());
+
+        if (target == OrderStatusEnum.SHIPPED) {
+            order.setShippedAt(LocalDateTime.now());
+            if (isNotBlank(req.getTrackingNo())) {
+                order.setTrackingNo(req.getTrackingNo());
+            }
+        } else if (target == OrderStatusEnum.COMPLETED) {
+            order.setCompletedAt(LocalDateTime.now());
+        }
+
+        orderMapper.updateByPrimaryKey(order);
+        insertStatusLog(orderId, fromStatus, target.getCode(), operatorId, operatorType, req.getRemark());
+
+        log.info("✅ 訂單狀態更新：{} → {}", fromStatus, target.getCode());
+        return convertToRes(order);
+    }
+
+    // ─── US1 / US3: Cancel order ──────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public OrderRes cancelOrder(String orderId, OrderCancelReq req,
+                                String operatorId, String operatorType) {
+        log.info("🔍 取消訂單：orderId={}", orderId);
+
+        Order order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null) {
+            throw new BusinessException("NOT_FOUND", "訂單不存在");
         }
 
         OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (currentStatus != OrderStatusEnum.PENDING) {
-            throw new BusinessException("訂單狀態不允許此操作");
+        if (!currentStatus.isCancellable()) {
+            throw new ConflictException("CANCEL_NOT_ALLOWED",
+                    "訂單已出貨，無法取消（currentStatus=" + currentStatus.getCode() + "）");
         }
 
-        order.setStatus(OrderStatusEnum.PREPARING.getCode());
+        String fromStatus = order.getStatus();
+        String cancelReason = req != null ? req.getCancelReason() : null;
+
+        order.setStatus(OrderStatusEnum.CANCELLED.getCode());
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledBy(operatorId);
+        order.setCancelReason(cancelReason);
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateByPrimaryKey(order);
 
-        recordStatusLog(orderId, OrderStatusEnum.PREPARING.getCode(),
-                OrderStatusEnum.PREPARING.getName(), operatorId, null);
+        // ✅ Restore prize boxes to IN_BOX
+        OrderItemExample itemExample = new OrderItemExample();
+        itemExample.createCriteria().andOrderIdEqualTo(orderId);
+        List<OrderItem> items = orderItemMapper.selectByExample(itemExample);
+        for (OrderItem item : items) {
+            PrizeBox box = prizeBoxMapper.selectByPrimaryKey(item.getPrizeBoxId());
+            if (box != null) {
+                box.setStatus(PrizeBoxStatusEnum.IN_BOX.getCode());
+                box.setOrderId(null);
+                box.setShippedAt(null);
+                prizeBoxMapper.updateByPrimaryKey(box);
+            }
+        }
 
-        log.info("✅ 訂單狀態更新：PREPARING");
+        insertStatusLog(orderId, fromStatus, OrderStatusEnum.CANCELLED.getCode(),
+                operatorId, operatorType,
+                cancelReason != null ? "取消原因：" + cancelReason : null);
+
+        log.info("✅ 訂單已取消");
+        return convertToRes(order);
+    }
+
+    // ─── Legacy methods (backward compat) ─────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void prepareShipping(String orderId, String operatorId) {
+        UpdateOrderStatusReq req = new UpdateOrderStatusReq();
+        req.setTargetStatus(OrderStatusEnum.PREPARING.getCode());
+        updateOrderStatus(orderId, req, operatorId, "STORE_OWNER");
     }
 
     @Override
     @Transactional
     public void ship(String orderId, OrderShipReq req, String operatorId) {
-        log.info("🔍 訂單出貨：orderId={}, trackingNo={}", orderId, req.getTrackingNo());
-
-        Order order = orderMapper.selectByPrimaryKey(orderId);
-        if (order == null) {
-            throw new BusinessException("訂單不存在");
-        }
-
-        OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (currentStatus != OrderStatusEnum.PREPARING) {
-            throw new BusinessException("訂單狀態不允許此操作");
-        }
-
-        order.setStatus(OrderStatusEnum.SHIPPED.getCode());
-        order.setTrackingNo(req.getTrackingNo());
-        order.setRemark(req.getRemark());
-        order.setUpdatedAt(LocalDateTime.now());
-        orderMapper.updateByPrimaryKey(order);
-
-        recordStatusLog(orderId, OrderStatusEnum.SHIPPED.getCode(),
-                OrderStatusEnum.SHIPPED.getName(), operatorId,
-                "物流單號：" + req.getTrackingNo());
-
-        log.info("✅ 訂單已出貨");
+        UpdateOrderStatusReq updateReq = new UpdateOrderStatusReq();
+        updateReq.setTargetStatus(OrderStatusEnum.SHIPPED.getCode());
+        updateReq.setTrackingNo(req.getTrackingNo());
+        updateReq.setRemark(req.getRemark());
+        updateOrderStatus(orderId, updateReq, operatorId, "STORE_OWNER");
     }
 
     @Override
     @Transactional
     public void complete(String orderId, String operatorId) {
-        log.info("🔍 完成訂單：orderId={}", orderId);
-
-        Order order = orderMapper.selectByPrimaryKey(orderId);
-        if (order == null) {
-            throw new BusinessException("訂單不存在");
-        }
-
-        OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (currentStatus != OrderStatusEnum.SHIPPED) {
-            throw new BusinessException("訂單狀態不允許此操作");
-        }
-
-        order.setStatus(OrderStatusEnum.COMPLETED.getCode());
-        order.setUpdatedAt(LocalDateTime.now());
-        orderMapper.updateByPrimaryKey(order);
-
-        recordStatusLog(orderId, OrderStatusEnum.COMPLETED.getCode(),
-                OrderStatusEnum.COMPLETED.getName(), operatorId, null);
-
-        log.info("✅ 訂單已完成");
+        UpdateOrderStatusReq req = new UpdateOrderStatusReq();
+        req.setTargetStatus(OrderStatusEnum.COMPLETED.getCode());
+        updateOrderStatus(orderId, req, operatorId, "STORE_OWNER");
     }
 
     @Override
     @Transactional
     public void cancel(String orderId, OrderCancelReq req, String operatorId) {
-        log.info("🔍 取消訂單：orderId={}", orderId);
-
-        Order order = orderMapper.selectByPrimaryKey(orderId);
-        if (order == null) {
-            throw new BusinessException("訂單不存在");
-        }
-
-        OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (!currentStatus.isCancellable()) {
-            throw new BusinessException("訂單狀態不允許取消");
-        }
-
-        order.setStatus(OrderStatusEnum.CANCELLED.getCode());
-        order.setCancelReason(req.getReason());
-        order.setCancelledAt(LocalDateTime.now());
-        order.setCancelledBy(operatorId);
-        order.setUpdatedAt(LocalDateTime.now());
-        orderMapper.updateByPrimaryKey(order);
-
-        // 重置關聯的賞品盒狀態：SHIPPED → IN_BOX，清除 orderId 及 shippedAt
-        OrderItemExample cancelItemExample = new OrderItemExample();
-        cancelItemExample.createCriteria().andOrderIdEqualTo(orderId);
-        List<OrderItem> cancelItems = orderItemMapper.selectByExample(cancelItemExample);
-        for (OrderItem item : cancelItems) {
-            if (item.getPrizeBoxId() != null) {
-                PrizeBox prizeBox = prizeBoxMapper.selectByPrimaryKey(item.getPrizeBoxId());
-                if (prizeBox != null) {
-                    prizeBox.setStatus(PrizeBoxStatusEnum.IN_BOX.getCode());
-                    prizeBox.setOrderId(null);
-                    prizeBox.setShippedAt(null);
-                    prizeBox.setUpdatedAt(LocalDateTime.now());
-                    prizeBoxMapper.updateByPrimaryKey(prizeBox);
-                    log.info("🔄 賞品盒狀態重置：prizeBoxId={}", prizeBox.getId());
-                }
-            }
-        }
-
-        recordStatusLog(orderId, OrderStatusEnum.CANCELLED.getCode(),
-                OrderStatusEnum.CANCELLED.getName(), operatorId,
-                "取消原因：" + req.getReason());
-
-        log.info("✅ 訂單已取消，已重置 {} 個賞品盒項目", cancelItems.size());
+        cancelOrder(orderId, req, operatorId, "ADMIN");
     }
 
-    /**
-     * 生成訂單編號：ORD + YYYYMMDD + 6位流水號
-     */
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private void validateTransition(OrderStatusEnum current, OrderStatusEnum target) {
+        boolean valid = (current == OrderStatusEnum.PENDING && target == OrderStatusEnum.PREPARING)
+                || (current == OrderStatusEnum.PREPARING && target == OrderStatusEnum.SHIPPED)
+                || (current == OrderStatusEnum.SHIPPED && target == OrderStatusEnum.COMPLETED);
+
+        if (!valid) {
+            throw new ConflictException("INVALID_STATE_TRANSITION",
+                    String.format("訂單狀態無法從 %s 轉換至 %s", current.getCode(), target.getCode()));
+        }
+    }
+
+    private void insertStatusLog(String orderId, String fromStatus, String toStatus,
+                                  String operatorId, String operatorType, String remark) {
+        OrderStatusLog statusLog = new OrderStatusLog();
+        statusLog.setId(UUID.randomUUID().toString());
+        statusLog.setOrderId(orderId);
+        statusLog.setFromStatus(fromStatus);
+        statusLog.setToStatus(toStatus);
+        statusLog.setOperatorId(operatorId);
+        statusLog.setOperatorType(operatorType);
+        statusLog.setRemark(remark);
+        statusLog.setCreatedAt(LocalDateTime.now());
+        orderStatusLogMapper.insert(statusLog);
+    }
+
     private String generateOrderNumber() {
         String datePrefix = "ORD" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-
-        // 查詢今天最後一筆訂單
         OrderExample example = new OrderExample();
         example.createCriteria().andOrderNumberLike(datePrefix + "%");
         example.setOrderByClause("order_number DESC");
-
         List<Order> orders = orderMapper.selectByExample(example);
-
-        int sequence = 1;
-        if (!orders.isEmpty()) {
-            String lastOrderNumber = orders.get(0).getOrderNumber();
-            String lastSequence = lastOrderNumber.substring(datePrefix.length());
-            sequence = Integer.parseInt(lastSequence) + 1;
-        }
-
+        int sequence = orders.isEmpty() ? 1
+                : Integer.parseInt(orders.get(0).getOrderNumber().substring(datePrefix.length())) + 1;
         return datePrefix + String.format("%06d", sequence);
     }
 
-    /**
-     * 記錄狀態變更
-     */
-    private void recordStatusLog(String orderId, String status, String statusName,
-            String operatorId, String remark) {
-        OrderStatusLog log = new OrderStatusLog();
-        log.setId(UUID.randomUUID().toString());
-        log.setOrderId(orderId);
-        log.setToStatus(status);
-        log.setOperatorId(operatorId);
-        log.setRemark(remark);
-        log.setCreatedAt(LocalDateTime.now());
-
-        orderStatusLogMapper.insert(log);
-    }
-
-    /**
-     * 轉換為回應 DTO（精簡版）
-     */
     private OrderRes convertToRes(Order order) {
         User user = userMapper.selectByPrimaryKey(order.getUserId());
         Store store = storeMapper.selectByPrimaryKey(order.getStoreId());
@@ -435,21 +446,18 @@ public class OrderServiceImpl implements OrderService {
                 .shippingStatusName(OrderStatusEnum.getNameByCode(order.getStatus()))
                 .totalItems(order.getTotalItems())
                 .shippingMethod(order.getShippingMethod())
-                .shippingMethodName(order.getShippingMethod()) // TODO: 轉換為名稱
+                .shippingMethodName(getShippingMethodLabel(order.getShippingMethod()))
                 .recipientName(order.getRecipientName())
                 .recipientPhone(order.getRecipientPhone())
                 .trackingNo(order.getTrackingNo())
-                .totalAmount(SHIPPING_FEE)  // 總金額 = 運費
-                .paymentMethod("GOLD")  // 付款方式（金幣）
+                .totalAmount(SHIPPING_FEE)
+                .paymentMethod("GOLD")
                 .createdAt(order.getCreatedAt())
                 .shippedAt(order.getShippedAt())
                 .completedAt(order.getCompletedAt())
                 .build();
     }
 
-    /**
-     * 轉換訂單項目為回應 DTO
-     */
     private OrderItemRes convertItemToRes(OrderItem item) {
         return OrderItemRes.builder()
                 .id(item.getId())
@@ -466,11 +474,32 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
-    /**
-     * 檢查字串是否非空白
-     * 空字串 "" 會被視為 null 處理
-     */
+    private StatusLogRes convertLogToRes(OrderStatusLog log) {
+        return StatusLogRes.builder()
+                .fromStatus(log.getFromStatus())
+                .fromStatusLabel(log.getFromStatus() != null
+                        ? OrderStatusEnum.getNameByCode(log.getFromStatus()) : null)
+                .toStatus(log.getToStatus())
+                .toStatusLabel(OrderStatusEnum.getNameByCode(log.getToStatus()))
+                .operatorId(log.getOperatorId())
+                .operatorType(log.getOperatorType())
+                .remark(log.getRemark())
+                .createdAt(log.getCreatedAt())
+                .build();
+    }
+
+    private String getShippingMethodLabel(String code) {
+        if (code == null) return null;
+        switch (code) {
+            case "HOME_DELIVERY": return "宅配到府";
+            case "SEVEN_ELEVEN": return "7-ELEVEN 超商取貨";
+            case "FAMILY_MART": return "全家超商取貨";
+            default: return code;
+        }
+    }
+
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
     }
 }
+

@@ -1,7 +1,8 @@
 package com.group.admin.handler;
 
 import com.group.admin.exception.BusinessException;
-import com.group.admin.exception.InsufficientBalanceException;
+import com.group.admin.exception.ConflictException;
+import com.group.admin.exception.ForbiddenException;
 import com.group.admin.result.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,10 +28,6 @@ public class GlobalExceptionHandler {
 
     /**
      * 處理業務邏輯異常
-     * 根據 errorCode 映射到適當的 HTTP 狀態碼：
-     * - ORDER_ACCESS_DENIED / ACCESS_DENIED → 403
-     * - ORDER_STATUS_CONFLICT / STATUS_CONFLICT → 409
-     * - 其他 → 400
      * 
      * @param ex BusinessException
      * @return 統一錯誤回應
@@ -39,22 +36,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException ex) {
         log.warn("⚠️ 業務邏輯例外: [{}] {}", ex.getErrorCode(), ex.getMessage());
 
-        HttpStatus status = resolveHttpStatus(ex.getErrorCode());
         return ResponseEntity
-                .status(status)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
     }
 
-    /**
-     * 根據 errorCode 決定 HTTP 狀態碼
-     */
-    private HttpStatus resolveHttpStatus(String errorCode) {
-        if (errorCode == null) return HttpStatus.BAD_REQUEST;
-        return switch (errorCode) {
-            case "ORDER_ACCESS_DENIED", "ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
-            case "ORDER_STATUS_CONFLICT", "STATUS_CONFLICT" -> HttpStatus.CONFLICT;
-            default -> HttpStatus.BAD_REQUEST;
-        };
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<?>> handleForbiddenException(ForbiddenException ex) {
+        log.warn("🚫 禁止存取: [{}] {}", ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiResponse<?>> handleConflictException(ConflictException ex) {
+        log.warn("⚠️ 狀態衝突: [{}] {}", ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
     }
 
     /**
@@ -116,26 +116,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("COMMON_ACCESS_001", "無權執行此操作"));
-    }
-
-    /**
-     * 處理餘額不足異常
-     */
-    @ExceptionHandler(InsufficientBalanceException.class)
-    public ResponseEntity<ApiResponse<?>> handleInsufficientBalance(InsufficientBalanceException ex) {
-        log.warn("💰 餘額不足: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ApiResponse.error("WALLET_INSUFFICIENT_001", ex.getMessage()));
-    }
-
-    /**
-     * 處理並發修改異常
-     */
-    @ExceptionHandler(java.util.ConcurrentModificationException.class)
-    public ResponseEntity<ApiResponse<?>> handleConcurrentModification(java.util.ConcurrentModificationException ex) {
-        log.warn("⚡ 並發衝突: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("WALLET_CONCURRENT_001", "操作衝突，請重試"));
     }
 
     /**
