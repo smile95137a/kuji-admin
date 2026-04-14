@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.group.admin.entity.User;
-import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.UserRes;
 import com.group.admin.service.S3Service;
@@ -42,7 +41,6 @@ import lombok.extern.slf4j.Slf4j;
 public class UserController {
 
     private final UserService userService;
-    private final UserMapper userMapper;
     private final S3Service s3Service;
 
     @GetMapping("/hello")
@@ -202,7 +200,7 @@ public class UserController {
         // 如果有更新,儲存到資料庫
         if (updated) {
             user.setUpdatedAt(java.time.LocalDateTime.now());
-            userMapper.updateByPrimaryKey(user);
+            userService.updateUser(user);
             log.info("✅ 更新成功: userId={}", userId);
         } else {
             log.info("ℹ️ 無需更新（沒有欄位變更）");
@@ -311,7 +309,7 @@ public class UserController {
         // 更新使用者 avatar 欄位
         user.setAvatar(newImageUrl);
         user.setUpdatedAt(java.time.LocalDateTime.now());
-        userMapper.updateByPrimaryKey(user);
+        userService.updateUser(user);
         
         log.info("✅ 頭像更新成功：userId={}, imageUrl={}", userId, newImageUrl);
         

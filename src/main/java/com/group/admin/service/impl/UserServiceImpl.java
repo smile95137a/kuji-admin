@@ -329,4 +329,9 @@ public class UserServiceImpl implements UserService {
         
         log.info("✅ 密碼重設成功: userId={}, email={}", user.getId(), user.getEmail());
     }
+
+    @Override
+    public void updateUser(User user) {
+        userMapper.updateByPrimaryKey(user);
+    }
 }

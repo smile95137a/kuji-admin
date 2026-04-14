@@ -1,8 +1,5 @@
 package com.group.admin.controller.admin;
 
-import com.group.admin.entity.StoreUser;
-import com.group.admin.example.StoreUserExample;
-import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryWithPrizesCreateReq;
@@ -95,7 +92,6 @@ import java.util.List;
 public class AdminLotteryWithPrizesController {
     
     private final LotteryService lotteryService;
-    private final StoreUserMapper storeUserMapper;
     
     /**
      * 建立商品並同時新增獎品
@@ -126,8 +122,8 @@ public class AdminLotteryWithPrizesController {
         
         String userId = SecurityUtils.getCurrentUserId();
         
-        // ✅ 自動帶入 storeId（從資料庫查詢，不依賴 Security 層）
-        String storeId = getStoreIdByUserId(userId);
+        // ✅ 自動帶入 storeId（從 JWT principal 取得）
+        String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
         if (storeId != null) {
             req.getLottery().setStoreId(storeId);
         }
@@ -144,30 +140,6 @@ public class AdminLotteryWithPrizesController {
                 result.getId(), result.getTitle(), result.getTotalPrizeCount());
         
         return ResponseEntity.ok(result);
-    }
-    
-    /**
-     * 根據 userId 從資料庫查詢關聯的 storeId
-     * 
-     * @param userId 使用者 ID
-     * @return 第一個關聯的店家 ID，若無關聯則返回 null
-     */
-    private String getStoreIdByUserId(String userId) {
-        if (userId == null) {
-            return null;
-        }
-        StoreUserExample example = new StoreUserExample();
-        example.createCriteria().andAdminUserIdEqualTo(userId);
-        List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
-        
-        if (storeUsers.isEmpty()) {
-            log.warn("⚠️ 使用者沒有關聯店家: userId={}", userId);
-            return null;
-        }
-        
-        String storeId = storeUsers.get(0).getStoreId();
-        log.info("🏪 查詢到店家: userId={}, storeId={}", userId, storeId);
-        return storeId;
     }
     
     /**
@@ -326,7 +298,7 @@ public class AdminLotteryWithPrizesController {
         String userId = SecurityUtils.getCurrentUserId();
         
         // ✅ 自動帶入 storeId（店家負責人/編輯只能查看自己的商品）
-        String storeId = getStoreIdByUserId(userId);
+        String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
         if (storeId != null) {
             if (req == null) {
                 req = new QueryReq<>();

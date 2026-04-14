@@ -1,14 +1,6 @@
 package com.group.admin.controller.admin;
 
 import com.group.admin.constants.ApiPaths;
-import com.group.admin.entity.AdminUser;
-import com.group.admin.entity.AdminUserRole;
-import com.group.admin.entity.Role;
-import com.group.admin.example.AdminUserExample;
-import com.group.admin.example.AdminUserRoleExample;
-import com.group.admin.mapper.AdminUserMapper;
-import com.group.admin.mapper.AdminUserRoleMapper;
-import com.group.admin.mapper.RoleMapper;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
 import com.group.admin.req.admin.UpdateAdminUserReq;
@@ -32,7 +24,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 後台帳號管理控制器
@@ -51,9 +42,6 @@ import java.util.stream.Collectors;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
-    private final AdminUserMapper adminUserMapper;
-    private final AdminUserRoleMapper adminUserRoleMapper;
-    private final RoleMapper roleMapper;
 
     /**
      * 建立店家負責人帳號
@@ -296,61 +284,8 @@ public class AdminUserController {
     })
     public ResponseEntity<List<EnumOption>> getAllUserOptions() {
         log.info("📋 [後台] 取得所有後台用戶選項");
-        
-        // 查詢所有啟用的用戶
-        AdminUserExample example = new AdminUserExample();
-        example.createCriteria().andStatusEqualTo("ACTIVE");
-        example.setOrderByClause("display_name ASC");
-        
-        List<AdminUser> users = adminUserMapper.selectByExample(example);
-        
-        // 為每個用戶查詢角色並組裝選項
-        List<EnumOption> options = users.stream()
-                .map(user -> {
-                    // 查詢用戶的角色
-                    AdminUserRoleExample userRoleExample = new AdminUserRoleExample();
-                    userRoleExample.createCriteria().andAdminUserIdEqualTo(user.getId());
-                    List<AdminUserRole> userRoles = adminUserRoleMapper.selectByExample(userRoleExample);
-                    
-                    // 取得角色代碼
-                    String roleCode = "未知";
-                    if (!userRoles.isEmpty()) {
-                        String roleId = userRoles.get(0).getRoleId();
-                        Role role = roleMapper.selectByPrimaryKey(roleId);
-                        if (role != null) {
-                            roleCode = role.getCode();
-                        }
-                    }
-                    
-                    // 組裝選項
-                    return EnumOption.builder()
-                            .label(String.format("%s (%s)", user.getDisplayName(), user.getEmail()))
-                            .value(user.getId())
-                            .description(String.format("ID: %s | 角色: %s", 
-                                    user.getId(), 
-                                    getRoleDisplayName(roleCode)))
-                            .build();
-                })
-                .collect(Collectors.toList());
-        
+        List<EnumOption> options = adminUserService.getAllUserOptions();
         log.info("✅ [後台] 返回 {} 個用戶選項", options.size());
         return ResponseEntity.ok(options);
-    }
-
-    /**
-     * 取得角色顯示名稱
-     */
-    private String getRoleDisplayName(String roleCode) {
-        if (roleCode == null) return "未知";
-        switch (roleCode) {
-            case "ROLE_ADMIN":
-                return "系統管理員";
-            case "ROLE_STORE_OWNER":
-                return "店家負責人";
-            case "ROLE_STORE_EDITOR":
-                return "店家編輯";
-            default:
-                return "未知";
-        }
     }
 }

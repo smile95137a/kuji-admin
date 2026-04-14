@@ -414,4 +414,78 @@ public class StoreServiceImpl implements StoreService {
     private String toSnakeCase(String camelCase) {
         return camelCase.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
     }
+
+    @Override
+    public List<com.group.admin.res.common.EnumOption> getStoreOptionsForUser(String userId, boolean isAdmin, boolean activeOnly) {
+        StoreExample example = new StoreExample();
+        StoreExample.Criteria criteria = example.createCriteria();
+
+        if (!isAdmin) {
+            StoreUserExample storeUserExample = new StoreUserExample();
+            storeUserExample.createCriteria().andAdminUserIdEqualTo(userId);
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
+            if (storeUsers.isEmpty()) {
+                return java.util.Collections.emptyList();
+            }
+            List<String> storeIds = storeUsers.stream().map(StoreUser::getStoreId).collect(Collectors.toList());
+            criteria.andIdIn(storeIds);
+        }
+
+        if (activeOnly) {
+            criteria.andStatusEqualTo("ACTIVE");
+        }
+        example.setOrderByClause("store_name ASC");
+
+        List<Store> stores = storeMapper.selectByExample(example);
+        return stores.stream()
+                .map(store -> com.group.admin.res.common.EnumOption.builder()
+                        .label(store.getStoreName())
+                        .value(store.getId())
+                        .description(String.format("%s (%s)",
+                                store.getShortDescription() != null ? store.getShortDescription() : "",
+                                store.getStatus()))
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<com.group.admin.res.common.EnumOption> searchStoreOptions(String userId, boolean isAdmin, List<String> storeIds, String keyword, boolean activeOnly) {
+        StoreExample example = new StoreExample();
+        StoreExample.Criteria criteria = example.createCriteria();
+
+        if (!isAdmin && storeIds != null && !storeIds.isEmpty()) {
+            criteria.andIdIn(storeIds);
+        }
+        criteria.andStoreNameLike("%" + keyword + "%");
+        if (activeOnly) {
+            criteria.andStatusEqualTo("ACTIVE");
+        }
+        example.setOrderByClause("store_name ASC");
+
+        List<Store> stores = storeMapper.selectByExample(example);
+        return stores.stream()
+                .map(store -> com.group.admin.res.common.EnumOption.builder()
+                        .label(store.getStoreName())
+                        .value(store.getId())
+                        .description(store.getShortDescription())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<com.group.admin.res.common.EnumOption> getAllActiveStoreOptions() {
+        StoreExample example = new StoreExample();
+        example.createCriteria().andStatusEqualTo("ACTIVE");
+        example.setOrderByClause("store_name ASC");
+        List<Store> stores = storeMapper.selectByExample(example);
+        return stores.stream()
+                .map(store -> com.group.admin.res.common.EnumOption.builder()
+                        .label(store.getStoreName())
+                        .value(store.getId())
+                        .description(String.format("ID: %s | %s",
+                                store.getId(),
+                                store.getShortDescription() != null ? store.getShortDescription() : ""))
+                        .build())
+                .collect(Collectors.toList());
+    }
 }

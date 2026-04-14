@@ -1,9 +1,7 @@
 package com.group.admin.controller.api;
 
-import com.group.admin.entity.Store;
-import com.group.admin.example.StoreExample;
-import com.group.admin.mapper.StoreMapper;
 import com.group.admin.res.common.EnumOption;
+import com.group.admin.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 前台店家選項 Controller
@@ -32,15 +29,10 @@ import java.util.stream.Collectors;
 @Tag(name = "前台店家選項", description = "提供店家列表供前台使用（無需登入）")
 public class StoreOptionController {
 
-    private final StoreMapper storeMapper;
+    private final StoreService storeService;
 
     /**
      * 取得所有啟用的店家選項（前台專用）
-     * 
-     * <p>無需登入，固定只返回 status=ACTIVE 的店家</p>
-     * <p>用於前台 Banner 點擊跳轉時顯示店家資訊</p>
-     * 
-     * @return 啟用的店家列表
      */
     @GetMapping("/options")
     @Operation(summary = "取得店家選項（前台）", description = "返回所有啟用的店家，格式：{ label: 店家名稱, value: 店家ID }")
@@ -48,19 +40,7 @@ public class StoreOptionController {
         
         log.info("📋 [前台] 取得店家選項列表");
         
-        StoreExample example = new StoreExample();
-        example.createCriteria().andStatusEqualTo("ACTIVE");
-        example.setOrderByClause("store_name ASC");
-        
-        List<Store> stores = storeMapper.selectByExample(example);
-        
-        List<EnumOption> options = stores.stream()
-                .map(store -> EnumOption.builder()
-                        .label(store.getStoreName())
-                        .value(store.getId())
-                        .description(store.getShortDescription())
-                        .build())
-                .collect(Collectors.toList());
+        List<EnumOption> options = storeService.getAllActiveStoreOptions();
         
         log.info("✅ [前台] 返回 {} 個店家選項", options.size());
         return ResponseEntity.ok(options);

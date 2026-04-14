@@ -507,4 +507,43 @@ public class AdminUserServiceImpl implements AdminUserService {
         res.setStores(getUserStoreInfos(user.getId()));
         return res;
     }
+
+    @Override
+    public List<com.group.admin.res.common.EnumOption> getAllUserOptions() {
+        AdminUserExample example = new AdminUserExample();
+        example.createCriteria().andStatusEqualTo("ACTIVE");
+        example.setOrderByClause("display_name ASC");
+        List<AdminUser> users = adminUserMapper.selectByExample(example);
+
+        return users.stream()
+                .map(user -> {
+                    AdminUserRoleExample userRoleExample = new AdminUserRoleExample();
+                    userRoleExample.createCriteria().andAdminUserIdEqualTo(user.getId());
+                    List<AdminUserRole> userRoles = adminUserRoleMapper.selectByExample(userRoleExample);
+
+                    String roleCode = "未知";
+                    if (!userRoles.isEmpty()) {
+                        String roleId = userRoles.get(0).getRoleId();
+                        Role role = roleMapper.selectByPrimaryKey(roleId);
+                        if (role != null) {
+                            roleCode = role.getCode();
+                        }
+                    }
+
+                    String roleName;
+                    switch (roleCode) {
+                        case "ROLE_ADMIN": roleName = "系統管理員"; break;
+                        case "ROLE_STORE_OWNER": roleName = "店家負責人"; break;
+                        case "ROLE_STORE_EDITOR": roleName = "店家編輯"; break;
+                        default: roleName = "未知";
+                    }
+
+                    return com.group.admin.res.common.EnumOption.builder()
+                            .label(String.format("%s (%s)", user.getDisplayName(), user.getEmail()))
+                            .value(user.getId())
+                            .description(String.format("ID: %s | 角色: %s", user.getId(), roleName))
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
 }
