@@ -16,7 +16,11 @@ import com.group.admin.req.AuthRegisterReq;
 import com.group.admin.req.RefreshTokenReq;
 import com.group.admin.req.auth.ForgotPasswordReq;
 import com.group.admin.req.auth.ResetPasswordReq;
+import com.group.admin.req.referral.ReferralValidationReq;
 import com.group.admin.res.AuthRes;
+import com.group.admin.res.referral.ReferralCodeRes;
+import com.group.admin.res.referral.ReferralValidationRes;
+import com.group.admin.service.ReferralCodeService;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
 
@@ -47,6 +51,7 @@ public class ApiAuthController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final ReferralCodeService referralCodeService;
 
     /**
      * 使用者註冊
@@ -185,6 +190,44 @@ public class ApiAuthController {
             return ResponseEntity.badRequest().body(Map.of(
                 "error", e.getMessage()
             ));
+        }
+    }
+
+    /**
+     * 驗證推薦碼（公開無需登入）
+     * POST /api/auth/validate-referral
+     */
+    @PostMapping("/validate-referral")
+    @Operation(summary = "驗證推薦碼", description = "驗證推薦碼有效性，可在註冊頁面即時檢查")
+    public ResponseEntity<ReferralValidationRes> validateReferral(@Valid @RequestBody ReferralValidationReq req) {
+        log.info("🔍 驗證推薦碼: code={}", req.getReferralCode());
+        try {
+            String upperCode = req.getReferralCode().trim().toUpperCase();
+
+            // 1. 使用 validateCode 完整驗證（含 maxUsage 檢查）
+            boolean valid = referralCodeService.validateCode(upperCode);
+            if (!valid) {
+                return ResponseEntity.ok(ReferralValidationRes.builder()
+                        .isValid(false)
+                        .errorMessage("推薦碼不存在、已停用或已達使用上限")
+                        .build());
+            }
+
+            // 2. 取得推薦碼詳細資訊（店家名稱等）
+            ReferralCodeRes codeRes = referralCodeService.getByCode(upperCode);
+
+            return ResponseEntity.ok(ReferralValidationRes.builder()
+                    .isValid(true)
+                    .referrerName(codeRes != null ? codeRes.getStoreName() : null)
+                    .referredStoreId(codeRes != null ? codeRes.getStoreId() : null)
+                    .rewardDescription("輸入此推薦碼即可獲得店家專屬優惠")
+                    .build());
+        } catch (Exception e) {
+            log.warn("⚠️ 驗證推薦碼失敗: {}", e.getMessage());
+            return ResponseEntity.ok(ReferralValidationRes.builder()
+                    .isValid(false)
+                    .errorMessage("驗證失敗，請稍後再試")
+                    .build());
         }
     }
 }

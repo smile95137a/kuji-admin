@@ -1,6 +1,7 @@
 package com.group.admin.enums;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 交易類型枚舉
@@ -40,6 +41,9 @@ public enum TransactionTypeEnum implements DisplayableEnum {
         return this.name;
     }
 
+    /**
+     * 根據 code 取得對應的枚舉
+     */
     public static TransactionTypeEnum fromCode(String code) {
         for (TransactionTypeEnum type : values()) {
             if (type.getCode().equals(code)) {

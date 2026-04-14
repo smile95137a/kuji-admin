@@ -9,9 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 應用推薦碼請求
- * 用於 POST /api/user/apply-referral 端點
- * 適用於 OAuth 登入的新用戶補充推薦碼信息
+ * 推薦碼驗證請求
+ * 用於 POST /api/auth/validate-referral 端點
  * 
  * @author KUJI System
  * @since 1.0.0
@@ -20,12 +19,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(title = "應用推薦碼", description = "用戶補充推薦代碼（只限首次登入的 OAuth 新用戶）")
-public class ApplyReferralReq {
+@Schema(title = "推薦碼驗證", description = "驗證推薦碼是否有效並取得獎勵信息")
+public class ReferralValidationReq {
     
     /**
      * 推薦碼
-     * 格式：6-50 個字符的唯一代碼
+     * 格式：通常為 6-50 個字符的唯一代碼
+     * 例如：STORE123456 或 KUJI_2024
      */
     @NotBlank(message = "推薦碼不能為空")
     @Size(min = 6, max = 50, message = "推薦碼長度應在 6-50 字符之間")
@@ -35,5 +35,5 @@ public class ApplyReferralReq {
         example = "STORE123456",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
-    private String code;
+    private String referralCode;
 }
