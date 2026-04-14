@@ -35,7 +35,12 @@ public class OrderCondition extends BaseCondition {
     private String shippingMethod;
     
     /**
-     * 訂單狀態
+     * 訂單狀態（PENDING/PREPARING/SHIPPED/COMPLETED/CANCELLED）
+     */
+    private String status;
+
+    /**
+     * 訂單狀態（舊欄位，兼容）
      */
     private String shippingStatus;
     

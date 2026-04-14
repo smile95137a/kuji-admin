@@ -119,11 +119,16 @@ public class OrderDetailRes {
      * 備註
      */
     private String remark;
-    
+
     /**
      * 訂單項目列表
      */
     private List<OrderItemRes> items;
+
+    /**
+     * 訂單狀態歷程
+     */
+    private List<StatusLogRes> statusHistory;
     
     /**
      * 商品小計（元）

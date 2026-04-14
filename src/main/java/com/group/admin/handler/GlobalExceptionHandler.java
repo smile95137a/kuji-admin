@@ -1,6 +1,8 @@
 package com.group.admin.handler;
 
 import com.group.admin.exception.BusinessException;
+import com.group.admin.exception.ConflictException;
+import com.group.admin.exception.ForbiddenException;
 import com.group.admin.result.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,6 +38,22 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<?>> handleForbiddenException(ForbiddenException ex) {
+        log.warn("🚫 禁止存取: [{}] {}", ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiResponse<?>> handleConflictException(ConflictException ex) {
+        log.warn("⚠️ 狀態衝突: [{}] {}", ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
     }
 
