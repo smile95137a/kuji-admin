@@ -349,15 +349,16 @@ public class AdminStoreController {
      */
     @PutMapping("/{storeId}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "更新店家狀態", description = "啟用或停用店家（ADMIN 專用）")
-    public ResponseEntity<Void> updateStoreStatus(
+    @Operation(summary = "更新店家狀態", description = "啟用或停用店家（ADMIN 專用）；停用時加 ?force=true 強制下架所有商品")
+    public ResponseEntity<Object> updateStoreStatus(
             @PathVariable
             @Parameter(description = "店家 ID", example = "uuid-store-1")
             String storeId,
-            @Valid @RequestBody UpdateStoreStatusReq req) {
+            @Valid @RequestBody UpdateStoreStatusReq req,
+            @RequestParam(defaultValue = "false") boolean force) {
         String operatorId = SecurityUtils.getCurrentUserId();
-        log.info("🔄 [後台] 更新店家狀態: storeId={}, status={}", storeId, req.getStatus());
-        storeService.updateStoreStatus(storeId, req, operatorId);
-        return ResponseEntity.ok().build();
+        log.info("🔄 [後台] 更新店家狀態: storeId={}, status={}, force={}", storeId, req.getStatus(), force);
+        Object result = storeService.updateStoreStatus(storeId, req, force, operatorId);
+        return ResponseEntity.ok(result);
     }
 }

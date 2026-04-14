@@ -34,8 +34,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException ex) {
         log.warn("⚠️ 業務邏輯例外: [{}] {}", ex.getErrorCode(), ex.getMessage());
 
+        HttpStatus status = switch (ex.getErrorCode()) {
+            case "USERNAME_CONFLICT", "CONFLICT" -> HttpStatus.CONFLICT;
+            case "ACTIVE_LOTTERIES" -> HttpStatus.CONFLICT;
+            case "NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(status)
                 .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
     }
 

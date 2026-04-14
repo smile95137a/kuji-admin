@@ -5,9 +5,13 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.store.CreateStoreReq;
 import com.group.admin.req.store.UpdateStoreReq;
 import com.group.admin.req.store.UpdateStoreStatusReq;
+import com.group.admin.res.PageResult;
+import com.group.admin.res.store.StoreDetailRes;
+import com.group.admin.res.store.StoreListItemRes;
 import com.group.admin.res.store.StoreRes;
 
 import java.util.List;
+import java.util.Map;
 
 public interface StoreService {
 
@@ -23,18 +27,11 @@ public interface StoreService {
 
     // ========== 014-store-management new methods ==========
 
-    /**
-     * 建立店家（含負責人帳號）
-     */
     StoreRes createStore(CreateStoreReq req, String operatorId);
 
-    /**
-     * 更新店家狀態
-     */
-    void updateStoreStatus(String storeId, UpdateStoreStatusReq req, String operatorId);
+    Map<String, Object> updateStoreStatus(String storeId, UpdateStoreStatusReq req, boolean force, String operatorId);
 
-    /**
-     * 前台公開店家列表（僅啟用的）
-     */
-    List<StoreRes> getPublicStoreList(int page, int size);
+    PageResult<StoreListItemRes> listEnabledStores(int page, int size);
+
+    StoreDetailRes getPublicStoreDetail(String storeId);
 }

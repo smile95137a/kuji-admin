@@ -19,6 +19,7 @@
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
     <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.Store">
     <result column="long_description" jdbcType="LONGVARCHAR" property="longDescription" />
@@ -85,7 +86,7 @@
   <sql id="Base_Column_List">
     id, owner_id, store_name, short_description, logo_url, cover_image_url, email, phone, 
     address, facebook_url, instagram_url, line_id, business_hours, status, created_at, 
-    updated_at, updated_by
+    updated_at, updated_by, created_by
   </sql>
   <sql id="Blob_Column_List">
     long_description, remark
@@ -146,14 +147,16 @@
       email, phone, address, 
       facebook_url, instagram_url, line_id, 
       business_hours, status, created_at, 
-      updated_at, updated_by, long_description, 
+      updated_at, updated_by, created_by,
+      long_description, 
       remark)
     values (#{id,jdbcType=VARCHAR}, #{ownerId,jdbcType=VARCHAR}, #{storeName,jdbcType=VARCHAR}, 
       #{shortDescription,jdbcType=VARCHAR}, #{logoUrl,jdbcType=VARCHAR}, #{coverImageUrl,jdbcType=VARCHAR}, 
       #{email,jdbcType=VARCHAR}, #{phone,jdbcType=VARCHAR}, #{address,jdbcType=VARCHAR}, 
       #{facebookUrl,jdbcType=VARCHAR}, #{instagramUrl,jdbcType=VARCHAR}, #{lineId,jdbcType=VARCHAR}, 
       #{businessHours,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{longDescription,jdbcType=LONGVARCHAR}, 
+      #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{createdBy,jdbcType=VARCHAR},
+      #{longDescription,jdbcType=LONGVARCHAR}, 
       #{remark,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Store">
@@ -209,6 +212,9 @@
       </if>
       <if test="updatedBy != null">
         updated_by,
+      </if>
+      <if test="createdBy != null">
+        created_by,
       </if>
       <if test="longDescription != null">
         long_description,
@@ -268,6 +274,9 @@
       </if>
       <if test="updatedBy != null">
         #{updatedBy,jdbcType=VARCHAR},
+      </if>
+      <if test="createdBy != null">
+        #{createdBy,jdbcType=VARCHAR},
       </if>
       <if test="longDescription != null">
         #{longDescription,jdbcType=LONGVARCHAR},
@@ -337,6 +346,9 @@
       <if test="row.updatedBy != null">
         updated_by = #{row.updatedBy,jdbcType=VARCHAR},
       </if>
+      <if test="row.createdBy != null">
+        created_by = #{row.createdBy,jdbcType=VARCHAR},
+      </if>
       <if test="row.longDescription != null">
         long_description = #{row.longDescription,jdbcType=LONGVARCHAR},
       </if>
@@ -367,6 +379,7 @@
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{row.updatedBy,jdbcType=VARCHAR},
+      created_by = #{row.createdBy,jdbcType=VARCHAR},
       long_description = #{row.longDescription,jdbcType=LONGVARCHAR},
       remark = #{row.remark,jdbcType=LONGVARCHAR}
     <if test="example != null">
@@ -391,12 +404,13 @@
       status = #{row.status,jdbcType=VARCHAR},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
-      updated_by = #{row.updatedBy,jdbcType=VARCHAR}
+      updated_by = #{row.updatedBy,jdbcType=VARCHAR},
+      created_by = #{row.createdBy,jdbcType=VARCHAR}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Store">
+  <update id="updateByPrimaryKeySelective"parameterType="com.group.admin.entity.Store">
     update `store`
     <set>
       <if test="ownerId != null">
@@ -447,6 +461,9 @@
       <if test="updatedBy != null">
         updated_by = #{updatedBy,jdbcType=VARCHAR},
       </if>
+      <if test="createdBy != null">
+        created_by = #{createdBy,jdbcType=VARCHAR},
+      </if>
       <if test="longDescription != null">
         long_description = #{longDescription,jdbcType=LONGVARCHAR},
       </if>
@@ -474,6 +491,7 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{updatedBy,jdbcType=VARCHAR},
+      created_by = #{createdBy,jdbcType=VARCHAR},
       long_description = #{longDescription,jdbcType=LONGVARCHAR},
       remark = #{remark,jdbcType=LONGVARCHAR}
     where id = #{id,jdbcType=VARCHAR}
@@ -495,7 +513,22 @@
       status = #{status,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
-      updated_by = #{updatedBy,jdbcType=VARCHAR}
+      updated_by = #{updatedBy,jdbcType=VARCHAR},
+      created_by = #{createdBy,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <select id="selectEnabledStores" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from `store`
+    where status = 'ENABLED'
+    order by created_at DESC
+    limit #{limit} offset #{offset}
+  </select>
+
+  <select id="countEnabledStores" resultType="java.lang.Long">
+    select count(*) from `store` where status = 'ENABLED'
+  </select>
+
 </mapper>

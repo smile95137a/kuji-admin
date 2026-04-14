@@ -102,6 +102,24 @@ public class StoreRes {
     private String lineId;
 
     /**
+     * 店家主帳號 ID（扁平化欄位）
+     */
+    @Schema(description = "店家主帳號 ID")
+    private String ownerId;
+
+    /**
+     * 店家主帳號登入名稱
+     */
+    @Schema(description = "店家主帳號登入名稱")
+    private String ownerUsername;
+
+    /**
+     * 店家主帳號顯示名稱
+     */
+    @Schema(description = "店家主帳號顯示名稱")
+    private String ownerDisplayName;
+
+    /**
      * 狀態
      */
     @Schema(description = "狀態", example = "ACTIVE")
@@ -130,6 +148,12 @@ public class StoreRes {
      */
     @Schema(description = "建立時間")
     private LocalDateTime createdAt;
+
+    /**
+     * 建立者 ID
+     */
+    @Schema(description = "建立者 ID")
+    private String createdBy;
 
     /**
      * 更新時間

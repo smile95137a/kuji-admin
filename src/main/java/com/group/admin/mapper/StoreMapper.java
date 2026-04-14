@@ -33,4 +33,8 @@ public interface StoreMapper {
     int updateByPrimaryKeyWithBLOBs(Store row);
 
     int updateByPrimaryKey(Store row);
+
+    List<Store> selectEnabledStores(@Param("offset") int offset, @Param("limit") int limit);
+
+    long countEnabledStores();
 }
