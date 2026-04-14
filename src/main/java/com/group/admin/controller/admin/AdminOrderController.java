@@ -2,10 +2,8 @@ package com.group.admin.controller.admin;
 
 import com.group.admin.condition.OrderCondition;
 import com.group.admin.req.common.QueryReq;
-import com.group.admin.req.order.CancelOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
-import com.group.admin.req.order.UpdateOrderStatusReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.service.OrderService;
@@ -29,73 +27,64 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/orders")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
 public class AdminOrderController {
     
     private final OrderService orderService;
     
     /**
-     * 查詢訂單列表（支援多條件查詢，角色自動限定店家範圍）
+     * 查詢訂單列表（支援多條件查詢）
      */
     @PostMapping("/list")
     public ResponseEntity<List<OrderRes>> getOrders(
             @RequestBody(required = false) QueryReq<OrderCondition> req) {
-        String currentUserId = SecurityUtils.getCurrentAdminUserId();
-        String callerRole = resolveCallerRole();
-        log.info("🔍 [Admin] 查詢訂單列表：userId={}, role={}", currentUserId, callerRole);
+        log.info("🔍 [Admin] 查詢訂單列表");
         
-        List<OrderRes> orders = orderService.getOrderList(req, currentUserId, callerRole);
+        // 店家只能查看自己的訂單
+        String currentUserId = SecurityUtils.getCurrentAdminUserId();
+        if (SecurityUtils.hasRole("ROLE_STORE_OWNER") || SecurityUtils.hasRole("ROLE_STORE_EDITOR")) {
+            String primaryStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
+            if (primaryStoreId != null) {
+                if (req == null) req = new QueryReq<>();
+                if (req.getCondition() == null) req.setCondition(new OrderCondition());
+                req.getCondition().setStoreId(primaryStoreId);
+                log.info("店家負責人查詢：userId={}, storeId={}", currentUserId, primaryStoreId);
+            }
+        }
+        
+        List<OrderRes> orders = orderService.getOrders(req);
         
         return ResponseEntity.ok(orders);
     }
     
     /**
-     * 查詢訂單詳情（含權限檢查）
+     * 查詢訂單詳情
      */
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderDetailRes> getOrderDetail(@PathVariable String orderId) {
-        String currentUserId = SecurityUtils.getCurrentAdminUserId();
-        String callerRole = resolveCallerRole();
-        log.info("🔍 [Admin] 查詢訂單詳情：orderId={}, role={}", orderId, callerRole);
-        
-        OrderDetailRes order = orderService.getOrderById(orderId, currentUserId, callerRole);
+        log.info("🔍 [Admin] 查詢訂單詳情：orderId={}", orderId);
+        OrderDetailRes order = orderService.getOrderDetail(orderId);
         return ResponseEntity.ok(order);
-    }
-    
-    /**
-     * 統一更新訂單狀態（狀態機驗證）
-     */
-    @PutMapping("/{orderId}/status")
-    public ResponseEntity<Void> updateOrderStatus(
-            @PathVariable String orderId,
-            @Valid @RequestBody UpdateOrderStatusReq req) {
-        String operatorId = SecurityUtils.getCurrentAdminUserId();
-        log.info("🔍 [Admin] 更新訂單狀態：orderId={}, target={}, operator={}", 
-                orderId, req.getTargetStatus(), operatorId);
-        
-        orderService.updateOrderStatus(orderId, req, operatorId, "ADMIN");
-        
-        return ResponseEntity.ok().build();
     }
     
     /**
      * 準備出貨（店家確認備貨完成）
      */
     @PutMapping("/{orderId}/prepare")
-    public ResponseEntity<String> prepareShipping(@PathVariable String orderId) {
+    public ResponseEntity<Void> prepareShipping(@PathVariable String orderId) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
         log.info("🔍 [Admin] 準備出貨：orderId={}, operator={}", orderId, operatorId);
         
         orderService.prepareShipping(orderId, operatorId);
         
-        return ResponseEntity.ok("訂單已更新為備貨中");
+        return ResponseEntity.ok().build();
     }
     
     /**
      * 訂單出貨（填寫物流單號）
      */
     @PutMapping("/{orderId}/ship")
-    public ResponseEntity<String> ship(
+    public ResponseEntity<Void> ship(
             @PathVariable String orderId,
             @Valid @RequestBody OrderShipReq req) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
@@ -104,62 +93,36 @@ public class AdminOrderController {
         
         orderService.ship(orderId, req, operatorId);
         
-        return ResponseEntity.ok("訂單已出貨");
+        return ResponseEntity.ok().build();
     }
     
     /**
      * 完成訂單
      */
     @PutMapping("/{orderId}/complete")
-    public ResponseEntity<String> complete(@PathVariable String orderId) {
+    public ResponseEntity<Void> complete(@PathVariable String orderId) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
         log.info("🔍 [Admin] 完成訂單：orderId={}, operator={}", orderId, operatorId);
         
         orderService.complete(orderId, operatorId);
         
-        return ResponseEntity.ok("訂單已完成");
-    }
-    
-    /**
-     * 取消訂單（新版，使用 CancelOrderReq）
-     */
-    @PostMapping("/{orderId}/cancel")
-    public ResponseEntity<Void> cancelOrder(
-            @PathVariable String orderId,
-            @RequestBody(required = false) CancelOrderReq req) {
-        String operatorId = SecurityUtils.getCurrentAdminUserId();
-        log.info("🔍 [Admin] 取消訂單：orderId={}, operator={}", orderId, operatorId);
-        
-        orderService.cancelOrder(orderId, req, operatorId, "ADMIN");
-        
         return ResponseEntity.ok().build();
     }
     
     /**
-     * 取消訂單（舊版，向下相容）
+     * 取消訂單（僅限 PENDING 狀態）
      */
     @PutMapping("/{orderId}/cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> cancel(
+    public ResponseEntity<Void> cancel(
             @PathVariable String orderId,
             @Valid @RequestBody OrderCancelReq req) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
-        log.info("🔍 [Admin] 取消訂單（舊版）：orderId={}, reason={}, operator={}", 
+        log.info("🔍 [Admin] 取消訂單：orderId={}, reason={}, operator={}", 
                 orderId, req.getReason(), operatorId);
         
         orderService.cancel(orderId, req, operatorId);
         
-        return ResponseEntity.ok("訂單已取消");
-    }
-    
-    private String resolveCallerRole() {
-        if (SecurityUtils.isAdmin()) {
-            return "ROLE_ADMIN";
-        } else if (SecurityUtils.isStoreOwner()) {
-            return "ROLE_STORE_OWNER";
-        } else if (SecurityUtils.isStoreEditor()) {
-            return "ROLE_STORE_EDITOR";
-        }
-        return "UNKNOWN";
+        return ResponseEntity.ok().build();
     }
 }
