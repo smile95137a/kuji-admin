@@ -196,14 +196,20 @@ public class LotteryUpdateReq {
     private Integer bonusCostPerDraw;
 
     /**
-     * 觸發降價的獎品等級（DRAFT 狀態可修改，上架後鎖定）
+     * 付款方式：GOLD / BONUS / FREE
      */
-    @Schema(description = "觸發降價的獎品等級，例如 A 或 A,B", example = "A")
-    private String discountTriggerLevel;
+    @Schema(description = "付款方式：GOLD/BONUS/FREE", example = "GOLD")
+    private String paymentType;
 
     /**
-     * 最後賞模式（DRAFT 狀態可修改，上架後鎖定）
+     * 免費抽門檻（刮刮樂專用）
      */
-    @Schema(description = "最後賞模式：LAST_DRAW 或 POOL_IN", example = "LAST_DRAW")
-    private String lastPrizeMode;
+    @Schema(description = "免費抽門檻（刮刮樂：累計幾次後觸發免費抽）", example = "10")
+    private Integer freeDrawThreshold;
+
+    /**
+     * 下架策略：GRAND_PRIZE_DRAWN / ALL_DRAWN / MANUAL
+     */
+    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
+    private String delistStrategy;
 }

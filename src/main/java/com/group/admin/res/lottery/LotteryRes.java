@@ -307,50 +307,20 @@ public class LotteryRes {
     private Boolean ticketsGenerated;
 
     /**
-     * 來源商品ID（複製時設定）
+     * 付款方式：GOLD / BONUS / FREE
      */
-    @Schema(description = "來源商品ID（複製時設定）")
-    private String sourceLotteryId;
+    @Schema(description = "付款方式", example = "GOLD")
+    private String paymentType;
 
     /**
-     * 進入已配置狀態的時間
+     * 免費抽門檻（刮刮樂）
      */
-    @Schema(description = "進入已配置狀態的時間")
-    private LocalDateTime configuredAt;
+    @Schema(description = "免費抽門檻", example = "10")
+    private Integer freeDrawThreshold;
 
     /**
-     * 進入可抽狀態的時間
+     * 下架策略
      */
-    @Schema(description = "進入可抽狀態的時間")
-    private LocalDateTime drawableAt;
-
-    /**
-     * 觸發降價的獎品等級
-     */
-    @Schema(description = "觸發降價的獎品等級，例如 A 或 A,B", example = "A")
-    private String discountTriggerLevel;
-
-    /**
-     * 最後賞模式
-     */
-    @Schema(description = "最後賞模式：LAST_DRAW 或 POOL_IN", example = "LAST_DRAW")
-    private String lastPrizeMode;
-
-    /**
-     * 是否有最後賞
-     */
-    @Schema(description = "是否有最後賞", example = "false")
-    private Boolean hasLastPrize;
-
-    /**
-     * 是否在保護期內
-     */
-    @Schema(description = "是否在保護期內", example = "false")
-    private Boolean isProtected;
-
-    /**
-     * 保護期到期時間
-     */
-    @Schema(description = "保護期到期時間")
-    private LocalDateTime protectionExpiresAt;
+    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
+    private String delistStrategy;
 }

@@ -21,8 +21,6 @@ public class Lottery {
 
     private Long discountedPrice;
 
-    private String discountTriggerLevel;
-
     private Byte autoDiscountEnabled;
 
     private Byte allowMultiDraw;
@@ -37,8 +35,6 @@ public class Lottery {
 
     private Integer totalDraws;
 
-    private Integer remainingDraws;
-
     private Integer maxDraws;
 
     private Integer protectionDraws;
@@ -46,8 +42,6 @@ public class Lottery {
     private Integer protectionMinutes;
 
     private Byte freeDrawEnabled;
-
-    private String lastPrizeMode;
 
     private String designatedPrizeNumbers;
 
@@ -83,15 +77,15 @@ public class Lottery {
 
     private String remark;
 
-    private String sourceLotteryId;
-
-    private LocalDateTime configuredAt;
-
-    private LocalDateTime drawableAt;
-
     private String galleryImages;
 
     private String content;
+
+    private String paymentType;
+
+    private Integer freeDrawThreshold;
+
+    private String delistStrategy;
 
     public String getId() {
         return id;
@@ -405,51 +399,27 @@ public class Lottery {
         this.content = content == null ? null : content.trim();
     }
 
-    public Integer getRemainingDraws() {
-        return remainingDraws;
+    public String getPaymentType() {
+        return paymentType;
     }
 
-    public void setRemainingDraws(Integer remainingDraws) {
-        this.remainingDraws = remainingDraws;
+    public void setPaymentType(String paymentType) {
+        this.paymentType = paymentType == null ? null : paymentType.trim();
     }
 
-    public String getDiscountTriggerLevel() {
-        return discountTriggerLevel;
+    public Integer getFreeDrawThreshold() {
+        return freeDrawThreshold;
     }
 
-    public void setDiscountTriggerLevel(String discountTriggerLevel) {
-        this.discountTriggerLevel = discountTriggerLevel == null ? null : discountTriggerLevel.trim();
+    public void setFreeDrawThreshold(Integer freeDrawThreshold) {
+        this.freeDrawThreshold = freeDrawThreshold;
     }
 
-    public String getLastPrizeMode() {
-        return lastPrizeMode;
+    public String getDelistStrategy() {
+        return delistStrategy;
     }
 
-    public void setLastPrizeMode(String lastPrizeMode) {
-        this.lastPrizeMode = lastPrizeMode == null ? null : lastPrizeMode.trim();
-    }
-
-    public String getSourceLotteryId() {
-        return sourceLotteryId;
-    }
-
-    public void setSourceLotteryId(String sourceLotteryId) {
-        this.sourceLotteryId = sourceLotteryId == null ? null : sourceLotteryId.trim();
-    }
-
-    public LocalDateTime getConfiguredAt() {
-        return configuredAt;
-    }
-
-    public void setConfiguredAt(LocalDateTime configuredAt) {
-        this.configuredAt = configuredAt;
-    }
-
-    public LocalDateTime getDrawableAt() {
-        return drawableAt;
-    }
-
-    public void setDrawableAt(LocalDateTime drawableAt) {
-        this.drawableAt = drawableAt;
+    public void setDelistStrategy(String delistStrategy) {
+        this.delistStrategy = delistStrategy == null ? null : delistStrategy.trim();
     }
 }

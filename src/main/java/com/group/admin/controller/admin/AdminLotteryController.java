@@ -10,7 +10,10 @@ import com.group.admin.req.lottery.LotteryCopyReq;
 import com.group.admin.req.lottery.LotteryCreateReq;
 import com.group.admin.req.lottery.LotteryStatusChangeReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
+import com.group.admin.req.lottery.LotteryWithPrizesCreateReq;
+import com.group.admin.req.lottery.LotteryWithPrizesUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
+import com.group.admin.res.lottery.LotteryWithPrizesRes;
 import com.group.admin.service.LotteryService;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -357,5 +360,89 @@ public class AdminLotteryController {
         
         log.info("✅ 狀態變更成功: newStatus={}", result.getStatus());
         return ResponseEntity.ok(result);
+    }
+
+    // ==================== 商品+獎品整合 API（原 AdminLotteryWithPrizesController）====================
+    // ⚠️ URL: /admin/lottery/with-prizes/** (原為 /admin/lottery-with-prizes/**)
+
+    @PostMapping("/with-prizes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "建立商品與獎品", description = "一支 API 同時建立商品和獎品")
+    public ResponseEntity<LotteryWithPrizesRes> createLotteryWithPrizes(
+            @Valid @RequestBody LotteryWithPrizesCreateReq req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        String storeId = getStoreIdByUserId(userId);
+        if (storeId != null) {
+            req.getLottery().setStoreId(storeId);
+        }
+        
+        log.info("📦 建立商品與獎品: userId={}, storeId={}, title={}", userId, storeId, req.getLottery().getTitle());
+        
+        LotteryWithPrizesRes result = lotteryService.createLotteryWithPrizes(req, userId);
+        
+        log.info("✅ 建立成功: lotteryId={}", result.getId());
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/with-prizes/{lotteryId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "更新商品與獎品", description = "一支 API 同時更新商品和獎品")
+    public ResponseEntity<LotteryWithPrizesRes> updateLotteryWithPrizes(
+            @PathVariable String lotteryId,
+            @Valid @RequestBody LotteryWithPrizesUpdateReq req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("📝 更新商品與獎品: userId={}, lotteryId={}", userId, lotteryId);
+        
+        req.setLotteryId(lotteryId);
+        LotteryWithPrizesRes result = lotteryService.updateLotteryWithPrizes(req, userId);
+        
+        log.info("✅ 更新成功: lotteryId={}", result.getId());
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/with-prizes/{lotteryId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "查詢商品與獎品", description = "一支 API 返回商品和獎品完整資訊")
+    public ResponseEntity<LotteryWithPrizesRes> getLotteryWithPrizes(@PathVariable String lotteryId) {
+        
+        log.info("🔍 查詢商品與獎品: lotteryId={}", lotteryId);
+        LotteryWithPrizesRes result = lotteryService.getLotteryWithPrizes(lotteryId);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/with-prizes/list")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "查詢所有商品與獎品", description = "條件查詢商品和獎品，自動過濾店家")
+    public ResponseEntity<List<LotteryWithPrizesRes>> getAllLotteriesWithPrizes(
+            @RequestBody(required = false) QueryReq<LotteryCondition> req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        String storeId = getStoreIdByUserId(userId);
+        if (storeId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new LotteryCondition());
+            req.getCondition().setStoreId(storeId);
+        }
+        
+        log.info("🔍 查詢所有商品與獎品: userId={}, storeId={}", userId, storeId);
+        List<LotteryWithPrizesRes> result = lotteryService.getAllLotteriesWithPrizes(req);
+        log.info("✅ 查詢成功: 返回 {} 個商品", result.size());
+        return ResponseEntity.ok(result);
+    }
+
+    private String getStoreIdByUserId(String userId) {
+        if (userId == null) return null;
+        StoreUserExample example = new StoreUserExample();
+        example.createCriteria().andAdminUserIdEqualTo(userId);
+        List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
+        if (storeUsers.isEmpty()) {
+            log.warn("⚠️ 使用者沒有關聯店家: userId={}", userId);
+            return null;
+        }
+        String storeId = storeUsers.get(0).getStoreId();
+        log.info("🏪 查詢到店家: userId={}, storeId={}", userId, storeId);
+        return storeId;
     }
 }

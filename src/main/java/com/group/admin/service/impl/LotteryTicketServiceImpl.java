@@ -13,6 +13,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,7 @@ import com.group.admin.mapper.LotterySessionMapper;
 import com.group.admin.mapper.LotteryTicketMapper;
 import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.ConsumptionRecordService;
+import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.PrizeBoxService;
 import com.group.admin.service.SystemConfigService;
@@ -68,6 +72,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
 
     private final SecureRandom random = new SecureRandom();
     private final ConcurrentHashMap<String, Object> gachaLocks = new ConcurrentHashMap<>();
+
+    @Lazy
+    @Autowired
+    private LotteryService lotteryService;
 
     // ==================== 籤位生成 ====================
 
@@ -618,7 +626,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         }
 
         // 10. 返回結果
-        return new DrawResult(
+        DrawResult result = new DrawResult(
                 true, 
                 targetTicket.getId(), 
                 actualTicketNumber,
@@ -638,6 +646,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 lastPrizeName,
                 lastPrizeImageUrl
         );
+
+        // T016: 自動下架檢查
+        lotteryService.checkAndDelist(lotteryId);
+
+        return result;
     }
 
     @Override
@@ -799,7 +812,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             lastPrizeImageUrl = first.getImageUrl();
         }
 
-        return new DrawResult(
+        DrawResult resultByTicketId = new DrawResult(
                 true,
                 ticketId,
                 actualTicketNumber,
@@ -819,6 +832,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 lastPrizeName,
                 lastPrizeImageUrl
         );
+
+        // T016: 自動下架檢查
+        lotteryService.checkAndDelist(lotteryId);
+
+        return resultByTicketId;
     }
 
     @Override

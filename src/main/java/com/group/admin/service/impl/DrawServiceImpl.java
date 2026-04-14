@@ -13,11 +13,14 @@ import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.draw.DrawReq;
 import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
+import com.group.admin.service.LotteryService;
 import com.group.admin.service.PrizeBoxService;
 import com.group.admin.service.CoinService;
 import com.group.admin.service.ConsumptionRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +55,10 @@ public class DrawServiceImpl implements DrawService {
     private final PrizeBoxService prizeBoxService;
     private final ConsumptionRecordService consumptionRecordService;
     private final Random random = new Random();
+
+    @Lazy
+    @Autowired
+    private LotteryService lotteryService;
     
     @Override
     @Transactional
@@ -242,6 +249,9 @@ public class DrawServiceImpl implements DrawService {
         }
         
         log.info("✅ 抽獎完成：共 {} 次，消費 Gold={}, Bonus={}", count, goldUsed, bonusUsed);
+        
+        // T015: 自動下架檢查
+        lotteryService.checkAndDelist(lotteryId);
         
         // ========== Step 7: 記錄消費記錄 ==========
         if (goldUsed > 0) {
