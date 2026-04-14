@@ -29,15 +29,13 @@ public class PrizeBoxShipReq {
     private String shippingMethod;
     
     /**
-     * 收件人姓名
+     * 收件人姓名（若無 userAddressId 則必填）
      */
-    @NotBlank(message = "收件人姓名不可為空")
     private String recipientName;
     
     /**
-     * 收件人電話
+     * 收件人電話（若無 userAddressId 則必填）
      */
-    @NotBlank(message = "收件人電話不可為空")
     private String recipientPhone;
     
     /**
@@ -64,4 +62,9 @@ public class PrizeBoxShipReq {
      * 備註
      */
     private String remark;
+
+    /**
+     * 已儲存地址 ID（選填，有值時優先於請求欄位）
+     */
+    private String userAddressId;
 }

@@ -88,14 +88,34 @@ public class PrizeBoxItemRes {
      * 是否可回收
      */
     private Boolean isRecyclable;
-    
+
+    /**
+     * 是否可出貨
+     */
+    private Boolean isShippable;
+
+    /**
+     * 獎品市值
+     */
+    private Long prizeValue;
+
     /**
      * 回收可得紅利
      */
     private Long recycleBonus;
-    
+
     /**
      * 抽中時間
      */
     private LocalDateTime createdAt;
+
+    /**
+     * 出貨時間（歷史記錄用）
+     */
+    private LocalDateTime shippedAt;
+
+    /**
+     * 回收時間（歷史記錄用）
+     */
+    private LocalDateTime recycledAt;
 }

@@ -10,6 +10,7 @@
     <result column="draw_result_id" jdbcType="VARCHAR" property="drawResultId" />
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="is_recyclable" jdbcType="TINYINT" property="isRecyclable" />
+    <result column="is_shippable" jdbcType="TINYINT" property="isShippable" />
     <result column="recycle_bonus" jdbcType="BIGINT" property="recycleBonus" />
     <result column="recycled_at" jdbcType="TIMESTAMP" property="recycledAt" />
     <result column="shipped_at" jdbcType="TIMESTAMP" property="shippedAt" />
@@ -77,7 +78,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, user_id, lottery_id, prize_id, store_id, draw_result_id, status, is_recyclable, 
-    recycle_bonus, recycled_at, shipped_at, order_id, created_at, updated_at
+    is_shippable, recycle_bonus, recycled_at, shipped_at, order_id, created_at, updated_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.PrizeBoxExample" resultMap="BaseResultMap">
     select
@@ -113,12 +114,12 @@
   <insert id="insert" parameterType="com.group.admin.entity.PrizeBox">
     insert into `prize_box` (id, user_id, lottery_id, 
       prize_id, store_id, draw_result_id, 
-      status, is_recyclable, recycle_bonus, 
+      status, is_recyclable, is_shippable, recycle_bonus, 
       recycled_at, shipped_at, order_id, 
       created_at, updated_at)
     values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, 
       #{prizeId,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{drawResultId,jdbcType=VARCHAR}, 
-      #{status,jdbcType=VARCHAR}, #{isRecyclable,jdbcType=TINYINT}, #{recycleBonus,jdbcType=BIGINT}, 
+      #{status,jdbcType=VARCHAR}, #{isRecyclable,jdbcType=TINYINT}, #{isShippable,jdbcType=TINYINT}, #{recycleBonus,jdbcType=BIGINT}, 
       #{recycledAt,jdbcType=TIMESTAMP}, #{shippedAt,jdbcType=TIMESTAMP}, #{orderId,jdbcType=VARCHAR}, 
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
   </insert>
@@ -148,6 +149,9 @@
       </if>
       <if test="isRecyclable != null">
         is_recyclable,
+      </if>
+      <if test="isShippable != null">
+        is_shippable,
       </if>
       <if test="recycleBonus != null">
         recycle_bonus,
@@ -192,6 +196,9 @@
       </if>
       <if test="isRecyclable != null">
         #{isRecyclable,jdbcType=TINYINT},
+      </if>
+      <if test="isShippable != null">
+        #{isShippable,jdbcType=TINYINT},
       </if>
       <if test="recycleBonus != null">
         #{recycleBonus,jdbcType=BIGINT},
@@ -246,6 +253,9 @@
       <if test="row.isRecyclable != null">
         is_recyclable = #{row.isRecyclable,jdbcType=TINYINT},
       </if>
+      <if test="row.isShippable != null">
+        is_shippable = #{row.isShippable,jdbcType=TINYINT},
+      </if>
       <if test="row.recycleBonus != null">
         recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
       </if>
@@ -279,6 +289,7 @@
       draw_result_id = #{row.drawResultId,jdbcType=VARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
       is_recyclable = #{row.isRecyclable,jdbcType=TINYINT},
+      is_shippable = #{row.isShippable,jdbcType=TINYINT},
       recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
       recycled_at = #{row.recycledAt,jdbcType=TIMESTAMP},
       shipped_at = #{row.shippedAt,jdbcType=TIMESTAMP},
@@ -313,6 +324,9 @@
       <if test="isRecyclable != null">
         is_recyclable = #{isRecyclable,jdbcType=TINYINT},
       </if>
+      <if test="isShippable != null">
+        is_shippable = #{isShippable,jdbcType=TINYINT},
+      </if>
       <if test="recycleBonus != null">
         recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
       </if>
@@ -343,6 +357,7 @@
       draw_result_id = #{drawResultId,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},
       is_recyclable = #{isRecyclable,jdbcType=TINYINT},
+      is_shippable = #{isShippable,jdbcType=TINYINT},
       recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
       recycled_at = #{recycledAt,jdbcType=TIMESTAMP},
       shipped_at = #{shippedAt,jdbcType=TIMESTAMP},
@@ -351,4 +366,16 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+  <select id="selectByExampleWithPage" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from `prize_box`
+    <if test="example != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="example != null and example.orderByClause != null">
+      order by ${example.orderByClause}
+    </if>
+    limit #{offset}, #{limit}
+  </select>
 </mapper>

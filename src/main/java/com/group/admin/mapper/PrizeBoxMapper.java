@@ -27,4 +27,8 @@ public interface PrizeBoxMapper {
     int updateByPrimaryKeySelective(PrizeBox row);
 
     int updateByPrimaryKey(PrizeBox row);
+
+    List<PrizeBox> selectByExampleWithPage(@Param("example") PrizeBoxExample example,
+                                            @Param("offset") int offset,
+                                            @Param("limit") int limit);
 }
