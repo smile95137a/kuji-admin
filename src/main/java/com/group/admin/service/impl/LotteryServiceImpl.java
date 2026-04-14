@@ -1185,6 +1185,22 @@ public class LotteryServiceImpl implements LotteryService {
         res.setDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers());
         res.setTicketsGenerated(lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1);
         
+        // New fields from V011
+        res.setSourceLotteryId(lottery.getSourceLotteryId());
+        res.setConfiguredAt(lottery.getConfiguredAt());
+        res.setDrawableAt(lottery.getDrawableAt());
+        res.setDiscountTriggerLevel(lottery.getDiscountTriggerLevel());
+        res.setLastPrizeMode(lottery.getLastPrizeMode());
+        res.setIsProtected(false);
+        
+        // Check for last prize
+        try {
+            LotteryPrize lastPrize = lotteryPrizeMapper.selectLastPrizeByLotteryId(lottery.getId());
+            res.setHasLastPrize(lastPrize != null);
+        } catch (Exception e) {
+            res.setHasLastPrize(false);
+        }
+        
         return res;
     }
     
@@ -1829,5 +1845,42 @@ public class LotteryServiceImpl implements LotteryService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    @Override
+    @Transactional
+    public void promoteScheduledLotteries() {
+        List<com.group.admin.entity.Lottery> lotteries = lotteryMapper.selectScheduledForPromotion();
+        if (lotteries.isEmpty()) return;
+        log.info("📅 自動上架排程觸發: {} 個商品待上架", lotteries.size());
+        for (com.group.admin.entity.Lottery lottery : lotteries) {
+            try {
+                lottery.setStatus("ON_SHELF");
+                lottery.setUpdatedAt(LocalDateTime.now());
+                lotteryMapper.updateByPrimaryKeySelective(lottery);
+                log.info("✅ 商品自動上架: id={}, title={}", lottery.getId(), lottery.getTitle());
+            } catch (Exception e) {
+                log.error("❌ 商品自動上架失敗: id={}, error={}", lottery.getId(), e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void promoteDrawableLotteries() {
+        List<com.group.admin.entity.Lottery> lotteries = lotteryMapper.selectDrawableForStart();
+        if (lotteries.isEmpty()) return;
+        log.info("🎯 自動開放抽獎觸發: {} 個商品待開放", lotteries.size());
+        for (com.group.admin.entity.Lottery lottery : lotteries) {
+            try {
+                lottery.setStatus("DRAWABLE");
+                lottery.setDrawableAt(LocalDateTime.now());
+                lottery.setUpdatedAt(LocalDateTime.now());
+                lotteryMapper.updateByPrimaryKeySelective(lottery);
+                log.info("✅ 商品開放抽獎: id={}, title={}", lottery.getId(), lottery.getTitle());
+            } catch (Exception e) {
+                log.error("❌ 商品開放抽獎失敗: id={}, error={}", lottery.getId(), e.getMessage());
+            }
+        }
     }
 }

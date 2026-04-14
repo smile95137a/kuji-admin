@@ -226,4 +226,18 @@ public interface LotteryService {
      * @return 更新後的商品
      */
     LotteryRes changeStatus(String lotteryId, String targetStatus, String reason, String operatorId);
+
+    /**
+     * 自動推進排程中的商品（CONFIGURED → ON_SHELF）
+     * 
+     * 當 scheduled_at <= NOW() 時自動上架
+     */
+    void promoteScheduledLotteries();
+
+    /**
+     * 自動推進可抽商品（ON_SHELF → DRAWABLE）
+     * 
+     * 當 start_time <= NOW() 時自動變為可抽
+     */
+    void promoteDrawableLotteries();
 }

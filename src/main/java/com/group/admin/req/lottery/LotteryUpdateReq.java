@@ -194,4 +194,16 @@ public class LotteryUpdateReq {
      */
     @Schema(description = "每抽消耗紅利點數", example = "200")
     private Integer bonusCostPerDraw;
+
+    /**
+     * 觸發降價的獎品等級（DRAFT 狀態可修改，上架後鎖定）
+     */
+    @Schema(description = "觸發降價的獎品等級，例如 A 或 A,B", example = "A")
+    private String discountTriggerLevel;
+
+    /**
+     * 最後賞模式（DRAFT 狀態可修改，上架後鎖定）
+     */
+    @Schema(description = "最後賞模式：LAST_DRAW 或 POOL_IN", example = "LAST_DRAW")
+    private String lastPrizeMode;
 }

@@ -2,7 +2,6 @@ package com.group.admin.mapper;
 
 import com.group.admin.entity.Lottery;
 import com.group.admin.example.LotteryExample;
-import java.time.LocalDateTime;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
@@ -35,12 +34,24 @@ public interface LotteryMapper {
 
     int updateByPrimaryKey(Lottery row);
 
-    /** Update price_per_draw = discounted_price after grand prize sold out */
-    int updatePriceAfterGrandPrizeSoldOut(String lotteryId);
+    // ==================== 自訂方法 ====================
 
-    /** Find OFF_SHELF lotteries whose scheduled_at <= now for auto on-shelf */
-    List<Lottery> selectScheduledOnShelf(@Param("now") LocalDateTime now);
+    List<Lottery> selectScheduledForPromotion();
 
-    /** Find ON_SHELF lotteries whose end_time <= now for auto off-shelf */
-    List<Lottery> selectScheduledOffShelf(@Param("now") LocalDateTime now);
+    List<Lottery> selectDrawableForStart();
+
+    Lottery selectForUpdate(@Param("id") String id);
+
+    List<java.util.Map<String, Object>> selectPublicList(
+            @Param("category") String category,
+            @Param("storeId") String storeId,
+            @Param("keyword") String keyword,
+            @Param("sort") String sort,
+            @Param("offset") int offset,
+            @Param("pageSize") int pageSize);
+
+    Long countPublicList(
+            @Param("category") String category,
+            @Param("storeId") String storeId,
+            @Param("keyword") String keyword);
 }

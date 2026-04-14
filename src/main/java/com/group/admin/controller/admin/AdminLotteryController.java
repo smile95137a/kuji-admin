@@ -8,11 +8,10 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCopyReq;
 import com.group.admin.req.lottery.LotteryCreateReq;
+import com.group.admin.req.lottery.LotteryStatusChangeReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
-import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryService;
-import com.group.admin.service.LotteryTicketService;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,7 +46,6 @@ import java.util.List;
 public class AdminLotteryController {
 
     private final LotteryService lotteryService;
-    private final LotteryTicketService lotteryTicketService;
     private final StoreUserMapper storeUserMapper;
 
     /**
@@ -156,7 +154,7 @@ public class AdminLotteryController {
         LotteryRes result = lotteryService.createLottery(req);
         
         log.info("✅ 新增成功: id={}, storeId={}", result.getId(), result.getStoreId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
     }
 
     /**
@@ -315,24 +313,49 @@ public class AdminLotteryController {
         );
         
         log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
     }
 
     /**
-     * 取得商品所有籤位狀態（後台完整版）
-     *
-     * <p>後台管理員可查看所有籤位的完整資訊，包含獎品詳情與指定狀態。</p>
-     *
-     * @param id 商品 ID（UUID 格式）
-     * @return 籤位列表（完整資訊）
+     * 複製商品（路徑參數版）
+     * 
+     * @param id 來源商品 ID（UUID 格式）
+     * @return 複製後的商品
      */
-    @GetMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/tickets")
+    @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/copy")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
-    @Operation(summary = "取得商品籤位列表（後台完整版）", description = "後台查看所有籤位，包含獎品資訊與指定狀態")
-    public ResponseEntity<List<LotteryTicketRes>> getTickets(@PathVariable String id) {
-        log.info("🔍 [後台] 查詢籤位列表: lotteryId={}", id);
-        List<LotteryTicketRes> tickets = lotteryTicketService.getTicketsForBackend(id);
-        log.info("✅ 查詢成功: {} 筆籤位", tickets.size());
-        return ResponseEntity.ok(tickets);
+    @Operation(summary = "複製商品（路徑參數版）", description = "根據商品 ID 複製商品")
+    public ResponseEntity<LotteryRes> copyLotteryById(@PathVariable String id) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("📋 複製商品(path): userId={}, sourceLotteryId={}", userId, id);
+        
+        LotteryRes result = lotteryService.copyLottery(id, null, true, null);
+        
+        log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
+    }
+
+    /**
+     * 變更商品狀態（含 FSM 轉換驗證）
+     * 
+     * @param id  商品 ID（UUID 格式）
+     * @param req 狀態變更請求
+     * @return 更新後的商品
+     */
+    @PutMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @Operation(summary = "變更商品狀態", description = "變更商品狀態，含 FSM 轉換驗證")
+    public ResponseEntity<LotteryRes> changeStatus(
+            @PathVariable String id,
+            @Valid @RequestBody LotteryStatusChangeReq req) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("🔄 變更商品狀態: userId={}, lotteryId={}, targetStatus={}", userId, id, req.getTargetStatus());
+        
+        LotteryRes result = lotteryService.changeStatus(id, req.getTargetStatus(), req.getReason(), userId);
+        
+        log.info("✅ 狀態變更成功: newStatus={}", result.getStatus());
+        return ResponseEntity.ok(result);
     }
 }

@@ -90,6 +90,12 @@ public class LotteryCreateReq {
     private Boolean autoDiscountEnabled;
 
     /**
+     * 觸發降價的獎品等級（例如 "A" 或 "A,B"）
+     */
+    @Schema(description = "觸發降價的獎品等級，例如 A 或 A,B", example = "A")
+    private String discountTriggerLevel;
+
+    /**
      * 是否允許多抽
      */
     @Schema(description = "是否允許多抽", example = "true")
@@ -225,4 +231,71 @@ public class LotteryCreateReq {
      */
     @Schema(description = "每抽消耗紅利點數", example = "200")
     private Integer bonusCostPerDraw;
+
+    /**
+     * 保護抽數（大獎保底機制）
+     */
+    @Schema(description = "保護抽數（幾抽內必出大獎）", example = "50")
+    private Integer protectionDraws;
+
+    /**
+     * 保護時間（分鐘）
+     */
+    @Schema(description = "保護時間（分鐘，搶購保護）", example = "10")
+    private Integer protectionMinutes;
+
+    /**
+     * 最後賞模式
+     */
+    @Schema(description = "最後賞模式：LAST_DRAW 或 POOL_IN", example = "LAST_DRAW")
+    private String lastPrizeMode;
+
+    /**
+     * 初始獎品列表（建立商品時一併新增獎品）
+     */
+    @Schema(description = "獎品列表（可選，建立商品時一併新增獎品）")
+    private List<PrizeItem> prizes;
+
+    @Data
+    @Schema(description = "獎品項目")
+    public static class PrizeItem {
+        @NotBlank(message = "獎項名稱不可為空")
+        @Schema(description = "獎項名稱", example = "炭治郎公仔")
+        private String name;
+
+        @Schema(description = "獎項描述")
+        private String description;
+
+        @Schema(description = "獎項圖片URL")
+        private String imageUrl;
+
+        @Schema(description = "獎項等級：A/B/C/D/LAST/GRAND", example = "A")
+        private String level;
+
+        @NotNull(message = "獎項數量不可為空")
+        @Min(value = 1)
+        @Schema(description = "總數量", example = "1")
+        private Integer quantity;
+
+        @Schema(description = "抽中權重", example = "10")
+        private Integer weight;
+
+        @Schema(description = "獎項類型：physical/digital/point", example = "physical")
+        private String prizeType;
+
+        @Schema(description = "點數金額（僅 point 類型需要）")
+        private Long pointValue;
+
+        @Schema(description = "回收獎勵金額（0=不可回收）", example = "0")
+        private Long recycleBonus;
+
+        @Schema(description = "是否為最後賞", example = "false")
+        private Boolean isLastPrize;
+
+        @Schema(description = "是否為大賞", example = "true")
+        private Boolean isGrandPrize;
+
+        @Schema(description = "顯示排序", example = "1")
+        private Integer orderNum;
+    }
 }

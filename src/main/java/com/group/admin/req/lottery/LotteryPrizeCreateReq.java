@@ -95,6 +95,12 @@ public class LotteryPrizeCreateReq {
     private Long pointValue;
 
     /**
+     * 回收獎勵金額（0=不可回收）
+     */
+    @Schema(description = "回收獎勵金額（0=不可回收）", example = "0")
+    private Long recycleBonus;
+
+    /**
      * 是否為最後賞
      */
     @Schema(description = "是否為最後賞", example = "false")

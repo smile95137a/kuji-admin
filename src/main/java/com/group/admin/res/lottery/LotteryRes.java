@@ -305,4 +305,52 @@ public class LotteryRes {
      */
     @Schema(description = "是否已生成抽籤號碼", example = "true")
     private Boolean ticketsGenerated;
+
+    /**
+     * 來源商品ID（複製時設定）
+     */
+    @Schema(description = "來源商品ID（複製時設定）")
+    private String sourceLotteryId;
+
+    /**
+     * 進入已配置狀態的時間
+     */
+    @Schema(description = "進入已配置狀態的時間")
+    private LocalDateTime configuredAt;
+
+    /**
+     * 進入可抽狀態的時間
+     */
+    @Schema(description = "進入可抽狀態的時間")
+    private LocalDateTime drawableAt;
+
+    /**
+     * 觸發降價的獎品等級
+     */
+    @Schema(description = "觸發降價的獎品等級，例如 A 或 A,B", example = "A")
+    private String discountTriggerLevel;
+
+    /**
+     * 最後賞模式
+     */
+    @Schema(description = "最後賞模式：LAST_DRAW 或 POOL_IN", example = "LAST_DRAW")
+    private String lastPrizeMode;
+
+    /**
+     * 是否有最後賞
+     */
+    @Schema(description = "是否有最後賞", example = "false")
+    private Boolean hasLastPrize;
+
+    /**
+     * 是否在保護期內
+     */
+    @Schema(description = "是否在保護期內", example = "false")
+    private Boolean isProtected;
+
+    /**
+     * 保護期到期時間
+     */
+    @Schema(description = "保護期到期時間")
+    private LocalDateTime protectionExpiresAt;
 }

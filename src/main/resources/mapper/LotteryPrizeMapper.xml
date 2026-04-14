@@ -13,6 +13,7 @@
     <result column="weight" jdbcType="INTEGER" property="weight" />
     <result column="prize_type" jdbcType="VARCHAR" property="prizeType" />
     <result column="point_value" jdbcType="BIGINT" property="pointValue" />
+    <result column="recycle_bonus" jdbcType="BIGINT" property="recycleBonus" />
     <result column="is_last_prize" jdbcType="TINYINT" property="isLastPrize" />
     <result column="is_grand_prize" jdbcType="TINYINT" property="isGrandPrize" />
     <result column="order_num" jdbcType="INTEGER" property="orderNum" />
@@ -83,7 +84,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight, 
-    prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
+    prize_type, point_value, recycle_bonus, is_last_prize, is_grand_prize, order_num, created_at, updated_at
   </sql>
   <sql id="Blob_Column_List">
     description, content
@@ -142,16 +143,16 @@
     insert into `lottery_prize` (id, lottery_id, name, 
       image_url, level, prize_number, 
       quantity, remaining, weight, 
-      prize_type, point_value, is_last_prize, 
-      is_grand_prize, order_num, created_at, 
-      updated_at, description, content
+      prize_type, point_value, recycle_bonus,
+      is_last_prize, is_grand_prize, order_num, 
+      created_at, updated_at, description, content
       )
     values (#{id,jdbcType=VARCHAR}, #{lotteryId,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
       #{imageUrl,jdbcType=VARCHAR}, #{level,jdbcType=VARCHAR}, #{prizeNumber,jdbcType=VARCHAR}, 
       #{quantity,jdbcType=INTEGER}, #{remaining,jdbcType=INTEGER}, #{weight,jdbcType=INTEGER}, 
-      #{prizeType,jdbcType=VARCHAR}, #{pointValue,jdbcType=BIGINT}, #{isLastPrize,jdbcType=TINYINT}, 
-      #{isGrandPrize,jdbcType=TINYINT}, #{orderNum,jdbcType=INTEGER}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR}
+      #{prizeType,jdbcType=VARCHAR}, #{pointValue,jdbcType=BIGINT}, #{recycleBonus,jdbcType=BIGINT},
+      #{isLastPrize,jdbcType=TINYINT}, #{isGrandPrize,jdbcType=TINYINT}, #{orderNum,jdbcType=INTEGER}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{description,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR}
       )
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.LotteryPrize">
@@ -189,6 +190,9 @@
       </if>
       <if test="pointValue != null">
         point_value,
+      </if>
+      <if test="recycleBonus != null">
+        recycle_bonus,
       </if>
       <if test="isLastPrize != null">
         is_last_prize,
@@ -245,6 +249,9 @@
       </if>
       <if test="pointValue != null">
         #{pointValue,jdbcType=BIGINT},
+      </if>
+      <if test="recycleBonus != null">
+        #{recycleBonus,jdbcType=BIGINT},
       </if>
       <if test="isLastPrize != null">
         #{isLastPrize,jdbcType=TINYINT},
@@ -311,6 +318,9 @@
       <if test="row.pointValue != null">
         point_value = #{row.pointValue,jdbcType=BIGINT},
       </if>
+      <if test="row.recycleBonus != null">
+        recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
+      </if>
       <if test="row.isLastPrize != null">
         is_last_prize = #{row.isLastPrize,jdbcType=TINYINT},
       </if>
@@ -350,6 +360,7 @@
       weight = #{row.weight,jdbcType=INTEGER},
       prize_type = #{row.prizeType,jdbcType=VARCHAR},
       point_value = #{row.pointValue,jdbcType=BIGINT},
+      recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
       is_last_prize = #{row.isLastPrize,jdbcType=TINYINT},
       is_grand_prize = #{row.isGrandPrize,jdbcType=TINYINT},
       order_num = #{row.orderNum,jdbcType=INTEGER},
@@ -374,6 +385,7 @@
       weight = #{row.weight,jdbcType=INTEGER},
       prize_type = #{row.prizeType,jdbcType=VARCHAR},
       point_value = #{row.pointValue,jdbcType=BIGINT},
+      recycle_bonus = #{row.recycleBonus,jdbcType=BIGINT},
       is_last_prize = #{row.isLastPrize,jdbcType=TINYINT},
       is_grand_prize = #{row.isGrandPrize,jdbcType=TINYINT},
       order_num = #{row.orderNum,jdbcType=INTEGER},
@@ -416,6 +428,9 @@
       <if test="pointValue != null">
         point_value = #{pointValue,jdbcType=BIGINT},
       </if>
+      <if test="recycleBonus != null">
+        recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
+      </if>
       <if test="isLastPrize != null">
         is_last_prize = #{isLastPrize,jdbcType=TINYINT},
       </if>
@@ -452,6 +467,7 @@
       weight = #{weight,jdbcType=INTEGER},
       prize_type = #{prizeType,jdbcType=VARCHAR},
       point_value = #{pointValue,jdbcType=BIGINT},
+      recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
       is_last_prize = #{isLastPrize,jdbcType=TINYINT},
       is_grand_prize = #{isGrandPrize,jdbcType=TINYINT},
       order_num = #{orderNum,jdbcType=INTEGER},
@@ -473,6 +489,7 @@
       weight = #{weight,jdbcType=INTEGER},
       prize_type = #{prizeType,jdbcType=VARCHAR},
       point_value = #{pointValue,jdbcType=BIGINT},
+      recycle_bonus = #{recycleBonus,jdbcType=BIGINT},
       is_last_prize = #{isLastPrize,jdbcType=TINYINT},
       is_grand_prize = #{isGrandPrize,jdbcType=TINYINT},
       order_num = #{orderNum,jdbcType=INTEGER},
@@ -481,41 +498,34 @@
     where id = #{id,jdbcType=VARCHAR}
   </update>
 
-  <!-- Lock single prize row for update (pessimistic lock) -->
-  <select id="selectByPrimaryKeyForUpdate" parameterType="java.lang.String" resultMap="BaseResultMap">
-    SELECT id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight,
-           prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
-    FROM `lottery_prize`
-    WHERE id = #{id}
-    FOR UPDATE
-  </select>
+  <!-- ==================== 自訂 SQL ==================== -->
 
-  <!-- Count grand prizes with remaining stock -->
-  <select id="countGrandPrizesWithStock" parameterType="java.lang.String" resultType="int">
-    SELECT COUNT(*) FROM `lottery_prize`
-    WHERE lottery_id = #{lotteryId}
-      AND is_grand_prize = 1
-      AND remaining > 0
-  </select>
+  <insert id="batchInsertPrizes" parameterType="java.util.List">
+    insert into `lottery_prize` (id, lottery_id, name, image_url, level, prize_number,
+      quantity, remaining, weight, prize_type, point_value, recycle_bonus, is_last_prize,
+      is_grand_prize, order_num, created_at, updated_at, description, content)
+    values
+    <foreach collection="list" item="item" separator=",">
+      (#{item.id,jdbcType=VARCHAR}, #{item.lotteryId,jdbcType=VARCHAR}, #{item.name,jdbcType=VARCHAR},
+       #{item.imageUrl,jdbcType=VARCHAR}, #{item.level,jdbcType=VARCHAR}, #{item.prizeNumber,jdbcType=VARCHAR},
+       #{item.quantity,jdbcType=INTEGER}, #{item.remaining,jdbcType=INTEGER}, #{item.weight,jdbcType=INTEGER},
+       #{item.prizeType,jdbcType=VARCHAR}, #{item.pointValue,jdbcType=BIGINT}, #{item.recycleBonus,jdbcType=BIGINT},
+       #{item.isLastPrize,jdbcType=TINYINT},
+       #{item.isGrandPrize,jdbcType=TINYINT}, #{item.orderNum,jdbcType=INTEGER}, #{item.createdAt,jdbcType=TIMESTAMP},
+       #{item.updatedAt,jdbcType=TIMESTAMP}, #{item.description,jdbcType=LONGVARCHAR}, #{item.content,jdbcType=LONGVARCHAR})
+    </foreach>
+  </insert>
 
-  <!-- Get last prize for lottery (is_last_prize=1 and remaining>0) -->
-  <select id="selectLastPrize" parameterType="java.lang.String" resultMap="BaseResultMap">
-    SELECT id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight,
-           prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
+  <delete id="deleteByLotteryId">
+    delete from `lottery_prize` where lottery_id = #{lotteryId,jdbcType=VARCHAR}
+  </delete>
+
+  <select id="selectLastPrizeByLotteryId" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    SELECT <include refid="Base_Column_List" />, <include refid="Blob_Column_List" />
     FROM `lottery_prize`
-    WHERE lottery_id = #{lotteryId}
+    WHERE lottery_id = #{lotteryId,jdbcType=VARCHAR}
       AND is_last_prize = 1
-      AND remaining > 0
     LIMIT 1
   </select>
 
-  <!-- Get all prizes with remaining stock for weighted draw -->
-  <select id="selectAvailablePrizes" parameterType="java.lang.String" resultMap="BaseResultMap">
-    SELECT id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight,
-           prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
-    FROM `lottery_prize`
-    WHERE lottery_id = #{lotteryId}
-      AND remaining > 0
-    ORDER BY order_num
-  </select>
 </mapper>
