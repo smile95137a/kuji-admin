@@ -27,4 +27,10 @@ public interface UserMapper {
     int updateByPrimaryKeySelective(User row);
 
     int updateByPrimaryKey(User row);
+
+    int updateBalanceWithVersion(@Param("userId") String userId,
+                                  @Param("goldCoins") Long goldCoins,
+                                  @Param("bonusCoins") Long bonusCoins,
+                                  @Param("totalRecharged") Long totalRecharged,
+                                  @Param("version") Integer version);
 }

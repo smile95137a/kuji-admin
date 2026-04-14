@@ -12,6 +12,7 @@ import lombok.Getter;
 public enum TransactionTypeEnum {
     
     RECHARGE("RECHARGE", "儲值"),
+    BONUS_GRANT("BONUS_GRANT", "紅利贈送"),
     DRAW("DRAW", "抽獎消費"),
     RECYCLE("RECYCLE", "獎品回收"),
     REFUND("REFUND", "退款"),

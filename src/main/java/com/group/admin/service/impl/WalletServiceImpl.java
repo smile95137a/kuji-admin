@@ -7,12 +7,16 @@ import com.group.admin.enums.CoinTypeEnum;
 import com.group.admin.enums.TransactionTypeEnum;
 import com.group.admin.example.WalletTransactionExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.exception.InsufficientBalanceException;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.mapper.WalletTransactionMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.wallet.WalletAdjustReq;
+import com.group.admin.res.PageResult;
+import com.group.admin.res.wallet.TransactionRes;
 import com.group.admin.res.wallet.UserWalletRes;
 import com.group.admin.res.wallet.WalletTransactionRes;
+import com.group.admin.config.WalletProperties;
 import com.group.admin.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +47,7 @@ public class WalletServiceImpl implements WalletService {
     
     private final WalletTransactionMapper walletTransactionMapper;
     private final UserMapper userMapper;
+    private final WalletProperties walletProperties;
     
     @Override
     @Transactional
@@ -394,5 +399,100 @@ public class WalletServiceImpl implements WalletService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    @Override
+    @Transactional
+    public void deductCoins(String userId, long amount, String referenceId, String reason) {
+        log.info("🔍 deductCoins: userId={}, amount={}", userId, amount);
+        int maxRetries = walletProperties.getOptimisticLock().getMaxRetries();
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            User user = userMapper.selectByPrimaryKey(userId);
+            if (user == null) throw new BusinessException("使用者不存在");
+            long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
+            long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
+            if (gold + bonus < amount) {
+                throw new InsufficientBalanceException(userId, amount, gold + bonus);
+            }
+            // Gold first
+            long goldDeduct = Math.min(gold, amount);
+            long bonusDeduct = amount - goldDeduct;
+            long newGold = gold - goldDeduct;
+            long newBonus = bonus - bonusDeduct;
+            Integer version = user.getVersion() != null ? user.getVersion() : 0;
+            Long totalRecharged = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
+            int rows = userMapper.updateBalanceWithVersion(userId, newGold, newBonus, totalRecharged, version);
+            if (rows == 0) {
+                log.warn("⚡ 樂觀鎖衝突 attempt={}", attempt + 1);
+                if (attempt == maxRetries - 1) {
+                    throw new java.util.ConcurrentModificationException("並發衝突，請重試");
+                }
+                continue;
+            }
+            WalletTransaction tx = new WalletTransaction();
+            tx.setId(UUID.randomUUID().toString());
+            tx.setUserId(userId);
+            tx.setTransactionType(TransactionTypeEnum.DRAW.getCode());
+            tx.setCoinType(bonusDeduct > 0 ? "MIXED" : "GOLD");
+            tx.setAmount(-amount);
+            tx.setBalanceAfter(newGold);
+            tx.setGoldDelta(-goldDeduct);
+            tx.setBonusDelta(-bonusDeduct);
+            tx.setGoldAfter(newGold);
+            tx.setBonusAfter(newBonus);
+            tx.setReferenceId(referenceId);
+            tx.setReason(reason);
+            tx.setRelatedId(referenceId);
+            tx.setDescription(reason);
+            tx.setCreatedAt(LocalDateTime.now());
+            walletTransactionMapper.insertSelective(tx);
+            log.info("✅ deductCoins成功: newGold={}, newBonus={}", newGold, newBonus);
+            return;
+        }
+    }
+
+    @Override
+    public boolean hasEnoughBalance(User user, long amount) {
+        long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
+        long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
+        return gold + bonus >= amount;
+    }
+
+    @Override
+    public PageResult<TransactionRes> getTransactionsPaged(String userId, int page, int size, String type, LocalDateTime startDate, LocalDateTime endDate) {
+        WalletTransactionExample example = new WalletTransactionExample();
+        WalletTransactionExample.Criteria criteria = example.createCriteria();
+        criteria.andUserIdEqualTo(userId);
+        if (type != null && !type.isBlank()) {
+            criteria.andTransactionTypeEqualTo(type);
+        }
+        if (startDate != null) {
+            criteria.andCreatedAtGreaterThanOrEqualTo(startDate);
+        }
+        if (endDate != null) {
+            criteria.andCreatedAtLessThanOrEqualTo(endDate);
+        }
+        example.setOrderByClause("created_at DESC");
+
+        List<WalletTransaction> all = walletTransactionMapper.selectByExample(example);
+        long total = all.size();
+
+        int fromIndex = page * size;
+        int toIndex = (int) Math.min((long) fromIndex + size, total);
+        List<WalletTransaction> pageData = fromIndex < total ? all.subList(fromIndex, toIndex) : List.of();
+
+        List<TransactionRes> content = pageData.stream().map(tx -> TransactionRes.builder()
+                .id(tx.getId())
+                .transactionType(tx.getTransactionType())
+                .goldDelta(tx.getGoldDelta())
+                .bonusDelta(tx.getBonusDelta())
+                .goldAfter(tx.getGoldAfter())
+                .bonusAfter(tx.getBonusAfter())
+                .referenceId(tx.getReferenceId())
+                .reason(tx.getReason())
+                .createdAt(tx.getCreatedAt())
+                .build()).collect(Collectors.toList());
+
+        return PageResult.of(page + 1, size, total, content);
     }
 }

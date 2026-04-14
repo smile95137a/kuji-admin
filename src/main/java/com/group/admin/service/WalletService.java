@@ -5,7 +5,11 @@ import com.group.admin.req.wallet.WalletAdjustReq;
 import com.group.admin.res.wallet.UserWalletRes;
 import com.group.admin.res.wallet.WalletTransactionRes;
 import com.group.admin.condition.WalletTransactionCondition;
+import com.group.admin.entity.User;
+import com.group.admin.res.PageResult;
+import com.group.admin.res.wallet.TransactionRes;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -102,4 +106,36 @@ public interface WalletService {
      * @return 是否足夠
      */
     boolean hasEnoughGold(String userId, Long amount);
+
+    /**
+     * 扣除點數（金幣優先，不足再扣紅利），使用樂觀鎖
+     *
+     * @param userId      玩家 ID
+     * @param amount      扣除總金額
+     * @param referenceId 關聯 ID
+     * @param reason      說明
+     */
+    void deductCoins(String userId, long amount, String referenceId, String reason);
+
+    /**
+     * 檢查使用者總餘額是否足夠
+     *
+     * @param user   玩家實體
+     * @param amount 需要的金額
+     * @return 是否足夠
+     */
+    boolean hasEnoughBalance(User user, long amount);
+
+    /**
+     * 分頁查詢交易記錄
+     *
+     * @param userId    玩家 ID
+     * @param page      頁碼（從 0 開始）
+     * @param size      每頁筆數
+     * @param type      交易類型篩選（可選）
+     * @param startDate 開始日期（可選）
+     * @param endDate   結束日期（可選）
+     * @return 分頁結果
+     */
+    PageResult<TransactionRes> getTransactionsPaged(String userId, int page, int size, String type, LocalDateTime startDate, LocalDateTime endDate);
 }
