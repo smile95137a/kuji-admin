@@ -1,40 +1,36 @@
 package com.group.admin.service;
 
 import com.group.admin.req.common.QueryReq;
-import com.group.admin.req.wallet.WalletAdjustReq;
-import com.group.admin.res.wallet.UserWalletRes;
-import com.group.admin.res.wallet.WalletTransactionRes;
-import com.group.admin.condition.WalletTransactionCondition;
-import com.group.admin.entity.User;
-import com.group.admin.res.PageResult;
-import com.group.admin.res.wallet.TransactionRes;
+import com.group.admin.req.wallet.CoinAdjustReq;
+import com.group.admin.res.wallet.UserCoinRes;
+import com.group.admin.res.wallet.CoinTransactionRes;
+import com.group.admin.condition.CoinTransactionCondition;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 錢包服務介面
+ * 金幣服務介面
  * 
  * @author Kuji Admin
  * @since 2026-01-09
  */
-public interface WalletService {
+public interface CoinService {
     
     /**
-     * 建立錢包（註冊時自動建立）
+     * 建立金幣帳戶（註冊時自動建立）
      * 
      * @param userId 玩家 ID
-     * @return 錢包資訊
+     * @return 金幣資訊
      */
-    UserWalletRes createWallet(String userId);
+    UserCoinRes createWallet(String userId);
     
     /**
-     * 查詢錢包資訊
+     * 查詢金幣資訊
      * 
      * @param userId 玩家 ID
-     * @return 錢包資訊
+     * @return 金幣資訊
      */
-    UserWalletRes getWallet(String userId);
+    UserCoinRes getWallet(String userId);
     
     /**
      * 扣除金幣（抽獎消費）
@@ -88,7 +84,7 @@ public interface WalletService {
      * @param req 調整請求
      * @param operatorId 操作者 ID
      */
-    void adjustCoins(WalletAdjustReq req, String operatorId);
+    void adjustCoins(CoinAdjustReq req, String operatorId);
     
     /**
      * 查詢交易記錄
@@ -96,46 +92,14 @@ public interface WalletService {
      * @param req 查詢請求
      * @return 交易記錄列表
      */
-    List<WalletTransactionRes> getTransactions(QueryReq<WalletTransactionCondition> req);
+    List<CoinTransactionRes> getTransactions(QueryReq<CoinTransactionCondition> req);
     
     /**
-     * 檢查餘額是否足夠
+     * 檢查金幣餘額是否足夠
      * 
      * @param userId 玩家 ID
      * @param amount 需要的金額
      * @return 是否足夠
      */
     boolean hasEnoughGold(String userId, Long amount);
-
-    /**
-     * 扣除點數（金幣優先，不足再扣紅利），使用樂觀鎖
-     *
-     * @param userId      玩家 ID
-     * @param amount      扣除總金額
-     * @param referenceId 關聯 ID
-     * @param reason      說明
-     */
-    void deductCoins(String userId, long amount, String referenceId, String reason);
-
-    /**
-     * 檢查使用者總餘額是否足夠
-     *
-     * @param user   玩家實體
-     * @param amount 需要的金額
-     * @return 是否足夠
-     */
-    boolean hasEnoughBalance(User user, long amount);
-
-    /**
-     * 分頁查詢交易記錄
-     *
-     * @param userId    玩家 ID
-     * @param page      頁碼（從 0 開始）
-     * @param size      每頁筆數
-     * @param type      交易類型篩選（可選）
-     * @param startDate 開始日期（可選）
-     * @param endDate   結束日期（可選）
-     * @return 分頁結果
-     */
-    PageResult<TransactionRes> getTransactionsPaged(String userId, int page, int size, String type, LocalDateTime startDate, LocalDateTime endDate);
 }

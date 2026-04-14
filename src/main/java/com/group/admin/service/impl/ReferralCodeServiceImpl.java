@@ -1,45 +1,32 @@
 package com.group.admin.service.impl;
 
-import com.group.admin.condition.report.ReferralReportCondition;
-import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.ReferralCode;
 import com.group.admin.entity.ReferralRecord;
 import com.group.admin.entity.Store;
-import com.group.admin.entity.StoreUser;
 import com.group.admin.entity.User;
-import com.group.admin.example.AdminUserExample;
 import com.group.admin.example.ReferralCodeExample;
 import com.group.admin.example.ReferralRecordExample;
-import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
-import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.ReferralCodeMapper;
 import com.group.admin.mapper.ReferralRecordMapper;
 import com.group.admin.mapper.StoreMapper;
-import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.repository.ReferralCodeRepository;
 import com.group.admin.repository.ReferralRecordRepository;
 import com.group.admin.req.referral.ReferralCodeCreateReq;
 import com.group.admin.req.referral.ReferralCodeUpdateReq;
-import com.group.admin.res.referral.AdminReferralStatsRes;
 import com.group.admin.res.referral.ReferralCodeRes;
 import com.group.admin.res.referral.ReferralRecordRes;
 import com.group.admin.res.referral.ReferralStatsRes;
-import com.group.admin.res.referral.ReferralValidateRes;
 import com.group.admin.service.ReferralCodeService;
-import com.group.admin.service.WalletService;
+import com.group.admin.service.CoinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -55,9 +42,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     private final ReferralRecordRepository referralRecordRepository;
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
-    private final AdminUserMapper adminUserMapper;
-    private final StoreUserMapper storeUserMapper;
-    private final WalletService walletService;
+    private final CoinService walletService;
 
     private static final long DEFAULT_BONUS_PER_USE = 50L;
     private static final int DEFAULT_MAX_USAGE = 100;
@@ -65,38 +50,21 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     @Override
     @Transactional
     public ReferralCodeRes create(ReferralCodeCreateReq req) {
-        log.info("🎫 建立推薦碼: storeId={}", req.getStoreId());
-
+        log.info("🎫 建立推薦碼: code={}, storeId={}", req.getCode(), req.getStoreId());
+        
+        ReferralCode existingCode = referralCodeRepository.selectByCode(req.getCode());
+        if (existingCode != null) {
+            throw new BusinessException("推薦碼已存在: " + req.getCode());
+        }
+        
         Store store = storeMapper.selectByPrimaryKey(req.getStoreId());
         if (store == null) {
             throw new BusinessException("店家不存在: " + req.getStoreId());
         }
-
-        // Auto-generate 8-char uppercase alphanumeric code with collision retry (max 5)
-        String code;
-        if (req.getCode() != null && !req.getCode().trim().isEmpty()) {
-            code = req.getCode().trim().toUpperCase();
-            if (referralCodeRepository.selectByCode(code) != null) {
-                throw new BusinessException("推薦碼已存在: " + code);
-            }
-        } else {
-            code = null;
-            for (int attempt = 0; attempt < 5; attempt++) {
-                String candidate = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-                if (referralCodeRepository.selectByCode(candidate) == null) {
-                    code = candidate;
-                    break;
-                }
-            }
-            if (code == null) {
-                throw new BusinessException("推薦碼生成失敗，請重試");
-            }
-        }
-        log.info("🎫 生成推薦碼: code={}", code);
-
+        
         ReferralCode referralCode = new ReferralCode();
         referralCode.setId(UUID.randomUUID().toString());
-        referralCode.setCode(code);
+        referralCode.setCode(req.getCode().toUpperCase());
         referralCode.setStoreId(req.getStoreId());
         referralCode.setDescription(req.getDescription());
         referralCode.setOwnerId(req.getStoreId());
@@ -107,10 +75,10 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         referralCode.setRewardBonus(DEFAULT_BONUS_PER_USE);
         referralCode.setCreatedAt(LocalDateTime.now());
         referralCode.setUpdatedAt(LocalDateTime.now());
-
+        
         referralCodeMapper.insert(referralCode);
         log.info("✅ 推薦碼建立成功: id={}", referralCode.getId());
-
+        
         return toReferralCodeRes(referralCode, store.getStoreName());
     }
     
@@ -187,18 +155,9 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     }
     
     @Override
-    public List<ReferralCodeRes> getAll(String storeId, Boolean isActive) {
-        ReferralCodeExample example = new ReferralCodeExample();
-        ReferralCodeExample.Criteria criteria = example.createCriteria();
-        if (storeId != null && !storeId.isEmpty()) {
-            criteria.andStoreIdEqualTo(storeId);
-        }
-        if (isActive != null) {
-            criteria.andIsActiveEqualTo(isActive);
-        }
-        example.setOrderByClause("created_at DESC");
-        List<ReferralCode> codes = referralCodeMapper.selectByExample(example);
-
+    public List<ReferralCodeRes> getAll() {
+        List<ReferralCode> codes = referralCodeRepository.selectAll();
+        
         return codes.stream()
                 .map(code -> {
                     Store store = storeMapper.selectByPrimaryKey(code.getStoreId());
@@ -462,182 +421,6 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         referralCodeMapper.updateByPrimaryKeySelective(referralCode);
 
         log.info("✅ 推薦碼已停用: codeId={}", codeId);
-    }
-
-    // ===== US1: Admin disable code (T008) =====
-
-    @Override
-    @Transactional
-    public ReferralCodeRes disableCode(String id) {
-        log.info("🚫 [Admin] 停用推薦碼: id={}", id);
-
-        ReferralCode code = referralCodeMapper.selectByPrimaryKey(id);
-        if (code == null) {
-            throw new BusinessException("推薦碼不存在");
-        }
-        if (!Boolean.TRUE.equals(code.getIsActive())) {
-            throw new BusinessException("推薦碼已經是停用狀態");
-        }
-
-        code.setIsActive(false);
-        code.setUpdatedAt(LocalDateTime.now());
-        referralCodeMapper.updateByPrimaryKeySelective(code);
-        log.info("✅ 推薦碼已停用: id={}", id);
-
-        Store store = storeMapper.selectByPrimaryKey(code.getStoreId());
-        return toReferralCodeRes(code, store != null ? store.getStoreName() : null);
-    }
-
-    // ===== US2: Validate & registration (T011) =====
-
-    @Override
-    public ReferralValidateRes validateForRegistration(String code) {
-        if (code == null) return new ReferralValidateRes(false, null, null);
-
-        String normalised = code.trim().toUpperCase();
-
-        ReferralCode referralCode = referralCodeRepository.selectByCode(normalised);
-        if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
-            return new ReferralValidateRes(false, normalised, null);
-        }
-
-        Store store = referralCode.getStoreId() != null
-                ? storeMapper.selectByPrimaryKey(referralCode.getStoreId()) : null;
-        if (store == null || !"ACTIVE".equals(store.getStatus())) {
-            return new ReferralValidateRes(false, normalised, null);
-        }
-
-        if (referralCode.getMaxUsage() != null
-                && referralCode.getUsedCount() >= referralCode.getMaxUsage()) {
-            return new ReferralValidateRes(false, normalised, null);
-        }
-
-        if (referralCode.getValidUntil() != null
-                && LocalDateTime.now().isAfter(referralCode.getValidUntil())) {
-            return new ReferralValidateRes(false, normalised, null);
-        }
-
-        return new ReferralValidateRes(true, normalised, store.getStoreName());
-    }
-
-    // ===== US2: useCode with protection (T014) =====
-
-    @Override
-    @Transactional
-    public void useCode(String userId, String code, String registrationEmail) {
-        log.info("🎁 使用推薦碼（含防護）: userId={}, code={}", userId, code);
-
-        String normalised = code.trim().toUpperCase();
-
-        ReferralCode referralCode = referralCodeRepository.selectByCode(normalised);
-        if (referralCode == null) {
-            throw new BusinessException("推薦碼不存在");
-        }
-        if (!Boolean.TRUE.equals(referralCode.getIsActive())) {
-            throw new BusinessException("REFERRAL_CODE_DISABLED", "推薦碼已停用");
-        }
-
-        // Store active check
-        Store store = referralCode.getStoreId() != null
-                ? storeMapper.selectByPrimaryKey(referralCode.getStoreId()) : null;
-        if (store == null || !"ACTIVE".equals(store.getStatus())) {
-            throw new BusinessException("STORE_INACTIVE", "店家已停用");
-        }
-
-        // Self-referral check: find admin user(s) linked to the store, compare email
-        if (registrationEmail != null && referralCode.getStoreId() != null) {
-            StoreUserExample suExample = new StoreUserExample();
-            suExample.createCriteria().andStoreIdEqualTo(referralCode.getStoreId());
-            List<StoreUser> storeUsers = storeUserMapper.selectByExample(suExample);
-            for (StoreUser su : storeUsers) {
-                AdminUser adminUser = adminUserMapper.selectByPrimaryKey(su.getAdminUserId());
-                if (adminUser != null
-                        && registrationEmail.equalsIgnoreCase(adminUser.getEmail())) {
-                    throw new BusinessException("SELF_REFERRAL_NOT_ALLOWED", "不能使用店家負責人的推薦碼");
-                }
-            }
-        }
-
-        // Usage limit check
-        if (referralCode.getMaxUsage() != null
-                && referralCode.getUsedCount() >= referralCode.getMaxUsage()) {
-            throw new BusinessException("推薦碼已達使用上限");
-        }
-
-        // Duplicate use check
-        List<ReferralRecord> existing = referralRecordRepository.selectByUserId(userId);
-        if (!existing.isEmpty()) {
-            throw new BusinessException("您已使用過推薦碼");
-        }
-
-        ReferralRecord record = new ReferralRecord();
-        record.setId(UUID.randomUUID().toString());
-        record.setUserId(userId);
-        record.setReferralCodeId(referralCode.getId());
-        record.setStoreId(referralCode.getStoreId());
-        record.setUsedCode(normalised);
-        record.setReferredAt(LocalDateTime.now());
-        record.setCreatedAt(LocalDateTime.now());
-
-        referralRecordMapper.insert(record);
-        referralCodeMapper.incrementUsageCount(referralCode.getId());
-
-        log.info("✅ 推薦碼使用成功: userId={}, code={}", userId, normalised);
-    }
-
-    // ===== US3: Admin referral stats (T019) =====
-
-    @Override
-    public List<AdminReferralStatsRes> getReferralStats(ReferralReportCondition condition) {
-        if (condition == null) condition = new ReferralReportCondition();
-
-        // Default date range: last 30 days
-        if (condition.getStartDate() == null) {
-            condition.setStartDate(LocalDate.now().minusDays(30));
-        }
-        if (condition.getEndDate() == null) {
-            condition.setEndDate(LocalDate.now());
-        }
-
-        // Validate date range
-        if (condition.getStartDate().isAfter(condition.getEndDate())) {
-            throw new BusinessException("開始日期不能晚於結束日期");
-        }
-
-        List<Map<String, Object>> statsRows =
-                referralCodeRepository.selectStatsByStore(condition);
-        List<Map<String, Object>> timelineRows =
-                referralRecordRepository.selectTimelineByStore(condition);
-
-        // Group timeline by storeId
-        Map<String, List<AdminReferralStatsRes.DailyCount>> timelineMap = new LinkedHashMap<>();
-        for (Map<String, Object> row : timelineRows) {
-            String storeId = (String) row.get("storeId");
-            String date = row.get("referralDate") != null ? row.get("referralDate").toString() : null;
-            Long count = toLong(row.get("dailyCount"));
-            timelineMap.computeIfAbsent(storeId, k -> new ArrayList<>())
-                    .add(new AdminReferralStatsRes.DailyCount(date, count));
-        }
-
-        List<AdminReferralStatsRes> result = new ArrayList<>();
-        for (Map<String, Object> row : statsRows) {
-            String storeId = (String) row.get("storeId");
-            String storeName = (String) row.get("storeName");
-            Long totalReferrals = toLong(row.get("totalReferrals"));
-            Long activeCodeCount = toLong(row.get("activeCodeCount"));
-            List<AdminReferralStatsRes.DailyCount> timeline =
-                    timelineMap.getOrDefault(storeId, new ArrayList<>());
-            result.add(new AdminReferralStatsRes(storeId, storeName, totalReferrals,
-                    activeCodeCount, timeline));
-        }
-        return result;
-    }
-
-    private Long toLong(Object value) {
-        if (value == null) return 0L;
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof Number) return ((Number) value).longValue();
-        return 0L;
     }
 
     // ========== Helper methods ==========

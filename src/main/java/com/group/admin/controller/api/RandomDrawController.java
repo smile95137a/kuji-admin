@@ -10,7 +10,7 @@ import com.group.admin.res.draw.DrawResponseRes;
 import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
 import com.group.admin.service.SystemConfigService;
-import com.group.admin.service.WalletService;
+import com.group.admin.service.CoinService;
 import com.group.admin.util.SecurityUtils;
 
 import jakarta.validation.constraints.Min;
@@ -46,7 +46,7 @@ public class RandomDrawController {
     private DrawService drawService;
     
     @Autowired
-    private WalletService walletService;
+    private CoinService walletService;
 
         @Autowired
         private SystemConfigService systemConfigService;

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 玩家錢包資訊回應
+ * 玩家金幣資訊回應
  * 
  * @author Kuji Admin
  * @since 2026-01-09
@@ -17,10 +17,10 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserWalletRes {
+public class UserCoinRes {
     
     /**
-     * 錢包 ID
+     * ID
      */
     private String id;
     

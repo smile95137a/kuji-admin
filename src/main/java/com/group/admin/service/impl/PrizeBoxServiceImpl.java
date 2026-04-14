@@ -14,7 +14,7 @@ import com.group.admin.res.prizebox.PrizeBoxSummaryRes;
 import com.group.admin.res.prizebox.RecycleResultRes;
 import com.group.admin.service.OrderService;
 import com.group.admin.service.PrizeBoxService;
-import com.group.admin.service.WalletService;
+import com.group.admin.service.CoinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,7 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
     private final LotteryPrizeMapper lotteryPrizeMapper;
     private final StoreMapper storeMapper;
     private final UserAddressMapper userAddressMapper;
-    private final WalletService walletService;
+    private final CoinService walletService;
     private final OrderService orderService;
 
     @Override

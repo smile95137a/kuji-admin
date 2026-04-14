@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 交易記錄回應
+ * 金幣交易記錄回應
  * 
  * @author Kuji Admin
  * @since 2026-01-09
@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class WalletTransactionRes {
+public class CoinTransactionRes {
     
     /**
      * 交易 ID

@@ -1,23 +1,19 @@
 package com.group.admin.service.impl;
 
-import com.group.admin.condition.WalletTransactionCondition;
+import com.group.admin.condition.CoinTransactionCondition;
 import com.group.admin.entity.User;
 import com.group.admin.entity.WalletTransaction;
 import com.group.admin.enums.CoinTypeEnum;
 import com.group.admin.enums.TransactionTypeEnum;
 import com.group.admin.example.WalletTransactionExample;
 import com.group.admin.exception.BusinessException;
-import com.group.admin.exception.InsufficientBalanceException;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.mapper.WalletTransactionMapper;
 import com.group.admin.req.common.QueryReq;
-import com.group.admin.req.wallet.WalletAdjustReq;
-import com.group.admin.res.PageResult;
-import com.group.admin.res.wallet.TransactionRes;
-import com.group.admin.res.wallet.UserWalletRes;
-import com.group.admin.res.wallet.WalletTransactionRes;
-import com.group.admin.config.WalletProperties;
-import com.group.admin.service.WalletService;
+import com.group.admin.req.wallet.CoinAdjustReq;
+import com.group.admin.res.wallet.UserCoinRes;
+import com.group.admin.res.wallet.CoinTransactionRes;
+import com.group.admin.service.CoinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,13 +25,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 錢包服務實作（直接使用 user 表的 gold_coins / bonus_coins）
+ * 金幣服務實作（直接使用 user 表的 gold_coins / bonus_coins）
  * 
- * <p>架構變更說明（2026-02-08）：</p>
- * <p>原本使用獨立的 user_wallet 表存放金幣/紅利，
- * 但 user 表本身已有 gold_coins 和 bonus_coins 欄位，
- * 造成資料冗餘和不一致的風險。</p>
- * <p>現在統一從 user 表讀寫金幣/紅利，不再依賴 user_wallet 表。</p>
+ * <p>架構說明：</p>
+ * <p>統一從 user 表讀寫金幣/紅利，所有增減操作需透過此服務，
+ * 並記錄至 wallet_transaction 表作為流水帳。</p>
  * 
  * @author Kuji Admin
  * @since 2026-01-09
@@ -43,29 +37,26 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WalletServiceImpl implements WalletService {
+public class CoinServiceImpl implements CoinService {
     
     private final WalletTransactionMapper walletTransactionMapper;
     private final UserMapper userMapper;
-    private final WalletProperties walletProperties;
     
     @Override
     @Transactional
-    public UserWalletRes createWallet(String userId) {
-        log.info("🔍 初始化錢包欄位：userId={}", userId);
+    public UserCoinRes createWallet(String userId) {
+        log.info("🔍 初始化金幣欄位：userId={}", userId);
         
         User user = userMapper.selectByPrimaryKey(userId);
         if (user == null) {
             throw new BusinessException("使用者不存在");
         }
         
-        // 如果已經有初始值就直接返回
         if (user.getGoldCoins() != null && user.getBonusCoins() != null) {
             log.info("✅ 使用者已有金幣欄位：userId={}", userId);
             return convertToRes(user);
         }
         
-        // 初始化金幣欄位
         user.setGoldCoins(0L);
         user.setBonusCoins(0L);
         user.setTotalRecharged(0L);
@@ -73,19 +64,18 @@ public class WalletServiceImpl implements WalletService {
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateByPrimaryKey(user);
         
-        log.info("✅ 錢包初始化成功：userId={}", userId);
+        log.info("✅ 金幣初始化成功：userId={}", userId);
         return convertToRes(user);
     }
     
     @Override
-    public UserWalletRes getWallet(String userId) {
+    public UserCoinRes getWallet(String userId) {
         User user = userMapper.selectByPrimaryKey(userId);
         
         if (user == null) {
             throw new BusinessException("使用者不存在");
         }
         
-        // 如果金幣欄位未初始化，自動初始化
         if (user.getGoldCoins() == null) {
             user.setGoldCoins(0L);
             user.setBonusCoins(0L);
@@ -114,12 +104,10 @@ public class WalletServiceImpl implements WalletService {
         
         Long currentGold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
         
-        // 檢查餘額
         if (currentGold < amount) {
             throw new BusinessException("金幣餘額不足");
         }
         
-        // 更新餘額
         Long newBalance = currentGold - amount;
         user.setGoldCoins(newBalance);
         user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
@@ -130,7 +118,6 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("點數扣除失敗，請重試");
         }
         
-        // 記錄交易
         recordTransaction(userId, CoinTypeEnum.GOLD.getCode(), transactionType, 
                 -amount, newBalance, relatedId, description, null);
         
@@ -153,13 +140,11 @@ public class WalletServiceImpl implements WalletService {
         
         Long currentGold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
         
-        // 更新餘額
         Long newBalance = currentGold + amount;
         user.setGoldCoins(newBalance);
         user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
         user.setUpdatedAt(LocalDateTime.now());
         
-        // 如果是儲值，更新累計儲值金額
         if (TransactionTypeEnum.RECHARGE.getCode().equals(transactionType)) {
             Long totalRecharged = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
             user.setTotalRecharged(totalRecharged + amount);
@@ -170,7 +155,6 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("點數增加失敗，請重試");
         }
         
-        // 記錄交易
         recordTransaction(userId, CoinTypeEnum.GOLD.getCode(), transactionType, 
                 amount, newBalance, relatedId, description, null);
         
@@ -193,7 +177,6 @@ public class WalletServiceImpl implements WalletService {
         
         Long currentBonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
         
-        // 更新餘額
         Long newBalance = currentBonus + amount;
         user.setBonusCoins(newBalance);
         user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
@@ -204,7 +187,6 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("點數增加失敗，請重試");
         }
         
-        // 記錄交易
         recordTransaction(userId, CoinTypeEnum.BONUS.getCode(), transactionType, 
                 amount, newBalance, relatedId, description, null);
         
@@ -227,12 +209,10 @@ public class WalletServiceImpl implements WalletService {
         
         Long currentBonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
         
-        // 檢查餘額
         if (currentBonus < amount) {
             throw new BusinessException("紅利點數不足");
         }
         
-        // 更新餘額
         Long newBalance = currentBonus - amount;
         user.setBonusCoins(newBalance);
         user.setVersion((user.getVersion() != null ? user.getVersion() : 0) + 1);
@@ -243,7 +223,6 @@ public class WalletServiceImpl implements WalletService {
             throw new BusinessException("點數扣除失敗，請重試");
         }
         
-        // 記錄交易（負數）
         recordTransaction(userId, CoinTypeEnum.BONUS.getCode(), transactionType, 
                 -amount, newBalance, relatedId, description, null);
         
@@ -252,7 +231,7 @@ public class WalletServiceImpl implements WalletService {
     
     @Override
     @Transactional
-    public void adjustCoins(WalletAdjustReq req, String operatorId) {
+    public void adjustCoins(CoinAdjustReq req, String operatorId) {
         log.info("🔍 手動調整點數：userId={}, coinType={}, amount={}, operator={}", 
                 req.getUserId(), req.getCoinType(), req.getAmount(), operatorId);
         
@@ -282,8 +261,8 @@ public class WalletServiceImpl implements WalletService {
     }
     
     @Override
-    public List<WalletTransactionRes> getTransactions(QueryReq<WalletTransactionCondition> req) {
-        WalletTransactionCondition condition = req != null ? req.getCondition() : null;
+    public List<CoinTransactionRes> getTransactions(QueryReq<CoinTransactionCondition> req) {
+        CoinTransactionCondition condition = req != null ? req.getCondition() : null;
         
         WalletTransactionExample example = new WalletTransactionExample();
         WalletTransactionExample.Criteria criteria = example.createCriteria();
@@ -301,7 +280,6 @@ public class WalletServiceImpl implements WalletService {
             if (isNotBlank(condition.getRelatedId())) {
                 criteria.andRelatedIdEqualTo(condition.getRelatedId());
             }
-            // 日期範圍（LocalDate 轉 LocalDateTime）
             if (condition.getCreatedAtStart() != null) {
                 criteria.andCreatedAtGreaterThanOrEqualTo(
                     condition.getCreatedAtStart().atStartOfDay()
@@ -314,7 +292,6 @@ public class WalletServiceImpl implements WalletService {
             }
         }
         
-        // 排序
         example.setOrderByClause("created_at DESC");
         
         List<WalletTransaction> transactions = walletTransactionMapper.selectByExample(example);
@@ -353,10 +330,10 @@ public class WalletServiceImpl implements WalletService {
     }
     
     /**
-     * 轉換 User 為錢包回應 DTO（直接從 user 表取金幣/紅利）
+     * 轉換 User 為金幣回應 DTO
      */
-    private UserWalletRes convertToRes(User user) {
-        return UserWalletRes.builder()
+    private UserCoinRes convertToRes(User user) {
+        return UserCoinRes.builder()
                 .id(user.getId())
                 .userId(user.getId())
                 .userNickname(user.getNickname())
@@ -372,11 +349,10 @@ public class WalletServiceImpl implements WalletService {
     /**
      * 轉換交易記錄為回應 DTO
      */
-    private WalletTransactionRes convertTransactionToRes(WalletTransaction transaction) {
-        // 查詢玩家資訊
+    private CoinTransactionRes convertTransactionToRes(WalletTransaction transaction) {
         User user = userMapper.selectByPrimaryKey(transaction.getUserId());
         
-        return WalletTransactionRes.builder()
+        return CoinTransactionRes.builder()
                 .id(transaction.getId())
                 .userId(transaction.getUserId())
                 .userNickname(user != null ? user.getNickname() : null)
@@ -395,104 +371,8 @@ public class WalletServiceImpl implements WalletService {
 
     /**
      * 檢查字串是否非空白
-     * 空字串 "" 會被視為 null 處理
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
-    }
-
-    @Override
-    @Transactional
-    public void deductCoins(String userId, long amount, String referenceId, String reason) {
-        log.info("🔍 deductCoins: userId={}, amount={}", userId, amount);
-        int maxRetries = walletProperties.getOptimisticLock().getMaxRetries();
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
-            User user = userMapper.selectByPrimaryKey(userId);
-            if (user == null) throw new BusinessException("使用者不存在");
-            long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
-            long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
-            if (gold + bonus < amount) {
-                throw new InsufficientBalanceException(userId, amount, gold + bonus);
-            }
-            // Gold first
-            long goldDeduct = Math.min(gold, amount);
-            long bonusDeduct = amount - goldDeduct;
-            long newGold = gold - goldDeduct;
-            long newBonus = bonus - bonusDeduct;
-            Integer version = user.getVersion() != null ? user.getVersion() : 0;
-            Long totalRecharged = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
-            int rows = userMapper.updateBalanceWithVersion(userId, newGold, newBonus, totalRecharged, version);
-            if (rows == 0) {
-                log.warn("⚡ 樂觀鎖衝突 attempt={}", attempt + 1);
-                if (attempt == maxRetries - 1) {
-                    throw new java.util.ConcurrentModificationException("並發衝突，請重試");
-                }
-                continue;
-            }
-            WalletTransaction tx = new WalletTransaction();
-            tx.setId(UUID.randomUUID().toString());
-            tx.setUserId(userId);
-            tx.setTransactionType(TransactionTypeEnum.DRAW.getCode());
-            tx.setCoinType(bonusDeduct > 0 ? "MIXED" : "GOLD");
-            tx.setAmount(-amount);
-            tx.setBalanceAfter(newGold);
-            tx.setGoldDelta(-goldDeduct);
-            tx.setBonusDelta(-bonusDeduct);
-            tx.setGoldAfter(newGold);
-            tx.setBonusAfter(newBonus);
-            tx.setReferenceId(referenceId);
-            tx.setReason(reason);
-            tx.setRelatedId(referenceId);
-            tx.setDescription(reason);
-            tx.setCreatedAt(LocalDateTime.now());
-            walletTransactionMapper.insertSelective(tx);
-            log.info("✅ deductCoins成功: newGold={}, newBonus={}", newGold, newBonus);
-            return;
-        }
-    }
-
-    @Override
-    public boolean hasEnoughBalance(User user, long amount) {
-        long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
-        long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
-        return gold + bonus >= amount;
-    }
-
-    @Override
-    public PageResult<TransactionRes> getTransactionsPaged(String userId, int page, int size, String type, LocalDateTime startDate, LocalDateTime endDate) {
-        WalletTransactionExample example = new WalletTransactionExample();
-        WalletTransactionExample.Criteria criteria = example.createCriteria();
-        criteria.andUserIdEqualTo(userId);
-        if (type != null && !type.isBlank()) {
-            criteria.andTransactionTypeEqualTo(type);
-        }
-        if (startDate != null) {
-            criteria.andCreatedAtGreaterThanOrEqualTo(startDate);
-        }
-        if (endDate != null) {
-            criteria.andCreatedAtLessThanOrEqualTo(endDate);
-        }
-        example.setOrderByClause("created_at DESC");
-
-        List<WalletTransaction> all = walletTransactionMapper.selectByExample(example);
-        long total = all.size();
-
-        int fromIndex = page * size;
-        int toIndex = (int) Math.min((long) fromIndex + size, total);
-        List<WalletTransaction> pageData = fromIndex < total ? all.subList(fromIndex, toIndex) : List.of();
-
-        List<TransactionRes> content = pageData.stream().map(tx -> TransactionRes.builder()
-                .id(tx.getId())
-                .transactionType(tx.getTransactionType())
-                .goldDelta(tx.getGoldDelta())
-                .bonusDelta(tx.getBonusDelta())
-                .goldAfter(tx.getGoldAfter())
-                .bonusAfter(tx.getBonusAfter())
-                .referenceId(tx.getReferenceId())
-                .reason(tx.getReason())
-                .createdAt(tx.getCreatedAt())
-                .build()).collect(Collectors.toList());
-
-        return PageResult.of(page + 1, size, total, content);
     }
 }

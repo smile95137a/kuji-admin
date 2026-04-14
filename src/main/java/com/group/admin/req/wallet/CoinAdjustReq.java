@@ -12,7 +12,7 @@ import jakarta.validation.constraints.NotNull;
  * @since 2026-01-09
  */
 @Data
-public class WalletAdjustReq {
+public class CoinAdjustReq {
     
     /**
      * 玩家 ID
