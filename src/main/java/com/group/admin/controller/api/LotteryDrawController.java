@@ -1,12 +1,11 @@
 package com.group.admin.controller.api;
 
-import com.group.admin.enums.GameModeEnum;
-import com.group.admin.res.lottery.LotteryTicketRes;
+import com.group.admin.res.lottery.DesignationCheckResponse;
+import com.group.admin.res.lottery.TicketListResponse;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.LotteryTicketService.DrawResult;
 import com.group.admin.service.LotteryTicketService.SessionInfo;
 import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
-import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.impl.LotteryTicketServiceImpl;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,7 +43,6 @@ public class LotteryDrawController {
 
     private final LotteryTicketService ticketService;
     private final LotteryTicketServiceImpl ticketServiceImpl;  // 🆕 用於 getGachaLock
-    private final SystemConfigService systemConfigService;
 
     /**
      * 執行抽獎
@@ -82,9 +80,8 @@ public class LotteryDrawController {
         if (count == null || count < 1) {
             return ResponseEntity.badRequest().body("count 必須至少為 1");
         }
-        int maxCount = systemConfigService.getInt(SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST, 10);
-        if (count > maxCount) {
-            return ResponseEntity.badRequest().body("單次最多只能抽 " + maxCount + " 張票券");
+        if (count > 10) {
+            return ResponseEntity.badRequest().body("單次最多只能抽 10 張票券");
         }
         
         // 取得商品資訊
@@ -110,26 +107,30 @@ public class LotteryDrawController {
         
         // 非扭蛋：檢查是否需要玩家指定大獎（SCRATCH_PLAYER 模式）
         SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
-        if (session.isOpener()) {
+        
+        if ("SCRATCH_PLAYER".equals(gameMode)) {
+            String playerDesignated = session.playerDesignatedNumbers();
+            boolean designationPending = playerDesignated == null || playerDesignated.trim().isEmpty();
+            
+            if (designationPending) {
+                if (session.isOpener()) {
+                    // 開套玩家：回傳 202 requiresDesignation
+                    DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
+                    if (designationCheck != null) {
+                        log.info("⚠️ 需要先指定大獎位置 (開套玩家，HTTP 202)");
+                        return ResponseEntity.status(202).body(designationCheck);
+                    }
+                } else {
+                    // 非開套玩家：回傳 423 DESIGNATION_PENDING
+                    log.warn("❌ 非開套玩家在指定完成前嘗試抽獎，HTTP 423");
+                    return ResponseEntity.status(423).body("DESIGNATION_PENDING: 等待開套玩家指定大獎位置");
+                }
+            }
+        } else if (session.isOpener()) {
             DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
             if (designationCheck != null) {
                 log.info("⚠️ 需要先指定大獎位置");
                 return ResponseEntity.ok(designationCheck);
-            }
-        }
-        
-        // 🆕 攔截非開套玩家（SCRATCH_PLAYER 模式且開套者尚未完成指定）
-        if (!session.isOpener() && GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
-            boolean notDesignated = session.playerDesignatedNumbers() == null
-                    || session.playerDesignatedNumbers().isBlank();
-            if (notDesignated) {
-                String deadline = session.designationDeadline() != null
-                        ? session.designationDeadline().toString() : null;
-                log.info("🚫 非開套玩家等待指定中: lotteryId={}, openerDeadline={}", lotteryId, deadline);
-                return ResponseEntity.ok(new DesignationPendingResponse(
-                        true,
-                        "開套玩家正在指定大獎位置，請稍候",
-                        deadline));
             }
         }
         
@@ -178,8 +179,37 @@ public class LotteryDrawController {
     }
 
     /**
-     * 取得目前場次資訊
+     * 取得票券列表（前台安全版）
+     *
+     * <p>嚴格執行資訊隱藏（FR-005, FR-006, SC-001）：</p>
+     * <ul>
+     *   <li>AVAILABLE 票券只顯示 ticketNumber + status</li>
+     *   <li>DRAWN 票券顯示完整獎品資訊</li>
+     * </ul>
      */
+    @GetMapping("/{lotteryId}/tickets")
+    @Operation(summary = "取得票券列表（資訊隱藏已強制執行）", description = "AVAILABLE 票券只顯示號碼與狀態；DRAWN 票券顯示完整獎品資訊。")
+    public ResponseEntity<TicketListResponse> getTickets(
+            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
+        log.info("🔍 查詢票券列表: lotteryId={}", lotteryId);
+        TicketListResponse response = ticketService.getTicketList(lotteryId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 查詢 SCRATCH_PLAYER 大獎指定狀態
+     *
+     * <p>前端用於輪詢或在抽獎前確認是否需要先指定大獎位置。</p>
+     */
+    @GetMapping("/{lotteryId}/designation-check")
+    @Operation(summary = "查詢 SCRATCH_PLAYER 指定狀態", description = "非 SCRATCH_PLAYER 模式固定回傳 required=false。開套玩家收到大獎清單，非開套玩家收到等待訊息。")
+    public ResponseEntity<DesignationCheckResponse> getDesignationCheck(
+            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("🔍 查詢指定狀態: lotteryId={}, userId={}", lotteryId, userId);
+        DesignationCheckResponse response = ticketService.getDesignationStatus(lotteryId, userId);
+        return ResponseEntity.ok(response);
+    }
     @GetMapping("/{lotteryId}/session")
     @Operation(summary = "取得場次資訊", description = "取得目前的開套場次狀態（唯讀）")
     public ResponseEntity<SessionResponse> getSession(
@@ -194,11 +224,7 @@ public class LotteryDrawController {
             return ResponseEntity.ok(null);
         }
         
-        // 取得商品 gameMode，用於正確判斷 isDesignationComplete
-        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
-        String gameMode = lottery != null ? lottery.getGameMode() : null;
-        
-        return ResponseEntity.ok(SessionResponse.from(session, gameMode));
+        return ResponseEntity.ok(SessionResponse.from(session, userId));
     }
 
     // ==================== 私有輔助方法 ====================
@@ -217,7 +243,7 @@ public class LotteryDrawController {
             if (tickets.size() != count) {
                 log.warn("❌ 票券列表長度不符: count={}, actual={}", count, tickets.size());
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表的長度必須等於 count", false, null, null, null));
+                        "ticket 列表的長度必須等於 count"));
                 return results;
             }
             
@@ -225,7 +251,7 @@ public class LotteryDrawController {
             long distinct = tickets.stream().distinct().count();
             if (distinct != tickets.size()) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表不可包含重複項目", false, null, null, null));
+                        "ticket 列表不可包含重複項目"));
                 return results;
             }
             
@@ -236,7 +262,7 @@ public class LotteryDrawController {
                 }
             } catch (IllegalArgumentException ex) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表必須包含有效的 UUID 格式", false, null, null, null));
+                        "ticket 列表必須包含有效的 UUID 格式"));
                 return results;
             }
             
@@ -276,7 +302,7 @@ public class LotteryDrawController {
         }
 
         // ⚠️ 只有 SCRATCH_PLAYER 才需要玩家指定大獎位置
-        if (!GameModeEnum.SCRATCH_PLAYER.getCode().equals(lottery.getGameMode())) {
+        if (!"SCRATCH_PLAYER".equals(lottery.getGameMode())) {
             return null;
         }
 
@@ -351,15 +377,6 @@ public class LotteryDrawController {
         String protectionEndTime  // 🆕 保護結束時間（ISO格式），前端用於顯示倒數計時；扭蛋為 null
     ) {}
 
-    /**
-     * 🆕 籤位列表回應（包含已指定的大獎中獎號碼）
-     */
-    public record TicketListResponse(
-        List<LotteryTicketRes> tickets,
-        SessionResponse session,
-        List<DesignatedWinningNumber> designatedWinningNumbers  // 🆕 已指定的大獎中獎號碼
-    ) {}
-
     public record SessionResponse(
         String sessionId,
         boolean isOpener,
@@ -368,25 +385,9 @@ public class LotteryDrawController {
         String protectionEndTime,
         int openerDrawCount,
         boolean freeDrawEnabled,
-        String status,
-        String designationDeadline,     // ISO-8601；null = 非 SCRATCH_PLAYER 或指定已完成
-        boolean isDesignationComplete   // true = 無需指定流程，或指定已完成
+        String status
     ) {
-        public static SessionResponse from(SessionInfo info, String gameMode) {
-            // 非 SCRATCH_PLAYER 模式（一番賞、扭蛋、SCRATCH_STORE）預設指定完成
-            boolean designationComplete;
-            if (!GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
-                designationComplete = true;
-            } else {
-                designationComplete = info.playerDesignatedNumbers() != null
-                        && !info.playerDesignatedNumbers().isBlank();
-            }
-
-            // 只有在 SCRATCH_PLAYER 且指定未完成時才回傳截止時間
-            String deadline = (!designationComplete && info.designationDeadline() != null)
-                    ? info.designationDeadline().toString()
-                    : null;
-
+        public static SessionResponse from(SessionInfo info, String currentUserId) {
             return new SessionResponse(
                     info.sessionId(),
                     info.isOpener(),
@@ -395,9 +396,7 @@ public class LotteryDrawController {
                     info.protectionEndTime() != null ? info.protectionEndTime().toString() : null,
                     info.openerDrawCount(),
                     info.freeDrawEnabled(),
-                    info.status(),
-                    deadline,
-                    designationComplete
+                    info.status()
             );
         }
     }
@@ -410,15 +409,6 @@ public class LotteryDrawController {
         String message,
         List<Integer> availableNumbers,  // 可選的 revealedNumber 列表
         List<GrandPrizeInfo> grandPrizes  // 大獎清單（告知前端要指定幾個、哪些）
-    ) {}
-
-    /**
-     * 等待開套者指定大獎時的回應（非開套玩家用）
-     */
-    public record DesignationPendingResponse(
-        boolean awaitingDesignation,  // 固定 true
-        String message,
-        String openerDeadline  // ISO-8601，前端用來倒數計時
     ) {}
 
     /**

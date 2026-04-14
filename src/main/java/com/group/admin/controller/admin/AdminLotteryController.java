@@ -1,14 +1,18 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.entity.StoreUser;
+import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCopyReq;
 import com.group.admin.req.lottery.LotteryCreateReq;
-import com.group.admin.req.lottery.LotteryStatusChangeReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
+import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,6 +47,8 @@ import java.util.List;
 public class AdminLotteryController {
 
     private final LotteryService lotteryService;
+    private final LotteryTicketService lotteryTicketService;
+    private final StoreUserMapper storeUserMapper;
 
     /**
      * 查詢商品列表（後台）
@@ -71,8 +77,15 @@ public class AdminLotteryController {
         
         // 非 Admin 需要過濾店家
         if (!isAdmin) {
-            String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
-            if (storeId != null) {
+            // 從資料庫查詢使用者的店家列表
+            StoreUserExample storeUserExample = new StoreUserExample();
+            storeUserExample.createCriteria().andAdminUserIdEqualTo(userId);
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
+            
+            if (!storeUsers.isEmpty()) {
+                String storeId = storeUsers.get(0).getStoreId();
+                
+                // 自動設定 storeId
                 if (req == null) {
                     req = new QueryReq<>();
                 }
@@ -80,6 +93,7 @@ public class AdminLotteryController {
                     req.setCondition(new LotteryCondition());
                 }
                 req.getCondition().setStoreId(storeId);
+                
                 log.info("🔒 過濾店家: storeId={}", storeId);
             } else {
                 log.warn("⚠️ 使用者沒有關聯任何店家: userId={}", userId);
@@ -123,13 +137,16 @@ public class AdminLotteryController {
                 throw new BusinessException("Admin 新增商品時必須指定店家 ID");
             }
             
-            // StoreOwner/Editor：從 JWT principal 取得店家 ID
-            String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+            // StoreOwner/Editor：自動查詢並使用第一個店家
+            StoreUserExample example = new StoreUserExample();
+            example.createCriteria().andAdminUserIdEqualTo(userId);
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
             
-            if (storeId == null) {
+            if (storeUsers.isEmpty()) {
                 throw new BusinessException("無法取得店家資訊，請聯繫管理員");
             }
             
+            String storeId = storeUsers.get(0).getStoreId();
             req.setStoreId(storeId);
             log.info("🔧 [自動帶入] storeId={}", storeId);
         } else {
@@ -212,29 +229,6 @@ public class AdminLotteryController {
         
         LotteryRes result = lotteryService.getLottery(id);
         
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 變更商品狀態（單一端點）
-     * 
-     * @param id 商品 ID（UUID 格式）
-     * @param status 目標狀態（ON_SHELF / OFF_SHELF）
-     * @return 更新後的商品
-     */
-    @PatchMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
-    @Operation(summary = "變更商品狀態", description = "上架或下架商品（ON_SHELF / OFF_SHELF）")
-    public ResponseEntity<LotteryRes> updateStatus(
-            @PathVariable String id,
-            @RequestParam String status) {
-        
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔄 變更商品狀態: userId={}, lotteryId={}, status={}", userId, id, status);
-        
-        LotteryRes result = lotteryService.updateStatus(id, status);
-        
-        log.info("✅ 狀態更新成功: id={}, status={}", id, status);
         return ResponseEntity.ok(result);
     }
 
@@ -325,45 +319,20 @@ public class AdminLotteryController {
     }
 
     /**
-     * 複製商品（路徑參數版）
-     * 
-     * @param id 來源商品 ID（UUID 格式）
-     * @return 複製後的商品
+     * 取得商品所有籤位狀態（後台完整版）
+     *
+     * <p>後台管理員可查看所有籤位的完整資訊，包含獎品詳情與指定狀態。</p>
+     *
+     * @param id 商品 ID（UUID 格式）
+     * @return 籤位列表（完整資訊）
      */
-    @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/copy")
+    @GetMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/tickets")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
-    @Operation(summary = "複製商品（路徑參數版）", description = "根據商品 ID 複製商品")
-    public ResponseEntity<LotteryRes> copyLotteryById(@PathVariable String id) {
-        
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("📋 複製商品(path): userId={}, sourceLotteryId={}", userId, id);
-        
-        LotteryRes result = lotteryService.copyLottery(id, null, true, null);
-        
-        log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 變更商品狀態（含 FSM 轉換驗證）
-     * 
-     * @param id  商品 ID（UUID 格式）
-     * @param req 狀態變更請求
-     * @return 更新後的商品
-     */
-    @PutMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
-    @Operation(summary = "變更商品狀態", description = "變更商品狀態，含 FSM 轉換驗證")
-    public ResponseEntity<LotteryRes> changeStatus(
-            @PathVariable String id,
-            @Valid @RequestBody LotteryStatusChangeReq req) {
-        
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔄 變更商品狀態: userId={}, lotteryId={}, targetStatus={}", userId, id, req.getTargetStatus());
-        
-        LotteryRes result = lotteryService.changeStatus(id, req.getTargetStatus(), req.getReason(), userId);
-        
-        log.info("✅ 狀態變更成功: newStatus={}", result.getStatus());
-        return ResponseEntity.ok(result);
+    @Operation(summary = "取得商品籤位列表（後台完整版）", description = "後台查看所有籤位，包含獎品資訊與指定狀態")
+    public ResponseEntity<List<LotteryTicketRes>> getTickets(@PathVariable String id) {
+        log.info("🔍 [後台] 查詢籤位列表: lotteryId={}", id);
+        List<LotteryTicketRes> tickets = lotteryTicketService.getTicketsForBackend(id);
+        log.info("✅ 查詢成功: {} 筆籤位", tickets.size());
+        return ResponseEntity.ok(tickets);
     }
 }
