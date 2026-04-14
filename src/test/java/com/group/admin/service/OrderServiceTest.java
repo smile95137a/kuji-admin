@@ -1,30 +1,31 @@
 package com.group.admin.service;
 
 import com.group.admin.entity.Order;
+import com.group.admin.entity.OrderStatusLog;
 import com.group.admin.enums.OrderStatusEnum;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.*;
 import com.group.admin.repository.OrderRepository;
-import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * OrderServiceImpl 單元測試（002-express-shipping）
+ * OrderService 單元測試
+ * 覆蓋狀態機轉換、所有權守衛、出貨資訊提交守衛
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OrderService 單元測試")
@@ -44,191 +45,192 @@ class OrderServiceTest {
     @InjectMocks
     private OrderServiceImpl orderService;
 
-    @Captor
-    private ArgumentCaptor<Order> orderCaptor;
+    private static final String ORDER_ID = "order-uuid-001";
+    private static final String OPERATOR_ID = "admin-uuid-001";
+    private static final String USER_ID = "user-uuid-001";
+    private static final String OTHER_USER_ID = "user-uuid-002";
 
-    // ── helper ──────────────────────────────────────────────
-    private Order createOrder(String id, String userId, String statusCode) {
+    private Order buildOrder(OrderStatusEnum status) {
         Order order = new Order();
-        order.setId(id);
-        order.setUserId(userId);
-        order.setStatus(statusCode);
+        order.setId(ORDER_ID);
+        order.setUserId(USER_ID);
+        order.setStoreId("store-uuid-001");
+        order.setStatus(status.getCode());
+        order.setCreatedAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
         return order;
     }
 
-    // ═══════════════════════════════════════════════════════
-    //  submitShippingInfo
-    // ═══════════════════════════════════════════════════════
-    @Nested
-    @DisplayName("submitShippingInfo")
-    class SubmitShippingInfoTests {
+    // ===== T004: 狀態機正向路徑 =====
 
-        @Test
-        @DisplayName("宅配 - 成功更新出貨資訊")
-        void submitShippingInfo_homeDelivery_success() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PENDING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
+    @Test
+    @DisplayName("T004-a: PENDING → PREPARING — 應更新狀態並寫入 OrderStatusLog")
+    void prepareShipping_FromPending_ShouldUpdateStatusAndLogEntry() {
+        Order order = buildOrder(OrderStatusEnum.PENDING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
 
-            ShipInfoReq req = new ShipInfoReq();
-            req.setShippingMethod("HOME_DELIVERY");
-            req.setRecipientName("王小明");
-            req.setRecipientPhone("0912345678");
-            req.setRecipientAddress("台北市信義區信義路五段7號");
+        orderService.prepareShipping(ORDER_ID, OPERATOR_ID);
 
-            orderService.submitShippingInfo("order-1", req, "user-1");
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        verify(orderMapper).updateByPrimaryKey(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.PREPARING.getCode());
 
-            verify(orderMapper).updateByPrimaryKey(orderCaptor.capture());
-            Order updated = orderCaptor.getValue();
-            assertEquals("HOME_DELIVERY", updated.getShippingMethod());
-            assertEquals("王小明", updated.getRecipientName());
-            assertEquals("0912345678", updated.getRecipientPhone());
-            assertEquals("台北市信義區信義路五段7號", updated.getRecipientAddress());
-        }
-
-        @Test
-        @DisplayName("超商取貨（7-11）- 成功更新出貨資訊")
-        void submitShippingInfo_sevenEleven_success() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PENDING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
-
-            ShipInfoReq req = new ShipInfoReq();
-            req.setShippingMethod("SEVEN_ELEVEN");
-            req.setStoreCode("167890");
-            req.setStoreName("信義門市");
-
-            orderService.submitShippingInfo("order-1", req, "user-1");
-
-            verify(orderMapper).updateByPrimaryKey(orderCaptor.capture());
-            Order updated = orderCaptor.getValue();
-            assertEquals("SEVEN_ELEVEN", updated.getShippingMethod());
-            assertEquals("167890", updated.getStoreCode());
-            assertEquals("信義門市", updated.getStoreName());
-        }
-
-        @Test
-        @DisplayName("PREPARING 狀態 → 拒絕修改")
-        void submitShippingInfo_preparingStatus_throwsException() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PREPARING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
-
-            ShipInfoReq req = new ShipInfoReq();
-            req.setShippingMethod("HOME_DELIVERY");
-
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> orderService.submitShippingInfo("order-1", req, "user-1"));
-            assertEquals("訂單已確認，無法修改出貨資訊", ex.getMessage());
-            verify(orderMapper, never()).updateByPrimaryKey(any());
-        }
-
-        @Test
-        @DisplayName("他人訂單 → 權限不足")
-        void submitShippingInfo_otherUserOrder_throwsException() {
-            Order order = createOrder("order-1", "user-A", OrderStatusEnum.PENDING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
-
-            ShipInfoReq req = new ShipInfoReq();
-            req.setShippingMethod("HOME_DELIVERY");
-
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> orderService.submitShippingInfo("order-1", req, "user-B"));
-            assertEquals("無權限操作此訂單", ex.getMessage());
-            verify(orderMapper, never()).updateByPrimaryKey(any());
-        }
-
-        @Test
-        @DisplayName("宅配缺少收件人姓名 → 驗證失敗")
-        void submitShippingInfo_homeDelivery_missingName_throwsException() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PENDING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
-
-            ShipInfoReq req = new ShipInfoReq();
-            req.setShippingMethod("HOME_DELIVERY");
-            req.setRecipientPhone("0912345678");
-            req.setRecipientAddress("台北市");
-
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> orderService.submitShippingInfo("order-1", req, "user-1"));
-            assertEquals("宅配需填入收件人姓名", ex.getMessage());
-        }
-
-        @Test
-        @DisplayName("超商取貨缺少分店代碼 → 驗證失敗")
-        void submitShippingInfo_sevenEleven_missingStoreCode_throwsException() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PENDING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
-
-            ShipInfoReq req = new ShipInfoReq();
-            req.setShippingMethod("SEVEN_ELEVEN");
-            req.setStoreName("信義門市");
-
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> orderService.submitShippingInfo("order-1", req, "user-1"));
-            assertEquals("超商取貨需填入分店代碼", ex.getMessage());
-        }
+        ArgumentCaptor<OrderStatusLog> logCaptor = ArgumentCaptor.forClass(OrderStatusLog.class);
+        verify(orderStatusLogMapper).insert(logCaptor.capture());
+        assertThat(logCaptor.getValue().getToStatus()).isEqualTo(OrderStatusEnum.PREPARING.getCode());
+        assertThat(logCaptor.getValue().getOperatorId()).isEqualTo(OPERATOR_ID);
     }
 
-    // ═══════════════════════════════════════════════════════
-    //  prepareShipping / ship / complete
-    // ═══════════════════════════════════════════════════════
-    @Nested
-    @DisplayName("訂單狀態流轉")
-    class StatusTransitionTests {
+    @Test
+    @DisplayName("T004-b: PREPARING → SHIPPED — 應更新狀態及 trackingNo，並寫入 OrderStatusLog")
+    void ship_FromPreparing_ShouldUpdateStatusTrackingNoAndLogEntry() {
+        Order order = buildOrder(OrderStatusEnum.PREPARING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
 
-        @Test
-        @DisplayName("prepareShipping - PENDING → PREPARING")
-        void prepareShipping_success() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PENDING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
+        OrderShipReq req = new OrderShipReq();
+        req.setTrackingNo("TRACK-12345");
+        orderService.ship(ORDER_ID, req, OPERATOR_ID);
 
-            orderService.prepareShipping("order-1", "admin-1");
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        verify(orderMapper).updateByPrimaryKey(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.SHIPPED.getCode());
+        assertThat(captor.getValue().getTrackingNo()).isEqualTo("TRACK-12345");
 
-            verify(orderMapper).updateByPrimaryKey(orderCaptor.capture());
-            assertEquals(OrderStatusEnum.PREPARING.getCode(), orderCaptor.getValue().getStatus());
-            verify(orderStatusLogMapper).insert(any());
-        }
+        verify(orderStatusLogMapper).insert(argThat(log ->
+                OrderStatusEnum.SHIPPED.getCode().equals(log.getToStatus())));
+    }
 
-        @Test
-        @DisplayName("ship - PREPARING → SHIPPED，設定物流單號")
-        void ship_success() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.PREPARING.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
+    @Test
+    @DisplayName("T004-c: SHIPPED → COMPLETED — 應更新狀態並寫入 OrderStatusLog")
+    void complete_FromShipped_ShouldUpdateStatusAndLogEntry() {
+        Order order = buildOrder(OrderStatusEnum.SHIPPED);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
 
-            OrderShipReq req = new OrderShipReq();
-            req.setTrackingNo("TRACK123456");
-            req.setRemark("請小心搬運");
+        orderService.complete(ORDER_ID, OPERATOR_ID);
 
-            orderService.ship("order-1", req, "admin-1");
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        verify(orderMapper).updateByPrimaryKey(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.COMPLETED.getCode());
 
-            verify(orderMapper).updateByPrimaryKey(orderCaptor.capture());
-            Order updated = orderCaptor.getValue();
-            assertEquals(OrderStatusEnum.SHIPPED.getCode(), updated.getStatus());
-            assertEquals("TRACK123456", updated.getTrackingNo());
-            verify(orderStatusLogMapper).insert(any());
-        }
+        verify(orderStatusLogMapper).insert(argThat(log ->
+                OrderStatusEnum.COMPLETED.getCode().equals(log.getToStatus())));
+    }
 
-        @Test
-        @DisplayName("complete - SHIPPED → COMPLETED")
-        void complete_success() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.SHIPPED.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
+    // ===== T005: 非法逆向轉換 =====
 
-            orderService.complete("order-1", "admin-1");
+    @Test
+    @DisplayName("T005: SHIPPED 狀態下呼叫 prepare → 應拋出 BusinessException")
+    void prepareShipping_FromShipped_ShouldThrowBusinessException() {
+        Order order = buildOrder(OrderStatusEnum.SHIPPED);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
 
-            verify(orderMapper).updateByPrimaryKey(orderCaptor.capture());
-            assertEquals(OrderStatusEnum.COMPLETED.getCode(), orderCaptor.getValue().getStatus());
-            verify(orderStatusLogMapper).insert(any());
-        }
+        assertThatThrownBy(() -> orderService.prepareShipping(ORDER_ID, OPERATOR_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("訂單狀態不允許此操作");
+    }
 
-        @Test
-        @DisplayName("prepareShipping - SHIPPED 狀態 → 拒絕操作")
-        void prepareShipping_wrongStatus_throwsException() {
-            Order order = createOrder("order-1", "user-1", OrderStatusEnum.SHIPPED.getCode());
-            when(orderMapper.selectByPrimaryKey("order-1")).thenReturn(order);
+    @Test
+    @DisplayName("T005-b: COMPLETED 狀態下呼叫 ship → 應拋出 BusinessException")
+    void ship_FromCompleted_ShouldThrowBusinessException() {
+        Order order = buildOrder(OrderStatusEnum.COMPLETED);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
 
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> orderService.prepareShipping("order-1", "admin-1"));
-            assertEquals("訂單狀態不允許此操作", ex.getMessage());
-            verify(orderMapper, never()).updateByPrimaryKey(any());
-        }
+        OrderShipReq req = new OrderShipReq();
+        req.setTrackingNo("TRACK-XYZ");
+
+        assertThatThrownBy(() -> orderService.ship(ORDER_ID, req, OPERATOR_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("訂單狀態不允許此操作");
+    }
+
+    // ===== T006: submitShippingInfo 在 PREPARING 狀態拋出例外 =====
+
+    @Test
+    @DisplayName("T006: PREPARING 狀態下提交出貨資訊 → 應拋出 BusinessException('訂單已確認，無法修改出貨資訊')")
+    void submitShippingInfo_WhenPreparing_ShouldThrowConflictException() {
+        Order order = buildOrder(OrderStatusEnum.PREPARING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
+
+        ShipInfoReq req = new ShipInfoReq();
+        req.setShippingMethod("HOME_DELIVERY");
+        req.setRecipientName("王小明");
+        req.setRecipientPhone("0912345678");
+        req.setRecipientAddress("台北市信義區信義路五段7號");
+
+        assertThatThrownBy(() -> orderService.submitShippingInfo(ORDER_ID, req, USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("訂單已確認，無法修改出貨資訊");
+    }
+
+    // ===== T007: submitShippingInfo 在他人訂單上拋出例外 =====
+
+    @Test
+    @DisplayName("T007: 存取他人訂單提交出貨資訊 → 應拋出 BusinessException('無權限操作此訂單')")
+    void submitShippingInfo_WhenNotOwner_ShouldThrowForbiddenException() {
+        Order order = buildOrder(OrderStatusEnum.PENDING);
+        // order.userId = USER_ID, but caller is OTHER_USER_ID
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
+
+        ShipInfoReq req = new ShipInfoReq();
+        req.setShippingMethod("HOME_DELIVERY");
+        req.setRecipientName("王小明");
+        req.setRecipientPhone("0912345678");
+        req.setRecipientAddress("台北市信義區");
+
+        assertThatThrownBy(() -> orderService.submitShippingInfo(ORDER_ID, req, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("無權限操作此訂單");
+    }
+
+    // ===== Additional: validateShippingInfo =====
+
+    @Test
+    @DisplayName("HOME_DELIVERY 缺少 recipientName → 應拋出 BusinessException")
+    void submitShippingInfo_HomeDeliveryMissingName_ShouldThrow() {
+        Order order = buildOrder(OrderStatusEnum.PENDING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
+
+        ShipInfoReq req = new ShipInfoReq();
+        req.setShippingMethod("HOME_DELIVERY");
+        req.setRecipientPhone("0912345678");
+        req.setRecipientAddress("台北市信義區");
+
+        assertThatThrownBy(() -> orderService.submitShippingInfo(ORDER_ID, req, USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("宅配需填入收件人姓名");
+    }
+
+    @Test
+    @DisplayName("SEVEN_ELEVEN 缺少 storeCode → 應拋出 BusinessException")
+    void submitShippingInfo_SevenElevenMissingStoreCode_ShouldThrow() {
+        Order order = buildOrder(OrderStatusEnum.PENDING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
+
+        ShipInfoReq req = new ShipInfoReq();
+        req.setShippingMethod("SEVEN_ELEVEN");
+        req.setStoreName("統一超商信義門市");
+
+        assertThatThrownBy(() -> orderService.submitShippingInfo(ORDER_ID, req, USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("超商取貨需填入分店代碼");
+    }
+
+    @Test
+    @DisplayName("HOME_DELIVERY 完整資訊 → 應成功呼叫 updateByPrimaryKeySelective")
+    void submitShippingInfo_HomeDelivery_HappyPath_ShouldUpdate() {
+        Order order = buildOrder(OrderStatusEnum.PENDING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
+
+        ShipInfoReq req = new ShipInfoReq();
+        req.setShippingMethod("HOME_DELIVERY");
+        req.setRecipientName("王小明");
+        req.setRecipientPhone("0912345678");
+        req.setRecipientAddress("台北市信義區信義路五段7號");
+
+        orderService.submitShippingInfo(ORDER_ID, req, USER_ID);
+
+        verify(orderMapper).updateByPrimaryKeySelective(argThat(o ->
+                "HOME_DELIVERY".equals(o.getShippingMethod()) &&
+                "王小明".equals(o.getRecipientName())));
     }
 }

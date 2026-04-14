@@ -1,35 +1,57 @@
 package com.group.admin.req.order;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+/**
+ * 出貨資訊提交請求 DTO
+ * 用於玩家提交或更新訂單出貨資訊（POST /order/{orderId}/shipping-info）
+ *
+ * @author Kuji Admin
+ * @since 2026-03-22
+ */
 @Data
-@Schema(description = "出貨資訊請求")
 public class ShipInfoReq {
 
-    @NotBlank(message = "請選擇配送方式")
-    @Schema(description = "配送方式（HOME_DELIVERY/SEVEN_ELEVEN/FAMILY_MART）", example = "HOME_DELIVERY")
+    /**
+     * 配送方式代碼（必填）
+     * 有效值：HOME_DELIVERY / SEVEN_ELEVEN / FAMILY_MART
+     */
+    @NotBlank(message = "出貨方式不可為空")
     private String shippingMethod;
 
-    @Schema(description = "收件人姓名（宅配必填）", example = "王小明")
+    /**
+     * 收件人姓名（HOME_DELIVERY 時必填）
+     */
     private String recipientName;
 
-    @Schema(description = "收件人電話（宅配必填）", example = "0912345678")
+    /**
+     * 收件人電話（HOME_DELIVERY 時必填）
+     */
     private String recipientPhone;
 
-    @Schema(description = "收件地址（宅配必填）", example = "台北市信義區信義路五段7號")
+    /**
+     * 收件地址（HOME_DELIVERY 時必填）
+     */
     private String recipientAddress;
 
-    @Schema(description = "超商分店代碼（超商取貨必填）", example = "167890")
+    /**
+     * 超商分店代碼（SEVEN_ELEVEN / FAMILY_MART 時必填）
+     */
     private String storeCode;
 
-    @Schema(description = "超商分店名稱（超商取貨必填）", example = "信義門市")
+    /**
+     * 超商分店名稱（SEVEN_ELEVEN / FAMILY_MART 時必填）
+     */
     private String storeName;
 
-    @Schema(description = "超商分店地址", example = "台北市信義區松仁路100號")
+    /**
+     * 超商分店地址（可選）
+     */
     private String storeAddress;
 
-    @Schema(description = "備註")
+    /**
+     * 備註（可選）
+     */
     private String remark;
 }
