@@ -19,6 +19,7 @@ import com.group.admin.req.AuthGoogleReq;
 import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
 import com.group.admin.res.AuthRes;
+import com.group.admin.res.referral.ReferralCodeRes;
 import com.group.admin.service.EmailService;
 import com.group.admin.service.ReferralCodeService;
 import com.group.admin.service.UserService;
@@ -99,9 +100,19 @@ public class UserServiceImpl implements UserService {
         if (req.getReferralCode() != null && !req.getReferralCode().trim().isEmpty()) {
             log.info("🎁 處理推薦碼: {}", req.getReferralCode());
             try {
-                boolean used = referralCodeService.useCode(user.getId(), req.getReferralCode().trim());
+                String code = req.getReferralCode().trim().toUpperCase();
+                boolean used = referralCodeService.useCode(user.getId(), code);
                 if (used) {
-                    log.info("✅ 推薦碼使用成功: userId={}, code={}", user.getId(), req.getReferralCode());
+                    // 同步推薦碼資訊到 user 表（新增）
+                    ReferralCodeRes codeRes = referralCodeService.getByCode(code);
+                    if (codeRes != null) {
+                        user.setReferralCode(code);
+                        user.setReferredStoreId(codeRes.getStoreId());
+                        user.setReferralBoundAt(LocalDateTime.now());
+                        userMapper.updateByPrimaryKeySelective(user);
+                        log.info("✅ 推薦碼綁定成功: userId={}, code={}, storeId={}",
+                                user.getId(), code, codeRes.getStoreId());
+                    }
                 } else {
                     log.warn("⚠️ 推薦碼無效或已停用: {}", req.getReferralCode());
                 }
@@ -200,8 +211,9 @@ public class UserServiceImpl implements UserService {
                 user.setLastLoginAt(LocalDateTime.now());
                 user.setCreatedAt(LocalDateTime.now());
                 user.setUpdatedAt(LocalDateTime.now());
+                user.setIsOauthNewUser(1); // ⭐ 標記為 OAuth 新用戶，前端用於顯示補推薦碼引導
                 userMapper.insert(user);
-                log.info("Google OAuth 新用戶註冊: {}", email);
+                log.info("Google OAuth 新用戶註冊: {}, userId={}", email, user.getId());
             } else {
                 // ✅ 檢查會員狀態（停用或刪除的會員不能登入）
                 if ("INACTIVE".equals(user.getStatus())) {
@@ -234,11 +246,14 @@ public class UserServiceImpl implements UserService {
             String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"));
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
+            boolean isNewUser = Integer.valueOf(1).equals(user.getIsOauthNewUser());
+
             AuthRes res = new AuthRes();
             res.setAccessToken(accessToken);
             res.setRefreshToken(refreshToken);
             res.setExpiresIn(jwtUtil.getExpirationSeconds());
             res.setUser(user);
+            res.setIsNewUser(isNewUser); // ⭐ 前端用於判斷是否要顯示補推薦碼引導
             return res;
             
         } catch (IllegalArgumentException e) {
@@ -246,6 +261,40 @@ public class UserServiceImpl implements UserService {
         } catch (Exception ex) {
             log.error("Google OAuth 驗證失敗", ex);
             throw new IllegalArgumentException("Google authentication failed");
+        }
+    }
+
+    /**
+     * OAuth 新用戶補推薦碼（一次性，已綁定則拋例外）
+     */
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void applyReferral(String userId, String code) {
+        log.info("🎁 [applyReferral] userId={}, code={}", userId, code);
+
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("用戶不存在");
+        }
+        // 已綁定推薦碼，不允許重複
+        if (user.getReferralCode() != null && !user.getReferralCode().isEmpty()) {
+            throw new IllegalArgumentException("您已綁定過推薦碼，無法再次修改");
+        }
+        String upperCode = code.trim().toUpperCase();
+        boolean used = referralCodeService.useCode(userId, upperCode);
+        if (!used) {
+            throw new IllegalArgumentException("推薦碼無效、已停用或已超過使用上限");
+        }
+        // 同步推薦碼資訊到 user 表
+        ReferralCodeRes codeRes = referralCodeService.getByCode(upperCode);
+        if (codeRes != null) {
+            user.setReferralCode(upperCode);
+            user.setReferredStoreId(codeRes.getStoreId());
+            user.setReferralBoundAt(LocalDateTime.now());
+            user.setIsOauthNewUser(0); // 已完成補碼，清除新用戶旗標
+            user.setUpdatedAt(LocalDateTime.now());
+            userMapper.updateByPrimaryKeySelective(user);
+            log.info("✅ OAuth 補推薦碼成功: userId={}, code={}, storeId={}", userId, upperCode, codeRes.getStoreId());
         }
     }
 

@@ -121,9 +121,9 @@ public class AdminOrderController {
     }
     
     /**
-     * 取消訂單（新版，使用 CancelOrderReq）
+     * 取消訂單
      */
-    @PostMapping("/{orderId}/cancel")
+    @DeleteMapping("/{orderId}")
     public ResponseEntity<Void> cancelOrder(
             @PathVariable String orderId,
             @RequestBody(required = false) CancelOrderReq req) {
@@ -131,23 +131,6 @@ public class AdminOrderController {
         log.info("🔍 [Admin] 取消訂單：orderId={}, operator={}", orderId, operatorId);
         
         orderService.cancelOrder(orderId, req, operatorId, "ADMIN");
-        
-        return ResponseEntity.ok().build();
-    }
-    
-    /**
-     * 取消訂單（舊版，向下相容）
-     */
-    @PutMapping("/{orderId}/cancel")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> cancel(
-            @PathVariable String orderId,
-            @Valid @RequestBody OrderCancelReq req) {
-        String operatorId = SecurityUtils.getCurrentAdminUserId();
-        log.info("🔍 [Admin] 取消訂單（舊版）：orderId={}, reason={}, operator={}", 
-                orderId, req.getReason(), operatorId);
-        
-        orderService.cancel(orderId, req, operatorId);
         
         return ResponseEntity.ok().build();
     }

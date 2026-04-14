@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.group.admin.entity.User;
 import com.group.admin.mapper.UserMapper;
+import com.group.admin.req.referral.ApplyReferralReq;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.UserRes;
 import com.group.admin.service.S3Service;
@@ -321,6 +322,23 @@ public class UserController {
         UserRes res = UserRes.from(user);
         
         return ResponseEntity.ok(res);
+    }
+
+    /**
+     * OAuth 新用戶補上推薦碼（一次性）
+     * POST /api/user/apply-referral
+     */
+    @PostMapping("/apply-referral")
+    @Operation(summary = "補上推薦碼", description = "OAuth 新用戶登入後補上推薦碼（一次性，已綁定則拋例外）")
+    public ResponseEntity<Void> applyReferral(@Valid @RequestBody ApplyReferralReq req) {
+        String userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        log.info("🎁 [API] 補上推薦碼: userId={}, code={}", userId, req.getCode());
+        userService.applyReferral(userId, req.getCode());
+        log.info("✅ [API] 推薦碼綁定成功: userId={}", userId);
+        return ResponseEntity.ok().build();
     }
 
 }

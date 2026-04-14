@@ -100,7 +100,7 @@ public class AdminAuthController {
      * @param req 刷新 Token 請求
      * @return 新的登入回應（含新 Token）
      */
-    @PostMapping("/refresh-token")
+    @PostMapping("/refresh")
     @Operation(summary = "刷新 Token", description = "使用 Refresh Token 取得新的 Access Token")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "刷新成功"),

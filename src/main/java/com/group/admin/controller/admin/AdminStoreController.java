@@ -301,63 +301,29 @@ public class AdminStoreController {
     }
 
     /**
-     * 啟用店家
+     * 更新店家狀態（啟用或停用）
      * 
      * @param storeId 店家 ID
+     * @param req 狀態更新請求
      * @return 成功訊息
-     */
-    @PostMapping("/{storeId}/activate")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "啟用店家", description = "只有 Admin 可以啟用店家")
-    public ResponseEntity<Void> activateStore(
-            @PathVariable
-            @Parameter(description = "店家 ID", example = "uuid-store-1")
-            String storeId) {
-        
-        log.info("✅ [後台] 啟用店家：storeId={}", storeId);
-        
-        storeService.activateStore(storeId);
-        
-        log.info("✅ [後台] 店家已啟用");
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * 停用店家
-     * 
-     * @param storeId 店家 ID
-     * @return 成功訊息
-     */
-    @PostMapping("/{storeId}/deactivate")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "停用店家", description = "只有 Admin 可以停用店家")
-    public ResponseEntity<Void> deactivateStore(
-            @PathVariable
-            @Parameter(description = "店家 ID", example = "uuid-store-1")
-            String storeId) {
-        
-        log.info("⛔ [後台] 停用店家：storeId={}", storeId);
-        
-        storeService.deactivateStore(storeId);
-        
-        log.info("✅ [後台] 店家已停用");
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * 更新店家狀態
      */
     @PutMapping("/{storeId}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "更新店家狀態", description = "啟用或停用店家（ADMIN 專用）")
+    @Operation(summary = "更新店家狀態", description = "啟用或停用店家。停用時觸發連鎖：所有商品→OFF_SHELF，所有橫幅→DISABLED")
     public ResponseEntity<Void> updateStoreStatus(
             @PathVariable
             @Parameter(description = "店家 ID", example = "uuid-store-1")
             String storeId,
-            @Valid @RequestBody UpdateStoreStatusReq req) {
-        String operatorId = SecurityUtils.getCurrentUserId();
-        log.info("🔄 [後台] 更新店家狀態: storeId={}, status={}", storeId, req.getStatus());
+            @Valid @RequestBody
+            @Parameter(description = "狀態更新請求")
+            UpdateStoreStatusReq req) {
+        
+        String operatorId = SecurityUtils.getCurrentAdminUserId();
+        log.info("🔄 [後台] 更新店家狀態：storeId={}, status={}, operator={}", storeId, req.getStatus(), operatorId);
+        
         storeService.updateStoreStatus(storeId, req, operatorId);
+        
+        log.info("✅ [後台] 店家狀態已更新");
         return ResponseEntity.ok().build();
     }
 }

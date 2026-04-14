@@ -1,6 +1,7 @@
 package com.group.admin.enums;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 交易類型枚舉
@@ -9,6 +10,7 @@ import lombok.Getter;
  * @since 2026-01-09
  */
 @Getter
+@RequiredArgsConstructor
 public enum TransactionTypeEnum {
     
     RECHARGE("RECHARGE", "儲值"),
@@ -19,11 +21,6 @@ public enum TransactionTypeEnum {
     
     private final String code;
     private final String name;
-    
-    TransactionTypeEnum(String code, String name) {
-        this.code = code;
-        this.name = name;
-    }
     
     /**
      * 根據 code 取得對應的枚舉

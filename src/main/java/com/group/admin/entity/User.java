@@ -342,4 +342,26 @@ public class User {
     public void setVersion(Integer version) {
         this.version = version;
     }
+
+    // ========== Spec-023: 推薦碼整合新增欄位 ==========
+
+    private java.time.LocalDateTime referralBoundAt;
+
+    private Integer isOauthNewUser;
+
+    public java.time.LocalDateTime getReferralBoundAt() {
+        return referralBoundAt;
+    }
+
+    public void setReferralBoundAt(java.time.LocalDateTime referralBoundAt) {
+        this.referralBoundAt = referralBoundAt;
+    }
+
+    public Integer getIsOauthNewUser() {
+        return isOauthNewUser;
+    }
+
+    public void setIsOauthNewUser(Integer isOauthNewUser) {
+        this.isOauthNewUser = isOauthNewUser;
+    }
 }

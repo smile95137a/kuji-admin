@@ -45,7 +45,13 @@ public interface UserService {
     void requestPasswordReset(String email);
     
     /**
+     * OAuth 新用戶登入後補上推薦碼（一次性，已綁定則拋例外）
+     */
+    void applyReferral(String userId, String code);
+
+    /**
      * 驗證重設 token 並重設密碼
      */
+
     void resetPassword(String token, String newPassword);
 }
