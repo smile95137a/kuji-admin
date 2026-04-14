@@ -176,6 +176,7 @@ public class LotteryCreateReq {
      * RANDOM: 完全隨機
      */
     @Schema(description = "遊戲模式：SCRATCH_STORE/SCRATCH_PLAYER/RANDOM（僅 SCRATCH_MODE 需要）", example = "RANDOM")
+    @Pattern(regexp = "^(RANDOM|SCRATCH_STORE|SCRATCH_PLAYER|TICKET)?$", message = "gameMode 必須為 RANDOM、SCRATCH_STORE、SCRATCH_PLAYER 或 TICKET")
     private String gameMode;
 
     /**

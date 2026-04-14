@@ -4,31 +4,42 @@ import lombok.Getter;
 
 /**
  * 交易類型枚舉
- * 
+ *
  * @author Kuji Admin
  * @since 2026-01-09
  */
 @Getter
-public enum TransactionTypeEnum {
-    
-    RECHARGE("RECHARGE", "儲值"),
-    BONUS_GRANT("BONUS_GRANT", "紅利贈送"),
-    DRAW("DRAW", "抽獎消費"),
-    RECYCLE("RECYCLE", "獎品回收"),
-    REFUND("REFUND", "退款"),
-    ADMIN_ADJUST("ADMIN_ADJUST", "系統調整");
-    
+public enum TransactionTypeEnum implements DisplayableEnum {
+
+    RECHARGE("RECHARGE", "儲值", true),
+    DRAW("DRAW", "抽獎消費", false),
+    RECYCLE("RECYCLE", "獎品回收", true),
+    REFUND("REFUND", "退款", true),
+    ADMIN_ADJUST("ADMIN_ADJUST", "系統調整", true),
+    BONUS_GRANT("BONUS_GRANT", "紅利贈送", true),
+    BONUS_EXPIRE("BONUS_EXPIRE", "紅利過期", false),
+    FREE_DRAW_REFUND("FREE_DRAW_REFUND", "免費抽退款", true);
+
     private final String code;
     private final String name;
-    
-    TransactionTypeEnum(String code, String name) {
+    private final boolean isIncrease;
+
+    TransactionTypeEnum(String code, String name, boolean isIncrease) {
         this.code = code;
         this.name = name;
+        this.isIncrease = isIncrease;
     }
-    
-    /**
-     * 根據 code 取得對應的枚舉
-     */
+
+    @Override
+    public String getCode() {
+        return this.code;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return this.name;
+    }
+
     public static TransactionTypeEnum fromCode(String code) {
         for (TransactionTypeEnum type : values()) {
             if (type.getCode().equals(code)) {
@@ -37,10 +48,7 @@ public enum TransactionTypeEnum {
         }
         throw new IllegalArgumentException("無效的交易類型：" + code);
     }
-    
-    /**
-     * 根據 code 取得對應的中文名稱
-     */
+
     public static String getNameByCode(String code) {
         try {
             return fromCode(code).getName();
@@ -48,10 +56,7 @@ public enum TransactionTypeEnum {
             return code;
         }
     }
-    
-    /**
-     * 檢查 code 是否有效
-     */
+
     public static boolean isValid(String code) {
         for (TransactionTypeEnum type : values()) {
             if (type.getCode().equals(code)) {
