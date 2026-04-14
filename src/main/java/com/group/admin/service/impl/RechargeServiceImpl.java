@@ -37,6 +37,13 @@ public class RechargeServiceImpl implements RechargeService {
     private final RechargePlanMapper rechargePlanMapper;
     private final UserMapper userMapper;
     private final CoinService coinService;
+
+    @Override
+    public com.group.admin.res.wallet.RechargeOrderRes createRechargeOrder(String userId, String planId) {
+        log.info("💳 [Recharge] 建立儲值訂單：userId={}, planId={}", userId, planId);
+        // Stub: 真實串接第三方金流時實作；目前使用管理端 createRechargeRequest
+        throw new BusinessException("請使用 POST /recharge/request 進行儲值");
+    }
     
     @Override
     public RechargeRes createRechargeRequest(String userId, RechargeReq req) {
@@ -233,5 +240,19 @@ public class RechargeServiceImpl implements RechargeService {
         log.info("✅ 支付失敗已記錄：rechargeId={}", rechargeId);
         
         return RechargeRes.from(record);
+    }
+
+    @Override
+    public void handleCallback(com.group.admin.gateway.GatewayCallbackResult result) {
+        log.info("📥 [Recharge] 支付閘道回調：merchantOrderId={}, success={}", result.merchantOrderId(), result.success());
+        if (result.success()) {
+            try {
+                confirmPayment(result.merchantOrderId(), result.gatewayOrderId());
+            } catch (Exception e) {
+                log.error("❌ 回調確認失敗：merchantOrderId={}, error={}", result.merchantOrderId(), e.getMessage());
+            }
+        } else {
+            log.warn("⚠️ 支付閘道回報失敗：merchantOrderId={}", result.merchantOrderId());
+        }
     }
 }

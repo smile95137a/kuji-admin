@@ -54,6 +54,11 @@ public class OrderDetailRes {
      * 店家名稱
      */
     private String storeName;
+
+    /**
+     * 店家 Logo URL
+     */
+    private String storeLogoUrl;
     
     /**
      * 商品總數

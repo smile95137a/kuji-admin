@@ -1,5 +1,6 @@
 package com.group.admin.res.draw;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -9,6 +10,9 @@ import java.util.List;
  * 後台抽獎歷史查詢回應
  */
 @Data
+@Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 public class AdminDrawHistoryRes {
 
     private int page;
@@ -19,6 +23,9 @@ public class AdminDrawHistoryRes {
     private DrawSummary summary;
 
     @Data
+    @Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     public static class DrawRecordItem {
         private String id;
         private String lotteryId;
@@ -35,6 +42,9 @@ public class AdminDrawHistoryRes {
     }
 
     @Data
+    @Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     public static class DrawSummary {
         private long totalDraws;
         private long successDraws;

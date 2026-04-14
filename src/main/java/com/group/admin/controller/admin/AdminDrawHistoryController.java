@@ -79,7 +79,7 @@ public class AdminDrawHistoryController {
         int size = req.getSize() != null ? req.getSize() : 20;
         int offset = (page - 1) * size;
 
-        List<LotteryDrawRecord> records = drawRecordMapper.selectByLotteryIdPaged(
+        List<Map<String,Object>> records = drawRecordMapper.selectByLotteryIdPaged(
                 id, req.getUserId(), req.getStatus(),
                 req.getStartDate(), req.getEndDate(),
                 size, offset);
@@ -88,35 +88,30 @@ public class AdminDrawHistoryController {
                 id, req.getUserId(), req.getStatus(),
                 req.getStartDate(), req.getEndDate());
 
-        // 4. Build prize lookup for display names
+        // 4. (prizeMap not needed — query already JOINs prize data)
         LotteryPrizeExample prizeExample = new LotteryPrizeExample();
         prizeExample.createCriteria().andLotteryIdEqualTo(id);
         List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
-        Map<String, LotteryPrize> prizeMap = prizes.stream()
-                .collect(Collectors.toMap(LotteryPrize::getId, p -> p));
 
         // 5. Convert records
         List<AdminDrawHistoryRes.DrawRecordItem> items = new ArrayList<>();
-        for (LotteryDrawRecord r : records) {
+        for (Map<String,Object> r : records) {
             AdminDrawHistoryRes.DrawRecordItem item = new AdminDrawHistoryRes.DrawRecordItem();
-            item.setId(r.getId());
-            item.setLotteryId(r.getLotteryId());
-            item.setUserId(r.getUserId());
-            item.setPrizeId(r.getPrizeId());
-            item.setCostType(r.getCostType());
-            item.setCostAmount(r.getCostAmount());
-            item.setStatus(r.getStatus());
-            item.setCreatedAt(r.getCreatedAt());
-
-            if (r.getPrizeId() != null) {
-                LotteryPrize prize = prizeMap.get(r.getPrizeId());
-                if (prize != null) {
-                    item.setPrizeName(prize.getName());
-                    item.setPrizeLevel(prize.getLevel());
-                    item.setPrizeImageUrl(prize.getImageUrl());
-                    item.setIsLastPrize(prize.getIsLastPrize() != null && prize.getIsLastPrize() == 1);
-                }
-            }
+            item.setId(getString(r, "id"));
+            item.setLotteryId(getString(r, "lottery_id"));
+            item.setUserId(getString(r, "user_id"));
+            item.setPrizeId(getString(r, "prize_id"));
+            item.setPrizeName(getString(r, "prize_name"));
+            item.setPrizeLevel(getString(r, "prize_level"));
+            item.setPrizeImageUrl(getString(r, "prize_image_url"));
+            item.setCostType(getString(r, "cost_type"));
+            Object costAmt = r.get("cost_amount");
+            item.setCostAmount(costAmt instanceof Number ? ((Number) costAmt).longValue() : null);
+            item.setStatus(getString(r, "status"));
+            Object createdAt = r.get("created_at");
+            if (createdAt instanceof java.time.LocalDateTime) item.setCreatedAt((java.time.LocalDateTime) createdAt);
+            Object isLast = r.get("is_last_prize");
+            item.setIsLastPrize(isLast != null && (isLast.equals(true) || isLast.equals(1) || "1".equals(isLast.toString())));
             items.add(item);
         }
 
@@ -154,5 +149,10 @@ public class AdminDrawHistoryController {
 
         log.info("✅ 查詢成功: lotteryId={}, total={}", id, total);
         return ResponseEntity.ok(res);
+    }
+
+    private String getString(Map<String,Object> map, String key) {
+        Object v = map.get(key);
+        return v != null ? v.toString() : null;
     }
 }

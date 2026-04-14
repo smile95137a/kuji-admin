@@ -34,4 +34,12 @@ public interface StoreService {
     PageResult<StoreListItemRes> listEnabledStores(int page, int size);
 
     StoreDetailRes getPublicStoreDetail(String storeId);
+
+    // ========== 店家選項相關 ==========
+
+    List<com.group.admin.res.common.EnumOption> getStoreOptionsForUser(String userId, boolean isAdmin, Boolean activeOnly);
+
+    List<com.group.admin.res.common.EnumOption> searchStoreOptions(String userId, boolean isAdmin, java.util.List<String> storeIds, String keyword, Boolean activeOnly);
+
+    List<com.group.admin.res.common.EnumOption> getAllActiveStoreOptions();
 }

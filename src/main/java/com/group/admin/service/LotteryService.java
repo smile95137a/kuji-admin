@@ -21,8 +21,18 @@ import java.util.Map;
  */
 public interface LotteryService {
     
-    // ==================== 商品管理 CRUD ====================
-    
+    // ==================== 排程觸發 ====================
+
+    /**
+     * 自動將排程到期商品從 CONFIGURED 推進到 ON_SHELF
+     */
+    void promoteScheduledLotteries();
+
+    /**
+     * 自動將 ON_SHELF 商品推進到 DRAWABLE（開放抽獎）
+     */
+    void promoteDrawableLotteries();
+
     /**
      * 建立抽獎商品
      *

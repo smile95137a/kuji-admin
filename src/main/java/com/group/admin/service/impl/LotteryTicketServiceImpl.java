@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -33,6 +34,7 @@ import com.group.admin.mapper.LotteryPrizeMapper;
 import com.group.admin.mapper.LotterySessionMapper;
 import com.group.admin.mapper.LotteryTicketMapper;
 import com.group.admin.res.lottery.LotteryTicketRes;
+import com.group.admin.res.lottery.DesignationCheckResponse;
 import com.group.admin.service.ConsumptionRecordService;
 import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
@@ -1228,6 +1230,63 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     }
 
     @Override
+    public com.group.admin.res.lottery.TicketListResponse getTicketList(String lotteryId) {
+        log.info("🎫 查詢籤位列表: lotteryId={}", lotteryId);
+
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+
+        LotteryTicketExample example = new LotteryTicketExample();
+        example.createCriteria().andLotteryIdEqualTo(lotteryId);
+        example.setOrderByClause("ticket_number ASC");
+        List<LotteryTicket> tickets = lotteryTicketMapper.selectByExample(example);
+
+        long availableCount = tickets.stream().filter(t -> "AVAILABLE".equals(t.getStatus())).count();
+        long drawnCount = tickets.stream().filter(t -> "DRAWN".equals(t.getStatus())).count();
+
+        List<com.group.admin.res.lottery.TicketListResponse.TicketView> views = tickets.stream().map(t -> {
+            if ("AVAILABLE".equals(t.getStatus())) {
+                return com.group.admin.res.lottery.TicketListResponse.TicketView.builder()
+                        .ticketNumber(t.getTicketNumber())
+                        .status(t.getStatus())
+                        .build();
+            } else {
+                String prizeName = null;
+                String prizeLevel = null;
+                String prizeImageUrl = null;
+                Boolean isGrandPrize = null;
+                if (t.getPrizeId() != null) {
+                    LotteryPrize p = lotteryPrizeMapper.selectByPrimaryKey(t.getPrizeId());
+                    if (p != null) {
+                        prizeName = p.getName();
+                        prizeLevel = p.getLevel();
+                        prizeImageUrl = p.getImageUrl();
+                        isGrandPrize = p.getIsGrandPrize() != null && p.getIsGrandPrize() == 1;
+                    }
+                }
+                return com.group.admin.res.lottery.TicketListResponse.TicketView.builder()
+                        .ticketNumber(t.getTicketNumber())
+                        .status(t.getStatus())
+                        .revealedNumber(t.getRevealedNumber())
+                        .prizeId(t.getPrizeId())
+                        .prizeName(prizeName)
+                        .prizeLevel(prizeLevel)
+                        .prizeImageUrl(prizeImageUrl)
+                        .isGrandPrize(isGrandPrize)
+                        .build();
+            }
+        }).collect(Collectors.toList());
+
+        return com.group.admin.res.lottery.TicketListResponse.builder()
+                .lotteryId(lotteryId)
+                .gameMode(lottery != null ? lottery.getGameMode() : null)
+                .totalTickets(tickets.size())
+                .availableCount((int) availableCount)
+                .drawnCount((int) drawnCount)
+                .tickets(views)
+                .build();
+    }
+
+    @Override
     public List<com.group.admin.entity.LotteryPrize> getGrandPrizes(String lotteryId) {
         log.info("🏆 查詢大獎清單: lotteryId={}", lotteryId);
 
@@ -1452,5 +1511,97 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
      */
     public Object getGachaLock(String lotteryId) {
         return gachaLocks.computeIfAbsent(lotteryId, k -> new Object());
+    }
+
+    @Override
+    public DesignationCheckResponse getDesignationStatus(String lotteryId, String userId) {
+        log.info("🔍 查詢指定狀態: lotteryId={}, userId={}", lotteryId, userId);
+
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            return DesignationCheckResponse.builder().required(false).build();
+        }
+
+        // 非 SCRATCH_PLAYER 模式 → 不需要指定
+        if (!GameModeEnum.SCRATCH_PLAYER.getCode().equals(lottery.getGameMode())) {
+            return DesignationCheckResponse.builder()
+                    .required(false)
+                    .gameMode(lottery.getGameMode())
+                    .build();
+        }
+
+        // 查詢 ACTIVE session
+        LotterySessionExample example = new LotterySessionExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andStatusEqualTo("ACTIVE");
+        List<LotterySession> sessions = lotterySessionMapper.selectByExample(example);
+
+        if (sessions.isEmpty()) {
+            return DesignationCheckResponse.builder()
+                    .required(false)
+                    .gameMode(lottery.getGameMode())
+                    .build();
+        }
+
+        LotterySession session = sessions.get(0);
+        boolean isOpener = userId != null && userId.equals(session.getOpenerUserId());
+
+        // 已完成指定
+        String designated = session.getPlayerDesignatedNumbers();
+        if (designated != null && !designated.isBlank()) {
+            return DesignationCheckResponse.builder()
+                    .required(false)
+                    .gameMode(lottery.getGameMode())
+                    .sessionId(session.getId())
+                    .isOpener(isOpener)
+                    .alreadyDesignated(true)
+                    .build();
+        }
+
+        // 需要指定
+        if (isOpener) {
+            // 查詢大獎獎品
+            LotteryPrizeExample prizeEx = new LotteryPrizeExample();
+            prizeEx.createCriteria()
+                    .andLotteryIdEqualTo(lotteryId)
+                    .andIsGrandPrizeEqualTo((byte) 1);
+            List<com.group.admin.entity.LotteryPrize> grandPrizes = lotteryPrizeMapper.selectByExample(prizeEx);
+
+            List<DesignationCheckResponse.GrandPrize> grandPrizeList = grandPrizes.stream()
+                    .map(p -> DesignationCheckResponse.GrandPrize.builder()
+                            .prizeId(p.getId())
+                            .prizeName(p.getName())
+                            .prizeLevel(p.getLevel())
+                            .prizeImageUrl(p.getImageUrl())
+                            .build())
+                    .collect(Collectors.toList());
+
+            // 查詢可用 revealedNumbers
+            List<Integer> availableNumbers = getAvailableRevealedNumbers(lotteryId);
+
+            int requiredCount = grandPrizes.stream()
+                    .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                    .sum();
+
+            return DesignationCheckResponse.builder()
+                    .required(true)
+                    .gameMode(lottery.getGameMode())
+                    .sessionId(session.getId())
+                    .isOpener(true)
+                    .requiredDesignationCount(requiredCount)
+                    .grandPrizes(grandPrizeList)
+                    .availableRevealedNumbers(availableNumbers)
+                    .build();
+        } else {
+            // 非開套玩家 → 等待開套玩家指定
+            return DesignationCheckResponse.builder()
+                    .required(true)
+                    .gameMode(lottery.getGameMode())
+                    .sessionId(session.getId())
+                    .isOpener(false)
+                    .message("等待開套玩家指定大獎位置")
+                    .build();
+        }
     }
 }

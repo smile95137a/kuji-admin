@@ -45,6 +45,14 @@ public interface OrderService {
 
     void cancelOrder(String id, CancelOrderReq req, String operatorId, String operatorType);
 
+    // ========== 相容方法 ==========
+
+    default List<String> createOrder(String userId, CreateOrderReq req) {
+        return createOrdersFromPrizeBox(userId, req);
+    }
+
+    OrderRes cancelOrder(String id, OrderCancelReq req, String operatorId, String operatorType);
+
     void submitShippingInfo(String orderId, com.group.admin.req.order.ShipInfoReq req, String userId);
 
     java.util.List<com.group.admin.res.order.StatusLogRes> getStatusLog(String orderId);

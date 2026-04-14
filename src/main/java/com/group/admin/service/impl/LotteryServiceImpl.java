@@ -2113,4 +2113,32 @@ public class LotteryServiceImpl implements LotteryService {
             lotteryMapper.updateByPrimaryKeySelective(upd);
         }
     }
+
+    @Override
+    public void promoteScheduledLotteries() {
+        log.info("⏰ [Scheduled] 檢查定時上架商品...");
+        List<Lottery> list = lotteryMapper.selectScheduledForPromotion();
+        for (Lottery l : list) {
+            Lottery upd = new Lottery();
+            upd.setId(l.getId());
+            upd.setStatus("ON_SHELF");
+            upd.setUpdatedAt(LocalDateTime.now());
+            lotteryMapper.updateByPrimaryKeySelective(upd);
+            log.info("✅ [Scheduled] 商品自動上架：id={}, title={}", l.getId(), l.getTitle());
+        }
+    }
+
+    @Override
+    public void promoteDrawableLotteries() {
+        log.info("⏰ [Scheduled] 檢查待開抽商品...");
+        List<Lottery> list = lotteryMapper.selectDrawableForStart();
+        for (Lottery l : list) {
+            Lottery upd = new Lottery();
+            upd.setId(l.getId());
+            upd.setStatus("DRAWABLE");
+            upd.setUpdatedAt(LocalDateTime.now());
+            lotteryMapper.updateByPrimaryKeySelective(upd);
+            log.info("✅ [Scheduled] 商品轉為可抽狀態：id={}, title={}", l.getId(), l.getTitle());
+        }
+    }
 }

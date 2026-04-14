@@ -42,6 +42,8 @@ public interface LotteryMapper {
 
     Lottery selectForUpdate(@Param("id") String id);
 
+    int updatePriceAfterGrandPrizeSoldOut(@Param("id") String id);
+
     List<java.util.Map<String, Object>> selectPublicList(
             @Param("category") String category,
             @Param("storeId") String storeId,

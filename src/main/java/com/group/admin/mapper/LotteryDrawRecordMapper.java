@@ -30,7 +30,7 @@ public interface LotteryDrawRecordMapper {
     int updateByPrimaryKey(LotteryDrawRecord row);
 
     /** Paginated draw history with optional filters */
-    List<LotteryDrawRecord> selectByLotteryIdPaged(
+    List<java.util.Map<String, Object>> selectByLotteryIdPaged(
             @Param("lotteryId") String lotteryId,
             @Param("userId") String userId,
             @Param("status") String status,
@@ -46,4 +46,7 @@ public interface LotteryDrawRecordMapper {
             @Param("status") String status,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    /** Sum total cost amount for a lottery */
+    Long sumCostAmountByLotteryId(@Param("lotteryId") String lotteryId);
 }

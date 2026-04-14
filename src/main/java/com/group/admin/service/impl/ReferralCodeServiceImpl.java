@@ -155,8 +155,16 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     }
     
     @Override
-    public List<ReferralCodeRes> getAll() {
-        List<ReferralCode> codes = referralCodeRepository.selectAll();
+    public List<ReferralCodeRes> getAll(String storeId, Boolean isActive) {
+        ReferralCodeExample example = new ReferralCodeExample();
+        ReferralCodeExample.Criteria criteria = example.createCriteria();
+        if (storeId != null && !storeId.isBlank()) {
+            criteria.andStoreIdEqualTo(storeId);
+        }
+        if (isActive != null) {
+            criteria.andIsActiveEqualTo(isActive);
+        }
+        List<ReferralCode> codes = referralCodeMapper.selectByExample(example);
         
         return codes.stream()
                 .map(code -> {
@@ -209,6 +217,23 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         
         log.info("✅ 推薦碼使用成功: userId={}, code={}", userId, code);
         return true;
+    }
+
+    @Override
+    @Transactional
+    public void useCode(String userId, String code, String registrationEmail) {
+        log.info("🎁 使用推薦碼 (含 email): userId={}, code={}", userId, code);
+        boolean result = useCode(userId, code);
+        if (!result) {
+            throw new com.group.admin.exception.BusinessException("推薦碼無效或已使用");
+        }
+    }
+
+    @Override
+    public com.group.admin.res.referral.ReferralValidateRes validateForRegistration(String code) {
+        log.info("🔍 驗證推薦碼 (註冊): code={}", code);
+        boolean valid = validateCode(code);
+        return new com.group.admin.res.referral.ReferralValidateRes(valid, code, null);
     }
     
     @Override
@@ -423,6 +448,20 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         log.info("✅ 推薦碼已停用: codeId={}", codeId);
     }
 
+    @Override
+    public ReferralCodeRes disableCode(String id) {
+        log.info("🚫 管理端停用推薦碼: id={}", id);
+        ReferralCode referralCode = referralCodeMapper.selectByPrimaryKey(id);
+        if (referralCode == null) {
+            throw new BusinessException("推薦碼不存在");
+        }
+        referralCode.setIsActive(false);
+        referralCode.setUpdatedAt(LocalDateTime.now());
+        referralCodeMapper.updateByPrimaryKeySelective(referralCode);
+        Store store = storeMapper.selectByPrimaryKey(referralCode.getStoreId());
+        return toReferralCodeRes(referralCode, store != null ? store.getStoreName() : null);
+    }
+
     // ========== Helper methods ==========
 
     private String generateUniqueCode() {
@@ -475,5 +514,12 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         }
         
         return res;
+    }
+
+    @Override
+    public List<com.group.admin.res.referral.AdminReferralStatsRes> getReferralStats(com.group.admin.condition.report.ReferralReportCondition condition) {
+        log.info("📊 [Referral] 查詢推薦統計：condition={}", condition);
+        // TODO: implement aggregated referral stats via JdbcTemplate
+        return java.util.Collections.emptyList();
     }
 }

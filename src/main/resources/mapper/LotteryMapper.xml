@@ -904,4 +904,16 @@
       delist_strategy = #{delistStrategy,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- 自動將 discounted_price 更新為大獎售罄後的折扣價格 -->
+  <update id="updatePriceAfterGrandPrizeSoldOut" parameterType="string">
+    UPDATE `lottery`
+    SET price_per_draw = discounted_price,
+        updated_at     = NOW()
+    WHERE id = #{id}
+      AND discounted_price IS NOT NULL
+      AND discounted_price > 0
+      AND auto_discount_enabled = 1
+  </update>
+
 </mapper>

@@ -803,4 +803,14 @@ public class OrderServiceImpl implements OrderService {
                 .map(this::convertLogToRes)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public com.group.admin.res.order.OrderRes cancelOrder(String id, com.group.admin.req.order.OrderCancelReq req, String operatorId, String operatorType) {
+        CancelOrderReq cancelReq = new CancelOrderReq();
+        cancelReq.setCancelReason(req != null ? req.getCancelReason() : null);
+        cancelOrder(id, cancelReq, operatorId, operatorType);
+        Order order = orderMapper.selectByPrimaryKey(id);
+        return order != null ? convertToRes(order) : null;
+    }
 }
