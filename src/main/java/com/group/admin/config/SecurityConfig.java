@@ -81,14 +81,17 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 登入、註冊、OAuth 不需要認證
                         .requestMatchers("/api/auth/**", "/login/oauth2/**").permitAll()
-                        // T013: 推薦碼驗證（公開端點，需在 /api/** 規則前宣告）
-                        .requestMatchers("/api/auth/validate-referral").permitAll()
                         // 公開 API（不需要認證）
                         .requestMatchers("/api/district/**").permitAll()  // 行政區資料
                         .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
                         .requestMatchers("/api/ws/**").permitAll()        // WebSocket
                         .requestMatchers("/api/recharge-plan/**").permitAll()  // 儲值方案
-                        .requestMatchers("/api/news/**").permitAll()           // 最新消息（公開）
+                        .requestMatchers("/api/stores/list").permitAll()        // 公開店家列表（舊路由）
+                        .requestMatchers("/api/stores", "/api/stores/**").permitAll()  // 公開店家列表與詳情
+                        .requestMatchers("/api/lottery/list").permitAll()       // 公開商品列表
+                        .requestMatchers("/api/lottery/browse/**").permitAll()  // 公開商品瀏覽
+                        .requestMatchers("/api/news/published").permitAll()     // 公開新聞
+                        .requestMatchers("/api/banners").permitAll()            // 公開輪播
                         // 其他 /api/** 需要 USER 或後台管理角色
                         .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )

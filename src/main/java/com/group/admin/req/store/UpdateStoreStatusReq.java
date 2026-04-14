@@ -10,7 +10,7 @@ import lombok.Data;
 public class UpdateStoreStatusReq {
 
     @NotBlank(message = "狀態不可為空")
-    @Pattern(regexp = "ACTIVE|INACTIVE", message = "狀態只能是 ACTIVE 或 INACTIVE")
-    @Schema(description = "店家狀態", example = "ACTIVE")
+    @Pattern(regexp = "ENABLED|DISABLED", message = "狀態只能是 ENABLED 或 DISABLED")
+    @Schema(description = "店家狀態", example = "ENABLED")
     private String status;
 }
