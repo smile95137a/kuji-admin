@@ -55,6 +55,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final StoreUserMapper storeUserMapper;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final com.group.admin.service.TokenBlacklistService tokenBlacklistService;
 
     /**
      * {@inheritDoc}
@@ -97,8 +98,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         user.setLastLoginAt(LocalDateTime.now());
         adminUserMapper.updateByPrimaryKey(user);
         
-        // 生成 Token（包含 storeIds）
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds);
+        // 生成 Token（包含 storeIds 與 gen）
+        long gen = tokenBlacklistService.getCurrentGen(user.getId());
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds, gen);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         
         log.info("後台登入成功：username={}, userId={}, storeIds={}", user.getUsername(), user.getId(), storeIds);
@@ -138,14 +140,18 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         user.setUpdatedAt(LocalDateTime.now());
         adminUserMapper.updateByPrimaryKey(user);
         
+        // 撤銷舊 Token
+        tokenBlacklistService.invalidateUser(userId);
+        
         // 取得角色列表
         List<String> roles = getUserRoles(user.getId());
         
         // 取得店家 ID 列表
         List<String> storeIds = getUserStoreIds(user.getId());
         
-        // 生成新 Token（包含 storeIds）
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds);
+        // 生成新 Token（包含 storeIds 與 gen）
+        long gen = tokenBlacklistService.getCurrentGen(user.getId());
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds, gen);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         
         log.info("首次登入修改密碼成功：userId={}, storeIds={}", userId, storeIds);
@@ -215,8 +221,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         // 取得店家 ID 列表
         List<String> storeIds = getUserStoreIds(user.getId());
         
-        // 生成新 Token（包含 storeIds）
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds);
+        // 生成新 Token（包含 storeIds 與 gen）
+        long gen = tokenBlacklistService.getCurrentGen(user.getId());
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId(), "admin", roles, storeIds, gen);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         
         log.info("刷新 Token 成功：username={}, storeIds={}", username, storeIds);

@@ -1,8 +1,11 @@
 package com.group.admin.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,6 +25,7 @@ import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.service.TokenBlacklistService;
 import com.group.admin.util.JwtUtil;
 
 import org.springframework.lang.NonNull;
@@ -35,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 後台 JWT 認證過濾器
  * 僅處理 /admin/** 路徑的請求
- * 支援後台 AdminUser 的認證
+ * 支援後台 AdminUser 的認證與 Token 黑名單檢查
  */
 @Slf4j
 @Component
@@ -47,56 +51,48 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
     private final StoreUserMapper storeUserMapper;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        // 取得 Servlet Path（已經去掉 context-path 的路徑）
         String path = request.getServletPath();
-        log.info("🔍 [AdminJwtFilter] 收到請求: URI={}, ServletPath={}", request.getRequestURI(), path);
+        log.debug("🔍 [AdminJwtFilter] path={}", path);
 
-        // 僅處理 /admin/** 路徑（ServletPath 已經不包含 /api 前綴）
         if (!path.startsWith("/admin/")) {
-            log.info("⏭️  [AdminJwtFilter] 非 /admin/** 路徑，跳過: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 跳過登入介面
-        if (path.equals("/admin/auth/login") || path.startsWith("/admin/auth/")) {
-            log.info("⏭️  [AdminJwtFilter] 登入路徑，跳過: {}", path);
+        // Login endpoint: no token needed
+        if (path.equals("/admin/auth/login")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        log.info("🔐 [AdminJwtFilter] 開始認證: {}", path);
+        boolean isAuthPath = path.startsWith("/admin/auth/");
+
+        String token = extractToken(request);
+        if (token == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (!jwtUtil.validateToken(token)) {
+            log.warn("⚠️  [AdminJwtFilter] Token 驗證失敗");
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
-            String token = extractToken(request);
-            if (token == null) {
-                log.warn("⚠️  [AdminJwtFilter] 未提供 Token");
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            log.info("🎫 [AdminJwtFilter] Token 前20字元: {}...", token.substring(0, Math.min(20, token.length())));
-
-            if (!jwtUtil.validateToken(token)) {
-                log.warn("⚠️  [AdminJwtFilter] Token 驗證失敗");
-                filterChain.doFilter(request, response);
-                return;
-            }
-
             String username = jwtUtil.getUsername(token);
-            log.info("👤 [AdminJwtFilter] 使用者: {}", username);
-                
-            // 使用 Example 模式查詢管理員
+
             AdminUserExample example = new AdminUserExample();
             example.createCriteria().andUsernameEqualTo(username);
             List<AdminUser> adminUsers = adminUserMapper.selectByExample(example);
-            
+
             if (adminUsers.isEmpty()) {
                 log.warn("❌ [AdminJwtFilter] 找不到管理員: {}", username);
                 filterChain.doFilter(request, response);
@@ -104,46 +100,44 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             AdminUser adminUser = adminUsers.get(0);
-            log.info("✅ [AdminJwtFilter] 找到管理員: {} (ID: {})", username, adminUser.getId());
-            
-            // 查詢使用者的店家列表
+
+            // Check token blacklist (gen-based)
+            Long tokenGen = jwtUtil.getGen(token);
+            if (tokenGen != null && tokenBlacklistService.isBlacklisted(adminUser.getId(), tokenGen)) {
+                log.warn("🚫 [AdminJwtFilter] Token 已失效 (blacklisted): userId={}", adminUser.getId());
+                writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token has been invalidated");
+                return;
+            }
+
+            // Build storeIds
             StoreUserExample storeUserExample = new StoreUserExample();
             storeUserExample.createCriteria().andAdminUserIdEqualTo(adminUser.getId());
             List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
-            
             List<String> storeIds = new ArrayList<>();
-            for (StoreUser storeUser : storeUsers) {
-                storeIds.add(storeUser.getStoreId());
+            for (StoreUser su : storeUsers) {
+                storeIds.add(su.getStoreId());
             }
-            log.info("🏪 [AdminJwtFilter] 使用者店家列表: {}", storeIds);
-            
-            // 使用 Example 模式查詢角色
+
+            // Build roles
             AdminUserRoleExample roleExample = new AdminUserRoleExample();
             roleExample.createCriteria().andAdminUserIdEqualTo(adminUser.getId());
             List<AdminUserRole> userRoles = adminUserRoleMapper.selectByExample(roleExample);
-            
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
             List<String> roleNames = new ArrayList<>();
-            
             for (AdminUserRole ur : userRoles) {
                 Role role = roleMapper.selectByPrimaryKey(ur.getRoleId());
                 if (role != null) {
-                    // 從 role.code 取得角色名稱（例如 ROLE_ADMIN）
-                    // Spring Security 會自動移除 ROLE_ 前綴進行比對
-                    String roleName = role.getCode(); // 保留完整的 ROLE_ADMIN
-                    roleNames.add(roleName);
-                    authorities.add(new SimpleGrantedAuthority(roleName));
-                    log.info("  ↳ 角色: {} (Code: {})", role.getName(), roleName);
+                    roleNames.add(role.getCode());
+                    authorities.add(new SimpleGrantedAuthority(role.getCode()));
                 }
             }
 
-            // 建立 UserPrincipal
             UserPrincipal principal = UserPrincipal.builder()
                     .userId(adminUser.getId())
                     .username(adminUser.getUsername())
                     .password(adminUser.getPassword())
                     .isAdmin(true)
-                    .storeIds(storeIds)  // ← 設定店家 ID 列表
+                    .storeIds(storeIds)
                     .authorities(authorities)
                     .adminUser(adminUser)
                     .build();
@@ -153,12 +147,31 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.info("✅ [AdminJwtFilter] 認證成功: {} (角色: {})", username, roleNames);
+            log.debug("✅ [AdminJwtFilter] 認證成功: {} (角色: {})", username, roleNames);
+
+            // For non-auth paths: check forceChangePassword
+            if (!isAuthPath && Boolean.TRUE.equals(adminUser.getForceChangePassword())) {
+                log.warn("⚠️  [AdminJwtFilter] 強制修改密碼 (forceChangePassword=true): userId={}", adminUser.getId());
+                writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
+                        "Password change required before accessing this resource");
+                return;
+            }
+
         } catch (Exception e) {
             log.error("❌ [AdminJwtFilter] 認證失敗: {}", e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        body.put("code", status);
+        body.put("message", message);
+        new ObjectMapper().writeValue(response.getWriter(), body);
     }
 
     private String extractToken(HttpServletRequest request) {

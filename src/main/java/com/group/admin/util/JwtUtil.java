@@ -81,6 +81,39 @@ public class JwtUtil {
     }
 
     /**
+     * 生成 Access Token（完整版，包含 storeIds 與 gen）
+     */
+    public String generateToken(String username, String userId, String userType, List<String> roles, List<String> storeIds, long gen) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("userType", userType);
+        claims.put("roles", roles);
+        claims.put("gen", gen);
+        if (storeIds != null && !storeIds.isEmpty()) {
+            claims.put("storeIds", storeIds);
+        }
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(SignatureAlgorithm.HS256, secret)
+                .compact();
+    }
+
+    /**
+     * 從 Token 取得 gen（blacklist generation）
+     */
+    public Long getGen(String token) {
+        try {
+            Object gen = getClaims(token).get("gen");
+            return gen != null ? ((Number) gen).longValue() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * 生成 Access Token（簡易版，向下相容）
      * 
      * @param username 使用者帳號
