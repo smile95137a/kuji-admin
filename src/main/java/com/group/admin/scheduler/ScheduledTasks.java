@@ -1,5 +1,6 @@
 package com.group.admin.scheduler;
 
+import com.group.admin.service.BannerService;
 import com.group.admin.service.EmailService;
 import com.group.admin.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,8 @@ public class ScheduledTasks {
     
     private final EmailService emailService;
     private final SystemLogService systemLogService;
-    
+    private final BannerService bannerService;
+
     /**
      * 每 5 分鐘重試失敗的郵件
      */
@@ -42,6 +44,30 @@ public class ScheduledTasks {
             log.info("🗑️ 日誌清除完成: {} 筆", deleted);
         } catch (Exception e) {
             log.error("❌ 日誌清除任務失敗: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 每分鐘自動上架排程 Banner（DRAFT + start_time 到期）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void autoPublishBanners() {
+        try {
+            bannerService.autoPublishBanners();
+        } catch (Exception e) {
+            log.error("❌ Banner 自動上架任務失敗: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 每分鐘自動下架過期 Banner（ACTIVE + end_time 已過）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void autoUnpublishBanners() {
+        try {
+            bannerService.autoUnpublishBanners();
+        } catch (Exception e) {
+            log.error("❌ Banner 自動下架任務失敗: {}", e.getMessage());
         }
     }
 }

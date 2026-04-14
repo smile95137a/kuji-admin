@@ -17,6 +17,7 @@ import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
+import com.group.admin.mapper.BannerMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
@@ -53,6 +54,7 @@ public class StoreServiceImpl implements StoreService {
     private final RoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
     private final PasswordUtil passwordUtil;
+    private final BannerMapper bannerMapper;
 
     @Override
     public List<StoreRes> queryStores(QueryReq<StoreCondition> req) {
@@ -340,6 +342,12 @@ public class StoreServiceImpl implements StoreService {
         store.setStatus(status);
         store.setUpdatedAt(LocalDateTime.now());
         storeMapper.updateByPrimaryKeySelective(store);
+        
+        // Cascade: deactivate all ACTIVE banners when store is disabled
+        if ("INACTIVE".equals(status)) {
+            bannerMapper.unpublishBannersByStoreId(storeId);
+            log.info("🏪 店家停用，連帶下架 Banner: storeId={}", storeId);
+        }
         
         log.info("✅ 店家狀態更新：storeId={}，status={}", storeId, status);
     }

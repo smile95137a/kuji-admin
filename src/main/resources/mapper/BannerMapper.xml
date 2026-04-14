@@ -304,4 +304,89 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- Custom result map for BannerRes (includes joined store fields) -->
+  <resultMap id="BannerResResultMap" type="com.group.admin.res.banner.BannerRes">
+    <id column="id" property="id"/>
+    <result column="store_id" property="storeId"/>
+    <result column="store_name" property="storeName"/>
+    <result column="store_logo_url" property="storeLogoUrl"/>
+    <result column="title" property="title"/>
+    <result column="image_url" property="imageUrl"/>
+    <result column="link_url" property="linkUrl"/>
+    <result column="order_num" property="orderNum"/>
+    <result column="status" property="status"/>
+    <result column="start_time" property="startTime"/>
+    <result column="end_time" property="endTime"/>
+    <result column="created_at" property="createdAt"/>
+    <result column="updated_at" property="updatedAt"/>
+  </resultMap>
+
+  <!-- Admin list: LEFT JOIN store, dynamic conditions -->
+  <select id="selectList" parameterType="com.group.admin.req.banner.BannerCondition"
+          resultMap="BannerResResultMap">
+    SELECT b.id, b.store_id, s.store_name, s.logo_url AS store_logo_url,
+           b.title, b.image_url, b.link_url, b.order_num, b.status,
+           b.start_time, b.end_time, b.created_at, b.updated_at
+    FROM `banner` b
+    LEFT JOIN `store` s ON b.store_id = s.id
+    <where>
+      <if test="storeId != null and storeId != ''">
+        AND b.store_id = #{storeId}
+      </if>
+      <if test="title != null and title != ''">
+        AND b.title LIKE CONCAT('%', #{title}, '%')
+      </if>
+      <if test="status != null and status != ''">
+        AND b.status = #{status}
+      </if>
+      <if test="keyword != null and keyword != ''">
+        AND b.title LIKE CONCAT('%', #{keyword}, '%')
+      </if>
+      <if test="createdAtStart != null">
+        AND b.created_at &gt;= #{createdAtStart}
+      </if>
+      <if test="createdAtEnd != null">
+        AND b.created_at &lt;= #{createdAtEnd}
+      </if>
+    </where>
+    ORDER BY b.order_num ASC, b.created_at DESC
+  </select>
+
+  <!-- Public carousel: only ACTIVE banners with ACTIVE stores -->
+  <select id="selectActiveBanners" resultMap="BannerResResultMap">
+    SELECT b.id, b.store_id, s.store_name, s.logo_url AS store_logo_url,
+           b.title, b.image_url, b.link_url, b.order_num, b.status,
+           b.start_time, b.end_time, b.created_at, b.updated_at
+    FROM `banner` b
+    INNER JOIN `store` s ON b.store_id = s.id AND s.status = 'ACTIVE'
+    WHERE b.status = 'ACTIVE'
+    ORDER BY b.order_num ASC
+  </select>
+
+  <!-- Scheduled: publish DRAFT banners whose start_time has arrived -->
+  <update id="autoPublishBanners">
+    UPDATE `banner`
+    SET status = 'ACTIVE', updated_at = NOW()
+    WHERE status = 'DRAFT'
+      AND start_time IS NOT NULL
+      AND start_time &lt;= NOW()
+  </update>
+
+  <!-- Scheduled: unpublish ACTIVE banners whose end_time has passed -->
+  <update id="autoUnpublishBanners">
+    UPDATE `banner`
+    SET status = 'INACTIVE', updated_at = NOW()
+    WHERE status = 'ACTIVE'
+      AND end_time IS NOT NULL
+      AND end_time &lt;= NOW()
+  </update>
+
+  <!-- Store cascade: deactivate all ACTIVE banners for a store -->
+  <update id="unpublishBannersByStoreId">
+    UPDATE `banner`
+    SET status = 'INACTIVE', updated_at = NOW()
+    WHERE store_id = #{storeId}
+      AND status = 'ACTIVE'
+  </update>
 </mapper>

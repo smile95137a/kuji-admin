@@ -83,8 +83,25 @@ public interface BannerService {
     
     /**
      * 查詢前台輪播 Banner（僅 PUBLISHED 狀態且店家 ACTIVE）
-     * 
+     *
      * @return Banner 列表（按 order_num 升序）
      */
     List<BannerRes> getCarouselBanners();
+
+    /**
+     * 排程自動上架（startTime 到期的 DRAFT/UNPUBLISHED Banner）
+     */
+    void autoPublishBanners();
+
+    /**
+     * 排程自動下架（endTime 已過的 PUBLISHED Banner）
+     */
+    void autoUnpublishBanners();
+
+    /**
+     * 將指定店家的所有 Banner 下架（店家停用時呼叫）
+     *
+     * @param storeId 店家 ID
+     */
+    void unpublishBannersByStoreId(String storeId);
 }

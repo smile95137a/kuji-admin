@@ -23,12 +23,12 @@ public class BannerUpdateReq {
     
     @Schema(description = "圖片 URL", example = "https://example.com/banner.jpg")
     private String imageUrl;
-    
-    @Schema(description = "排序", example = "1")
+
+    @Schema(description = "點擊連結 URL", example = "https://example.com/promo")
+    private String linkUrl;
+
+    @Schema(description = "顯示排序", example = "1")
     private Integer orderNum;
-    
-    @Schema(description = "狀態（PUBLISHED/UNPUBLISHED）", example = "PUBLISHED")
-    private String status;
     
     @Schema(description = "開始顯示時間", example = "2026-01-10T00:00:00")
     private LocalDateTime startTime;
