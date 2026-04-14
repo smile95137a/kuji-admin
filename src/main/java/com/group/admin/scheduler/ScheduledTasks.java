@@ -1,6 +1,7 @@
 package com.group.admin.scheduler;
 
 import com.group.admin.service.EmailService;
+import com.group.admin.service.LotteryService;
 import com.group.admin.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class ScheduledTasks {
     
     private final EmailService emailService;
     private final SystemLogService systemLogService;
+    private final LotteryService lotteryService;
     
     /**
      * 每 5 分鐘重試失敗的郵件
@@ -42,6 +44,30 @@ public class ScheduledTasks {
             log.info("🗑️ 日誌清除完成: {} 筆", deleted);
         } catch (Exception e) {
             log.error("❌ 日誌清除任務失敗: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 每 60 秒自動推進排程的商品（CONFIGURED → ON_SHELF）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void autoPromoteLotteries() {
+        try {
+            lotteryService.promoteScheduledLotteries();
+        } catch (Exception e) {
+            log.error("❌ 自動上架任務失敗: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 每 60 秒自動開放可抽商品（ON_SHELF → DRAWABLE）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void autoStartDrawable() {
+        try {
+            lotteryService.promoteDrawableLotteries();
+        } catch (Exception e) {
+            log.error("❌ 自動開放抽獎任務失敗: {}", e.getMessage());
         }
     }
 }

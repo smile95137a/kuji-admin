@@ -154,7 +154,7 @@ public class AdminLotteryController {
         LotteryRes result = lotteryService.createLottery(req);
         
         log.info("✅ 新增成功: id={}, storeId={}", result.getId(), result.getStoreId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
     }
 
     /**
@@ -313,7 +313,7 @@ public class AdminLotteryController {
         );
         
         log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
     }
 
     /**
@@ -333,7 +333,7 @@ public class AdminLotteryController {
         LotteryRes result = lotteryService.copyLottery(id, null, true, null);
         
         log.info("✅ 複製成功: newLotteryId={}, newTitle={}", result.getId(), result.getTitle());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
     }
 
     /**

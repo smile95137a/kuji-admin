@@ -37,6 +37,12 @@
     <result column="bonus_enabled" jdbcType="BIT" property="bonusEnabled" />
     <result column="bonus_points_per_draw" jdbcType="INTEGER" property="bonusPointsPerDraw" />
     <result column="bonus_cost_per_draw" jdbcType="INTEGER" property="bonusCostPerDraw" />
+    <result column="source_lottery_id" jdbcType="VARCHAR" property="sourceLotteryId" />
+    <result column="configured_at" jdbcType="TIMESTAMP" property="configuredAt" />
+    <result column="drawable_at" jdbcType="TIMESTAMP" property="drawableAt" />
+    <result column="remaining_draws" jdbcType="INTEGER" property="remainingDraws" />
+    <result column="discount_trigger_level" jdbcType="VARCHAR" property="discountTriggerLevel" />
+    <result column="last_prize_mode" jdbcType="VARCHAR" property="lastPrizeMode" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.Lottery">
     <result column="description" jdbcType="LONGVARCHAR" property="description" />
@@ -108,7 +114,8 @@
     start_time, end_time, total_draws, max_draws, protection_draws, protection_minutes, 
     free_draw_enabled, designated_prize_numbers, tickets_generated, status, order_num, 
     weight, created_by, created_at, updated_at, play_mode, hot_count, theme, tags, bonus_enabled, 
-    bonus_points_per_draw, bonus_cost_per_draw
+    bonus_points_per_draw, bonus_cost_per_draw, source_lottery_id, configured_at, drawable_at,
+    remaining_draws, discount_trigger_level, last_prize_mode
   </sql>
   <sql id="Blob_Column_List">
     description, remark, gallery_images, content
@@ -175,7 +182,9 @@
       weight, created_by, created_at, 
       updated_at, play_mode, hot_count, 
       theme, tags, bonus_enabled, 
-      bonus_points_per_draw, bonus_cost_per_draw, description, 
+      bonus_points_per_draw, bonus_cost_per_draw, source_lottery_id,
+      configured_at, drawable_at, remaining_draws,
+      discount_trigger_level, last_prize_mode, description, 
       remark, gallery_images, content
       )
     values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
@@ -189,7 +198,9 @@
       #{weight,jdbcType=INTEGER}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
       #{updatedAt,jdbcType=TIMESTAMP}, #{playMode,jdbcType=VARCHAR}, #{hotCount,jdbcType=INTEGER}, 
       #{theme,jdbcType=VARCHAR}, #{tags,jdbcType=VARCHAR}, #{bonusEnabled,jdbcType=BIT}, 
-      #{bonusPointsPerDraw,jdbcType=INTEGER}, #{bonusCostPerDraw,jdbcType=INTEGER}, #{description,jdbcType=LONGVARCHAR}, 
+      #{bonusPointsPerDraw,jdbcType=INTEGER}, #{bonusCostPerDraw,jdbcType=INTEGER}, #{sourceLotteryId,jdbcType=VARCHAR},
+      #{configuredAt,jdbcType=TIMESTAMP}, #{drawableAt,jdbcType=TIMESTAMP}, #{remainingDraws,jdbcType=INTEGER},
+      #{discountTriggerLevel,jdbcType=VARCHAR}, #{lastPrizeMode,jdbcType=VARCHAR}, #{description,jdbcType=LONGVARCHAR}, 
       #{remark,jdbcType=LONGVARCHAR}, #{galleryImages,jdbcType=LONGVARCHAR}, #{content,jdbcType=LONGVARCHAR}
       )
   </insert>
@@ -300,6 +311,24 @@
       </if>
       <if test="bonusCostPerDraw != null">
         bonus_cost_per_draw,
+      </if>
+      <if test="sourceLotteryId != null">
+        source_lottery_id,
+      </if>
+      <if test="configuredAt != null">
+        configured_at,
+      </if>
+      <if test="drawableAt != null">
+        drawable_at,
+      </if>
+      <if test="remainingDraws != null">
+        remaining_draws,
+      </if>
+      <if test="discountTriggerLevel != null">
+        discount_trigger_level,
+      </if>
+      <if test="lastPrizeMode != null">
+        last_prize_mode,
       </if>
       <if test="description != null">
         description,
@@ -419,6 +448,24 @@
       </if>
       <if test="bonusCostPerDraw != null">
         #{bonusCostPerDraw,jdbcType=INTEGER},
+      </if>
+      <if test="sourceLotteryId != null">
+        #{sourceLotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="configuredAt != null">
+        #{configuredAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="drawableAt != null">
+        #{drawableAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="remainingDraws != null">
+        #{remainingDraws,jdbcType=INTEGER},
+      </if>
+      <if test="discountTriggerLevel != null">
+        #{discountTriggerLevel,jdbcType=VARCHAR},
+      </if>
+      <if test="lastPrizeMode != null">
+        #{lastPrizeMode,jdbcType=VARCHAR},
       </if>
       <if test="description != null">
         #{description,jdbcType=LONGVARCHAR},
@@ -548,6 +595,24 @@
       <if test="row.bonusCostPerDraw != null">
         bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER},
       </if>
+      <if test="row.sourceLotteryId != null">
+        source_lottery_id = #{row.sourceLotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.configuredAt != null">
+        configured_at = #{row.configuredAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.drawableAt != null">
+        drawable_at = #{row.drawableAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.remainingDraws != null">
+        remaining_draws = #{row.remainingDraws,jdbcType=INTEGER},
+      </if>
+      <if test="row.discountTriggerLevel != null">
+        discount_trigger_level = #{row.discountTriggerLevel,jdbcType=VARCHAR},
+      </if>
+      <if test="row.lastPrizeMode != null">
+        last_prize_mode = #{row.lastPrizeMode,jdbcType=VARCHAR},
+      </if>
       <if test="row.description != null">
         description = #{row.description,jdbcType=LONGVARCHAR},
       </if>
@@ -602,6 +667,12 @@
       bonus_enabled = #{row.bonusEnabled,jdbcType=BIT},
       bonus_points_per_draw = #{row.bonusPointsPerDraw,jdbcType=INTEGER},
       bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER},
+      source_lottery_id = #{row.sourceLotteryId,jdbcType=VARCHAR},
+      configured_at = #{row.configuredAt,jdbcType=TIMESTAMP},
+      drawable_at = #{row.drawableAt,jdbcType=TIMESTAMP},
+      remaining_draws = #{row.remainingDraws,jdbcType=INTEGER},
+      discount_trigger_level = #{row.discountTriggerLevel,jdbcType=VARCHAR},
+      last_prize_mode = #{row.lastPrizeMode,jdbcType=VARCHAR},
       description = #{row.description,jdbcType=LONGVARCHAR},
       remark = #{row.remark,jdbcType=LONGVARCHAR},
       gallery_images = #{row.galleryImages,jdbcType=LONGVARCHAR},
@@ -646,7 +717,13 @@
       tags = #{row.tags,jdbcType=VARCHAR},
       bonus_enabled = #{row.bonusEnabled,jdbcType=BIT},
       bonus_points_per_draw = #{row.bonusPointsPerDraw,jdbcType=INTEGER},
-      bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER}
+      bonus_cost_per_draw = #{row.bonusCostPerDraw,jdbcType=INTEGER},
+      source_lottery_id = #{row.sourceLotteryId,jdbcType=VARCHAR},
+      configured_at = #{row.configuredAt,jdbcType=TIMESTAMP},
+      drawable_at = #{row.drawableAt,jdbcType=TIMESTAMP},
+      remaining_draws = #{row.remainingDraws,jdbcType=INTEGER},
+      discount_trigger_level = #{row.discountTriggerLevel,jdbcType=VARCHAR},
+      last_prize_mode = #{row.lastPrizeMode,jdbcType=VARCHAR}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -756,6 +833,24 @@
       <if test="bonusCostPerDraw != null">
         bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER},
       </if>
+      <if test="sourceLotteryId != null">
+        source_lottery_id = #{sourceLotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="configuredAt != null">
+        configured_at = #{configuredAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="drawableAt != null">
+        drawable_at = #{drawableAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="remainingDraws != null">
+        remaining_draws = #{remainingDraws,jdbcType=INTEGER},
+      </if>
+      <if test="discountTriggerLevel != null">
+        discount_trigger_level = #{discountTriggerLevel,jdbcType=VARCHAR},
+      </if>
+      <if test="lastPrizeMode != null">
+        last_prize_mode = #{lastPrizeMode,jdbcType=VARCHAR},
+      </if>
       <if test="description != null">
         description = #{description,jdbcType=LONGVARCHAR},
       </if>
@@ -807,6 +902,12 @@
       bonus_enabled = #{bonusEnabled,jdbcType=BIT},
       bonus_points_per_draw = #{bonusPointsPerDraw,jdbcType=INTEGER},
       bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER},
+      source_lottery_id = #{sourceLotteryId,jdbcType=VARCHAR},
+      configured_at = #{configuredAt,jdbcType=TIMESTAMP},
+      drawable_at = #{drawableAt,jdbcType=TIMESTAMP},
+      remaining_draws = #{remainingDraws,jdbcType=INTEGER},
+      discount_trigger_level = #{discountTriggerLevel,jdbcType=VARCHAR},
+      last_prize_mode = #{lastPrizeMode,jdbcType=VARCHAR},
       description = #{description,jdbcType=LONGVARCHAR},
       remark = #{remark,jdbcType=LONGVARCHAR},
       gallery_images = #{galleryImages,jdbcType=LONGVARCHAR},
@@ -848,7 +949,81 @@
       tags = #{tags,jdbcType=VARCHAR},
       bonus_enabled = #{bonusEnabled,jdbcType=BIT},
       bonus_points_per_draw = #{bonusPointsPerDraw,jdbcType=INTEGER},
-      bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER}
+      bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER},
+      source_lottery_id = #{sourceLotteryId,jdbcType=VARCHAR},
+      configured_at = #{configuredAt,jdbcType=TIMESTAMP},
+      drawable_at = #{drawableAt,jdbcType=TIMESTAMP},
+      remaining_draws = #{remainingDraws,jdbcType=INTEGER},
+      discount_trigger_level = #{discountTriggerLevel,jdbcType=VARCHAR},
+      last_prize_mode = #{lastPrizeMode,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== 自訂查詢 ==================== -->
+
+  <select id="selectScheduledForPromotion" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `lottery`
+    WHERE status = 'CONFIGURED'
+      AND scheduled_at IS NOT NULL
+      AND scheduled_at &lt;= NOW()
+  </select>
+
+  <select id="selectDrawableForStart" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `lottery`
+    WHERE status = 'ON_SHELF'
+      AND start_time IS NOT NULL
+      AND start_time &lt;= NOW()
+  </select>
+
+  <select id="selectForUpdate" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    SELECT <include refid="Base_Column_List" />, <include refid="Blob_Column_List" />
+    FROM `lottery`
+    WHERE id = #{id,jdbcType=VARCHAR}
+    FOR UPDATE
+  </select>
+
+  <select id="selectPublicList" resultType="java.util.Map">
+    SELECT l.id, l.store_id, s.store_name AS storeName, l.title, l.category, l.sub_category AS subCategory,
+           l.image_url AS imageUrl, l.price_per_draw AS pricePerDraw, l.discounted_price AS discountedPrice,
+           l.status, l.total_draws AS totalDraws, l.remaining_draws AS remainingDraws,
+           l.hot_count AS hotCount, l.tags, l.scheduled_at AS scheduledAt, l.start_time AS startTime,
+           l.last_prize_mode AS lastPrizeMode
+    FROM `lottery` l
+    LEFT JOIN `store` s ON l.store_id = s.id
+    WHERE l.status IN ('ON_SHELF', 'DRAWABLE', 'IN_PROGRESS')
+    <if test="category != null and category != ''">
+      AND l.category = #{category}
+    </if>
+    <if test="storeId != null and storeId != ''">
+      AND l.store_id = #{storeId}
+    </if>
+    <if test="keyword != null and keyword != ''">
+      AND (l.title LIKE CONCAT('%', #{keyword}, '%') OR l.tags LIKE CONCAT('%', #{keyword}, '%'))
+    </if>
+    <choose>
+      <when test="sort == 'HOT'">ORDER BY l.hot_count DESC</when>
+      <when test="sort == 'PRICE_ASC'">ORDER BY l.price_per_draw ASC</when>
+      <when test="sort == 'PRICE_DESC'">ORDER BY l.price_per_draw DESC</when>
+      <otherwise>ORDER BY l.created_at DESC</otherwise>
+    </choose>
+    LIMIT #{offset}, #{pageSize}
+  </select>
+
+  <select id="countPublicList" resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM `lottery` l
+    WHERE l.status IN ('ON_SHELF', 'DRAWABLE', 'IN_PROGRESS')
+    <if test="category != null and category != ''">
+      AND l.category = #{category}
+    </if>
+    <if test="storeId != null and storeId != ''">
+      AND l.store_id = #{storeId}
+    </if>
+    <if test="keyword != null and keyword != ''">
+      AND (l.title LIKE CONCAT('%', #{keyword}, '%') OR l.tags LIKE CONCAT('%', #{keyword}, '%'))
+    </if>
+  </select>
+
 </mapper>

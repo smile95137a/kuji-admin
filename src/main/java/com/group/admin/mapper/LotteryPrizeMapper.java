@@ -39,4 +39,6 @@ public interface LotteryPrizeMapper {
     int batchInsertPrizes(@Param("list") List<LotteryPrize> prizes);
 
     int deleteByLotteryId(@Param("lotteryId") String lotteryId);
+
+    LotteryPrize selectLastPrizeByLotteryId(@Param("lotteryId") String lotteryId);
 }

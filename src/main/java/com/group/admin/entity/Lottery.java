@@ -21,6 +21,8 @@ public class Lottery {
 
     private Long discountedPrice;
 
+    private String discountTriggerLevel;
+
     private Byte autoDiscountEnabled;
 
     private Byte allowMultiDraw;
@@ -35,6 +37,8 @@ public class Lottery {
 
     private Integer totalDraws;
 
+    private Integer remainingDraws;
+
     private Integer maxDraws;
 
     private Integer protectionDraws;
@@ -42,6 +46,8 @@ public class Lottery {
     private Integer protectionMinutes;
 
     private Byte freeDrawEnabled;
+
+    private String lastPrizeMode;
 
     private String designatedPrizeNumbers;
 
@@ -76,6 +82,12 @@ public class Lottery {
     private String description;
 
     private String remark;
+
+    private String sourceLotteryId;
+
+    private LocalDateTime configuredAt;
+
+    private LocalDateTime drawableAt;
 
     private String galleryImages;
 
@@ -391,5 +403,53 @@ public class Lottery {
 
     public void setContent(String content) {
         this.content = content == null ? null : content.trim();
+    }
+
+    public Integer getRemainingDraws() {
+        return remainingDraws;
+    }
+
+    public void setRemainingDraws(Integer remainingDraws) {
+        this.remainingDraws = remainingDraws;
+    }
+
+    public String getDiscountTriggerLevel() {
+        return discountTriggerLevel;
+    }
+
+    public void setDiscountTriggerLevel(String discountTriggerLevel) {
+        this.discountTriggerLevel = discountTriggerLevel == null ? null : discountTriggerLevel.trim();
+    }
+
+    public String getLastPrizeMode() {
+        return lastPrizeMode;
+    }
+
+    public void setLastPrizeMode(String lastPrizeMode) {
+        this.lastPrizeMode = lastPrizeMode == null ? null : lastPrizeMode.trim();
+    }
+
+    public String getSourceLotteryId() {
+        return sourceLotteryId;
+    }
+
+    public void setSourceLotteryId(String sourceLotteryId) {
+        this.sourceLotteryId = sourceLotteryId == null ? null : sourceLotteryId.trim();
+    }
+
+    public LocalDateTime getConfiguredAt() {
+        return configuredAt;
+    }
+
+    public void setConfiguredAt(LocalDateTime configuredAt) {
+        this.configuredAt = configuredAt;
+    }
+
+    public LocalDateTime getDrawableAt() {
+        return drawableAt;
+    }
+
+    public void setDrawableAt(LocalDateTime drawableAt) {
+        this.drawableAt = drawableAt;
     }
 }
