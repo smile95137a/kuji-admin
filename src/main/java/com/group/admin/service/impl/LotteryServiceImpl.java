@@ -121,7 +121,8 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setEndTime(req.getEndTime());
         lottery.setMaxDraws(req.getMaxDraws());
         lottery.setTotalDraws(0);
-        lottery.setPlayMode(req.getPlayMode());
+        // ✅ 後端自動推算 playMode（前端傳入值會被覆蓋）
+        lottery.setPlayMode(resolvePlayMode(req.getCategory(), req.getSubCategory()));
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
         lottery.setHotCount(req.getHotCount());
@@ -880,11 +881,48 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setTitle(req.getTitle());
         lottery.setDescription(req.getDescription());
         lottery.setCategory(req.getCategory());
-        lottery.setStatus("OFF_SHELF");  // 預設下架
+        lottery.setSubCategory(req.getSubCategory());
+        // ✅ 後端自動推算 playMode（前端傳入值會被覆蓋）
+        lottery.setPlayMode(resolvePlayMode(req.getCategory(), req.getSubCategory()));
+        lottery.setStatus(req.getStatus() != null ? req.getStatus() : "OFF_SHELF");
         lottery.setPricePerDraw(req.getPricePerDraw());
-        // lottery.setTotalQuantity(req.getTotalQuantity());  // 欄位可能不存在
-        // lottery.setRemainingQuantity(req.getTotalQuantity());
+        lottery.setDiscountedPrice(req.getDiscountedPrice());
+        lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        lottery.setBonusEnabled(req.getBonusEnabled());
+        lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
+        lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
+        lottery.setMaxDraws(req.getMaxDraws());
+        lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
+        lottery.setScheduledAt(req.getScheduledAt());
+        lottery.setStartTime(req.getStartTime());
+        lottery.setEndTime(req.getEndTime());
+        lottery.setHotCount(req.getHotCount() != null ? req.getHotCount() : 0);
+        lottery.setTheme(req.getTheme());
         lottery.setImageUrl(req.getImageUrl());
+        if (req.getTags() != null) {
+            try {
+                lottery.setTags(objectMapper.writeValueAsString(req.getTags()));
+            } catch (JsonProcessingException e) {
+                log.warn("標籤序列化失敗", e);
+            }
+        }
+        if (req.getGalleryImages() != null) {
+            try {
+                lottery.setGalleryImages(objectMapper.writeValueAsString(req.getGalleryImages()));
+            } catch (JsonProcessingException e) {
+                log.warn("圖庫序列化失敗", e);
+            }
+        }
+        if (req.getMultiDrawOptions() != null) {
+            try {
+                lottery.setMultiDrawOptions(objectMapper.writeValueAsString(req.getMultiDrawOptions()));
+            } catch (JsonProcessingException e) {
+                log.warn("多抽選項序列化失敗", e);
+            }
+        }
+        lottery.setRemark(req.getRemark());
+        lottery.setTotalDraws(0);
         lottery.setCreatedAt(LocalDateTime.now());
         lottery.setUpdatedAt(LocalDateTime.now());
         
@@ -920,6 +958,18 @@ public class LotteryServiceImpl implements LotteryService {
         }
         if (req.getPricePerDraw() != null) {
             lottery.setPricePerDraw(req.getPricePerDraw());
+        }
+        if (req.getCategory() != null) {
+            lottery.setCategory(req.getCategory());
+        }
+        if (req.getSubCategory() != null) {
+            lottery.setSubCategory(req.getSubCategory());
+        }
+        // ✅ 自動重新推算 playMode（當 category 或 subCategory 有更新時）
+        if (req.getCategory() != null || req.getSubCategory() != null) {
+            String effectiveCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
+            String effectiveSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+            lottery.setPlayMode(resolvePlayMode(effectiveCategory, effectiveSubCategory));
         }
         
         lottery.setUpdatedAt(LocalDateTime.now());
@@ -1748,6 +1798,27 @@ public class LotteryServiceImpl implements LotteryService {
     }
     
     // ==================== 輔助方法 ====================
+    
+    /**
+     * 根據 category + subCategory 自動推算 playMode
+     * 
+     * | category        | subCategory  | → playMode    |
+     * |-----------------|--------------|---------------|
+     * | GACHA           | -            | LOTTERY_MODE  |
+     * | OFFICIAL_ICHIBAN| -            | LOTTERY_MODE  |
+     * | TRADING_CARD    | -            | LOTTERY_MODE  |
+     * | CUSTOM_GACHA    | LOTTERY_MODE | LOTTERY_MODE  |
+     * | CUSTOM_GACHA    | null         | LOTTERY_MODE  |
+     * | CUSTOM_GACHA    | SCRATCH_MODE | SCRATCH_MODE  |
+     * 
+     * ⚠️ 前端不應傳入 playMode，後端自動覆蓋
+     */
+    private String resolvePlayMode(String category, String subCategory) {
+        if ("CUSTOM_GACHA".equals(category) && "SCRATCH_MODE".equals(subCategory)) {
+            return "SCRATCH_MODE";
+        }
+        return "LOTTERY_MODE";
+    }
     
     /**
      * 判斷字串是否非空白

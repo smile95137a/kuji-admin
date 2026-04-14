@@ -145,46 +145,100 @@ public class DrawServiceImpl implements DrawService {
         List<DrawResultRes> results = new ArrayList<>();
         
         for (int i = 0; i < count; i++) {
-            // 根據權重隨機抽取獎品
-            LotteryPrize drawnPrize = weightedRandomSelect(availablePrizes);
+            // Refresh available prizes each iteration (removes depleted prizes)
+            prizeExample = new LotteryPrizeExample();
+            prizeExample.createCriteria()
+                    .andLotteryIdEqualTo(lotteryId)
+                    .andRemainingGreaterThan(0);
+            availablePrizes = lotteryPrizeMapper.selectByExample(prizeExample);
+            
+            if (availablePrizes.isEmpty()) {
+                log.warn("⚠️ 第 {} 次抽獎時獎品已全部抽完", i + 1);
+                break;
+            }
+            
+            // --- Last-prize logic (US3) ---
+            LotteryPrize drawnPrize = null;
+            boolean isLastPrize = false;
+            int totalRemaining = availablePrizes.stream()
+                    .mapToInt(p -> p.getRemaining() != null ? p.getRemaining() : 0).sum();
+            
+            if (totalRemaining == 1) {
+                // Check for designated last prize
+                LotteryPrizeExample lastPrizeEx = new LotteryPrizeExample();
+                lastPrizeEx.createCriteria()
+                        .andLotteryIdEqualTo(lotteryId)
+                        .andIsLastPrizeEqualTo((byte) 1)
+                        .andRemainingGreaterThan(0);
+                List<LotteryPrize> lastPrizes = lotteryPrizeMapper.selectByExample(lastPrizeEx);
+                if (!lastPrizes.isEmpty()) {
+                    drawnPrize = lastPrizes.get(0);
+                    isLastPrize = true;
+                    log.info("🏆 最後賞觸發: {}", drawnPrize.getName());
+                }
+            }
+            
+            if (drawnPrize == null) {
+                drawnPrize = weightedRandomSelect(availablePrizes);
+            }
             
             if (drawnPrize == null) {
                 log.error("❌ 第 {} 次抽獎失敗：無可用獎品", i + 1);
                 throw new BusinessException("抽獎失敗：無可用獎品");
             }
             
-            // 扣除獎品庫存（樂觀鎖）
-            int updated = lotteryPrizeMapper.updateByPrimaryKey(drawnPrize);
+            // Decrement stock
+            drawnPrize.setRemaining(drawnPrize.getRemaining() - 1);
+            int updated = lotteryPrizeMapper.updateByPrimaryKeySelective(drawnPrize);
             if (updated == 0) {
                 log.error("❌ 扣除獎品庫存失敗：prizeId={}", drawnPrize.getId());
                 throw new BusinessException("獎品庫存不足");
             }
             
-            // 更新本地獎品列表的 remaining
-            drawnPrize.setRemaining(drawnPrize.getRemaining() - 1);
-            
-            // 如果獎品已抽完，從可用列表中移除
-            if (drawnPrize.getRemaining() <= 0) {
-                availablePrizes.remove(drawnPrize);
-                log.info("🎁 獎品 {} 已全部抽完", drawnPrize.getName());
+            // --- Auto-discount logic (US4) ---
+            boolean priceChanged = false;
+            Long newPrice = null;
+            if (drawnPrize.getIsGrandPrize() != null && drawnPrize.getIsGrandPrize() == 1) {
+                // Re-fetch lottery to get latest autoDiscountEnabled / discountedPrice
+                lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+                if (lottery != null
+                        && lottery.getAutoDiscountEnabled() != null && lottery.getAutoDiscountEnabled() == 1
+                        && lottery.getDiscountedPrice() != null && lottery.getDiscountedPrice() > 0) {
+                    LotteryPrizeExample grandEx = new LotteryPrizeExample();
+                    grandEx.createCriteria()
+                            .andLotteryIdEqualTo(lotteryId)
+                            .andIsGrandPrizeEqualTo((byte) 1)
+                            .andRemainingGreaterThan(0);
+                    long grandRemaining = lotteryPrizeMapper.countByExample(grandEx);
+                    if (grandRemaining == 0) {
+                        lotteryMapper.updatePriceAfterGrandPrizeSoldOut(lotteryId);
+                        priceChanged = true;
+                        newPrice = lottery.getDiscountedPrice();
+                        log.info("💰 大獎售罄自動降價: lotteryId={}, newPrice={}", lotteryId, newPrice);
+                    }
+                }
             }
             
-            // 加入賞品盒
+            // Add to prize box
             Long recycleBonus = calculateRecycleBonus(drawnPrize, lottery);
             prizeBoxService.addToPrizeBox(userId, lotteryId, drawnPrize.getId(), 
                 lottery.getStoreId(), recycleBonus);
             
-            // 建立結果
+            // Build result
             DrawResultRes result = new DrawResultRes();
             result.setLotteryTitle(lottery.getTitle());
             result.setPrizeName(drawnPrize.getName());
             result.setPrizeLevel(drawnPrize.getLevel());
             result.setPrizeImageUrl(drawnPrize.getImageUrl());
             result.setIsGrandPrize(drawnPrize.getIsGrandPrize() != null && drawnPrize.getIsGrandPrize() == 1);
-            result.setIsLastPrize(drawnPrize.getIsLastPrize() != null && drawnPrize.getIsLastPrize() == 1);
-            result.setCostType("GOLD"); // 標記消費類型
+            result.setIsLastPrize(isLastPrize || (drawnPrize.getIsLastPrize() != null && drawnPrize.getIsLastPrize() == 1));
+            result.setCostType("GOLD");
             result.setCostAmount(pricePerDraw);
             result.setDrawTime(java.time.LocalDateTime.now());
+            if (priceChanged) {
+                result.setDiscountTriggered(true);
+                result.setDiscountedPrice(newPrice);
+            }
             
             results.add(result);
             

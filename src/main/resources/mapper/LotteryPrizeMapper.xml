@@ -480,4 +480,42 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- Lock single prize row for update (pessimistic lock) -->
+  <select id="selectByPrimaryKeyForUpdate" parameterType="java.lang.String" resultMap="BaseResultMap">
+    SELECT id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight,
+           prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
+    FROM `lottery_prize`
+    WHERE id = #{id}
+    FOR UPDATE
+  </select>
+
+  <!-- Count grand prizes with remaining stock -->
+  <select id="countGrandPrizesWithStock" parameterType="java.lang.String" resultType="int">
+    SELECT COUNT(*) FROM `lottery_prize`
+    WHERE lottery_id = #{lotteryId}
+      AND is_grand_prize = 1
+      AND remaining > 0
+  </select>
+
+  <!-- Get last prize for lottery (is_last_prize=1 and remaining>0) -->
+  <select id="selectLastPrize" parameterType="java.lang.String" resultMap="BaseResultMap">
+    SELECT id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight,
+           prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
+    FROM `lottery_prize`
+    WHERE lottery_id = #{lotteryId}
+      AND is_last_prize = 1
+      AND remaining > 0
+    LIMIT 1
+  </select>
+
+  <!-- Get all prizes with remaining stock for weighted draw -->
+  <select id="selectAvailablePrizes" parameterType="java.lang.String" resultMap="BaseResultMap">
+    SELECT id, lottery_id, name, image_url, level, prize_number, quantity, remaining, weight,
+           prize_type, point_value, is_last_prize, is_grand_prize, order_num, created_at, updated_at
+    FROM `lottery_prize`
+    WHERE lottery_id = #{lotteryId}
+      AND remaining > 0
+    ORDER BY order_num
+  </select>
 </mapper>

@@ -336,4 +336,29 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- Paginated draw history for admin with optional filters -->
+  <select id="selectByLotteryIdPaged" resultMap="BaseResultMap">
+    SELECT ldr.id, ldr.lottery_id, ldr.user_id, ldr.prize_id, ldr.ticket_id, ldr.session_id,
+           ldr.is_opener_draw, ldr.triggered_free_draw, ldr.selected_number,
+           ldr.cost_type, ldr.cost_amount, ldr.status, ldr.created_at
+    FROM `lottery_draw_record` ldr
+    WHERE ldr.lottery_id = #{lotteryId}
+      <if test="userId != null">AND ldr.user_id = #{userId}</if>
+      <if test="status != null">AND ldr.status = #{status}</if>
+      <if test="startDate != null">AND ldr.created_at &gt;= #{startDate}</if>
+      <if test="endDate != null">AND ldr.created_at &lt;= #{endDate}</if>
+    ORDER BY ldr.created_at DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <!-- Count filtered draw records for pagination -->
+  <select id="countByLotteryIdFiltered" resultType="long">
+    SELECT COUNT(*) FROM `lottery_draw_record` ldr
+    WHERE ldr.lottery_id = #{lotteryId}
+      <if test="userId != null">AND ldr.user_id = #{userId}</if>
+      <if test="status != null">AND ldr.status = #{status}</if>
+      <if test="startDate != null">AND ldr.created_at &gt;= #{startDate}</if>
+      <if test="endDate != null">AND ldr.created_at &lt;= #{endDate}</if>
+  </select>
 </mapper>

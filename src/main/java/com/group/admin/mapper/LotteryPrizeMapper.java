@@ -33,4 +33,16 @@ public interface LotteryPrizeMapper {
     int updateByPrimaryKeyWithBLOBs(LotteryPrize row);
 
     int updateByPrimaryKey(LotteryPrize row);
+
+    /** Pessimistic lock: SELECT ... FOR UPDATE */
+    LotteryPrize selectByPrimaryKeyForUpdate(String id);
+
+    /** Count grand prizes with remaining stock > 0 */
+    int countGrandPrizesWithStock(String lotteryId);
+
+    /** Get last prize (is_last_prize=1 and remaining>0) */
+    LotteryPrize selectLastPrize(String lotteryId);
+
+    /** Get all prizes with remaining stock, ordered by order_num */
+    List<LotteryPrize> selectAvailablePrizes(String lotteryId);
 }

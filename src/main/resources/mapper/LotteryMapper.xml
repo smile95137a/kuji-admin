@@ -851,4 +851,29 @@
       bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- Update price_per_draw to discounted_price after grand prize sold out -->
+  <update id="updatePriceAfterGrandPrizeSoldOut" parameterType="java.lang.String">
+    UPDATE `lottery`
+    SET price_per_draw = discounted_price, updated_at = NOW()
+    WHERE id = #{lotteryId}
+  </update>
+
+  <!-- Auto on-shelf: OFF_SHELF + scheduledAt <= now -->
+  <select id="selectScheduledOnShelf" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `lottery`
+    WHERE status = 'OFF_SHELF'
+      AND scheduled_at IS NOT NULL
+      AND scheduled_at &lt;= #{now}
+  </select>
+
+  <!-- Auto off-shelf: ON_SHELF + endTime <= now -->
+  <select id="selectScheduledOffShelf" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `lottery`
+    WHERE status = 'ON_SHELF'
+      AND end_time IS NOT NULL
+      AND end_time &lt;= #{now}
+  </select>
 </mapper>
