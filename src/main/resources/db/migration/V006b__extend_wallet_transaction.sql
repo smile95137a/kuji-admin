@@ -1,0 +1,7 @@
+ALTER TABLE wallet_transaction
+  ADD COLUMN IF NOT EXISTS gold_delta    BIGINT       NULL DEFAULT NULL AFTER balance_after,
+  ADD COLUMN IF NOT EXISTS bonus_delta   BIGINT       NULL DEFAULT NULL AFTER gold_delta,
+  ADD COLUMN IF NOT EXISTS gold_after    BIGINT       NULL DEFAULT NULL AFTER bonus_delta,
+  ADD COLUMN IF NOT EXISTS bonus_after   BIGINT       NULL DEFAULT NULL AFTER gold_after,
+  ADD COLUMN IF NOT EXISTS reference_id  VARCHAR(36)  NULL DEFAULT NULL AFTER bonus_after,
+  ADD COLUMN IF NOT EXISTS reason        VARCHAR(500) NULL DEFAULT NULL AFTER reference_id;

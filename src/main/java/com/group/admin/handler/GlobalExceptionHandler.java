@@ -1,6 +1,7 @@
 package com.group.admin.handler;
 
 import com.group.admin.exception.BusinessException;
+import com.group.admin.exception.InsufficientBalanceException;
 import com.group.admin.result.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -98,6 +99,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("COMMON_ACCESS_001", "無權執行此操作"));
+    }
+
+    /**
+     * 處理餘額不足異常
+     */
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<ApiResponse<?>> handleInsufficientBalance(InsufficientBalanceException ex) {
+        log.warn("💰 餘額不足: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.error("WALLET_INSUFFICIENT_001", ex.getMessage()));
+    }
+
+    /**
+     * 處理並發修改異常
+     */
+    @ExceptionHandler(java.util.ConcurrentModificationException.class)
+    public ResponseEntity<ApiResponse<?>> handleConcurrentModification(java.util.ConcurrentModificationException ex) {
+        log.warn("⚡ 並發衝突: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("WALLET_CONCURRENT_001", "操作衝突，請重試"));
     }
 
     /**

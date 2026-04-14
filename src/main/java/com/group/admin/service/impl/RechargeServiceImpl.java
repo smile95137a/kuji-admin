@@ -2,16 +2,24 @@ package com.group.admin.service.impl;
 
 import com.group.admin.entity.RechargeRecord;
 import com.group.admin.entity.RechargePlan;
+import com.group.admin.entity.RechargeOrder;
 import com.group.admin.entity.User;
 import com.group.admin.entity.WalletTransaction;
+import com.group.admin.enums.RechargeOrderStatus;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.gateway.GatewayCallbackResult;
+import com.group.admin.gateway.GatewayInitResult;
+import com.group.admin.gateway.PaymentGatewayClient;
 import com.group.admin.mapper.RechargeRecordMapper;
 import com.group.admin.mapper.RechargePlanMapper;
+import com.group.admin.mapper.RechargeOrderMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.mapper.WalletTransactionMapper;
 import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.recharge.RechargeRes;
+import com.group.admin.res.wallet.RechargeOrderRes;
 import com.group.admin.service.RechargeService;
+import com.group.admin.config.WalletProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +46,9 @@ public class RechargeServiceImpl implements RechargeService {
     private final RechargePlanMapper rechargePlanMapper;
     private final UserMapper userMapper;
     private final WalletTransactionMapper walletTransactionMapper;
+    private final RechargeOrderMapper rechargeOrderMapper;
+    private final PaymentGatewayClient paymentGatewayClient;
+    private final WalletProperties walletProperties;
     
     @Override
     public RechargeRes createRechargeRequest(String userId, RechargeReq req) {
@@ -302,5 +313,147 @@ public class RechargeServiceImpl implements RechargeService {
         log.info("✅ 支付失敗已記錄：rechargeId={}", rechargeId);
         
         return RechargeRes.from(record);
+    }
+
+    @Override
+    @Transactional
+    public RechargeOrderRes createRechargeOrder(String userId, String planId) {
+        log.info("💳 [RechargeOrder] 建立儲值訂單：userId={}, planId={}", userId, planId);
+
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) throw new BusinessException("使用者不存在");
+
+        RechargePlan plan = rechargePlanMapper.selectByPrimaryKey(planId);
+        if (plan == null) throw new BusinessException("儲值方案不存在");
+        if (plan.getIsActive() == null || plan.getIsActive() != 1) throw new BusinessException("儲值方案已禁用");
+        LocalDateTime now = LocalDateTime.now();
+        if (plan.getStartDate() != null && now.isBefore(plan.getStartDate())) throw new BusinessException("儲值方案尚未開始");
+        if (plan.getEndDate() != null && now.isAfter(plan.getEndDate())) throw new BusinessException("儲值方案已結束");
+        if (plan.getDeletedAt() != null) throw new BusinessException("儲值方案已刪除");
+
+        RechargeOrder order = RechargeOrder.builder()
+                .id(UUID.randomUUID().toString())
+                .userId(userId)
+                .planId(planId)
+                .goldAmount(plan.getGoldCoins())
+                .bonusAmount(plan.getBonusCoins() != null ? plan.getBonusCoins() : 0L)
+                .priceTwd(java.math.BigDecimal.valueOf(plan.getAmount()))
+                .status(RechargeOrderStatus.PENDING)
+                .expiredAt(now.plusMinutes(walletProperties.getRechargeOrder().getTtlMinutes()))
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        rechargeOrderMapper.insert(order);
+
+        GatewayInitResult gatewayResult = paymentGatewayClient.charge(order);
+
+        log.info("✅ [RechargeOrder] 訂單建立成功：orderId={}, payUrl={}", order.getId(), gatewayResult.payUrl());
+
+        return RechargeOrderRes.builder()
+                .rechargeOrderId(order.getId())
+                .payUrl(gatewayResult.payUrl())
+                .goldAmount(order.getGoldAmount())
+                .bonusAmount(order.getBonusAmount())
+                .priceTwd(order.getPriceTwd())
+                .expiredAt(order.getExpiredAt())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void handleCallback(GatewayCallbackResult result) {
+        log.info("📞 [Callback] merchantOrderId={}, success={}", result.merchantOrderId(), result.success());
+
+        RechargeOrder order = rechargeOrderMapper.selectById(result.merchantOrderId());
+        if (order == null) {
+            log.warn("⚠️ [Callback] 找不到訂單：{}", result.merchantOrderId());
+            return;
+        }
+
+        if (order.getStatus() != RechargeOrderStatus.PENDING) {
+            log.warn("⚠️ [Callback] 訂單狀態非 PENDING：{}", order.getStatus());
+            return;
+        }
+
+        RechargeOrderStatus newStatus = result.success() ? RechargeOrderStatus.SUCCESS : RechargeOrderStatus.FAILED;
+        LocalDateTime paidAt = result.success() ? (result.paidAt() != null ? result.paidAt() : LocalDateTime.now()) : null;
+
+        int updated = rechargeOrderMapper.updateStatusByIdAndExpectStatus(
+                order.getId(), newStatus, RechargeOrderStatus.PENDING,
+                result.gatewayOrderId(), result.rawPayload(), paidAt);
+
+        if (updated == 0) {
+            log.warn("⚠️ [Callback] CAS 更新失敗（並發或已處理）：orderId={}", order.getId());
+            return;
+        }
+
+        if (!result.success()) {
+            log.info("❌ [Callback] 支付失敗：orderId={}", order.getId());
+            return;
+        }
+
+        // Credit coins to user
+        User user = userMapper.selectByPrimaryKey(order.getUserId());
+        if (user == null) {
+            log.error("❌ [Callback] 找不到使用者：{}", order.getUserId());
+            return;
+        }
+
+        Long goldBefore = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
+        Long bonusBefore = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
+        Long totalBefore = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
+        Long goldAfter = goldBefore + order.getGoldAmount();
+        Long bonusAfter = bonusBefore + order.getBonusAmount();
+        Long totalAfter = totalBefore + order.getPriceTwd().longValue();
+
+        user.setGoldCoins(goldAfter);
+        user.setBonusCoins(bonusAfter);
+        user.setTotalRecharged(totalAfter);
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKeySelective(user);
+
+        // Audit: gold transaction
+        if (order.getGoldAmount() > 0) {
+            WalletTransaction tx = new WalletTransaction();
+            tx.setId(UUID.randomUUID().toString());
+            tx.setUserId(order.getUserId());
+            tx.setTransactionType("RECHARGE");
+            tx.setCoinType("GOLD");
+            tx.setAmount(order.getGoldAmount());
+            tx.setBalanceAfter(goldAfter);
+            tx.setGoldDelta(order.getGoldAmount());
+            tx.setGoldAfter(goldAfter);
+            tx.setBonusAfter(bonusAfter);
+            tx.setReferenceId(order.getId());
+            tx.setReason("儲值：planId=" + order.getPlanId());
+            tx.setRelatedId(order.getId());
+            tx.setDescription("儲值：planId=" + order.getPlanId());
+            tx.setCreatedAt(LocalDateTime.now());
+            walletTransactionMapper.insertSelective(tx);
+        }
+
+        // Audit: bonus transaction
+        if (order.getBonusAmount() != null && order.getBonusAmount() > 0) {
+            WalletTransaction bonusTx = new WalletTransaction();
+            bonusTx.setId(UUID.randomUUID().toString());
+            bonusTx.setUserId(order.getUserId());
+            bonusTx.setTransactionType("BONUS_GRANT");
+            bonusTx.setCoinType("BONUS");
+            bonusTx.setAmount(order.getBonusAmount());
+            bonusTx.setBalanceAfter(bonusAfter);
+            bonusTx.setBonusDelta(order.getBonusAmount());
+            bonusTx.setGoldAfter(goldAfter);
+            bonusTx.setBonusAfter(bonusAfter);
+            bonusTx.setReferenceId(order.getId());
+            bonusTx.setReason("儲值紅利：planId=" + order.getPlanId());
+            bonusTx.setRelatedId(order.getId());
+            bonusTx.setDescription("儲值紅利：planId=" + order.getPlanId());
+            bonusTx.setCreatedAt(LocalDateTime.now());
+            walletTransactionMapper.insertSelective(bonusTx);
+        }
+
+        log.info("✅ [Callback] 金幣發放成功：userId={}, +gold={}, +bonus={}", 
+                order.getUserId(), order.getGoldAmount(), order.getBonusAmount());
     }
 }

@@ -80,3 +80,16 @@ file:
 app:
   name: KUJI 一番賞
   frontend-url: http://localhost:3000
+
+payment:
+  gateway:
+    provider: stub
+    stub:
+      always-success: true
+    callback-base-url: http://localhost:8080
+
+wallet:
+  recharge-order:
+    ttl-minutes: 30
+  optimistic-lock:
+    max-retries: 3

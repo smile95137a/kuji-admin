@@ -671,4 +671,15 @@
       version = #{version,jdbcType=INTEGER}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <update id="updateBalanceWithVersion">
+    UPDATE `user`
+    SET gold_coins = #{goldCoins},
+        bonus_coins = #{bonusCoins},
+        total_recharged = #{totalRecharged},
+        version = version + 1,
+        updated_at = NOW()
+    WHERE id = #{userId}
+      AND version = #{version}
+  </update>
 </mapper>

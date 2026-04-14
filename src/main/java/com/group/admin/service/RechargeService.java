@@ -2,6 +2,8 @@ package com.group.admin.service;
 
 import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.recharge.RechargeRes;
+import com.group.admin.gateway.GatewayCallbackResult;
+import com.group.admin.res.wallet.RechargeOrderRes;
 
 /**
  * 前台使用者儲值服務介面
@@ -60,4 +62,20 @@ public interface RechargeService {
      * @return 儲值記錄
      */
     RechargeRes recordPaymentFailure(String rechargeId, String failReason);
+
+    /**
+     * 建立儲值訂單（透過支付閘道）
+     *
+     * @param userId 玩家 ID
+     * @param planId 方案 ID
+     * @return 訂單資訊（含支付 URL）
+     */
+    RechargeOrderRes createRechargeOrder(String userId, String planId);
+
+    /**
+     * 處理支付閘道回調
+     *
+     * @param result 閘道回調結果
+     */
+    void handleCallback(GatewayCallbackResult result);
 }

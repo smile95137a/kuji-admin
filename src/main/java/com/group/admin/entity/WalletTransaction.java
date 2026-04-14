@@ -23,6 +23,18 @@ public class WalletTransaction {
 
     private LocalDateTime createdAt;
 
+    private Long goldDelta;
+
+    private Long bonusDelta;
+
+    private Long goldAfter;
+
+    private Long bonusAfter;
+
+    private String referenceId;
+
+    private String reason;
+
     public String getId() {
         return id;
     }
@@ -101,5 +113,53 @@ public class WalletTransaction {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getGoldDelta() {
+        return goldDelta;
+    }
+
+    public void setGoldDelta(Long goldDelta) {
+        this.goldDelta = goldDelta;
+    }
+
+    public Long getBonusDelta() {
+        return bonusDelta;
+    }
+
+    public void setBonusDelta(Long bonusDelta) {
+        this.bonusDelta = bonusDelta;
+    }
+
+    public Long getGoldAfter() {
+        return goldAfter;
+    }
+
+    public void setGoldAfter(Long goldAfter) {
+        this.goldAfter = goldAfter;
+    }
+
+    public Long getBonusAfter() {
+        return bonusAfter;
+    }
+
+    public void setBonusAfter(Long bonusAfter) {
+        this.bonusAfter = bonusAfter;
+    }
+
+    public String getReferenceId() {
+        return referenceId;
+    }
+
+    public void setReferenceId(String referenceId) {
+        this.referenceId = referenceId == null ? null : referenceId.trim();
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason == null ? null : reason.trim();
     }
 }

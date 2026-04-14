@@ -12,6 +12,12 @@
     <result column="description" jdbcType="VARCHAR" property="description" />
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="gold_delta" jdbcType="BIGINT" property="goldDelta" />
+    <result column="bonus_delta" jdbcType="BIGINT" property="bonusDelta" />
+    <result column="gold_after" jdbcType="BIGINT" property="goldAfter" />
+    <result column="bonus_after" jdbcType="BIGINT" property="bonusAfter" />
+    <result column="reference_id" jdbcType="VARCHAR" property="referenceId" />
+    <result column="reason" jdbcType="VARCHAR" property="reason" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -73,7 +79,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, user_id, transaction_type, coin_type, amount, balance_after, related_id, description, 
-    created_by, created_at
+    created_by, created_at, gold_delta, bonus_delta, gold_after, bonus_after, reference_id, reason
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.WalletTransactionExample" resultMap="BaseResultMap">
     select
@@ -110,11 +116,14 @@
     insert into `wallet_transaction` (id, user_id, transaction_type, 
       coin_type, amount, balance_after, 
       related_id, description, created_by, 
-      created_at)
+      created_at, gold_delta, bonus_delta, gold_after, bonus_after,
+      reference_id, reason)
     values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{transactionType,jdbcType=VARCHAR}, 
       #{coinType,jdbcType=VARCHAR}, #{amount,jdbcType=BIGINT}, #{balanceAfter,jdbcType=BIGINT}, 
       #{relatedId,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{createdBy,jdbcType=VARCHAR}, 
-      #{createdAt,jdbcType=TIMESTAMP})
+      #{createdAt,jdbcType=TIMESTAMP}, #{goldDelta,jdbcType=BIGINT}, #{bonusDelta,jdbcType=BIGINT},
+      #{goldAfter,jdbcType=BIGINT}, #{bonusAfter,jdbcType=BIGINT},
+      #{referenceId,jdbcType=VARCHAR}, #{reason,jdbcType=VARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.WalletTransaction">
     insert into `wallet_transaction`
@@ -149,6 +158,24 @@
       <if test="createdAt != null">
         created_at,
       </if>
+      <if test="goldDelta != null">
+        gold_delta,
+      </if>
+      <if test="bonusDelta != null">
+        bonus_delta,
+      </if>
+      <if test="goldAfter != null">
+        gold_after,
+      </if>
+      <if test="bonusAfter != null">
+        bonus_after,
+      </if>
+      <if test="referenceId != null">
+        reference_id,
+      </if>
+      <if test="reason != null">
+        reason,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -180,6 +207,24 @@
       </if>
       <if test="createdAt != null">
         #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="goldDelta != null">
+        #{goldDelta,jdbcType=BIGINT},
+      </if>
+      <if test="bonusDelta != null">
+        #{bonusDelta,jdbcType=BIGINT},
+      </if>
+      <if test="goldAfter != null">
+        #{goldAfter,jdbcType=BIGINT},
+      </if>
+      <if test="bonusAfter != null">
+        #{bonusAfter,jdbcType=BIGINT},
+      </if>
+      <if test="referenceId != null">
+        #{referenceId,jdbcType=VARCHAR},
+      </if>
+      <if test="reason != null">
+        #{reason,jdbcType=VARCHAR},
       </if>
     </trim>
   </insert>

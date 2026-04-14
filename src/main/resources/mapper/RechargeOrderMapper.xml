@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.RechargeOrderMapper">
+
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.RechargeOrder">
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="user_id" property="userId" jdbcType="VARCHAR"/>
+    <result column="plan_id" property="planId" jdbcType="VARCHAR"/>
+    <result column="gold_amount" property="goldAmount" jdbcType="BIGINT"/>
+    <result column="bonus_amount" property="bonusAmount" jdbcType="BIGINT"/>
+    <result column="price_twd" property="priceTwd" jdbcType="DECIMAL"/>
+    <result column="status" property="status" jdbcType="VARCHAR"
+            typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+    <result column="gateway_provider" property="gatewayProvider" jdbcType="VARCHAR"/>
+    <result column="gateway_order_id" property="gatewayOrderId" jdbcType="VARCHAR"/>
+    <result column="gateway_raw_resp" property="gatewayRawResp" jdbcType="LONGVARCHAR"/>
+    <result column="paid_at" property="paidAt" jdbcType="TIMESTAMP"/>
+    <result column="expired_at" property="expiredAt" jdbcType="TIMESTAMP"/>
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+  </resultMap>
+
+  <insert id="insert" parameterType="com.group.admin.entity.RechargeOrder">
+    INSERT INTO recharge_order (id, user_id, plan_id, gold_amount, bonus_amount, price_twd,
+      status, gateway_provider, gateway_order_id, gateway_raw_resp, paid_at, expired_at, created_at, updated_at)
+    VALUES (#{id}, #{userId}, #{planId}, #{goldAmount}, #{bonusAmount}, #{priceTwd},
+      #{status,typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+      #{gatewayProvider}, #{gatewayOrderId}, #{gatewayRawResp}, #{paidAt}, #{expiredAt},
+      #{createdAt}, #{updatedAt})
+  </insert>
+
+  <select id="selectById" parameterType="java.lang.String" resultMap="BaseResultMap">
+    SELECT * FROM recharge_order WHERE id = #{id}
+  </select>
+
+  <select id="selectByUserId" parameterType="java.lang.String" resultMap="BaseResultMap">
+    SELECT * FROM recharge_order WHERE user_id = #{userId} ORDER BY created_at DESC
+  </select>
+
+  <update id="updateStatusByIdAndExpectStatus">
+    UPDATE recharge_order
+    SET status = #{newStatus,typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+        gateway_order_id = #{gatewayOrderId},
+        gateway_raw_resp = #{gatewayRawResp},
+        paid_at = #{paidAt}
+    WHERE id = #{id}
+      AND status = #{expectedStatus,typeHandler=org.apache.ibatis.type.EnumTypeHandler}
+  </update>
+
+  <update id="updateExpiredOrders">
+    UPDATE recharge_order
+    SET status = 'EXPIRED'
+    WHERE status = 'PENDING'
+      AND expired_at &lt; #{now}
+  </update>
+
+</mapper>
