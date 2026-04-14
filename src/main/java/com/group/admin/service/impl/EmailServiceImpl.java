@@ -111,6 +111,25 @@ public class EmailServiceImpl implements EmailService {
     }
     
     @Override
+    @Async
+    public void sendInitialPasswordEmail(String to, String displayName, String initialPassword) {
+        String subject = String.format("[%s] 後台帳號初始密碼", appName);
+
+        Context context = new Context();
+        context.setVariable("displayName", displayName);
+        context.setVariable("initialPassword", initialPassword);
+        context.setVariable("loginUrl", frontendUrl + "/admin/login");
+        String content = templateEngine.process("initial-password-email", context);
+
+        Map<String, Object> params = Map.of(
+            "displayName", displayName,
+            "initialPassword", initialPassword
+        );
+
+        sendEmail("INITIAL_PASSWORD", to, displayName, subject, content, "initial-password-email", params, null, null);
+    }
+
+    @Override
     public void retryFailedEmails() {
         List<EmailLog> failedEmails = emailLogRepository.selectPendingForRetry("FAILED", 3, 10);
         

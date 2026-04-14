@@ -26,6 +26,11 @@ public interface EmailService {
     void sendNotification(String email, String nickname, String subject, String content);
     
     /**
+     * 發送初始密碼郵件（後台帳號建立時）
+     */
+    void sendInitialPasswordEmail(String to, String displayName, String initialPassword);
+    
+    /**
      * 重試發送失敗的郵件
      */
     void retryFailedEmails();

@@ -1,7 +1,9 @@
 package com.group.admin.mapper;
 
+import com.group.admin.dto.AdminAccountDetailDO;
 import com.group.admin.entity.AdminUser;
 import com.group.admin.example.AdminUserExample;
+import com.group.admin.req.admin.AccountFilterCondition;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
@@ -33,4 +35,8 @@ public interface AdminUserMapper {
     int updateByPrimaryKeyWithBLOBs(AdminUser row);
 
     int updateByPrimaryKey(AdminUser row);
+
+    List<AdminAccountDetailDO> selectAccountsWithRole(@Param("filters") AccountFilterCondition filters);
+
+    Long countAccountsWithRole(@Param("filters") AccountFilterCondition filters);
 }

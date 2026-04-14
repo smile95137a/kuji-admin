@@ -410,4 +410,60 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <resultMap id="AccountDetailResultMap" type="com.group.admin.dto.AdminAccountDetailDO">
+    <id column="id" property="id" />
+    <result column="email" property="email" />
+    <result column="display_name" property="displayName" />
+    <result column="phone" property="phone" />
+    <result column="status" property="status" />
+    <result column="force_change_password" jdbcType="BIT" property="forceChangePassword" />
+    <result column="last_login_at" property="lastLoginAt" />
+    <result column="role_type" property="roleType" />
+    <result column="store_id" property="storeId" />
+    <result column="store_name" property="storeName" />
+    <result column="created_by" property="createdBy" />
+    <result column="created_at" property="createdAt" />
+    <result column="updated_by" property="updatedBy" />
+    <result column="updated_at" property="updatedAt" />
+    <result column="remark" property="remark" />
+  </resultMap>
+
+  <sql id="AccountFilter_Where_Clause">
+    WHERE 1=1
+    <if test="filters.status != null and filters.status != ''">
+      AND au.status = #{filters.status}
+    </if>
+    <if test="filters.roleType != null and filters.roleType != ''">
+      AND su.role_type = #{filters.roleType}
+    </if>
+    <if test="filters.storeId != null and filters.storeId != ''">
+      AND su.store_id = #{filters.storeId}
+    </if>
+    <if test="filters.keyword != null and filters.keyword != ''">
+      AND (au.email LIKE CONCAT('%', #{filters.keyword}, '%')
+        OR au.display_name LIKE CONCAT('%', #{filters.keyword}, '%'))
+    </if>
+  </sql>
+
+  <select id="selectAccountsWithRole" resultMap="AccountDetailResultMap">
+    SELECT au.id, au.email, au.display_name, au.phone, au.status,
+           au.force_change_password, au.last_login_at,
+           au.created_by, au.created_at, au.updated_by, au.updated_at, au.remark,
+           su.role_type, su.store_id, s.store_name
+    FROM admin_user au
+    LEFT JOIN store_user su ON su.admin_user_id = au.id
+    LEFT JOIN store s ON s.id = su.store_id
+    <include refid="AccountFilter_Where_Clause" />
+    ORDER BY ${filters.sortBy} ${filters.sortDir}
+    LIMIT #{filters.pageSize} OFFSET #{filters.offset}
+  </select>
+
+  <select id="countAccountsWithRole" resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM admin_user au
+    LEFT JOIN store_user su ON su.admin_user_id = au.id
+    LEFT JOIN store s ON s.id = su.store_id
+    <include refid="AccountFilter_Where_Clause" />
+  </select>
 </mapper>

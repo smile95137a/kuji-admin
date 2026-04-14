@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.AdminTokenBlacklistMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.AdminTokenBlacklist">
+    <id column="admin_user_id" jdbcType="VARCHAR" property="adminUserId" />
+    <result column="blacklist_gen" jdbcType="INTEGER" property="blacklistGen" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <select id="selectByAdminUserId" resultMap="BaseResultMap">
+    SELECT admin_user_id, blacklist_gen, updated_at
+    FROM admin_token_blacklist
+    WHERE admin_user_id = #{adminUserId}
+  </select>
+
+  <update id="incrementGen">
+    INSERT INTO admin_token_blacklist (admin_user_id, blacklist_gen, updated_at)
+    VALUES (#{adminUserId}, 1, NOW())
+    ON DUPLICATE KEY UPDATE
+      blacklist_gen = blacklist_gen + 1,
+      updated_at = NOW()
+  </update>
+</mapper>
