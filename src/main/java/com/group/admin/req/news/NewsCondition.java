@@ -19,7 +19,7 @@ public class NewsCondition extends BaseCondition {
     @Schema(description = "標題（模糊查詢）", example = "活動")
     private String title;
     
-    @Schema(description = "狀態（DRAFT/PUBLISHED/ARCHIVED）", example = "PUBLISHED")
+    @Schema(description = "狀態（DRAFT/PUBLISHED/UNPUBLISHED）", example = "PUBLISHED")
     private String status;
     
     @Schema(description = "分類（ANNOUNCEMENT/EVENT/SYSTEM）", example = "ANNOUNCEMENT")

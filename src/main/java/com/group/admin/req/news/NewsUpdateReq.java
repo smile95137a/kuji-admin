@@ -24,7 +24,7 @@ public class NewsUpdateReq {
     @Schema(description = "封面圖片 URL", example = "https://example.com/news.jpg")
     private String imageUrl;
     
-    @Schema(description = "狀態（DRAFT/PUBLISHED/ARCHIVED）", example = "PUBLISHED")
+    @Schema(description = "狀態（DRAFT/PUBLISHED/UNPUBLISHED）", example = "PUBLISHED")
     private String status;
     
     @Schema(description = "分類（ANNOUNCEMENT/EVENT/SYSTEM）", example = "EVENT")

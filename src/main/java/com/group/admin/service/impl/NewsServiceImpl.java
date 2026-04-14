@@ -265,7 +265,7 @@ public class NewsServiceImpl implements NewsService {
             throw new RuntimeException("最新消息不存在");
         }
         
-        news.setStatus("ARCHIVED");
+        news.setStatus("UNPUBLISHED");
         news.setEndTime(LocalDateTime.now());
         news.setUpdatedAt(LocalDateTime.now());
         
@@ -317,6 +317,28 @@ public class NewsServiceImpl implements NewsService {
     }
 
     /**
+     * 自動上架已到排程時間的草稿
+     */
+    @Override
+    @Transactional
+    public int autoPublishScheduledNews() {
+        int count = newsMapper.autoPublishNews();
+        log.info("⏰ 自動上架完成，共上架 {} 則最新消息", count);
+        return count;
+    }
+
+    /**
+     * 自動下架已過下架時間的消息
+     */
+    @Override
+    @Transactional
+    public int autoUnpublishExpiredNews() {
+        int count = newsMapper.autoUnpublishNews();
+        log.info("⏰ 自動下架完成，共下架 {} 則最新消息", count);
+        return count;
+    }
+
+    /**
      * 轉換 Entity 為 Response DTO
      */
     private NewsRes convertToRes(News news) {
@@ -347,7 +369,7 @@ public class NewsServiceImpl implements NewsService {
                 return "草稿";
             case "PUBLISHED":
                 return "已上架";
-            case "ARCHIVED":
+            case "UNPUBLISHED":
                 return "已下架";
             default:
                 return status;

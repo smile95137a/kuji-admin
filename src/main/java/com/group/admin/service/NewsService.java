@@ -79,4 +79,17 @@ public interface NewsService {
      * @return 最新消息列表
      */
     List<NewsRes> getPublishedNews(Integer limit);
+    /**
+     * 自動上架已到排程時間的草稿
+     * 
+     * @return 上架數量
+     */
+    int autoPublishScheduledNews();
+    
+    /**
+     * 自動下架已過下架時間的消息
+     * 
+     * @return 下架數量
+     */
+    int autoUnpublishExpiredNews();
 }

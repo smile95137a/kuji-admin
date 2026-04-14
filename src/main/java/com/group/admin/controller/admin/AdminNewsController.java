@@ -37,12 +37,33 @@ public class AdminNewsController {
     private final NewsService newsService;
 
     /**
+     * 查詢最新消息列表（GET 簡易版，支援 ?status= 篩選）
+     */
+    @GetMapping
+    @Operation(summary = "查詢最新消息列表（GET）", description = "可選 ?status= 篩選狀態，預設按 created_at DESC 排序")
+    public ResponseEntity<List<NewsRes>> listNews(
+            @RequestParam(required = false)
+            @Parameter(description = "狀態篩選 (DRAFT/PUBLISHED/UNPUBLISHED)", example = "PUBLISHED")
+            String status) {
+
+        log.info("📋 後台 GET 查詢最新消息列表，status：{}", status);
+        QueryReq<NewsCondition> req = new QueryReq<>();
+        if (status != null && !status.isBlank()) {
+            NewsCondition condition = new NewsCondition();
+            condition.setStatus(status);
+            req.setCondition(condition);
+        }
+        List<NewsRes> results = newsService.queryNews(req);
+        return ResponseEntity.ok(results);
+    }
+
+    /**
      * 查詢最新消息列表
      * 
      * <p>支援動態條件查詢（標題、狀態、時間範圍、關鍵字）</p>
      */
     @PostMapping("/list")
-    @Operation(summary = "查詢最新消息列表", description = "支援動態條件查詢，所有條件皆可選")
+    @Operation(summary = "查詢最新消息列表（POST）", description = "支援動態條件查詢，所有條件皆可選")
     public ResponseEntity<List<NewsRes>> queryNews(
             @RequestBody(required = false) 
             @Parameter(description = "查詢條件（可選）")
@@ -135,7 +156,7 @@ public class AdminNewsController {
      * 下架最新消息
      */
     @PostMapping("/{id}/unpublish")
-    @Operation(summary = "下架最新消息", description = "將最新消息狀態設為 ARCHIVED，並設定下架時間為當前時間")
+    @Operation(summary = "下架最新消息", description = "將最新消息狀態設為 UNPUBLISHED，並設定下架時間為當前時間")
     public ResponseEntity<NewsRes> unpublishNews(
             @PathVariable 
             @Parameter(description = "最新消息 ID", example = "uuid-news-123")
