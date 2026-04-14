@@ -789,4 +789,18 @@ public class OrderServiceImpl implements OrderService {
             default -> method;
         };
     }
+
+    @Override
+    public List<StatusLogRes> getStatusLog(String orderId) {
+        Order order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null) {
+            throw new BusinessException("ORDER_NOT_FOUND", "訂單不存在");
+        }
+        OrderStatusLogExample example = new OrderStatusLogExample();
+        example.createCriteria().andOrderIdEqualTo(orderId);
+        example.setOrderByClause("created_at ASC");
+        return orderStatusLogMapper.selectByExample(example).stream()
+                .map(this::convertLogToRes)
+                .collect(Collectors.toList());
+    }
 }

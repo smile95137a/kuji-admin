@@ -46,4 +46,6 @@ public interface OrderService {
     void cancelOrder(String id, CancelOrderReq req, String operatorId, String operatorType);
 
     void submitShippingInfo(String orderId, com.group.admin.req.order.ShipInfoReq req, String userId);
+
+    java.util.List<com.group.admin.res.order.StatusLogRes> getStatusLog(String orderId);
 }

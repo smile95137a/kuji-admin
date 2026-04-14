@@ -8,6 +8,7 @@ import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.UpdateOrderStatusReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
+import com.group.admin.res.order.StatusLogRes;
 import com.group.admin.service.OrderService;
 import com.group.admin.util.SecurityUtils;
 import jakarta.validation.Valid;
@@ -161,5 +162,14 @@ public class AdminOrderController {
             return "ROLE_STORE_EDITOR";
         }
         return "UNKNOWN";
+    }
+
+    /**
+     * 查詢訂單狀態歷史記錄
+     */
+    @GetMapping("/{orderId}/status-log")
+    public ResponseEntity<List<StatusLogRes>> getStatusLog(@PathVariable String orderId) {
+        log.info("🔍 [Admin] 查詢訂單狀態歷史：orderId={}", orderId);
+        return ResponseEntity.ok(orderService.getStatusLog(orderId));
     }
 }
