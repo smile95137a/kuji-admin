@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -16,22 +17,30 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.Lottery;
+import com.group.admin.entity.LotteryDrawRecord;
 import com.group.admin.entity.LotteryPrize;
+import com.group.admin.entity.PointLog;
 import com.group.admin.entity.Store;
-import com.group.admin.enums.GameModeEnum;
+import com.group.admin.entity.User;
 import com.group.admin.enums.LotteryCategoryEnum;
 import com.group.admin.enums.LotteryStatusEnum;
 import com.group.admin.enums.LotterySubCategoryEnum;
 import com.group.admin.example.LotteryExample;
 import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.mapper.LotteryDrawRecordMapper;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
+import com.group.admin.mapper.PointLogMapper;
 import com.group.admin.mapper.StoreMapper;
+import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCreateReq;
+import com.group.admin.req.lottery.LotteryQueryReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
+import com.group.admin.res.PageResult;
+import com.group.admin.res.lottery.LotteryListRes;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
@@ -53,11 +62,450 @@ public class LotteryServiceImpl implements LotteryService {
 
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
+    private final LotteryDrawRecordMapper drawRecordMapper;
+    private final UserMapper userMapper;
+    private final PointLogMapper pointLogMapper;
     private final ObjectMapper objectMapper;
     private final StoreMapper storeMapper;
     private final LotteryTicketService lotteryTicketService;
     
+    private final Random random = new Random();
 
+    // ==================== 商品管理 CRUD ====================
+
+    @Override
+    @Transactional
+    public LotteryRes createLottery(LotteryCreateReq req, String operatorId) {
+        log.info("創建抽獎商品: title={}, operatorId={}", req.getTitle(), operatorId);
+        
+        Lottery lottery = new Lottery();
+        lottery.setId(UUID.randomUUID().toString());
+        lottery.setStoreId(req.getStoreId());
+        lottery.setTitle(req.getTitle());
+        lottery.setDescription(req.getDescription());
+        lottery.setImageUrl(req.getImageUrl());
+        lottery.setCategory(req.getCategory());
+        lottery.setSubCategory(req.getSubCategory());
+        lottery.setPricePerDraw(req.getPricePerDraw());
+        lottery.setDiscountedPrice(req.getDiscountedPrice());
+        lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        lottery.setBonusEnabled(req.getBonusEnabled());
+        
+        if (req.getMultiDrawOptions() != null) {
+            try {
+                lottery.setMultiDrawOptions(objectMapper.writeValueAsString(req.getMultiDrawOptions()));
+            } catch (JsonProcessingException e) {
+                log.warn("多抽選項序列化失敗", e);
+            }
+        }
+        
+        if (req.getTags() != null) {
+            try {
+                lottery.setTags(objectMapper.writeValueAsString(req.getTags()));
+            } catch (JsonProcessingException e) {
+                log.warn("標籤序列化失敗", e);
+            }
+        }
+        
+        if (req.getGalleryImages() != null) {
+            try {
+                lottery.setGalleryImages(objectMapper.writeValueAsString(req.getGalleryImages()));
+            } catch (JsonProcessingException e) {
+                log.warn("圖庫序列化失敗", e);
+            }
+        }
+        
+        lottery.setScheduledAt(req.getScheduledAt());
+        lottery.setStartTime(req.getStartTime());
+        lottery.setEndTime(req.getEndTime());
+        lottery.setMaxDraws(req.getMaxDraws());
+        lottery.setTotalDraws(0);
+        // ✅ 後端自動推算 playMode（前端傳入值會被覆蓋）
+        lottery.setPlayMode(resolvePlayMode(req.getCategory(), req.getSubCategory()));
+        lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
+        lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
+        lottery.setHotCount(req.getHotCount());
+        lottery.setTheme(req.getTheme());
+        lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
+        lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
+        // ✅ 不再設定 weight
+        lottery.setCreatedBy(operatorId);
+        lottery.setCreatedAt(LocalDateTime.now());
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lottery.setRemark(req.getRemark());
+        
+        lotteryMapper.insert(lottery);
+        log.info("抽獎商品創建成功: id={}", lottery.getId());
+        
+        return getLotteryById(lottery.getId());
+    }
+
+    @Override
+    @Transactional
+    public LotteryRes updateLottery(LotteryUpdateReq req, String operatorId) {
+        log.info("更新抽獎商品: id={}, operatorId={}", req.getId(), operatorId);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(req.getId());
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        // 只有草稿和已下架狀態可以修改
+        String status = lottery.getStatus();
+        if (!LotteryStatusEnum.DRAFT.getCode().equals(status) 
+                && !LotteryStatusEnum.OFF_SHELF.getCode().equals(status)) {
+            throw new BusinessException("只有草稿或已下架狀態的商品可以修改");
+        }
+        
+        if (req.getTitle() != null) lottery.setTitle(req.getTitle());
+        if (req.getDescription() != null) lottery.setDescription(req.getDescription());
+        if (req.getImageUrl() != null) lottery.setImageUrl(req.getImageUrl());
+        if (req.getCategory() != null) lottery.setCategory(req.getCategory());
+        if (req.getSubCategory() != null) lottery.setSubCategory(req.getSubCategory());
+        if (req.getPricePerDraw() != null) lottery.setPricePerDraw(req.getPricePerDraw());
+        if (req.getDiscountedPrice() != null) lottery.setDiscountedPrice(req.getDiscountedPrice());
+        if (req.getAutoDiscountEnabled() != null) lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
+        if (req.getAllowMultiDraw() != null) lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        if (req.getBonusEnabled() != null) lottery.setBonusEnabled(req.getBonusEnabled());
+        
+        if (req.getMultiDrawOptions() != null) {
+            try {
+                lottery.setMultiDrawOptions(objectMapper.writeValueAsString(req.getMultiDrawOptions()));
+            } catch (JsonProcessingException e) {
+                log.warn("多抽選項序列化失敗", e);
+            }
+        }
+        
+        if (req.getTags() != null) {
+            try {
+                lottery.setTags(objectMapper.writeValueAsString(req.getTags()));
+            } catch (JsonProcessingException e) {
+                log.warn("標籤序列化失敗", e);
+            }
+        }
+        
+        if (req.getGalleryImages() != null) {
+            try {
+                lottery.setGalleryImages(objectMapper.writeValueAsString(req.getGalleryImages()));
+            } catch (JsonProcessingException e) {
+                log.warn("圖庫序列化失敗", e);
+            }
+        }
+        
+        if (req.getScheduledAt() != null) lottery.setScheduledAt(req.getScheduledAt());
+        if (req.getStartTime() != null) lottery.setStartTime(req.getStartTime());
+        if (req.getEndTime() != null) lottery.setEndTime(req.getEndTime());
+        if (req.getMaxDraws() != null) lottery.setMaxDraws(req.getMaxDraws());
+        if (req.getOrderNum() != null) lottery.setOrderNum(req.getOrderNum());
+        if (req.getPlayMode() != null) lottery.setPlayMode(req.getPlayMode());
+        if (req.getStatus() != null) lottery.setStatus(req.getStatus());
+        // ✅ 不再設定 weight
+        if (req.getRemark() != null) lottery.setRemark(req.getRemark());
+        
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+        log.info("抽獎商品更新成功: id={}", req.getId());
+        
+        return getLotteryById(req.getId());
+    }
+
+    @Override
+    @Transactional
+    public void deleteLottery(String id, String operatorId) {
+        log.info("刪除抽獎商品: id={}, operatorId={}", id, operatorId);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        // 只有草稿和已下架狀態可以刪除
+        String status = lottery.getStatus();
+        if (!LotteryStatusEnum.DRAFT.getCode().equals(status) 
+                && !LotteryStatusEnum.OFF_SHELF.getCode().equals(status)) {
+            throw new BusinessException("只有草稿或已下架狀態的商品可以刪除");
+        }
+        
+        // 先刪除關聯的獎項（使用 Example 模式）
+        LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+        prizeExample.createCriteria().andLotteryIdEqualTo(id);
+        lotteryPrizeMapper.deleteByExample(prizeExample);
+        
+        // 刪除商品
+        lotteryMapper.deleteByPrimaryKey(id);
+        log.info("抽獎商品刪除成功: id={}", id);
+    }
+
+    @Override
+    public LotteryRes getLotteryById(String id) {
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        return convertToRes(lottery);
+    }
+
+    @Override
+    public PageResult<LotteryListRes> queryLotteries(LotteryQueryReq req) {
+        // 使用 Example 模式進行查詢
+        LotteryExample example = new LotteryExample();
+        LotteryExample.Criteria criteria = example.createCriteria();
+        
+        // ✅ 使用 isNotBlank 處理空字串
+        if (isNotBlank(req.getStoreId())) {
+            criteria.andStoreIdEqualTo(req.getStoreId());
+        }
+        if (isNotBlank(req.getKeyword())) {
+            criteria.andTitleLike("%" + req.getKeyword() + "%");
+        }
+        if (isNotBlank(req.getCategory())) {
+            criteria.andCategoryEqualTo(req.getCategory());
+        }
+        if (isNotBlank(req.getTheme())) {
+            criteria.andThemeEqualTo(req.getTheme());
+        }
+        if (isNotBlank(req.getStatus())) {
+            criteria.andStatusEqualTo(req.getStatus());
+        }
+        
+        // 設置排序
+        String sortBy = isNotBlank(req.getSortBy()) ? req.getSortBy() : "created_at";
+        String sortDirection = isNotBlank(req.getSortDirection()) ? req.getSortDirection() : "DESC";
+        example.setOrderByClause(sortBy + " " + sortDirection);
+        
+        // 獲取總數
+        long total = lotteryMapper.countByExample(example);
+        
+        // MyBatis Example 不支援直接設置分頁，需使用 RowBounds 或直接查詢後手動分頁
+        // 這裡先查詢全部，然後手動分頁（小資料量可行，大資料量建議使用 PageHelper）
+        List<Lottery> allLotteries = lotteryMapper.selectByExampleWithBLOBs(example);
+        
+        // 手動分頁
+        int offset = (req.getPage() - 1) * req.getSize();
+        int endIndex = Math.min(offset + req.getSize(), allLotteries.size());
+        List<Lottery> lotteries = offset < allLotteries.size() 
+            ? allLotteries.subList(offset, endIndex) 
+            : new ArrayList<>();
+        
+        List<LotteryListRes> list = lotteries.stream()
+                .map(this::convertToListRes)
+                .toList();
+        
+        return PageResult.of(req.getPage(), req.getSize(), total, list);
+    }
+
+    @Override
+    public PageResult<LotteryListRes> queryLotteriesByStore(String storeId, LotteryQueryReq req) {
+        req.setStoreId(storeId);
+        return queryLotteries(req);
+    }
+
+    // ==================== 狀態管理 ====================
+
+    @Override
+    @Transactional
+    public LotteryRes publishLottery(String id, String operatorId) {
+        log.info("上架商品: id={}, operatorId={}", id, operatorId);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        // 檢查是否有獎項
+        int prizeCount = sumQuantityByLotteryId(id);
+        if (prizeCount <= 0) {
+            throw new BusinessException("商品尚未設定獎項，無法上架");
+        }
+        
+        lottery.setStatus(LotteryStatusEnum.ON_SHELF.getCode());
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+        log.info("商品上架成功: id={}", id);
+        
+        return getLotteryById(id);
+    }
+
+    @Override
+    @Transactional
+    public LotteryRes unpublishLottery(String id, String operatorId) {
+        log.info("下架商品: id={}, operatorId={}", id, operatorId);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        lottery.setStatus(LotteryStatusEnum.OFF_SHELF.getCode());
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+        log.info("商品下架成功: id={}", id);
+        
+        return getLotteryById(id);
+    }
+
+    @Override
+    @Transactional
+    public LotteryRes forceOffShelf(String id, String reason, String operatorId) {
+        log.info("強制下架商品: id={}, reason={}, operatorId={}", id, reason, operatorId);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
+        if (lottery == null) {
+            throw new BusinessException("商品不存在");
+        }
+        
+        lottery.setStatus(LotteryStatusEnum.FORCED_OFF.getCode());
+        lottery.setRemark(lottery.getRemark() != null 
+                ? lottery.getRemark() + "\n強制下架原因: " + reason 
+                : "強制下架原因: " + reason);
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKey(lottery);
+        log.info("商品強制下架成功: id={}", id);
+        
+        return getLotteryById(id);
+    }
+
+    // ==================== 抽獎相關 ====================
+
+    @Override
+    @Transactional
+    public LotteryDrawRecord draw(String lotteryId, String userId, String costType) {
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            throw new BusinessException("抽獎活動不存在");
+        }
+
+        // 檢查商品狀態
+        if (!LotteryStatusEnum.ON_SHELF.getCode().equals(lottery.getStatus()) 
+                && !LotteryStatusEnum.IN_PROGRESS.getCode().equals(lottery.getStatus())) {
+            throw new BusinessException("商品未上架或已結束");
+        }
+
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
+        }
+
+        long price = lottery.getPricePerDraw() == null ? 0L : lottery.getPricePerDraw();
+        if ("bonus".equalsIgnoreCase(costType)) {
+            if (user.getBonusCoins() == null || user.getBonusCoins() < price) {
+                throw new BusinessException("紅利金不足");
+            }
+        } else {
+            if (user.getGoldCoins() == null || user.getGoldCoins() < price) {
+                throw new BusinessException("儲值金不足");
+            }
+        }
+
+        // 獲取可用獎項（使用 Example 模式）
+        List<LotteryPrize> prizes = selectPrizesByLotteryId(lotteryId);
+        if (prizes == null || prizes.stream().noneMatch(p -> p.getRemaining() != null && p.getRemaining() > 0)) {
+            // 結束抽獎
+            lottery.setStatus(LotteryStatusEnum.ENDED.getCode());
+            lottery.setUpdatedAt(LocalDateTime.now());
+            lotteryMapper.updateByPrimaryKey(lottery);
+            throw new BusinessException("獎品已抽完，活動結束");
+        }
+
+        // 更新狀態為抽獎中
+        if (LotteryStatusEnum.ON_SHELF.getCode().equals(lottery.getStatus())) {
+            lottery.setStatus(LotteryStatusEnum.IN_PROGRESS.getCode());
+            lottery.setUpdatedAt(LocalDateTime.now());
+            lotteryMapper.updateByPrimaryKey(lottery);
+        }
+
+        LotteryPrize selected = selectPrize(prizes, lotteryId);
+
+        if (selected == null) {
+            throw new BusinessException("抽獎失敗，請稍後再試");
+        }
+
+        // 扣除餘額並更新用戶
+        Long beforeGold = user.getGoldCoins() == null ? 0L : user.getGoldCoins();
+        Long beforeBonus = user.getBonusCoins() == null ? 0L : user.getBonusCoins();
+        
+        if ("bonus".equalsIgnoreCase(costType)) {
+            user.setBonusCoins(beforeBonus - price);
+        } else {
+            user.setGoldCoins(beforeGold - price);
+        }
+        userMapper.updateByPrimaryKey(user);
+
+        // 記錄點數變動
+        PointLog pointLog = new PointLog();
+        pointLog.setId(UUID.randomUUID().toString());
+        pointLog.setUserId(userId);
+        pointLog.setPointType(costType.equalsIgnoreCase("bonus") ? "BONUS" : "GOLD");
+        pointLog.setOperationType("DRAW");
+        pointLog.setAmount(-price);
+        pointLog.setBeforeBalance(costType.equalsIgnoreCase("bonus") ? beforeBonus : beforeGold);
+        pointLog.setAfterBalance((costType.equalsIgnoreCase("bonus") ? beforeBonus : beforeGold) - price);
+        pointLog.setReferenceType("LOTTERY");
+        pointLog.setReferenceId(lotteryId);
+        pointLog.setRemark("抽獎消費");
+        pointLog.setCreatedAt(LocalDateTime.now());
+        pointLogMapper.insert(pointLog);
+
+        // 建立抽獎記錄
+        LotteryDrawRecord record = new LotteryDrawRecord();
+        record.setId(UUID.randomUUID().toString());
+        record.setLotteryId(lotteryId);
+        record.setUserId(userId);
+        record.setPrizeId(selected.getId());
+        record.setCostType(costType);
+        record.setCostAmount(price);
+        record.setStatus("completed");
+        record.setCreatedAt(LocalDateTime.now());
+        drawRecordMapper.insert(record);
+
+        // 遞增抽獎次數
+        lottery.setTotalDraws((lottery.getTotalDraws() == null ? 0 : lottery.getTotalDraws()) + 1);
+        lotteryMapper.updateByPrimaryKey(lottery);
+
+        // 檢查是否需要觸發降價
+        checkAndTriggerDiscount(lotteryId);
+
+        return record;
+    }
+
+    @Override
+    @Transactional
+    public List<LotteryDrawRecord> multiDraw(String lotteryId, String userId, int drawCount, String costType) {
+        log.info("執行多連抽: lotteryId={}, userId={}, count={}", lotteryId, userId, drawCount);
+        
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null) {
+            throw new BusinessException("抽獎活動不存在");
+        }
+        
+        // 檢查是否允許多抽
+        if (lottery.getAllowMultiDraw() == null || lottery.getAllowMultiDraw() == 0) {
+            throw new BusinessException("此商品不支援多連抽");
+        }
+        
+        // 檢查連抽次數是否在允許範圍內
+        List<Integer> allowedOptions = parseMultiDrawOptions(lottery.getMultiDrawOptions());
+        if (!allowedOptions.contains(drawCount)) {
+            throw new BusinessException("不支援的連抽次數");
+        }
+        
+        List<LotteryDrawRecord> records = new ArrayList<>();
+        for (int i = 0; i < drawCount; i++) {
+            try {
+                LotteryDrawRecord record = draw(lotteryId, userId, costType);
+                records.add(record);
+            } catch (BusinessException e) {
+                if ("獎品已抽完，活動結束".equals(e.getMessage())) {
+                    break; // 獎品抽完提前結束
+                }
+                throw e;
+            }
+        }
+        
+        log.info("多連抽完成: 實際抽取 {} 次", records.size());
+        return records;
+    }
 
     // ==================== 降價機制 ====================
 
@@ -160,7 +608,6 @@ public class LotteryServiceImpl implements LotteryService {
     private int sumRemainingByLotteryId(String lotteryId) {
         List<LotteryPrize> prizes = selectPrizesByLotteryId(lotteryId);
         return prizes.stream()
-                .filter(p -> p.getIsLastPrize() == null || p.getIsLastPrize() != 1) // 最後賞不計入剩餘抽數
                 .mapToInt(p -> p.getRemaining() == null ? 0 : p.getRemaining())
                 .sum();
     }
@@ -178,6 +625,67 @@ public class LotteryServiceImpl implements LotteryService {
         return grandPrizes.stream()
                 .mapToInt(p -> p.getRemaining() == null ? 0 : p.getRemaining())
                 .sum();
+    }
+
+    /**
+     * 根據剩餘數量選擇獎項
+     * 
+     * ✅ 機率計算：1/剩餘數量
+     * - 不使用 weight 欄位
+     * - 每個獎項的機率 = remaining / 總剩餘數量
+     * - 例如：A賞剩1個，B賞剩3個 → A機率=1/4，B機率=3/4
+     */
+    private LotteryPrize selectPrize(List<LotteryPrize> prizes, String lotteryId) {
+        LotteryPrize selected = null;
+        int attempts = 0;
+        
+        while (attempts++ < 5) {
+            // 計算總剩餘數量（機率 = 1/剩餘數量）
+            long total = prizes.stream()
+                    .filter(p -> p.getRemaining() != null && p.getRemaining() > 0)
+                    .mapToLong(p -> (long) p.getRemaining())
+                    .sum();
+            
+            if (total <= 0) break;
+            
+            long r = Math.abs(random.nextLong()) % total;
+            long cum = 0;
+            
+            for (LotteryPrize p : prizes) {
+                if (p.getRemaining() == null || p.getRemaining() <= 0) continue;
+                long remaining = (long) p.getRemaining();
+                cum += remaining;
+                if (r < cum) {
+                    // 扣減獎項剩餘數量
+                    int updated = decrementPrizeRemaining(p.getId());
+                    if (updated > 0) {
+                        selected = p;
+                        break;
+                    } else {
+                        // 庫存不足，重新查詢獎項
+                        prizes = selectPrizesByLotteryId(lotteryId);
+                        selected = null;
+                        break;
+                    }
+                }
+            }
+            if (selected != null) break;
+        }
+        
+        return selected;
+    }
+
+    /**
+     * 扣減獎項剩餘數量
+     */
+    private int decrementPrizeRemaining(String prizeId) {
+        LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeId);
+        if (prize == null || prize.getRemaining() == null || prize.getRemaining() <= 0) {
+            return 0;
+        }
+        prize.setRemaining(prize.getRemaining() - 1);
+        prize.setUpdatedAt(LocalDateTime.now());
+        return lotteryPrizeMapper.updateByPrimaryKey(prize);
     }
 
     /**
@@ -221,6 +729,29 @@ public class LotteryServiceImpl implements LotteryService {
         return res;
     }
 
+    /**
+     * 轉換為列表響應
+     */
+    private LotteryListRes convertToListRes(Lottery lottery) {
+        LotteryListRes res = new LotteryListRes();
+        res.setId(lottery.getId());
+        res.setStoreId(lottery.getStoreId());
+        res.setTitle(lottery.getTitle());
+        res.setImageUrl(lottery.getImageUrl());
+        res.setCategory(lottery.getCategory());
+        res.setCategoryName(LotteryCategoryEnum.getNameByCode(lottery.getCategory()));
+        res.setPricePerDraw(lottery.getPricePerDraw());
+        res.setCurrentPrice(lottery.getPricePerDraw());
+        res.setStatus(lottery.getStatus());
+        res.setStatusName(LotteryStatusEnum.getNameByCode(lottery.getStatus()));
+        res.setTotalDraws(lottery.getTotalDraws());
+        res.setRemainingDraws(sumRemainingByLotteryId(lottery.getId()));
+        res.setTotalPrizes(sumQuantityByLotteryId(lottery.getId()));
+        res.setRemainingPrizes(sumRemainingByLotteryId(lottery.getId()));
+        res.setOrderNum(lottery.getOrderNum());
+        res.setCreatedAt(lottery.getCreatedAt());
+        return res;
+    }
 
     /**
      * 解析多連抽選項
@@ -351,41 +882,47 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setDescription(req.getDescription());
         lottery.setCategory(req.getCategory());
         lottery.setSubCategory(req.getSubCategory());
-        lottery.setGameMode(req.getGameMode());
-
-        // 自動推算 playMode：前端不需要傳，後端根據 category + subCategory 決定
-        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
-        lottery.setPlayMode(resolvedPlayMode);
-
+        // ✅ 後端自動推算 playMode（前端傳入值會被覆蓋）
+        lottery.setPlayMode(resolvePlayMode(req.getCategory(), req.getSubCategory()));
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : "OFF_SHELF");
         lottery.setPricePerDraw(req.getPricePerDraw());
         lottery.setDiscountedPrice(req.getDiscountedPrice());
         lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
         lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
-        if (req.getMultiDrawOptions() != null && !req.getMultiDrawOptions().isEmpty()) {
-            lottery.setMultiDrawOptions(req.getMultiDrawOptions().stream()
-                    .map(String::valueOf).collect(Collectors.joining(",")));
-        }
-        lottery.setMaxDraws(req.getMaxDraws());
-        lottery.setTotalDraws(0);
-        lottery.setImageUrl(req.getImageUrl());
-        lottery.setOrderNum(req.getOrderNum());
-        lottery.setRemark(req.getRemark());
-        lottery.setHotCount(req.getHotCount() != null ? req.getHotCount() : 0);
-        lottery.setTheme(req.getTheme());
-        lottery.setContent(req.getContent());
-        lottery.setScheduledAt(req.getScheduledAt());
-        lottery.setStartTime(req.getStartTime());
-        lottery.setEndTime(req.getEndTime());
         lottery.setBonusEnabled(req.getBonusEnabled());
         lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
         lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
-        if (req.getTags() != null && !req.getTags().isEmpty()) {
-            lottery.setTags(String.join(",", req.getTags()));
+        lottery.setMaxDraws(req.getMaxDraws());
+        lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
+        lottery.setScheduledAt(req.getScheduledAt());
+        lottery.setStartTime(req.getStartTime());
+        lottery.setEndTime(req.getEndTime());
+        lottery.setHotCount(req.getHotCount() != null ? req.getHotCount() : 0);
+        lottery.setTheme(req.getTheme());
+        lottery.setImageUrl(req.getImageUrl());
+        if (req.getTags() != null) {
+            try {
+                lottery.setTags(objectMapper.writeValueAsString(req.getTags()));
+            } catch (JsonProcessingException e) {
+                log.warn("標籤序列化失敗", e);
+            }
         }
-        if (req.getGalleryImages() != null && !req.getGalleryImages().isEmpty()) {
-            lottery.setGalleryImages(String.join(",", req.getGalleryImages()));
+        if (req.getGalleryImages() != null) {
+            try {
+                lottery.setGalleryImages(objectMapper.writeValueAsString(req.getGalleryImages()));
+            } catch (JsonProcessingException e) {
+                log.warn("圖庫序列化失敗", e);
+            }
         }
+        if (req.getMultiDrawOptions() != null) {
+            try {
+                lottery.setMultiDrawOptions(objectMapper.writeValueAsString(req.getMultiDrawOptions()));
+            } catch (JsonProcessingException e) {
+                log.warn("多抽選項序列化失敗", e);
+            }
+        }
+        lottery.setRemark(req.getRemark());
+        lottery.setTotalDraws(0);
         lottery.setCreatedAt(LocalDateTime.now());
         lottery.setUpdatedAt(LocalDateTime.now());
         
@@ -409,7 +946,7 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("商品不存在");
         }
         
-        // 更新欄位（所有欄位都是可選的）
+        // 更新欄位
         if (req.getTitle() != null) {
             lottery.setTitle(req.getTitle());
         }
@@ -419,84 +956,20 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getImageUrl() != null) {
             lottery.setImageUrl(req.getImageUrl());
         }
+        if (req.getPricePerDraw() != null) {
+            lottery.setPricePerDraw(req.getPricePerDraw());
+        }
         if (req.getCategory() != null) {
             lottery.setCategory(req.getCategory());
         }
         if (req.getSubCategory() != null) {
             lottery.setSubCategory(req.getSubCategory());
         }
-        if (req.getPlayMode() != null || req.getCategory() != null || req.getSubCategory() != null) {
-            // 有任何分類相關欄位更新時，重新推算 playMode
-            String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
-            String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
-            lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory));
-        }
-        if (req.getGameMode() != null) {
-            lottery.setGameMode(req.getGameMode());
-        }
-        if (req.getPricePerDraw() != null) {
-            lottery.setPricePerDraw(req.getPricePerDraw());
-        }
-        if (req.getDiscountedPrice() != null) {
-            lottery.setDiscountedPrice(req.getDiscountedPrice());
-        }
-        if (req.getAutoDiscountEnabled() != null) {
-            lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
-        }
-        if (req.getAllowMultiDraw() != null) {
-            lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
-        }
-        if (req.getMultiDrawOptions() != null) {
-            lottery.setMultiDrawOptions(req.getMultiDrawOptions().stream()
-                    .map(String::valueOf).collect(Collectors.joining(",")));
-        }
-        if (req.getBonusEnabled() != null) {
-            lottery.setBonusEnabled(req.getBonusEnabled());
-        }
-        if (req.getBonusPointsPerDraw() != null) {
-            lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
-        }
-        if (req.getBonusCostPerDraw() != null) {
-            lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
-        }
-        if (req.getMaxDraws() != null) {
-            lottery.setMaxDraws(req.getMaxDraws());
-        }
-        if (req.getOrderNum() != null) {
-            lottery.setOrderNum(req.getOrderNum());
-        }
-        if (req.getWeight() != null) {
-            lottery.setWeight(req.getWeight());
-        }
-        if (req.getRemark() != null) {
-            lottery.setRemark(req.getRemark());
-        }
-        if (req.getTheme() != null) {
-            lottery.setTheme(req.getTheme());
-        }
-        if (req.getContent() != null) {
-            lottery.setContent(req.getContent());
-        }
-        if (req.getHotCount() != null) {
-            lottery.setHotCount(req.getHotCount());
-        }
-        if (req.getStatus() != null) {
-            lottery.setStatus(req.getStatus());
-        }
-        if (req.getScheduledAt() != null) {
-            lottery.setScheduledAt(req.getScheduledAt());
-        }
-        if (req.getStartTime() != null) {
-            lottery.setStartTime(req.getStartTime());
-        }
-        if (req.getEndTime() != null) {
-            lottery.setEndTime(req.getEndTime());
-        }
-        if (req.getTags() != null) {
-            lottery.setTags(req.getTags().stream().collect(Collectors.joining(",")));
-        }
-        if (req.getGalleryImages() != null) {
-            lottery.setGalleryImages(req.getGalleryImages().stream().collect(Collectors.joining(",")));
+        // ✅ 自動重新推算 playMode（當 category 或 subCategory 有更新時）
+        if (req.getCategory() != null || req.getSubCategory() != null) {
+            String effectiveCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
+            String effectiveSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+            lottery.setPlayMode(resolvePlayMode(effectiveCategory, effectiveSubCategory));
         }
         
         lottery.setUpdatedAt(LocalDateTime.now());
@@ -566,8 +1039,6 @@ public class LotteryServiceImpl implements LotteryService {
 
         // 🆕 上架時自動生成籤位（若尚未生成）
         if ("ON_SHELF".equals(status)) {
-            // 🆕 SCRATCH_STORE 上架前置驗證：必須先指定大獎號碼
-            validateCanGoOnShelf(lottery);
             Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
             if (!generated) {
                 log.info("🎫 籤位尚未生成，自動執行 generateTickets: lotteryId={}", id);
@@ -708,7 +1179,7 @@ public class LotteryServiceImpl implements LotteryService {
         // ✅ 新增欄位（前台商品詳情需要）
         res.setProtectionDraws(lottery.getProtectionDraws());
         res.setProtectionMinutes(lottery.getProtectionMinutes());
-        res.setContent(lottery.getContent());
+        res.setContent(lottery.getDescription()); // content 使用 description 欄位
         res.setGameMode(lottery.getGameMode());
         res.setFreeDrawEnabled(lottery.getFreeDrawEnabled() != null && lottery.getFreeDrawEnabled() == 1);
         res.setDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers());
@@ -727,43 +1198,9 @@ public class LotteryServiceImpl implements LotteryService {
         int totalDraws = lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0;
         return Math.max(0, lottery.getMaxDraws() - totalDraws);
     }
-
-    /**
-     * 根據 category + subCategory 自動推算 playMode
-     *
-     * <pre>
-     * category                    subCategory      → playMode
-     * GACHA                       -                → LOTTERY_MODE
-     * OFFICIAL_ICHIBAN            -                → LOTTERY_MODE
-     * TRADING_CARD                -                → LOTTERY_MODE
-     * CUSTOM_GACHA                SCRATCH_MODE     → SCRATCH_MODE
-     * CUSTOM_GACHA                LOTTERY_MODE     → LOTTERY_MODE
-     * CUSTOM_GACHA                (null)           → LOTTERY_MODE
-     * SCRATCH（舊值，已棄用）      -                → SCRATCH_MODE
-     * </pre>
-     *
-     * @param explicit    前端明確傳入的 playMode（優先使用，不為 null 時直接採用）
-     * @param category    商品大分類
-     * @param subCategory 自製賞子類型
-     * @return 推算後的 playMode
-     */
-    private String resolvePlayMode(String explicit, String category, String subCategory) {
-        if (explicit != null && !explicit.isBlank()) {
-            return explicit; // 前端明確指定時尊重傳入值
-        }
-        if (category == null) {
-            return "LOTTERY_MODE";
-        }
-        return switch (category) {
-            case "GACHA", "OFFICIAL_ICHIBAN", "TRADING_CARD" -> "LOTTERY_MODE";
-            case "CUSTOM_GACHA" -> "SCRATCH_MODE".equals(subCategory) ? "SCRATCH_MODE" : "LOTTERY_MODE";
-            case "SCRATCH" -> "SCRATCH_MODE"; // 舊資料相容
-            default -> "LOTTERY_MODE";
-        };
-    }
-
+    
     // ==================== 複製商品功能 ====================
-
+    
     @Override
     @Transactional
     public LotteryRes copyLottery(String sourceLotteryId, String newTitle, Boolean regenerateTickets, String newStatus) {
@@ -898,7 +1335,7 @@ public class LotteryServiceImpl implements LotteryService {
                 operatorId);
         
         // Step 1: 建立商品
-        LotteryRes lotteryRes = createLottery(req.getLottery());
+        LotteryRes lotteryRes = createLottery(req.getLottery(), operatorId);
         String lotteryId = lotteryRes.getId();
         
         log.info("✅ 商品建立成功: lotteryId={}", lotteryId);
@@ -908,13 +1345,6 @@ public class LotteryServiceImpl implements LotteryService {
         
         if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
             log.info("🎁 開始批次新增獎品: count={}", req.getPrizes().size());
-            
-            // 🆕 刮刮樂模式：強制驗證只允許 1 個大獎，不允許非大獎獎品
-            String reqGameMode = req.getLottery().getGameMode();
-            if (GameModeEnum.SCRATCH_STORE.getCode().equals(reqGameMode)
-                    || GameModeEnum.SCRATCH_PLAYER.getCode().equals(reqGameMode)) {
-                validateScratchPrizes(reqGameMode, req.getPrizes());
-            }
             
             for (com.group.admin.req.lottery.LotteryPrizeCreateReq prizeReq : req.getPrizes()) {
                 // 設定 lotteryId
@@ -949,29 +1379,18 @@ public class LotteryServiceImpl implements LotteryService {
             log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
             
             // Step 2.5: 🆕 自動計算 maxDraws 並更新商品
-            // 計算非最後賞獎品總數（最後賞不加入籤位池）
+            // 計算獎品總數
             int totalPrizeQuantity = req.getPrizes().stream()
-                    .filter(p -> p.getIsLastPrize() == null || !p.getIsLastPrize())
-                    .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
-                    .sum();
-            int lastPrizeQuantity = (int) req.getPrizes().stream()
-                    .filter(p -> p.getIsLastPrize() != null && p.getIsLastPrize())
                     .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
                     .sum();
             
-            // 使用與 createLottery 相同的推算邏輯（前端不傳 playMode，需自動推算）
-            String playMode = resolvePlayMode(
-                    req.getLottery().getPlayMode(),
-                    req.getLottery().getCategory(),
-                    req.getLottery().getSubCategory()
-            );
+            String playMode = req.getLottery().getPlayMode();
             
-            log.info("🎰 籤位生成準備: playMode={}, 非最後賞獎品總數={}, 最後賞數量={}", 
-                    playMode, totalPrizeQuantity, lastPrizeQuantity);
+            log.info("🎰 籤位生成準備: playMode={}, 獎品總數={}", playMode, totalPrizeQuantity);
             
-            // ✅ 檢查獎品總數（排除最後賞後仍需有獎品）
+            // ✅ 檢查獎品總數
             if (totalPrizeQuantity <= 0) {
-                String errorMsg = "非最後賞獎品總數必須大於 0！請至少新增一個非最後賞獎品。";
+                String errorMsg = "獎品總數必須大於 0！請至少新增一個獎品。";
                 log.error("❌ {}", errorMsg);
                 throw new BusinessException(errorMsg);
             }
@@ -981,13 +1400,13 @@ public class LotteryServiceImpl implements LotteryService {
             Integer frontendMaxDraws = req.getLottery().getMaxDraws();
             
             if ("LOTTERY_MODE".equals(playMode)) {
-                // 一番賞/扭蛋/卡牌：maxDraws = 非最後賞獎品總數
+                // 一番賞/扭蛋/卡牌：maxDraws = 獎品總數（不能有謝謝惠顧）
                 calculatedMaxDraws = totalPrizeQuantity;
-                log.info("🎯 一番賞模式：自動設定 maxDraws = 非最後賞獎品總數 = {}", calculatedMaxDraws);
+                log.info("🎯 一番賞模式：自動設定 maxDraws = 獎品總數 = {}", calculatedMaxDraws);
                 
-                // 如果前端傳入的 maxDraws 與計算值不符，警告並覆寫
+                // 如果前端傳入的 maxDraws 與獎品總數不符，警告並覆寫
                 if (frontendMaxDraws != null && frontendMaxDraws != totalPrizeQuantity) {
-                    log.warn("⚠️ 一番賞模式：前端傳入 maxDraws={} 與非最後賞獎品總數={} 不符，已自動覆寫", 
+                    log.warn("⚠️ 一番賞模式：前端傳入 maxDraws={} 與獎品總數={} 不符，已自動覆寫", 
                             frontendMaxDraws, totalPrizeQuantity);
                 }
             } else if ("SCRATCH_MODE".equals(playMode)) {
@@ -1055,7 +1474,7 @@ public class LotteryServiceImpl implements LotteryService {
         LotteryRes lotteryRes;
         if (req.getLottery() != null) {
             req.getLottery().setId(lotteryId); // 確保 ID 正確
-            lotteryRes = updateLottery(lotteryId, req.getLottery());
+            lotteryRes = updateLottery(req.getLottery(), operatorId);
             log.info("✅ 商品更新成功: lotteryId={}", lotteryId);
         } else {
             // 沒有提供更新資訊，直接查詢現有資料
@@ -1378,129 +1797,29 @@ public class LotteryServiceImpl implements LotteryService {
         return newHotCount;
     }
     
-    // ==================== 狀態變更（含 FSM 驗證）====================
-    
-    private static final Map<String, List<String>> VALID_TRANSITIONS = Map.of(
-        "DRAFT",       List.of("CONFIGURED", "ON_SHELF", "FORCED_OFF"),
-        "CONFIGURED",  List.of("ON_SHELF", "FORCED_OFF"),
-        "ON_SHELF",    List.of("OFF_SHELF", "DRAWABLE", "FORCED_OFF"),
-        "OFF_SHELF",   List.of("ON_SHELF", "FORCED_OFF"),
-        "DRAWABLE",    List.of("SOLD_OUT", "FORCED_OFF"),
-        "IN_PROGRESS", List.of("SOLD_OUT", "FORCED_OFF"),
-        "SOLD_OUT",    List.of("FORCED_OFF"),
-        "FORCED_OFF",  List.of("DRAFT")
-    );
-    
-    @Override
-    @Transactional
-    public LotteryRes changeStatus(String lotteryId, String targetStatus, String reason, String operatorId) {
-        log.info("🔄 變更商品狀態: lotteryId={}, targetStatus={}, operatorId={}", lotteryId, targetStatus, operatorId);
-        
-        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
-        if (lottery == null) {
-            throw new BusinessException("商品不存在: " + lotteryId);
-        }
-        
-        String currentStatus = lottery.getStatus();
-        if (currentStatus == null) {
-            currentStatus = "DRAFT";
-        }
-        
-        // FSM 轉換驗證
-        List<String> allowed = VALID_TRANSITIONS.getOrDefault(currentStatus, List.of());
-        if (!allowed.contains(targetStatus)) {
-            throw new BusinessException(String.format(
-                "不合法的狀態轉換: %s → %s（允許: %s）", currentStatus, targetStatus, allowed));
-        }
-        
-        // FORCED_OFF 需要 reason
-        if ("FORCED_OFF".equals(targetStatus) && (reason == null || reason.isBlank())) {
-            log.warn("⚠️ 強制下架未提供原因");
-        }
-        
-        // 特殊轉換邏輯
-        if ("FORCED_OFF".equals(targetStatus) && reason != null) {
-            lottery.setRemark(reason);
-        }
-        if ("DRAFT".equals(targetStatus) && "FORCED_OFF".equals(currentStatus)) {
-            // 重新啟用：重設相關欄位
-            lottery.setTicketsGenerated((byte) 0);
-        }
-        
-        lottery.setStatus(targetStatus);
-        lottery.setUpdatedAt(LocalDateTime.now());
-        lotteryMapper.updateByPrimaryKey(lottery);
-        
-        // 上架時自動生成籤位
-        if ("ON_SHELF".equals(targetStatus)) {
-            // 🆕 SCRATCH_STORE 上架前置驗證：必須先指定大獎號碼
-            validateCanGoOnShelf(lottery);
-            Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
-            if (!generated) {
-                try {
-                    lotteryTicketService.generateTickets(lotteryId);
-                    lottery.setTicketsGenerated((byte) 1);
-                    lottery.setUpdatedAt(LocalDateTime.now());
-                    lotteryMapper.updateByPrimaryKey(lottery);
-                    log.info("✅ 籤位自動生成完成: lotteryId={}", lotteryId);
-                } catch (Exception e) {
-                    log.warn("⚠️ 籤位生成失敗: {}", e.getMessage());
-                }
-            }
-        }
-        
-        log.info("✅ 狀態變更成功: {} → {}", currentStatus, targetStatus);
-        return convertToResNew(lottery);
-    }
-    
     // ==================== 輔助方法 ====================
     
     /**
-     * 🆕 刮刮樂獎品數量驗證：只允許 1 個大獎（quantity=1），不允許非大獎獎品
+     * 根據 category + subCategory 自動推算 playMode
      * 
-     * @param gameMode 遊戲模式（SCRATCH_STORE 或 SCRATCH_PLAYER）
-     * @param prizes   獎品列表
+     * | category        | subCategory  | → playMode    |
+     * |-----------------|--------------|---------------|
+     * | GACHA           | -            | LOTTERY_MODE  |
+     * | OFFICIAL_ICHIBAN| -            | LOTTERY_MODE  |
+     * | TRADING_CARD    | -            | LOTTERY_MODE  |
+     * | CUSTOM_GACHA    | LOTTERY_MODE | LOTTERY_MODE  |
+     * | CUSTOM_GACHA    | null         | LOTTERY_MODE  |
+     * | CUSTOM_GACHA    | SCRATCH_MODE | SCRATCH_MODE  |
+     * 
+     * ⚠️ 前端不應傳入 playMode，後端自動覆蓋
      */
-    private void validateScratchPrizes(String gameMode, 
-            List<com.group.admin.req.lottery.LotteryPrizeCreateReq> prizes) {
-        long grandPrizeTotal = prizes.stream()
-                .filter(p -> Boolean.TRUE.equals(p.getIsGrandPrize()))
-                .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 1)
-                .sum();
-        
-        if (grandPrizeTotal != 1) {
-            throw new BusinessException(
-                "刮刮樂模式：大獎數量必須剛好為 1（目前設定 " + grandPrizeTotal + " 個）。"
-                    + "其餘籤位系統會自動設為謝謝惠顧，不需額外設定。");
+    private String resolvePlayMode(String category, String subCategory) {
+        if ("CUSTOM_GACHA".equals(category) && "SCRATCH_MODE".equals(subCategory)) {
+            return "SCRATCH_MODE";
         }
-        
-        long nonGrandCount = prizes.stream()
-                .filter(p -> !Boolean.TRUE.equals(p.getIsGrandPrize()))
-                .count();
-        
-        if (nonGrandCount > 0) {
-            throw new BusinessException(
-                "刮刮樂模式：不允許設定非大獎獎品（目前設定了 " + nonGrandCount 
-                    + " 個），其餘籤位系統自動為謝謝惠顧。");
-        }
+        return "LOTTERY_MODE";
     }
     
-    /**
-     * 🆕 SCRATCH_STORE 上架前置驗證：必須先指定大獎號碼才能上架
-     * SCRATCH_PLAYER 和其他模式不受此限制。
-     * 
-     * @param lottery 商品實體
-     */
-    private void validateCanGoOnShelf(Lottery lottery) {
-        if (GameModeEnum.SCRATCH_STORE.getCode().equals(lottery.getGameMode())) {
-            String d = lottery.getDesignatedPrizeNumbers();
-            if (d == null || d.isBlank()) {
-                throw new BusinessException(
-                    "SCRATCH_STORE 模式：請先在後台指定大獎號碼（designatedPrizeNumbers），才能上架。");
-            }
-        }
-    }
-
     /**
      * 判斷字串是否非空白
      * 空字串 "" 視為空白

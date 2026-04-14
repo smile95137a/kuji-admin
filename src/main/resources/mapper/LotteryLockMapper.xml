@@ -241,4 +241,22 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- Get active lock for a lottery -->
+  <select id="selectActiveLock" parameterType="java.lang.String" resultMap="BaseResultMap">
+    SELECT id, lottery_id, user_id, lock_start_time, lock_end_time, is_active, created_at
+    FROM `lottery_lock`
+    WHERE lottery_id = #{lotteryId}
+      AND is_active = 1
+      AND lock_end_time > NOW()
+    LIMIT 1
+  </select>
+
+  <!-- Expire stale locks older than given time -->
+  <update id="expireStaleLocksBeforeTime" parameterType="java.time.LocalDateTime">
+    UPDATE `lottery_lock`
+    SET is_active = 0
+    WHERE is_active = 1
+      AND lock_end_time &lt; #{now}
+  </update>
 </mapper>

@@ -216,6 +216,29 @@ public class AdminLotteryController {
     }
 
     /**
+     * 變更商品狀態（單一端點）
+     * 
+     * @param id 商品 ID（UUID 格式）
+     * @param status 目標狀態（ON_SHELF / OFF_SHELF）
+     * @return 更新後的商品
+     */
+    @PatchMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @Operation(summary = "變更商品狀態", description = "上架或下架商品（ON_SHELF / OFF_SHELF）")
+    public ResponseEntity<LotteryRes> updateStatus(
+            @PathVariable String id,
+            @RequestParam String status) {
+        
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("🔄 變更商品狀態: userId={}, lotteryId={}, status={}", userId, id, status);
+        
+        LotteryRes result = lotteryService.updateStatus(id, status);
+        
+        log.info("✅ 狀態更新成功: id={}, status={}", id, status);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 上架商品
      * 
      * ⚠️ 使用正則表達式限制 id 必須是 UUID 格式

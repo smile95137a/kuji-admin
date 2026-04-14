@@ -1,31 +1,30 @@
 package com.group.admin.req.draw;
 
-import java.time.LocalDateTime;
 import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+
+import java.time.LocalDateTime;
 
 /**
- * 後台抽獎歷史查詢請求 DTO
+ * 後台查詢抽獎歷史請求
  */
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class AdminDrawHistoryReq {
 
-    @Builder.Default
+    /** 頁碼（從 1 開始） */
     private Integer page = 1;
 
-    @Builder.Default
+    /** 每頁筆數 */
     private Integer size = 20;
 
+    /** 篩選特定玩家 ID */
     private String userId;
 
+    /** 篩選狀態（SUCCESS / PENDING / FAILED） */
     private String status;
 
+    /** 起始時間 */
     private LocalDateTime startDate;
 
+    /** 結束時間 */
     private LocalDateTime endDate;
 }

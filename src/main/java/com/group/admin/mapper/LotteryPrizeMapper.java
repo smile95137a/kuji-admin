@@ -34,9 +34,15 @@ public interface LotteryPrizeMapper {
 
     int updateByPrimaryKey(LotteryPrize row);
 
-    // ==================== 自訂方法 ====================
+    /** Pessimistic lock: SELECT ... FOR UPDATE */
+    LotteryPrize selectByPrimaryKeyForUpdate(String id);
 
-    int batchInsertPrizes(@Param("list") List<LotteryPrize> prizes);
+    /** Count grand prizes with remaining stock > 0 */
+    int countGrandPrizesWithStock(String lotteryId);
 
-    int deleteByLotteryId(@Param("lotteryId") String lotteryId);
+    /** Get last prize (is_last_prize=1 and remaining>0) */
+    LotteryPrize selectLastPrize(String lotteryId);
+
+    /** Get all prizes with remaining stock, ordered by order_num */
+    List<LotteryPrize> selectAvailablePrizes(String lotteryId);
 }
