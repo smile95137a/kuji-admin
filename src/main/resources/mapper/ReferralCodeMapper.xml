@@ -368,4 +368,18 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <select id="selectByCode" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from `referral_code`
+    where code = #{code,jdbcType=VARCHAR}
+    limit 1
+  </select>
+
+  <update id="incrementUsageCount">
+    update `referral_code`
+    set used_count = used_count + 1,
+        updated_at = NOW()
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
 </mapper>

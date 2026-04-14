@@ -98,17 +98,9 @@ public class UserServiceImpl implements UserService {
         // ✅ 處理推薦碼（如果有提供）
         if (req.getReferralCode() != null && !req.getReferralCode().trim().isEmpty()) {
             log.info("🎁 處理推薦碼: {}", req.getReferralCode());
-            try {
-                boolean used = referralCodeService.useCode(user.getId(), req.getReferralCode().trim());
-                if (used) {
-                    log.info("✅ 推薦碼使用成功: userId={}, code={}", user.getId(), req.getReferralCode());
-                } else {
-                    log.warn("⚠️ 推薦碼無效或已停用: {}", req.getReferralCode());
-                }
-            } catch (Exception e) {
-                // 推薦碼處理失敗不影響註冊
-                log.warn("⚠️ 推薦碼處理失敗: {}", e.getMessage());
-            }
+            // T015: use 3-param version — exceptions propagate as 400 to caller
+            referralCodeService.useCode(user.getId(), req.getReferralCode().trim(), req.getEmail());
+            log.info("✅ 推薦碼使用成功: userId={}, code={}", user.getId(), req.getReferralCode());
         }
         
         return user;

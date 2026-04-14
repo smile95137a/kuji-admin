@@ -81,6 +81,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 登入、註冊、OAuth 不需要認證
                         .requestMatchers("/api/auth/**", "/login/oauth2/**").permitAll()
+                        // T013: 推薦碼驗證（公開端點，需在 /api/** 規則前宣告）
+                        .requestMatchers("/api/auth/validate-referral").permitAll()
                         // 公開 API（不需要認證）
                         .requestMatchers("/api/district/**").permitAll()  // 行政區資料
                         .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈

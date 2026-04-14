@@ -17,12 +17,11 @@ import lombok.Data;
 public class ReferralCodeCreateReq {
     
     /**
-     * 推薦碼（6-20 字元，英數混合）
+     * 推薦碼（選用；若未提供則由伺服器自動生成 8 位大寫英數字）
      */
-    @NotBlank(message = "推薦碼不能為空")
     @Size(min = 6, max = 20, message = "推薦碼長度必須在 6-20 字元之間")
     @Pattern(regexp = "^[A-Za-z0-9]+$", message = "推薦碼只能包含英文字母和數字")
-    @Schema(description = "推薦碼", example = "STORE001")
+    @Schema(description = "推薦碼（選用，留空則自動生成）", example = "STORE001")
     private String code;
     
     /**
