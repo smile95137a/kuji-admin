@@ -5,6 +5,7 @@ import com.group.admin.req.menu.MenuUpdateReq;
 import com.group.admin.res.MenuPermissionRes;
 import com.group.admin.res.menu.MenuRes;
 import com.group.admin.res.menu.MenuTreeRes;
+import com.group.admin.security.UserPrincipal;
 import com.group.admin.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +13,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -144,7 +147,7 @@ public class MenuController {
 
     // ===== Feature 009: Dynamic menu with permissions =====
 
-    @Operation(summary = "我的選單權限", description = "查詢當前登入使用者可訪問的選單樹，含 canView/canEdit/canDelete 旗標")
+    @Operation(summary = "我的選單權限（舊版）", description = "查詢當前登入使用者可訪問的選單樹，含 canView/canEdit/canDelete 旗標")
     @GetMapping("/my-permissions")
     public ResponseEntity<List<MenuPermissionRes>> getMyMenuPermissions() {
         String adminUserId = com.group.admin.util.SecurityUtils.getCurrentAdminUserId();
@@ -152,6 +155,19 @@ public class MenuController {
             return ResponseEntity.status(401).build();
         }
         List<MenuPermissionRes> res = menuService.getMenusForCurrentUser(adminUserId);
+        return ResponseEntity.ok(res);
+    }
+
+    @Operation(summary = "我的選單（含權限旗標）",
+               description = "依當前登入使用者的角色返回可訪問的選單樹，含 canView/canEdit/canDelete 旗標；ROLE_ADMIN 取得所有選單（全旗標 true）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/my")
+    public ResponseEntity<List<MenuPermissionRes>> getMyMenus(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return ResponseEntity.status(401).build();
+        }
+        List<MenuPermissionRes> res = menuService.getAuthorizedMenusForUser(
+                principal.getUserId(), principal.getRoles());
         return ResponseEntity.ok(res);
     }
 }
