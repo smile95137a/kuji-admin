@@ -11,7 +11,7 @@ import lombok.Getter;
 @Getter
 public enum PrizeBoxStatusEnum {
     
-    IN_BOX("IN_BOX", "在賞品盒中"),
+    IN_BOX("IN_BOX", "在獎品盒中"),
     SHIPPED("SHIPPED", "已出貨"),
     RECYCLED("RECYCLED", "已回收");
     
@@ -32,7 +32,7 @@ public enum PrizeBoxStatusEnum {
                 return status;
             }
         }
-        throw new IllegalArgumentException("無效的賞品盒狀態：" + code);
+        throw new IllegalArgumentException("無效的獎品盒狀態：" + code);
     }
     
     /**

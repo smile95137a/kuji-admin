@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
 /**
- * 出貨請求（從獎品盒產生訂單）
+ * 出貨請求（從賞品盒產生訂單）
  * 
  * @author Kuji Admin
  * @since 2026-01-09
@@ -17,7 +17,7 @@ import java.util.List;
 public class PrizeBoxShipReq {
     
     /**
-     * 要出貨的獎品盒項目 ID 列表
+     * 要出貨的賞品盒項目 ID 列表
      */
     @NotEmpty(message = "請選擇要出貨的獎品")
     private List<String> prizeBoxIds;
@@ -29,15 +29,13 @@ public class PrizeBoxShipReq {
     private String shippingMethod;
     
     /**
-     * 收件人姓名
+     * 收件人姓名（若無 userAddressId 則必填）
      */
-    @NotBlank(message = "收件人姓名不可為空")
     private String recipientName;
     
     /**
-     * 收件人電話
+     * 收件人電話（若無 userAddressId 則必填）
      */
-    @NotBlank(message = "收件人電話不可為空")
     private String recipientPhone;
     
     /**
@@ -65,9 +63,8 @@ public class PrizeBoxShipReq {
      */
     private String remark;
 
-    
     /**
-     * 使用者常用地址 ID（選填，用於快速填入收件資訊）
+     * 已儲存地址 ID（選填，有值時優先於請求欄位）
      */
     private String userAddressId;
 }

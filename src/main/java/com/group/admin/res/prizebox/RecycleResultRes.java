@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 回收結果回應
- * 
+ * 回收獎品結果回應
+ *
  * @author Kuji Admin
  * @since 2026-03-22
  */
@@ -16,14 +16,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RecycleResultRes {
-    
+
     /**
-     * 回收獲得的總紅利
+     * 本次回收共獲得的 Bonus 點數
      */
     private Long totalBonus;
-    
+
     /**
-     * 回收的獎品數量
+     * 本次回收件數
      */
     private Integer recycledCount;
 }
