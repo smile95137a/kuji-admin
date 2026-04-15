@@ -28,4 +28,13 @@ public class MarqueeController {
     public ResponseEntity<List<Marquee>> getActiveMarquees() {
         return ResponseEntity.ok(marqueeService.getActiveMarquees());
     }
+    
+    /**
+     * 取得跑馬燈列表（別名端點，符合前端規範）
+     * GET /api/marquee/list
+     */
+    @GetMapping("/list")
+    public ResponseEntity<List<Marquee>> listActiveMarquees() {
+        return ResponseEntity.ok(marqueeService.getActiveMarquees());
+    }
 }
