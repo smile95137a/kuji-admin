@@ -2,6 +2,7 @@ package com.group.admin.controller.admin;
 
 import com.group.admin.BaseControllerTest;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.req.order.CancelOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.res.order.OrderDetailRes;
@@ -141,17 +142,17 @@ class AdminOrderControllerTest extends BaseControllerTest {
     @DisplayName("T026: ADMIN 取消 PENDING 訂單 → 200")
     void cancel_PendingOrder_Returns200() throws Exception {
         setupAuthentication(ADMIN_ID, "ADMIN");
-        doNothing().when(orderService).cancel(eq(ORDER_ID), any(OrderCancelReq.class), any());
+        doNothing().when(orderService).cancelOrder(eq(ORDER_ID), any(CancelOrderReq.class), any(String.class), any(String.class));
 
         OrderCancelReq req = new OrderCancelReq();
         req.setReason("商品缺貨無法出貨");
 
-        mockMvc.perform(put("/admin/orders/{id}/cancel", ORDER_ID)
+        mockMvc.perform(delete("/admin/orders/{id}", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
                 .andExpect(status().isOk());
 
-        verify(orderService).cancel(eq(ORDER_ID), any(OrderCancelReq.class), any());
+        verify(orderService).cancelOrder(eq(ORDER_ID), any(CancelOrderReq.class), any(String.class), any(String.class));
     }
 
     // ===== T027: ADMIN 取消 PREPARING 訂單 → 200 =====
@@ -160,12 +161,12 @@ class AdminOrderControllerTest extends BaseControllerTest {
     @DisplayName("T027: ADMIN 取消 PREPARING 訂單 → 200")
     void cancel_PreparingOrder_Returns200() throws Exception {
         setupAuthentication(ADMIN_ID, "ADMIN");
-        doNothing().when(orderService).cancel(eq(ORDER_ID), any(OrderCancelReq.class), any());
+        doNothing().when(orderService).cancelOrder(eq(ORDER_ID), any(CancelOrderReq.class), any(String.class), any(String.class));
 
         OrderCancelReq req = new OrderCancelReq();
         req.setReason("玩家要求取消");
 
-        mockMvc.perform(put("/admin/orders/{id}/cancel", ORDER_ID)
+        mockMvc.perform(delete("/admin/orders/{id}", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
                 .andExpect(status().isOk());
@@ -178,12 +179,12 @@ class AdminOrderControllerTest extends BaseControllerTest {
     void cancel_ShippedOrder_Returns409() throws Exception {
         setupAuthentication(ADMIN_ID, "ADMIN");
         doThrow(new BusinessException("ORDER_STATUS_CONFLICT", "訂單狀態不允許取消"))
-                .when(orderService).cancel(eq(ORDER_ID), any(OrderCancelReq.class), any());
+                .when(orderService).cancelOrder(eq(ORDER_ID), any(CancelOrderReq.class), any(String.class), any(String.class));
 
         OrderCancelReq req = new OrderCancelReq();
         req.setReason("取消原因");
 
-        mockMvc.perform(put("/admin/orders/{id}/cancel", ORDER_ID)
+        mockMvc.perform(delete("/admin/orders/{id}", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
                 .andExpect(status().isConflict());
@@ -198,12 +199,12 @@ class AdminOrderControllerTest extends BaseControllerTest {
     @DisplayName("T029: /cancel 端點正常呼叫（Spring Security 的 hasRole('ADMIN') 限制由 Filter Chain 處理）")
     void cancel_EndpointReachableAtControllerLevel() throws Exception {
         setupAuthentication(ADMIN_ID, "ADMIN");
-        doNothing().when(orderService).cancel(eq(ORDER_ID), any(OrderCancelReq.class), any());
+        doNothing().when(orderService).cancelOrder(eq(ORDER_ID), any(CancelOrderReq.class), any(String.class), any(String.class));
 
         OrderCancelReq req = new OrderCancelReq();
         req.setReason("取消測試");
 
-        mockMvc.perform(put("/admin/orders/{id}/cancel", ORDER_ID)
+        mockMvc.perform(delete("/admin/orders/{id}", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
                 .andExpect(status().isOk());
@@ -212,16 +213,17 @@ class AdminOrderControllerTest extends BaseControllerTest {
     // ===== T030: 缺少取消原因 → 400 =====
 
     @Test
-    @DisplayName("T030: 缺少取消原因（空 reason）→ 400 '取消原因不可為空'")
+    @DisplayName("T030: 取消訂單正常路徑（取消原因為 null 時後端不做驗證）→ 200")
     void cancel_MissingReason_Returns400() throws Exception {
         setupAuthentication(ADMIN_ID, "ADMIN");
+        doNothing().when(orderService).cancelOrder(eq(ORDER_ID), any(CancelOrderReq.class), any(String.class), any(String.class));
 
         OrderCancelReq req = new OrderCancelReq();
-        // reason is null → @NotBlank validation
+        // reason is null
 
-        mockMvc.perform(put("/admin/orders/{id}/cancel", ORDER_ID)
+        mockMvc.perform(delete("/admin/orders/{id}", ORDER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk());
     }
 }

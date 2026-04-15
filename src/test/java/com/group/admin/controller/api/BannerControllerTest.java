@@ -36,7 +36,7 @@ class BannerControllerTest extends BaseControllerTest {
     void getCarouselBanners_ShouldReturnList() throws Exception {
         when(bannerService.getCarouselBanners()).thenReturn(Collections.emptyList());
         
-        mockMvc.perform(get("/banner/carousel"))
+        mockMvc.perform(get("/api/banners"))
                 .andExpect(status().isOk());
     }
 }

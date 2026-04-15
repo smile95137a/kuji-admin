@@ -72,7 +72,7 @@ class OrderServiceTest {
         orderService.prepareShipping(ORDER_ID, OPERATOR_ID);
 
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
-        verify(orderMapper).updateByPrimaryKey(captor.capture());
+        verify(orderMapper).updateByPrimaryKeySelective(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.PREPARING.getCode());
 
         ArgumentCaptor<OrderStatusLog> logCaptor = ArgumentCaptor.forClass(OrderStatusLog.class);
@@ -92,7 +92,7 @@ class OrderServiceTest {
         orderService.ship(ORDER_ID, req, OPERATOR_ID);
 
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
-        verify(orderMapper).updateByPrimaryKey(captor.capture());
+        verify(orderMapper).updateByPrimaryKeySelective(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.SHIPPED.getCode());
         assertThat(captor.getValue().getTrackingNo()).isEqualTo("TRACK-12345");
 
@@ -109,7 +109,7 @@ class OrderServiceTest {
         orderService.complete(ORDER_ID, OPERATOR_ID);
 
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
-        verify(orderMapper).updateByPrimaryKey(captor.capture());
+        verify(orderMapper).updateByPrimaryKeySelective(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.COMPLETED.getCode());
 
         verify(orderStatusLogMapper).insert(argThat(log ->
@@ -229,7 +229,7 @@ class OrderServiceTest {
 
         orderService.submitShippingInfo(ORDER_ID, req, USER_ID);
 
-        verify(orderMapper).updateByPrimaryKeySelective(argThat(o ->
+        verify(orderMapper).updateByPrimaryKey(argThat(o ->
                 "HOME_DELIVERY".equals(o.getShippingMethod()) &&
                 "王小明".equals(o.getRecipientName())));
     }

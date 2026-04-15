@@ -12,8 +12,12 @@ public class OrderCancelReq {
     @Size(max = 500, message = "取消原因不可超過 500 字元")
     private String cancelReason;
 
-    /** 相容舊版呼叫 getReason() */
+    /** 相容舊版呼叫 getReason() / setReason() */
     public String getReason() {
         return cancelReason;
+    }
+
+    public void setReason(String reason) {
+        this.cancelReason = reason;
     }
 }

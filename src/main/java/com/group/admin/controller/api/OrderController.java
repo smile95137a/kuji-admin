@@ -4,6 +4,7 @@ import com.group.admin.condition.OrderCondition;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.order.CreateOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
+import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.service.OrderService;
@@ -72,6 +73,19 @@ public class OrderController {
         }
 
         return ResponseEntity.ok(order);
+    }
+
+    /**
+     * US1 - 玩家提交出貨資訊（配送方式 + 收件資訊）
+     */
+    @PostMapping("/{orderId}/shipping-info")
+    public ResponseEntity<Void> submitShippingInfo(
+            @PathVariable String orderId,
+            @RequestBody ShipInfoReq req) {
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("📦 [API] 提交出貨資訊：userId={}, orderId={}", userId, orderId);
+        orderService.submitShippingInfo(orderId, req, userId);
+        return ResponseEntity.ok().build();
     }
 
     /**

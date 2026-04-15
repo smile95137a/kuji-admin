@@ -1,8 +1,7 @@
 package com.group.admin.controller.admin;
 
 import com.group.admin.BaseControllerTest;
-import com.group.admin.mapper.StoreMapper;
-import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.service.StoreService;
 import com.group.admin.util.SecurityUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +14,10 @@ import org.mockito.MockedStatic;
 import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -26,10 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminStoreControllerTest extends BaseControllerTest {
 
     @Mock
-    private StoreMapper storeMapper;
-
-    @Mock
-    private StoreUserMapper storeUserMapper;
+    private StoreService storeService;
 
     @InjectMocks
     private AdminStoreController adminStoreController;
@@ -42,6 +41,10 @@ class AdminStoreControllerTest extends BaseControllerTest {
         securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn("test-admin-id");
         securityUtilsMock.when(SecurityUtils::isAdmin).thenReturn(true);
         securityUtilsMock.when(SecurityUtils::getCurrentUserStoreIds).thenReturn(Collections.emptyList());
+        lenient().when(storeService.getStoreOptionsForUser(anyString(), anyBoolean(), anyBoolean()))
+                .thenReturn(Collections.emptyList());
+        lenient().when(storeService.searchStoreOptions(anyString(), anyBoolean(), any(), anyString(), anyBoolean()))
+                .thenReturn(Collections.emptyList());
         setupMockMvc(adminStoreController);
     }
 

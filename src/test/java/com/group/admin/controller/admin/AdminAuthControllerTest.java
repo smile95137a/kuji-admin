@@ -85,7 +85,7 @@ class AdminAuthControllerTest extends BaseControllerTest {
         
         when(adminAuthService.refreshToken(any())).thenReturn(mockRes);
 
-        mockMvc.perform(post("/admin/auth/refresh-token")
+        mockMvc.perform(post("/admin/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
                 .andExpect(status().isOk());

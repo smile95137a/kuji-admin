@@ -41,9 +41,8 @@ class AdminBannerControllerTest extends BaseControllerTest {
         List<BannerRes> mockList = Arrays.asList(new BannerRes(), new BannerRes());
         when(bannerService.queryBanners(any())).thenReturn(mockList);
 
-        mockMvc.perform(post("/admin/banner/list")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+        mockMvc.perform(get("/admin/banners")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         verify(bannerService).queryBanners(any());
@@ -66,7 +65,7 @@ class AdminBannerControllerTest extends BaseControllerTest {
             }
             """;
 
-        mockMvc.perform(post("/admin/banner")
+        mockMvc.perform(post("/admin/banners")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk());
@@ -85,7 +84,7 @@ class AdminBannerControllerTest extends BaseControllerTest {
             }
             """;
 
-        mockMvc.perform(put("/admin/banner/test-id")
+        mockMvc.perform(put("/admin/banners/test-id")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk());
@@ -96,7 +95,7 @@ class AdminBannerControllerTest extends BaseControllerTest {
     void deleteBanner_ShouldReturn204() throws Exception {
         doNothing().when(bannerService).deleteBanner(any());
 
-        mockMvc.perform(delete("/admin/banner/test-id"))
+        mockMvc.perform(delete("/admin/banners/test-id"))
                 .andExpect(status().isOk());
     }
 }

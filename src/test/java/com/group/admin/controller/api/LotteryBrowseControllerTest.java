@@ -5,6 +5,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class LotteryBrowseControllerTest extends BaseControllerTest {
     @Mock
     private LotteryService lotteryService;
 
+    @Mock
+    private LotteryTicketService lotteryTicketService;
+
     @InjectMocks
     private LotteryBrowseController lotteryBrowseController;
 
@@ -42,7 +46,7 @@ class LotteryBrowseControllerTest extends BaseControllerTest {
     @DisplayName("瀏覽一番賞列表")
     void browseLotteries_ShouldReturnList() throws Exception {
         when(lotteryService.queryLotteries(any(QueryReq.class))).thenReturn(Collections.emptyList());
-        
+
         mockMvc.perform(post("/lottery/browse/list")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -55,8 +59,11 @@ class LotteryBrowseControllerTest extends BaseControllerTest {
         LotteryRes mockRes = new LotteryRes();
         mockRes.setStatus("ON_SHELF");
         when(lotteryService.getLottery(anyString())).thenReturn(mockRes);
-        
-        mockMvc.perform(get("/lottery/browse/test-id"))
+        when(lotteryService.getPrizesByLotteryId(anyString())).thenReturn(Collections.emptyList());
+        when(lotteryTicketService.getTicketsForFrontend(anyString())).thenReturn(Collections.emptyList());
+        when(lotteryTicketService.getDesignatedWinningNumbers(anyString())).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/lottery/browse/test-id/detail"))
                 .andExpect(status().isOk());
     }
 }
