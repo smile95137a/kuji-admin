@@ -17,14 +17,14 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/banners")
+@RequestMapping("/banner")
 @RequiredArgsConstructor
 public class BannerController {
 
     private final BannerService bannerService;
 
-    /** GET /api/banners — returns only ACTIVE banners, ordered by displayOrder */
-    @GetMapping
+    /** GET /api/banner 或 GET /api/banner/list — returns only ACTIVE banners, ordered by displayOrder */
+    @GetMapping({"", "/list"})
     public ResponseEntity<List<BannerRes>> getActiveBanners() {
         log.info("🎠 前台查詢輪播 Banner");
         return ResponseEntity.ok(bannerService.getCarouselBanners());

@@ -42,46 +42,31 @@ public class CategoryController {
     /**
      * 查詢所有類別（一番賞、扭蛋、刮刮樂等）
      */
-    @PostMapping("/categories")
+    @GetMapping("/categories")
     @Operation(summary = "查詢商品類別", description = "查詢所有商品類別（如一番賞、扭蛋、刮刮樂等），返回每個類別的商品數量")
-    public ResponseEntity<List<CategoryRes>> queryCategories(
-            @RequestBody(required = false) QueryReq<CategoryCondition> req) {
-        
+    public ResponseEntity<List<CategoryRes>> queryCategories() {
         log.info("📂 前台查詢類別");
-        
-        List<CategoryRes> categories = categoryService.queryCategories(req);
-        
-        return ResponseEntity.ok(categories);
+        return ResponseEntity.ok(categoryService.queryCategories(null));
     }
     
     /**
      * 查詢所有主題（火影忍者、進擊的巨人、排球少年等）
      */
-    @PostMapping("/themes")
+    @GetMapping("/themes")
     @Operation(summary = "查詢商品主題", description = "查詢所有商品主題（如火影忍者、進擊的巨人等），返回每個主題的商品數量和熱度")
-    public ResponseEntity<List<CategoryRes>> queryThemes(
-            @RequestBody(required = false) QueryReq<CategoryCondition> req) {
-        
+    public ResponseEntity<List<CategoryRes>> queryThemes() {
         log.info("🎨 前台查詢主題");
-        
-        List<CategoryRes> themes = categoryService.queryThemes(req);
-        
-        return ResponseEntity.ok(themes);
+        return ResponseEntity.ok(categoryService.queryThemes(null));
     }
     
     /**
      * 查詢所有標籤
      */
-    @PostMapping("/tags")
+    @GetMapping("/tags")
     @Operation(summary = "查詢商品標籤", description = "查詢所有商品標籤，返回每個標籤的商品數量")
-    public ResponseEntity<List<CategoryRes>> queryTags(
-            @RequestBody(required = false) QueryReq<CategoryCondition> req) {
-        
+    public ResponseEntity<List<CategoryRes>> queryTags() {
         log.info("🏷️ 前台查詢標籤");
-        
-        List<CategoryRes> tags = categoryService.queryTags(req);
-        
-        return ResponseEntity.ok(tags);
+        return ResponseEntity.ok(categoryService.queryTags(null));
     }
     
     /**
