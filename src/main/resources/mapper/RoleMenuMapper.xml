@@ -241,4 +241,28 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectByRoleId" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM role_menu
+    WHERE role_id = #{roleId,jdbcType=VARCHAR}
+  </select>
+
+  <delete id="deleteByRoleId">
+    DELETE FROM role_menu
+    WHERE role_id = #{roleId,jdbcType=VARCHAR}
+  </delete>
+
+  <insert id="batchInsert">
+    INSERT INTO role_menu (id, role_id, menu_id, can_view, can_edit, can_delete, created_at)
+    VALUES
+    <foreach collection="list" item="item" separator=",">
+      (#{item.id,jdbcType=VARCHAR}, #{item.roleId,jdbcType=VARCHAR}, #{item.menuId,jdbcType=VARCHAR},
+       #{item.canView,jdbcType=BIT}, #{item.canEdit,jdbcType=BIT}, #{item.canDelete,jdbcType=BIT},
+       #{item.createdAt,jdbcType=TIMESTAMP})
+    </foreach>
+  </insert>
+
 </mapper>

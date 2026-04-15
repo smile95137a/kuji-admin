@@ -304,4 +304,45 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectActiveBanners" resultType="com.group.admin.res.banner.BannerRes">
+    SELECT b.id, b.store_id AS storeId, s.store_name AS storeName, s.logo_url AS storeLogoUrl,
+           b.title, b.image_url AS imageUrl, b.link_url AS linkUrl,
+           b.order_num AS orderNum, b.status,
+           b.start_time AS startTime, b.end_time AS endTime,
+           b.created_at AS createdAt, b.updated_at AS updatedAt
+    FROM banner b
+    LEFT JOIN store s ON b.store_id = s.id
+    WHERE b.status = 'PUBLISHED'
+    ORDER BY b.order_num ASC
+  </select>
+
+  <update id="autoPublishBanners">
+    UPDATE banner
+    SET status     = 'PUBLISHED',
+        updated_at = NOW()
+    WHERE status     = 'SCHEDULED'
+      AND start_time IS NOT NULL
+      AND start_time &lt;= NOW()
+  </update>
+
+  <update id="autoUnpublishBanners">
+    UPDATE banner
+    SET status     = 'EXPIRED',
+        updated_at = NOW()
+    WHERE status   = 'PUBLISHED'
+      AND end_time IS NOT NULL
+      AND end_time &lt;= NOW()
+  </update>
+
+  <update id="unpublishBannersByStoreId">
+    UPDATE banner
+    SET status     = 'EXPIRED',
+        updated_at = NOW()
+    WHERE store_id = #{storeId,jdbcType=VARCHAR}
+      AND status   = 'PUBLISHED'
+  </update>
+
 </mapper>

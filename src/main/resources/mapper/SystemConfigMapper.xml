@@ -274,4 +274,42 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM system_config
+    ORDER BY config_group, config_key
+  </select>
+
+  <select id="selectByConfigKey" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM system_config
+    WHERE config_key = #{configKey,jdbcType=VARCHAR}
+    LIMIT 1
+  </select>
+
+  <select id="selectByConfigGroup" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM system_config
+    WHERE config_group = #{configGroup,jdbcType=VARCHAR}
+    ORDER BY config_key
+  </select>
+
+  <select id="countByConfigKey" resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM system_config
+    WHERE config_key = #{configKey,jdbcType=VARCHAR}
+  </select>
+
+  <update id="updateByPrimaryKeyAndVersion">
+    UPDATE system_config
+    SET config_value = #{config.configValue,jdbcType=VARCHAR},
+        version      = version + 1,
+        updated_at   = NOW()
+    WHERE id      = #{config.id,jdbcType=VARCHAR}
+      AND version = #{version,jdbcType=INTEGER}
+  </update>
+
 </mapper>

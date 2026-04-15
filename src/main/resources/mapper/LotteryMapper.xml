@@ -851,4 +851,85 @@
       bonus_cost_per_draw = #{bonusCostPerDraw,jdbcType=INTEGER}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectPublicList" resultType="java.util.Map">
+    SELECT l.id, l.store_id AS storeId, s.store_name AS storeName,
+           l.title, l.image_url AS imageUrl, l.category, l.sub_category AS subCategory,
+           l.game_mode AS gameMode, l.play_mode AS playMode,
+           l.price_per_draw AS pricePerDraw, l.discounted_price AS discountedPrice,
+           l.auto_discount_enabled AS autoDiscountEnabled,
+           l.allow_multi_draw AS allowMultiDraw, l.multi_draw_options AS multiDrawOptions,
+           l.total_draws AS totalDraws, l.max_draws AS maxDraws,
+           l.status, l.order_num AS orderNum, l.weight, l.hot_count AS hotCount,
+           l.tags, l.theme, l.bonus_enabled AS bonusEnabled,
+           l.start_time AS startTime, l.end_time AS endTime, l.created_at AS createdAt
+    FROM lottery l
+    LEFT JOIN store s ON l.store_id = s.id
+    <where>
+      l.status = 'ON_SHELF'
+      <if test="category != null and category != ''">
+        AND l.category = #{category,jdbcType=VARCHAR}
+      </if>
+      <if test="storeId != null and storeId != ''">
+        AND l.store_id = #{storeId,jdbcType=VARCHAR}
+      </if>
+      <if test="keyword != null and keyword != ''">
+        AND (l.title LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%')
+          OR l.tags LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%'))
+      </if>
+    </where>
+    <choose>
+      <when test="sort != null and sort == 'hot'">ORDER BY l.hot_count DESC, l.created_at DESC</when>
+      <when test="sort != null and sort == 'price_asc'">ORDER BY l.price_per_draw ASC</when>
+      <when test="sort != null and sort == 'price_desc'">ORDER BY l.price_per_draw DESC</when>
+      <otherwise>ORDER BY l.order_num ASC, l.created_at DESC</otherwise>
+    </choose>
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countPublicList" resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM lottery l
+    <where>
+      l.status = 'ON_SHELF'
+      <if test="category != null and category != ''">
+        AND l.category = #{category,jdbcType=VARCHAR}
+      </if>
+      <if test="storeId != null and storeId != ''">
+        AND l.store_id = #{storeId,jdbcType=VARCHAR}
+      </if>
+      <if test="keyword != null and keyword != ''">
+        AND (l.title LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%')
+          OR l.tags LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%'))
+      </if>
+    </where>
+  </select>
+
+  <update id="updatePriceAfterGrandPrizeSoldOut">
+    UPDATE lottery
+    SET price_per_draw = discounted_price,
+        updated_at     = NOW()
+    WHERE id                  = #{lotteryId,jdbcType=VARCHAR}
+      AND discounted_price IS NOT NULL
+      AND auto_discount_enabled = 1
+  </update>
+
+  <select id="selectScheduledForPromotion" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM lottery
+    WHERE status       = 'OFF_SHELF'
+      AND scheduled_at IS NOT NULL
+      AND scheduled_at &lt;= NOW()
+  </select>
+
+  <select id="selectDrawableForStart" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM lottery
+    WHERE status     = 'ON_SHELF'
+      AND start_time IS NOT NULL
+      AND start_time &lt;= NOW()
+  </select>
+
 </mapper>

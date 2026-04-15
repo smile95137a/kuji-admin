@@ -368,4 +368,21 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectByCode" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM referral_code
+    WHERE code = #{code,jdbcType=VARCHAR}
+    LIMIT 1
+  </select>
+
+  <update id="incrementUsageCount">
+    UPDATE referral_code
+    SET used_count = used_count + 1,
+        updated_at = NOW()
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
 </mapper>

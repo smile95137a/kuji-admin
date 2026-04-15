@@ -410,4 +410,70 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectAccountsWithRole" resultType="com.group.admin.dto.AdminAccountDetailDO">
+    SELECT au.id, au.email, au.display_name AS displayName, au.phone, au.status,
+           au.force_change_password AS forceChangePassword, au.last_login_at AS lastLoginAt,
+           r.code AS roleType, su.store_id AS storeId, s.store_name AS storeName,
+           au.created_by AS createdBy, au.created_at AS createdAt,
+           au.updated_by AS updatedBy, au.updated_at AS updatedAt, au.remark
+    FROM admin_user au
+    LEFT JOIN admin_user_role aur ON au.id = aur.admin_user_id
+    LEFT JOIN role r ON aur.role_id = r.id
+    LEFT JOIN store_user su ON au.id = su.admin_user_id
+    LEFT JOIN store s ON su.store_id = s.id
+    <where>
+      <if test="condition != null and condition.status != null and condition.status != ''">
+        AND au.status = #{condition.status,jdbcType=VARCHAR}
+      </if>
+      <if test="condition != null and condition.roleType != null and condition.roleType != ''">
+        AND r.code = #{condition.roleType,jdbcType=VARCHAR}
+      </if>
+      <if test="condition != null and condition.storeId != null and condition.storeId != ''">
+        AND su.store_id = #{condition.storeId,jdbcType=VARCHAR}
+      </if>
+      <if test="condition != null and condition.keyword != null and condition.keyword != ''">
+        AND (au.email LIKE CONCAT('%', #{condition.keyword,jdbcType=VARCHAR}, '%')
+          OR au.display_name LIKE CONCAT('%', #{condition.keyword,jdbcType=VARCHAR}, '%'))
+      </if>
+    </where>
+    <choose>
+      <when test="condition != null and condition.sortBy != null and condition.sortBy != ''">
+        ORDER BY ${condition.sortBy}
+        <if test="condition.sortDir != null and condition.sortDir != ''">
+          ${condition.sortDir}
+        </if>
+      </when>
+      <otherwise>
+        ORDER BY au.created_at DESC
+      </otherwise>
+    </choose>
+    LIMIT #{condition.pageSize} OFFSET #{condition.offset}
+  </select>
+
+  <select id="countAccountsWithRole" resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM admin_user au
+    LEFT JOIN admin_user_role aur ON au.id = aur.admin_user_id
+    LEFT JOIN role r ON aur.role_id = r.id
+    LEFT JOIN store_user su ON au.id = su.admin_user_id
+    <where>
+      <if test="condition != null and condition.status != null and condition.status != ''">
+        AND au.status = #{condition.status,jdbcType=VARCHAR}
+      </if>
+      <if test="condition != null and condition.roleType != null and condition.roleType != ''">
+        AND r.code = #{condition.roleType,jdbcType=VARCHAR}
+      </if>
+      <if test="condition != null and condition.storeId != null and condition.storeId != ''">
+        AND su.store_id = #{condition.storeId,jdbcType=VARCHAR}
+      </if>
+      <if test="condition != null and condition.keyword != null and condition.keyword != ''">
+        AND (au.email LIKE CONCAT('%', #{condition.keyword,jdbcType=VARCHAR}, '%')
+          OR au.display_name LIKE CONCAT('%', #{condition.keyword,jdbcType=VARCHAR}, '%'))
+      </if>
+    </where>
+  </select>
+
 </mapper>

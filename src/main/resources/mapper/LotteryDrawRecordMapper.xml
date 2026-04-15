@@ -336,4 +336,63 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectByLotteryIdPaged" resultType="java.util.Map">
+    SELECT ldr.id, ldr.lottery_id AS lotteryId, ldr.user_id AS userId,
+           u.nickname AS userNickname, u.email AS userEmail,
+           ldr.prize_id AS prizeId, lp.name AS prizeName, lp.level AS prizeLevel,
+           ldr.ticket_id AS ticketId, ldr.selected_number AS selectedNumber,
+           ldr.cost_type AS costType, ldr.cost_amount AS costAmount,
+           ldr.status, ldr.created_at AS createdAt
+    FROM lottery_draw_record ldr
+    LEFT JOIN `user` u ON ldr.user_id = u.id
+    LEFT JOIN lottery_prize lp ON ldr.prize_id = lp.id
+    <where>
+      ldr.lottery_id = #{lotteryId,jdbcType=VARCHAR}
+      <if test="userId != null and userId != ''">
+        AND ldr.user_id = #{userId,jdbcType=VARCHAR}
+      </if>
+      <if test="prizeLevel != null and prizeLevel != ''">
+        AND lp.level = #{prizeLevel,jdbcType=VARCHAR}
+      </if>
+      <if test="startTime != null">
+        AND ldr.created_at &gt;= #{startTime,jdbcType=TIMESTAMP}
+      </if>
+      <if test="endTime != null">
+        AND ldr.created_at &lt;= #{endTime,jdbcType=TIMESTAMP}
+      </if>
+    </where>
+    ORDER BY ldr.created_at DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countByLotteryIdFiltered" resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM lottery_draw_record ldr
+    LEFT JOIN lottery_prize lp ON ldr.prize_id = lp.id
+    <where>
+      ldr.lottery_id = #{lotteryId,jdbcType=VARCHAR}
+      <if test="userId != null and userId != ''">
+        AND ldr.user_id = #{userId,jdbcType=VARCHAR}
+      </if>
+      <if test="prizeLevel != null and prizeLevel != ''">
+        AND lp.level = #{prizeLevel,jdbcType=VARCHAR}
+      </if>
+      <if test="startTime != null">
+        AND ldr.created_at &gt;= #{startTime,jdbcType=TIMESTAMP}
+      </if>
+      <if test="endTime != null">
+        AND ldr.created_at &lt;= #{endTime,jdbcType=TIMESTAMP}
+      </if>
+    </where>
+  </select>
+
+  <select id="sumCostAmountByLotteryId" resultType="java.lang.Long">
+    SELECT COALESCE(SUM(cost_amount), 0)
+    FROM lottery_draw_record
+    WHERE lottery_id = #{lotteryId,jdbcType=VARCHAR}
+  </select>
+
 </mapper>

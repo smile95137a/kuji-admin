@@ -241,4 +241,22 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+
+  <!-- ==================== Custom SQL (NOT MBG-generated) ==================== -->
+
+  <select id="selectActiveLock" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM lottery_lock
+    WHERE lottery_id = #{lotteryId,jdbcType=VARCHAR}
+      AND is_active = 1
+    LIMIT 1
+  </select>
+
+  <update id="expireStaleLocksBeforeTime">
+    UPDATE lottery_lock
+    SET is_active = 0
+    WHERE lock_end_time &lt; #{beforeTime,jdbcType=TIMESTAMP}
+      AND is_active = 1
+  </update>
+
 </mapper>
