@@ -255,7 +255,7 @@
   <update id="expireStaleLocksBeforeTime">
     UPDATE lottery_lock
     SET is_active = 0
-    WHERE lock_end_time &lt; #{beforeTime,jdbcType=TIMESTAMP}
+    WHERE lock_end_time &lt; #{expireTime,jdbcType=TIMESTAMP}
       AND is_active = 1
   </update>
 
