@@ -34,9 +34,11 @@ public interface LotteryPrizeMapper {
 
     int updateByPrimaryKey(LotteryPrize row);
 
-    int batchInsertPrizes(@Param("list") List<LotteryPrize> list);
+    // ---------- custom methods ----------
 
-    int deleteByLotteryId(String lotteryId);
+    int batchInsertPrizes(@Param("list") java.util.List<LotteryPrize> list);
 
-    LotteryPrize selectLastPrizeByLotteryId(String lotteryId);
+    int deleteByLotteryId(@Param("lotteryId") String lotteryId);
+
+    LotteryPrize selectLastPrizeByLotteryId(@Param("lotteryId") String lotteryId);
 }

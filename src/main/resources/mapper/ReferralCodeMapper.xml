@@ -454,6 +454,373 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
+    from referral_code
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from referral_code
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from referral_code
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.ReferralCodeExample">
+    delete from referral_code
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.ReferralCode">
+    insert into referral_code (id, code, store_id, 
+      description, owner_id, owner_type, 
+      reward_gold, reward_bonus, max_usage, 
+      used_count, valid_from, valid_until, 
+      is_active, created_at, updated_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, 
+      #{description,jdbcType=VARCHAR}, #{ownerId,jdbcType=VARCHAR}, #{ownerType,jdbcType=VARCHAR}, 
+      #{rewardGold,jdbcType=BIGINT}, #{rewardBonus,jdbcType=BIGINT}, #{maxUsage,jdbcType=INTEGER}, 
+      #{usedCount,jdbcType=INTEGER}, #{validFrom,jdbcType=TIMESTAMP}, #{validUntil,jdbcType=TIMESTAMP}, 
+      #{isActive,jdbcType=BIT}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.ReferralCode">
+    insert into referral_code
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="code != null">
+        code,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="ownerId != null">
+        owner_id,
+      </if>
+      <if test="ownerType != null">
+        owner_type,
+      </if>
+      <if test="rewardGold != null">
+        reward_gold,
+      </if>
+      <if test="rewardBonus != null">
+        reward_bonus,
+      </if>
+      <if test="maxUsage != null">
+        max_usage,
+      </if>
+      <if test="usedCount != null">
+        used_count,
+      </if>
+      <if test="validFrom != null">
+        valid_from,
+      </if>
+      <if test="validUntil != null">
+        valid_until,
+      </if>
+      <if test="isActive != null">
+        is_active,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="code != null">
+        #{code,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="ownerId != null">
+        #{ownerId,jdbcType=VARCHAR},
+      </if>
+      <if test="ownerType != null">
+        #{ownerType,jdbcType=VARCHAR},
+      </if>
+      <if test="rewardGold != null">
+        #{rewardGold,jdbcType=BIGINT},
+      </if>
+      <if test="rewardBonus != null">
+        #{rewardBonus,jdbcType=BIGINT},
+      </if>
+      <if test="maxUsage != null">
+        #{maxUsage,jdbcType=INTEGER},
+      </if>
+      <if test="usedCount != null">
+        #{usedCount,jdbcType=INTEGER},
+      </if>
+      <if test="validFrom != null">
+        #{validFrom,jdbcType=TIMESTAMP},
+      </if>
+      <if test="validUntil != null">
+        #{validUntil,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isActive != null">
+        #{isActive,jdbcType=BIT},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.ReferralCodeExample" resultType="java.lang.Long">
+    select count(*) from referral_code
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update referral_code
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.code != null">
+        code = #{row.code,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.description != null">
+        description = #{row.description,jdbcType=VARCHAR},
+      </if>
+      <if test="row.ownerId != null">
+        owner_id = #{row.ownerId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.ownerType != null">
+        owner_type = #{row.ownerType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.rewardGold != null">
+        reward_gold = #{row.rewardGold,jdbcType=BIGINT},
+      </if>
+      <if test="row.rewardBonus != null">
+        reward_bonus = #{row.rewardBonus,jdbcType=BIGINT},
+      </if>
+      <if test="row.maxUsage != null">
+        max_usage = #{row.maxUsage,jdbcType=INTEGER},
+      </if>
+      <if test="row.usedCount != null">
+        used_count = #{row.usedCount,jdbcType=INTEGER},
+      </if>
+      <if test="row.validFrom != null">
+        valid_from = #{row.validFrom,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.validUntil != null">
+        valid_until = #{row.validUntil,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.isActive != null">
+        is_active = #{row.isActive,jdbcType=BIT},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update referral_code
+    set id = #{row.id,jdbcType=VARCHAR},
+      code = #{row.code,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      description = #{row.description,jdbcType=VARCHAR},
+      owner_id = #{row.ownerId,jdbcType=VARCHAR},
+      owner_type = #{row.ownerType,jdbcType=VARCHAR},
+      reward_gold = #{row.rewardGold,jdbcType=BIGINT},
+      reward_bonus = #{row.rewardBonus,jdbcType=BIGINT},
+      max_usage = #{row.maxUsage,jdbcType=INTEGER},
+      used_count = #{row.usedCount,jdbcType=INTEGER},
+      valid_from = #{row.validFrom,jdbcType=TIMESTAMP},
+      valid_until = #{row.validUntil,jdbcType=TIMESTAMP},
+      is_active = #{row.isActive,jdbcType=BIT},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ReferralCode">
+    update referral_code
+    <set>
+      <if test="code != null">
+        code = #{code,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="ownerId != null">
+        owner_id = #{ownerId,jdbcType=VARCHAR},
+      </if>
+      <if test="ownerType != null">
+        owner_type = #{ownerType,jdbcType=VARCHAR},
+      </if>
+      <if test="rewardGold != null">
+        reward_gold = #{rewardGold,jdbcType=BIGINT},
+      </if>
+      <if test="rewardBonus != null">
+        reward_bonus = #{rewardBonus,jdbcType=BIGINT},
+      </if>
+      <if test="maxUsage != null">
+        max_usage = #{maxUsage,jdbcType=INTEGER},
+      </if>
+      <if test="usedCount != null">
+        used_count = #{usedCount,jdbcType=INTEGER},
+      </if>
+      <if test="validFrom != null">
+        valid_from = #{validFrom,jdbcType=TIMESTAMP},
+      </if>
+      <if test="validUntil != null">
+        valid_until = #{validUntil,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isActive != null">
+        is_active = #{isActive,jdbcType=BIT},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ReferralCode">
+    update referral_code
+    set code = #{code,jdbcType=VARCHAR},
+      store_id = #{storeId,jdbcType=VARCHAR},
+      description = #{description,jdbcType=VARCHAR},
+      owner_id = #{ownerId,jdbcType=VARCHAR},
+      owner_type = #{ownerType,jdbcType=VARCHAR},
+      reward_gold = #{rewardGold,jdbcType=BIGINT},
+      reward_bonus = #{rewardBonus,jdbcType=BIGINT},
+      max_usage = #{maxUsage,jdbcType=INTEGER},
+      used_count = #{usedCount,jdbcType=INTEGER},
+      valid_from = #{validFrom,jdbcType=TIMESTAMP},
+      valid_until = #{validUntil,jdbcType=TIMESTAMP},
+      is_active = #{isActive,jdbcType=BIT},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.ReferralCode">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="owner_id" jdbcType="VARCHAR" property="ownerId" />
+    <result column="owner_type" jdbcType="VARCHAR" property="ownerType" />
+    <result column="reward_gold" jdbcType="BIGINT" property="rewardGold" />
+    <result column="reward_bonus" jdbcType="BIGINT" property="rewardBonus" />
+    <result column="max_usage" jdbcType="INTEGER" property="maxUsage" />
+    <result column="used_count" jdbcType="INTEGER" property="usedCount" />
+    <result column="valid_from" jdbcType="TIMESTAMP" property="validFrom" />
+    <result column="valid_until" jdbcType="TIMESTAMP" property="validUntil" />
+    <result column="is_active" jdbcType="BIT" property="isActive" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, code, store_id, description, owner_id, owner_type, reward_gold, reward_bonus, 
+    max_usage, used_count, valid_from, valid_until, is_active, created_at, updated_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.ReferralCodeExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
     from `referral_code`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />

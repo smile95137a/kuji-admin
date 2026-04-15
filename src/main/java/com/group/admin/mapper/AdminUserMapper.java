@@ -34,7 +34,9 @@ public interface AdminUserMapper {
 
     int updateByPrimaryKey(AdminUser row);
 
-    List<com.group.admin.dto.AdminAccountDetailDO> selectAccountsWithRole(com.group.admin.req.admin.AccountFilterCondition filters);
+    // ---------- custom methods ----------
 
-    Long countAccountsWithRole(com.group.admin.req.admin.AccountFilterCondition filters);
+    List<com.group.admin.dto.AdminAccountDetailDO> selectAccountsWithRole(com.group.admin.req.admin.AccountFilterCondition condition);
+
+    long countAccountsWithRole(com.group.admin.req.admin.AccountFilterCondition condition);
 }

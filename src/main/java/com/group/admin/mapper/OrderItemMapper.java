@@ -28,5 +28,7 @@ public interface OrderItemMapper {
 
     int updateByPrimaryKey(OrderItem row);
 
-    int batchInsertOrderItems(java.util.List<OrderItem> items);
+    // ---------- custom methods ----------
+
+    int batchInsertOrderItems(@Param("list") java.util.List<OrderItem> list);
 }

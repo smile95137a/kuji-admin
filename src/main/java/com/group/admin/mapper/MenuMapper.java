@@ -28,5 +28,7 @@ public interface MenuMapper {
 
     int updateByPrimaryKey(Menu row);
 
-    java.util.List<java.util.Map<String, Object>> getMenusWithPermissionsForUser(String userId);
+    // ---------- custom methods ----------
+
+    List<java.util.Map<String, Object>> getMenusWithPermissionsForUser(@Param("userId") String userId);
 }

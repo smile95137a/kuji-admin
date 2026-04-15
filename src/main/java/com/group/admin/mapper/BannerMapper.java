@@ -28,6 +28,8 @@ public interface BannerMapper {
 
     int updateByPrimaryKey(Banner row);
 
+    // ---------- custom methods ----------
+
     List<com.group.admin.res.banner.BannerRes> selectList(com.group.admin.req.banner.BannerCondition condition);
 
     List<com.group.admin.res.banner.BannerRes> selectActiveBanners();
@@ -36,5 +38,5 @@ public interface BannerMapper {
 
     int autoUnpublishBanners();
 
-    int unpublishBannersByStoreId(String storeId);
+    int unpublishBannersByStoreId(@Param("storeId") String storeId);
 }

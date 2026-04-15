@@ -28,8 +28,10 @@ public interface PrizeBoxMapper {
 
     int updateByPrimaryKey(PrizeBox row);
 
+    // ---------- custom methods ----------
+
     List<PrizeBox> selectByExampleWithPage(
-        @Param("example") PrizeBoxExample example,
-        @Param("offset") int offset,
-        @Param("limit") int limit);
+            @Param("example") PrizeBoxExample example,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
 }

@@ -28,13 +28,15 @@ public interface SystemConfigMapper {
 
     int updateByPrimaryKey(SystemConfig row);
 
-    SystemConfig selectByConfigKey(String configKey);
+    // ---------- custom methods ----------
 
     List<SystemConfig> selectAll();
 
-    List<SystemConfig> selectByConfigGroup(String configGroup);
+    SystemConfig selectByConfigKey(@Param("configKey") String configKey);
 
-    int countByConfigKey(String configKey);
+    List<SystemConfig> selectByConfigGroup(@Param("configGroup") String configGroup);
+
+    int countByConfigKey(@Param("configKey") String configKey);
 
     int updateByPrimaryKeyAndVersion(@Param("entity") SystemConfig entity, @Param("version") Integer version);
 }

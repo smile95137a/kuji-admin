@@ -19,6 +19,8 @@ public class PrizeBox {
 
     private Byte isRecyclable;
 
+    private Byte isShippable;
+
     private Long recycleBonus;
 
     private LocalDateTime recycledAt;
@@ -142,8 +144,6 @@ public class PrizeBox {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
-
-    private Byte isShippable;
 
     public Byte getIsShippable() {
         return isShippable;

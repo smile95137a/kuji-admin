@@ -28,9 +28,11 @@ public interface RoleMenuMapper {
 
     int updateByPrimaryKey(RoleMenu row);
 
-    List<RoleMenu> selectByRoleId(String roleId);
+    // ---------- custom methods ----------
 
-    int deleteByRoleId(String roleId);
+    List<RoleMenu> selectByRoleId(@Param("roleId") String roleId);
 
-    int batchInsert(@Param("list") List<RoleMenu> list);
+    int deleteByRoleId(@Param("roleId") String roleId);
+
+    int batchInsert(@Param("list") java.util.List<RoleMenu> list);
 }

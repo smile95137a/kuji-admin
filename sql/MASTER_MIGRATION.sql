@@ -411,108 +411,123 @@ CREATE TABLE IF NOT EXISTS `lottery_ticket` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽獎籤位';
 
 -- ============================================================
--- PHASE 4：ALTER TABLE 新增欄位（IF NOT EXISTS，MySQL 8.0+）
+-- PHASE 4：ALTER TABLE 新增欄位（MySQL 相容版）
+-- 使用 stored procedure 模擬 IF NOT EXISTS
 -- ============================================================
 
--- user 表：地址、發票、推薦碼、OAuth、驗證欄位
-ALTER TABLE `user`
-  ADD COLUMN IF NOT EXISTS `line_id`                     VARCHAR(100) DEFAULT NULL AFTER `phone_number`,
-  ADD COLUMN IF NOT EXISTS `recipient_name`              VARCHAR(100) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `recipient_phone`             VARCHAR(20)  DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `city`                        VARCHAR(50)  DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `district`                    VARCHAR(50)  DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `address_detail`              VARCHAR(255) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `invoice_type`                VARCHAR(20)  DEFAULT NULL COMMENT 'PERSONAL/COMPANY',
-  ADD COLUMN IF NOT EXISTS `invoice_email`               VARCHAR(100) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `carrier_code`                VARCHAR(50)  DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `tax_id`                      VARCHAR(20)  DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `company_name`                VARCHAR(100) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `referral_code`               VARCHAR(50)  DEFAULT NULL UNIQUE COMMENT '使用的推薦碼',
-  ADD COLUMN IF NOT EXISTS `referred_store_id`           VARCHAR(36)  DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `referral_bound_at`           TIMESTAMP    DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `is_oauth_new_user`           TINYINT(1)   DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS `email_verification_token`    VARCHAR(100) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `email_verification_expires`  DATETIME     DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `password_reset_token`        VARCHAR(100) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `password_reset_expires`      DATETIME     DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `total_recharged`             BIGINT       NOT NULL DEFAULT 0;
+DROP PROCEDURE IF EXISTS AddColIfNotExists;
+DELIMITER $$
+CREATE PROCEDURE AddColIfNotExists(
+    IN p_table VARCHAR(64),
+    IN p_col   VARCHAR(64),
+    IN p_def   TEXT
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME  = p_table
+          AND COLUMN_NAME = p_col
+    ) THEN
+        SET @sql = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN `', p_col, '` ', p_def);
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
 
--- user 表：推薦碼索引（可能已存在，忽略錯誤）
-CREATE INDEX IF NOT EXISTS `idx_user_referral_code`      ON `user`(`referral_code`);
-CREATE INDEX IF NOT EXISTS `idx_user_referred_store_id`  ON `user`(`referred_store_id`);
+-- ---------- user 表 ----------
+CALL AddColIfNotExists('user','line_id',                   'VARCHAR(100) DEFAULT NULL');
+CALL AddColIfNotExists('user','recipient_name',             'VARCHAR(100) DEFAULT NULL');
+CALL AddColIfNotExists('user','recipient_phone',            'VARCHAR(20)  DEFAULT NULL');
+CALL AddColIfNotExists('user','city',                       'VARCHAR(50)  DEFAULT NULL');
+CALL AddColIfNotExists('user','district',                   'VARCHAR(50)  DEFAULT NULL');
+CALL AddColIfNotExists('user','address_detail',             'VARCHAR(255) DEFAULT NULL');
+CALL AddColIfNotExists('user','invoice_type',               'VARCHAR(20)  DEFAULT NULL COMMENT ''PERSONAL/COMPANY''');
+CALL AddColIfNotExists('user','invoice_email',              'VARCHAR(100) DEFAULT NULL');
+CALL AddColIfNotExists('user','carrier_code',               'VARCHAR(50)  DEFAULT NULL');
+CALL AddColIfNotExists('user','tax_id',                     'VARCHAR(20)  DEFAULT NULL');
+CALL AddColIfNotExists('user','company_name',               'VARCHAR(100) DEFAULT NULL');
+CALL AddColIfNotExists('user','referral_code',              'VARCHAR(50)  DEFAULT NULL COMMENT ''使用的推薦碼''');
+CALL AddColIfNotExists('user','referred_store_id',          'VARCHAR(36)  DEFAULT NULL');
+CALL AddColIfNotExists('user','referral_bound_at',          'TIMESTAMP    DEFAULT NULL');
+CALL AddColIfNotExists('user','is_oauth_new_user',          'TINYINT(1)   DEFAULT 0');
+CALL AddColIfNotExists('user','email_verification_token',   'VARCHAR(100) DEFAULT NULL');
+CALL AddColIfNotExists('user','email_verification_expires', 'DATETIME     DEFAULT NULL');
+CALL AddColIfNotExists('user','password_reset_token',       'VARCHAR(100) DEFAULT NULL');
+CALL AddColIfNotExists('user','password_reset_expires',     'DATETIME     DEFAULT NULL');
+CALL AddColIfNotExists('user','total_recharged',            'BIGINT       NOT NULL DEFAULT 0');
 
--- lottery 表：11個新欄位（play_mode / game_mode / sub_category / 等）
-ALTER TABLE `lottery`
-  ADD COLUMN IF NOT EXISTS `play_mode`               VARCHAR(20)  DEFAULT 'LOTTERY_MODE' COMMENT 'LOTTERY_MODE/SCRATCH_MODE',
-  ADD COLUMN IF NOT EXISTS `game_mode`               VARCHAR(20)  NULL COMMENT 'RANDOM/SCRATCH_STORE/SCRATCH_PLAYER',
-  ADD COLUMN IF NOT EXISTS `sub_category`            VARCHAR(30)  NULL COMMENT 'LOTTERY_MODE/SCRATCH_MODE',
-  ADD COLUMN IF NOT EXISTS `source_lottery_id`       VARCHAR(36)  NULL,
-  ADD COLUMN IF NOT EXISTS `configured_at`           DATETIME     NULL,
-  ADD COLUMN IF NOT EXISTS `drawable_at`             DATETIME     NULL,
-  ADD COLUMN IF NOT EXISTS `remaining_draws`         INT          NULL,
-  ADD COLUMN IF NOT EXISTS `discount_trigger_level`  VARCHAR(20)  NULL,
-  ADD COLUMN IF NOT EXISTS `last_prize_mode`         VARCHAR(20)  NULL COMMENT 'LAST_DRAW/POOL_IN',
-  ADD COLUMN IF NOT EXISTS `hot_count`               INT          NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS `theme`                   VARCHAR(50)  NULL,
-  ADD COLUMN IF NOT EXISTS `tags`                    VARCHAR(255) NULL,
-  ADD COLUMN IF NOT EXISTS `gallery_urls`            TEXT         NULL,
-  ADD COLUMN IF NOT EXISTS `content`                 TEXT         NULL,
-  ADD COLUMN IF NOT EXISTS `bonus_rate`              DECIMAL(5,2) DEFAULT 0.00,
-  ADD COLUMN IF NOT EXISTS `payment_type`            VARCHAR(20)  NOT NULL DEFAULT 'GOLD',
-  ADD COLUMN IF NOT EXISTS `free_draw_threshold`     INT          NULL,
-  ADD COLUMN IF NOT EXISTS `delist_strategy`         VARCHAR(30)  NOT NULL DEFAULT 'ALL_DRAWN';
+-- user 表：索引（忽略已存在錯誤）
+CREATE INDEX IF NOT EXISTS `idx_user_referral_code`     ON `user`(`referral_code`);
+CREATE INDEX IF NOT EXISTS `idx_user_referred_store_id` ON `user`(`referred_store_id`);
+
+-- ---------- lottery 表 ----------
+CALL AddColIfNotExists('lottery','play_mode',              'VARCHAR(20)  DEFAULT ''LOTTERY_MODE'' COMMENT ''LOTTERY_MODE/SCRATCH_MODE''');
+CALL AddColIfNotExists('lottery','game_mode',              'VARCHAR(20)  NULL COMMENT ''RANDOM/SCRATCH_STORE/SCRATCH_PLAYER''');
+CALL AddColIfNotExists('lottery','sub_category',           'VARCHAR(30)  NULL COMMENT ''LOTTERY_MODE/SCRATCH_MODE''');
+CALL AddColIfNotExists('lottery','source_lottery_id',      'VARCHAR(36)  NULL');
+CALL AddColIfNotExists('lottery','configured_at',          'DATETIME     NULL');
+CALL AddColIfNotExists('lottery','drawable_at',            'DATETIME     NULL');
+CALL AddColIfNotExists('lottery','remaining_draws',        'INT          NULL');
+CALL AddColIfNotExists('lottery','discount_trigger_level', 'VARCHAR(20)  NULL');
+CALL AddColIfNotExists('lottery','last_prize_mode',        'VARCHAR(20)  NULL COMMENT ''LAST_DRAW/POOL_IN''');
+CALL AddColIfNotExists('lottery','hot_count',              'INT          NOT NULL DEFAULT 0');
+CALL AddColIfNotExists('lottery','theme',                  'VARCHAR(50)  NULL');
+CALL AddColIfNotExists('lottery','tags',                   'VARCHAR(255) NULL');
+CALL AddColIfNotExists('lottery','gallery_urls',           'TEXT         NULL');
+CALL AddColIfNotExists('lottery','content',                'TEXT         NULL');
+CALL AddColIfNotExists('lottery','bonus_rate',             'DECIMAL(5,2) DEFAULT 0.00');
+CALL AddColIfNotExists('lottery','payment_type',           'VARCHAR(20)  NOT NULL DEFAULT ''GOLD''');
+CALL AddColIfNotExists('lottery','free_draw_threshold',    'INT          NULL');
+CALL AddColIfNotExists('lottery','delist_strategy',        'VARCHAR(30)  NOT NULL DEFAULT ''ALL_DRAWN''');
 
 -- lottery 表：索引
-ALTER TABLE `lottery` ADD INDEX IF NOT EXISTS `idx_lottery_scheduled_at`  (`scheduled_at`);
-ALTER TABLE `lottery` ADD INDEX IF NOT EXISTS `idx_lottery_start_time`    (`start_time`);
-ALTER TABLE `lottery` ADD INDEX IF NOT EXISTS `idx_lottery_source_id`     (`source_lottery_id`);
+CREATE INDEX IF NOT EXISTS `idx_lottery_scheduled_at` ON `lottery`(`scheduled_at`);
+CREATE INDEX IF NOT EXISTS `idx_lottery_start_time`   ON `lottery`(`start_time`);
+CREATE INDEX IF NOT EXISTS `idx_lottery_source_id`    ON `lottery`(`source_lottery_id`);
 
--- lottery 表：MODIFY（放寬 NOT NULL 限制，可安全重複執行）
+-- lottery 表：MODIFY（放寬 NOT NULL 限制）
 ALTER TABLE `lottery`
   MODIFY COLUMN `multi_draw_options` VARCHAR(100) NULL,
   MODIFY COLUMN `allow_multi_draw`   TINYINT(1)   NULL DEFAULT 0,
   MODIFY COLUMN `protection_draws`   INT          NULL,
   MODIFY COLUMN `protection_minutes` INT          NULL;
 
--- lottery_prize 表：回收紅利 + 索引
-ALTER TABLE `lottery_prize`
-  ADD COLUMN IF NOT EXISTS `recycle_bonus` BIGINT NOT NULL DEFAULT 0 COMMENT '回收獎勵紅利；0=不可回收';
+-- ---------- lottery_prize 表 ----------
+CALL AddColIfNotExists('lottery_prize','recycle_bonus','BIGINT NOT NULL DEFAULT 0 COMMENT ''回收獎勵紅利；0=不可回收''');
+CREATE INDEX IF NOT EXISTS `idx_prize_lottery_level` ON `lottery_prize`(`lottery_id`, `level`);
 
-ALTER TABLE `lottery_prize` ADD INDEX IF NOT EXISTS `idx_prize_lottery_level` (`lottery_id`, `level`);
+-- ---------- news 表 ----------
+CALL AddColIfNotExists('news','category',  'VARCHAR(20)  DEFAULT ''ANNOUNCEMENT'' COMMENT ''ALL/ANNOUNCEMENT/EVENT/SYSTEM''');
+CALL AddColIfNotExists('news','important', 'TINYINT(1)   DEFAULT 0');
 
--- news 表：分類 + 重要標記
-ALTER TABLE `news`
-  ADD COLUMN IF NOT EXISTS `category`  VARCHAR(20)  DEFAULT 'ANNOUNCEMENT' COMMENT 'ALL/ANNOUNCEMENT/EVENT/SYSTEM',
-  ADD COLUMN IF NOT EXISTS `important` TINYINT(1)   DEFAULT 0;
+-- ---------- order 表 ----------
+CALL AddColIfNotExists('order','shipping_method_id','VARCHAR(36) NULL COMMENT ''FK → shipping_method''');
+CALL AddColIfNotExists('order','shipping_fee',       'BIGINT      NOT NULL DEFAULT 0');
+CALL AddColIfNotExists('order','payment_method',     'VARCHAR(30) NOT NULL DEFAULT ''STUB'' COMMENT ''STUB/MASTERCARD/GOLD_COIN''');
+CALL AddColIfNotExists('order','payment_status',     'VARCHAR(20) NOT NULL DEFAULT ''SUCCESS'' COMMENT ''PENDING/SUCCESS/FAILED/CANCELLED''');
 
--- order 表：新增欄位
-ALTER TABLE `order`
-  ADD COLUMN IF NOT EXISTS `shipping_method_id` VARCHAR(36) NULL COMMENT 'FK → shipping_method',
-  ADD COLUMN IF NOT EXISTS `shipping_fee`        BIGINT      NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS `payment_method`      VARCHAR(30) NOT NULL DEFAULT 'STUB' COMMENT 'STUB/MASTERCARD/GOLD_COIN',
-  ADD COLUMN IF NOT EXISTS `payment_status`      VARCHAR(20) NOT NULL DEFAULT 'SUCCESS' COMMENT 'PENDING/SUCCESS/FAILED/CANCELLED';
+-- ---------- order_item 表 ----------
+CALL AddColIfNotExists('order_item','prize_grade','VARCHAR(10)  NULL');
+CALL AddColIfNotExists('order_item','prize_image','VARCHAR(500) NULL');
 
--- order_item 表：新增欄位
-ALTER TABLE `order_item`
-  ADD COLUMN IF NOT EXISTS `prize_grade` VARCHAR(10)  NULL,
-  ADD COLUMN IF NOT EXISTS `prize_image` VARCHAR(500) NULL;
+-- ---------- store 表 ----------
+CALL AddColIfNotExists('store','created_by','VARCHAR(36) NULL COMMENT ''建立者 ID''');
 
--- store 表：新增 created_by 欄位（操作者記錄）
-ALTER TABLE `store`
-  ADD COLUMN IF NOT EXISTS `created_by` VARCHAR(36)  NULL COMMENT '建立者 ID';
+-- ---------- prize_box 表 ----------
+CALL AddColIfNotExists('prize_box','is_shippable','TINYINT(1) NOT NULL DEFAULT 1 COMMENT ''是否可出貨（1=可, 0=不可）''');
 
--- prize_box 表：新增 is_shippable 欄位（是否可出貨）
-ALTER TABLE `prize_box`
-  ADD COLUMN IF NOT EXISTS `is_shippable` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否可出貨（1=可, 0=不可）';
+-- ---------- wallet_transaction 表 ----------
+CALL AddColIfNotExists('wallet_transaction','gold_delta',   'BIGINT       NULL DEFAULT NULL');
+CALL AddColIfNotExists('wallet_transaction','bonus_delta',  'BIGINT       NULL DEFAULT NULL');
+CALL AddColIfNotExists('wallet_transaction','gold_after',   'BIGINT       NULL DEFAULT NULL');
+CALL AddColIfNotExists('wallet_transaction','bonus_after',  'BIGINT       NULL DEFAULT NULL');
+CALL AddColIfNotExists('wallet_transaction','reference_id', 'VARCHAR(36)  NULL DEFAULT NULL');
+CALL AddColIfNotExists('wallet_transaction','reason',       'VARCHAR(500) NULL DEFAULT NULL');
 
--- wallet_transaction 表：新增欄位
-ALTER TABLE `wallet_transaction`
-  ADD COLUMN IF NOT EXISTS `gold_delta`   BIGINT       NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `bonus_delta`  BIGINT       NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `gold_after`   BIGINT       NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `bonus_after`  BIGINT       NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `reference_id` VARCHAR(36)  NULL DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS `reason`       VARCHAR(500) NULL DEFAULT NULL;
+DROP PROCEDURE IF EXISTS AddColIfNotExists;
 
 -- ============================================================
 -- PHASE 5：欄位改名（CHANGE COLUMN，需確認舊欄位是否存在）
@@ -533,8 +548,8 @@ ALTER TABLE `wallet_transaction`
 -- ALTER TABLE `recharge_plan` CHANGE COLUMN `display_order` `order_num` INT DEFAULT 0;
 -- ALTER TABLE `recharge_plan` CHANGE COLUMN `start_time` `start_date` DATETIME;
 -- ALTER TABLE `recharge_plan` CHANGE COLUMN `end_time` `end_date` DATETIME;
--- ALTER TABLE `recharge_plan` DROP COLUMN IF EXISTS `is_promotional`;
--- ALTER TABLE `recharge_plan` ADD COLUMN IF NOT EXISTS `deleted_at` DATETIME NULL;
+-- ALTER TABLE `recharge_plan` DROP COLUMN `is_promotional`;  -- 若欄位存在
+-- CALL AddColIfNotExists('recharge_plan','deleted_at','DATETIME NULL');
 
 -- ============================================================
 -- PHASE 6：初始資料 INSERT（INSERT IGNORE 防重複）
@@ -580,7 +595,7 @@ UPDATE `point_log`           SET `point_type`  = UPPER(`point_type`)  WHERE `poi
 
 -- referral_record：每個 user 只能被推薦一次
 -- ⚠️ 若 user_id 有重複資料，此指令會失敗，請先清理
--- ALTER TABLE `referral_record` ADD UNIQUE INDEX IF NOT EXISTS `idx_referral_record_user_id` (`user_id`);
+-- ALTER TABLE `referral_record` ADD UNIQUE INDEX `idx_referral_record_user_id` (`user_id`);
 
 -- ============================================================
 -- 完成！

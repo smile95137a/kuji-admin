@@ -34,6 +34,8 @@ public interface NewsMapper {
 
     int updateByPrimaryKey(News row);
 
+    // ---------- custom methods ----------
+
     int autoPublishNews();
 
     int autoUnpublishNews();

@@ -386,6 +386,309 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
+    from consumption_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from consumption_record
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from consumption_record
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.ConsumptionRecordExample">
+    delete from consumption_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.ConsumptionRecord">
+    insert into consumption_record (id, user_id, type, 
+      lottery_id, lottery_title, order_id, 
+      order_number, gold_amount, bonus_amount, 
+      description, created_at)
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{type,jdbcType=VARCHAR}, 
+      #{lotteryId,jdbcType=VARCHAR}, #{lotteryTitle,jdbcType=VARCHAR}, #{orderId,jdbcType=VARCHAR}, 
+      #{orderNumber,jdbcType=VARCHAR}, #{goldAmount,jdbcType=BIGINT}, #{bonusAmount,jdbcType=BIGINT}, 
+      #{description,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.ConsumptionRecord">
+    insert into consumption_record
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="type != null">
+        type,
+      </if>
+      <if test="lotteryId != null">
+        lottery_id,
+      </if>
+      <if test="lotteryTitle != null">
+        lottery_title,
+      </if>
+      <if test="orderId != null">
+        order_id,
+      </if>
+      <if test="orderNumber != null">
+        order_number,
+      </if>
+      <if test="goldAmount != null">
+        gold_amount,
+      </if>
+      <if test="bonusAmount != null">
+        bonus_amount,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="type != null">
+        #{type,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryId != null">
+        #{lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryTitle != null">
+        #{lotteryTitle,jdbcType=VARCHAR},
+      </if>
+      <if test="orderId != null">
+        #{orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNumber != null">
+        #{orderNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="goldAmount != null">
+        #{goldAmount,jdbcType=BIGINT},
+      </if>
+      <if test="bonusAmount != null">
+        #{bonusAmount,jdbcType=BIGINT},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.ConsumptionRecordExample" resultType="java.lang.Long">
+    select count(*) from consumption_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update consumption_record
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.type != null">
+        type = #{row.type,jdbcType=VARCHAR},
+      </if>
+      <if test="row.lotteryId != null">
+        lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.lotteryTitle != null">
+        lottery_title = #{row.lotteryTitle,jdbcType=VARCHAR},
+      </if>
+      <if test="row.orderId != null">
+        order_id = #{row.orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.orderNumber != null">
+        order_number = #{row.orderNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="row.goldAmount != null">
+        gold_amount = #{row.goldAmount,jdbcType=BIGINT},
+      </if>
+      <if test="row.bonusAmount != null">
+        bonus_amount = #{row.bonusAmount,jdbcType=BIGINT},
+      </if>
+      <if test="row.description != null">
+        description = #{row.description,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update consumption_record
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      type = #{row.type,jdbcType=VARCHAR},
+      lottery_id = #{row.lotteryId,jdbcType=VARCHAR},
+      lottery_title = #{row.lotteryTitle,jdbcType=VARCHAR},
+      order_id = #{row.orderId,jdbcType=VARCHAR},
+      order_number = #{row.orderNumber,jdbcType=VARCHAR},
+      gold_amount = #{row.goldAmount,jdbcType=BIGINT},
+      bonus_amount = #{row.bonusAmount,jdbcType=BIGINT},
+      description = #{row.description,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ConsumptionRecord">
+    update consumption_record
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="type != null">
+        type = #{type,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryId != null">
+        lottery_id = #{lotteryId,jdbcType=VARCHAR},
+      </if>
+      <if test="lotteryTitle != null">
+        lottery_title = #{lotteryTitle,jdbcType=VARCHAR},
+      </if>
+      <if test="orderId != null">
+        order_id = #{orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="orderNumber != null">
+        order_number = #{orderNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="goldAmount != null">
+        gold_amount = #{goldAmount,jdbcType=BIGINT},
+      </if>
+      <if test="bonusAmount != null">
+        bonus_amount = #{bonusAmount,jdbcType=BIGINT},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ConsumptionRecord">
+    update consumption_record
+    set user_id = #{userId,jdbcType=VARCHAR},
+      type = #{type,jdbcType=VARCHAR},
+      lottery_id = #{lotteryId,jdbcType=VARCHAR},
+      lottery_title = #{lotteryTitle,jdbcType=VARCHAR},
+      order_id = #{orderId,jdbcType=VARCHAR},
+      order_number = #{orderNumber,jdbcType=VARCHAR},
+      gold_amount = #{goldAmount,jdbcType=BIGINT},
+      bonus_amount = #{bonusAmount,jdbcType=BIGINT},
+      description = #{description,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.ConsumptionRecord">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="type" jdbcType="VARCHAR" property="type" />
+    <result column="lottery_id" jdbcType="VARCHAR" property="lotteryId" />
+    <result column="lottery_title" jdbcType="VARCHAR" property="lotteryTitle" />
+    <result column="order_id" jdbcType="VARCHAR" property="orderId" />
+    <result column="order_number" jdbcType="VARCHAR" property="orderNumber" />
+    <result column="gold_amount" jdbcType="BIGINT" property="goldAmount" />
+    <result column="bonus_amount" jdbcType="BIGINT" property="bonusAmount" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_id, type, lottery_id, lottery_title, order_id, order_number, gold_amount, 
+    bonus_amount, description, created_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.ConsumptionRecordExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
     from `consumption_record`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />

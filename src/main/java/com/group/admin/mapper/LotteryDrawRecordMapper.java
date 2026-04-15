@@ -28,21 +28,23 @@ public interface LotteryDrawRecordMapper {
 
     int updateByPrimaryKey(LotteryDrawRecord row);
 
+    // ---------- custom methods ----------
+
     List<java.util.Map<String, Object>> selectByLotteryIdPaged(
-        @Param("lotteryId") String lotteryId,
-        @Param("userId") String userId,
-        @Param("status") String status,
-        @Param("startDate") java.time.LocalDateTime startDate,
-        @Param("endDate") java.time.LocalDateTime endDate,
-        @Param("limit") int limit,
-        @Param("offset") int offset);
+            @Param("lotteryId") String lotteryId,
+            @Param("userId") String userId,
+            @Param("prizeLevel") String prizeLevel,
+            @Param("startTime") java.time.LocalDateTime startTime,
+            @Param("endTime") java.time.LocalDateTime endTime,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
 
     long countByLotteryIdFiltered(
-        @Param("lotteryId") String lotteryId,
-        @Param("userId") String userId,
-        @Param("status") String status,
-        @Param("startDate") java.time.LocalDateTime startDate,
-        @Param("endDate") java.time.LocalDateTime endDate);
+            @Param("lotteryId") String lotteryId,
+            @Param("userId") String userId,
+            @Param("prizeLevel") String prizeLevel,
+            @Param("startTime") java.time.LocalDateTime startTime,
+            @Param("endTime") java.time.LocalDateTime endTime);
 
-    Long sumCostAmountByLotteryId(String lotteryId);
+    Long sumCostAmountByLotteryId(@Param("lotteryId") String lotteryId);
 }

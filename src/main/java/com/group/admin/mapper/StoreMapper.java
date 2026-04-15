@@ -34,7 +34,9 @@ public interface StoreMapper {
 
     int updateByPrimaryKey(Store row);
 
+    // ---------- custom methods ----------
+
     List<Store> selectEnabledStores(@Param("offset") int offset, @Param("limit") int limit);
 
-    Long countEnabledStores();
+    long countEnabledStores();
 }

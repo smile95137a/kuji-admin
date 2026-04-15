@@ -456,6 +456,374 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
+    from referral_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from referral_record
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from referral_record
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.ReferralRecordExample">
+    delete from referral_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.ReferralRecord">
+    insert into referral_record (id, user_id, referral_code_id, 
+      store_id, used_code, referred_at, 
+      referral_code, referrer_id, referee_id, 
+      referee_username, reward_gold, reward_bonus, 
+      is_reward_given, reward_given_at, created_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{referralCodeId,jdbcType=VARCHAR}, 
+      #{storeId,jdbcType=VARCHAR}, #{usedCode,jdbcType=VARCHAR}, #{referredAt,jdbcType=TIMESTAMP}, 
+      #{referralCode,jdbcType=VARCHAR}, #{referrerId,jdbcType=VARCHAR}, #{refereeId,jdbcType=VARCHAR}, 
+      #{refereeUsername,jdbcType=VARCHAR}, #{rewardGold,jdbcType=BIGINT}, #{rewardBonus,jdbcType=BIGINT}, 
+      #{isRewardGiven,jdbcType=BIT}, #{rewardGivenAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.ReferralRecord">
+    insert into referral_record
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="referralCodeId != null">
+        referral_code_id,
+      </if>
+      <if test="storeId != null">
+        store_id,
+      </if>
+      <if test="usedCode != null">
+        used_code,
+      </if>
+      <if test="referredAt != null">
+        referred_at,
+      </if>
+      <if test="referralCode != null">
+        referral_code,
+      </if>
+      <if test="referrerId != null">
+        referrer_id,
+      </if>
+      <if test="refereeId != null">
+        referee_id,
+      </if>
+      <if test="refereeUsername != null">
+        referee_username,
+      </if>
+      <if test="rewardGold != null">
+        reward_gold,
+      </if>
+      <if test="rewardBonus != null">
+        reward_bonus,
+      </if>
+      <if test="isRewardGiven != null">
+        is_reward_given,
+      </if>
+      <if test="rewardGivenAt != null">
+        reward_given_at,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="referralCodeId != null">
+        #{referralCodeId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="usedCode != null">
+        #{usedCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referredAt != null">
+        #{referredAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="referralCode != null">
+        #{referralCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referrerId != null">
+        #{referrerId,jdbcType=VARCHAR},
+      </if>
+      <if test="refereeId != null">
+        #{refereeId,jdbcType=VARCHAR},
+      </if>
+      <if test="refereeUsername != null">
+        #{refereeUsername,jdbcType=VARCHAR},
+      </if>
+      <if test="rewardGold != null">
+        #{rewardGold,jdbcType=BIGINT},
+      </if>
+      <if test="rewardBonus != null">
+        #{rewardBonus,jdbcType=BIGINT},
+      </if>
+      <if test="isRewardGiven != null">
+        #{isRewardGiven,jdbcType=BIT},
+      </if>
+      <if test="rewardGivenAt != null">
+        #{rewardGivenAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.ReferralRecordExample" resultType="java.lang.Long">
+    select count(*) from referral_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update referral_record
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referralCodeId != null">
+        referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.storeId != null">
+        store_id = #{row.storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.usedCode != null">
+        used_code = #{row.usedCode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referredAt != null">
+        referred_at = #{row.referredAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.referralCode != null">
+        referral_code = #{row.referralCode,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referrerId != null">
+        referrer_id = #{row.referrerId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.refereeId != null">
+        referee_id = #{row.refereeId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.refereeUsername != null">
+        referee_username = #{row.refereeUsername,jdbcType=VARCHAR},
+      </if>
+      <if test="row.rewardGold != null">
+        reward_gold = #{row.rewardGold,jdbcType=BIGINT},
+      </if>
+      <if test="row.rewardBonus != null">
+        reward_bonus = #{row.rewardBonus,jdbcType=BIGINT},
+      </if>
+      <if test="row.isRewardGiven != null">
+        is_reward_given = #{row.isRewardGiven,jdbcType=BIT},
+      </if>
+      <if test="row.rewardGivenAt != null">
+        reward_given_at = #{row.rewardGivenAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update referral_record
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
+      store_id = #{row.storeId,jdbcType=VARCHAR},
+      used_code = #{row.usedCode,jdbcType=VARCHAR},
+      referred_at = #{row.referredAt,jdbcType=TIMESTAMP},
+      referral_code = #{row.referralCode,jdbcType=VARCHAR},
+      referrer_id = #{row.referrerId,jdbcType=VARCHAR},
+      referee_id = #{row.refereeId,jdbcType=VARCHAR},
+      referee_username = #{row.refereeUsername,jdbcType=VARCHAR},
+      reward_gold = #{row.rewardGold,jdbcType=BIGINT},
+      reward_bonus = #{row.rewardBonus,jdbcType=BIGINT},
+      is_reward_given = #{row.isRewardGiven,jdbcType=BIT},
+      reward_given_at = #{row.rewardGivenAt,jdbcType=TIMESTAMP},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.ReferralRecord">
+    update referral_record
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="referralCodeId != null">
+        referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
+      </if>
+      <if test="storeId != null">
+        store_id = #{storeId,jdbcType=VARCHAR},
+      </if>
+      <if test="usedCode != null">
+        used_code = #{usedCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referredAt != null">
+        referred_at = #{referredAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="referralCode != null">
+        referral_code = #{referralCode,jdbcType=VARCHAR},
+      </if>
+      <if test="referrerId != null">
+        referrer_id = #{referrerId,jdbcType=VARCHAR},
+      </if>
+      <if test="refereeId != null">
+        referee_id = #{refereeId,jdbcType=VARCHAR},
+      </if>
+      <if test="refereeUsername != null">
+        referee_username = #{refereeUsername,jdbcType=VARCHAR},
+      </if>
+      <if test="rewardGold != null">
+        reward_gold = #{rewardGold,jdbcType=BIGINT},
+      </if>
+      <if test="rewardBonus != null">
+        reward_bonus = #{rewardBonus,jdbcType=BIGINT},
+      </if>
+      <if test="isRewardGiven != null">
+        is_reward_given = #{isRewardGiven,jdbcType=BIT},
+      </if>
+      <if test="rewardGivenAt != null">
+        reward_given_at = #{rewardGivenAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.ReferralRecord">
+    update referral_record
+    set user_id = #{userId,jdbcType=VARCHAR},
+      referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
+      store_id = #{storeId,jdbcType=VARCHAR},
+      used_code = #{usedCode,jdbcType=VARCHAR},
+      referred_at = #{referredAt,jdbcType=TIMESTAMP},
+      referral_code = #{referralCode,jdbcType=VARCHAR},
+      referrer_id = #{referrerId,jdbcType=VARCHAR},
+      referee_id = #{refereeId,jdbcType=VARCHAR},
+      referee_username = #{refereeUsername,jdbcType=VARCHAR},
+      reward_gold = #{rewardGold,jdbcType=BIGINT},
+      reward_bonus = #{rewardBonus,jdbcType=BIGINT},
+      is_reward_given = #{isRewardGiven,jdbcType=BIT},
+      reward_given_at = #{rewardGivenAt,jdbcType=TIMESTAMP},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.ReferralRecord">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="referral_code_id" jdbcType="VARCHAR" property="referralCodeId" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="used_code" jdbcType="VARCHAR" property="usedCode" />
+    <result column="referred_at" jdbcType="TIMESTAMP" property="referredAt" />
+    <result column="referral_code" jdbcType="VARCHAR" property="referralCode" />
+    <result column="referrer_id" jdbcType="VARCHAR" property="referrerId" />
+    <result column="referee_id" jdbcType="VARCHAR" property="refereeId" />
+    <result column="referee_username" jdbcType="VARCHAR" property="refereeUsername" />
+    <result column="reward_gold" jdbcType="BIGINT" property="rewardGold" />
+    <result column="reward_bonus" jdbcType="BIGINT" property="rewardBonus" />
+    <result column="is_reward_given" jdbcType="BIT" property="isRewardGiven" />
+    <result column="reward_given_at" jdbcType="TIMESTAMP" property="rewardGivenAt" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_id, referral_code_id, store_id, used_code, referred_at, referral_code, referrer_id, 
+    referee_id, referee_username, reward_gold, reward_bonus, is_reward_given, reward_given_at, 
+    created_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.ReferralRecordExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
     from `referral_record`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />

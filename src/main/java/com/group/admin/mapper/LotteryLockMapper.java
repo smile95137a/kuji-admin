@@ -28,7 +28,9 @@ public interface LotteryLockMapper {
 
     int updateByPrimaryKey(LotteryLock row);
 
-    LotteryLock selectActiveLock(String lotteryId);
+    // ---------- custom methods ----------
 
-    int expireStaleLocksBeforeTime(java.time.LocalDateTime cutoffTime);
+    LotteryLock selectActiveLock(@Param("lotteryId") String lotteryId);
+
+    int expireStaleLocksBeforeTime(@Param("expireTime") java.time.LocalDateTime expireTime);
 }

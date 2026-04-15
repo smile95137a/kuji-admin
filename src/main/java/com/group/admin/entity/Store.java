@@ -41,6 +41,8 @@ public class Store {
 
     private String remark;
 
+    private String createdBy;
+
     public String getId() {
         return id;
     }
@@ -192,8 +194,6 @@ public class Store {
     public void setRemark(String remark) {
         this.remark = remark == null ? null : remark.trim();
     }
-
-    private String createdBy;
 
     public String getCreatedBy() {
         return createdBy;
