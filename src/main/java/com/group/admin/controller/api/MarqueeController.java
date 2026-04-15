@@ -24,7 +24,7 @@ public class MarqueeController {
     /**
      * 取得所有啟用中的跑馬燈
      */
-    @GetMapping
+    @GetMapping({"", "/list"})
     public ResponseEntity<List<Marquee>> getActiveMarquees() {
         return ResponseEntity.ok(marqueeService.getActiveMarquees());
     }

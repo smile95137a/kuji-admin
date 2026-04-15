@@ -1198,17 +1198,27 @@ public class LotteryServiceImpl implements LotteryService {
         res.setAllowMultiDraw(lottery.getAllowMultiDraw() != null && lottery.getAllowMultiDraw() == 1);
         if (lottery.getMultiDrawOptions() != null && !lottery.getMultiDrawOptions().isEmpty()) {
             try {
-                List<Integer> options = Arrays.stream(lottery.getMultiDrawOptions().split(","))
-                        .map(String::trim)
-                        .map(Integer::parseInt)
-                        .collect(Collectors.toList());
-                res.setMultiDrawOptions(options);
+                // Support both JSON array format "[10,20]" and comma-separated "10,20"
+                String raw = lottery.getMultiDrawOptions().trim();
+                if (raw.startsWith("[")) {
+                    raw = raw.substring(1, raw.length() - 1).trim();
+                }
+                if (raw.isEmpty()) {
+                    res.setMultiDrawOptions(List.of());
+                } else {
+                    List<Integer> options = Arrays.stream(raw.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .map(Integer::parseInt)
+                            .collect(Collectors.toList());
+                    res.setMultiDrawOptions(options);
+                }
             } catch (Exception e) {
                 log.warn("⚠️ 解析多抽選項失敗: {}", lottery.getMultiDrawOptions());
-                res.setMultiDrawOptions(List.of()); // ✅ 設定空列表而非 null
+                res.setMultiDrawOptions(List.of());
             }
         } else {
-            res.setMultiDrawOptions(List.of()); // ✅ 設定空列表而非 null
+            res.setMultiDrawOptions(List.of());
         }
         
         // 紅利相關
