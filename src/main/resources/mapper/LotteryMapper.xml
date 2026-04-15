@@ -597,7 +597,7 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExampleWithBLOBs"parameterType="map">
+  <update id="updateByExampleWithBLOBs" parameterType="map">
     update `lottery`
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
@@ -645,7 +645,7 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExample"parameterType="map">
+  <update id="updateByExample" parameterType="map">
     update `lottery`
     set id = #{row.id,jdbcType=VARCHAR},
       store_id = #{row.storeId,jdbcType=VARCHAR},
@@ -689,7 +689,7 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByPrimaryKeySelective"parameterType="com.group.admin.entity.Lottery">
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Lottery">
     update `lottery`
     <set>
       <if test="storeId != null">
@@ -818,7 +818,7 @@
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKeyWithBLOBs"parameterType="com.group.admin.entity.Lottery">
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.Lottery">
     update `lottery`
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
@@ -863,7 +863,7 @@
       delist_strategy = #{delistStrategy,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKey"parameterType="com.group.admin.entity.Lottery">
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Lottery">
     update `lottery`
     set store_id = #{storeId,jdbcType=VARCHAR},
       title = #{title,jdbcType=VARCHAR},
