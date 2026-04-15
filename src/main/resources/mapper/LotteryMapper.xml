@@ -916,4 +916,22 @@
       AND auto_discount_enabled = 1
   </update>
 
+  <!-- 定時上架：CONFIGURED 且 scheduled_at 已到 → 自動推進為 ON_SHELF -->
+  <select id="selectScheduledForPromotion" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `lottery`
+    WHERE status = 'CONFIGURED'
+      AND scheduled_at IS NOT NULL
+      AND scheduled_at &lt;= NOW()
+  </select>
+
+  <!-- 待開抽：ON_SHELF 且 start_time 已到 → 自動推進為 DRAWABLE -->
+  <select id="selectDrawableForStart" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM `lottery`
+    WHERE status = 'ON_SHELF'
+      AND start_time IS NOT NULL
+      AND start_time &lt;= NOW()
+  </select>
+
 </mapper>
