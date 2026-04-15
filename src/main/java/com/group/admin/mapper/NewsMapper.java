@@ -33,6 +33,7 @@ public interface NewsMapper {
     int updateByPrimaryKeyWithBLOBs(News row);
 
     int updateByPrimaryKey(News row);
+
     int autoPublishNews();
 
     int autoUnpublishNews();

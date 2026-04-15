@@ -81,12 +81,6 @@ public class Lottery {
 
     private String content;
 
-    private String paymentType;
-
-    private Integer freeDrawThreshold;
-
-    private String delistStrategy;
-
     public String getId() {
         return id;
     }
@@ -399,6 +393,8 @@ public class Lottery {
         this.content = content == null ? null : content.trim();
     }
 
+    private String paymentType;
+
     public String getPaymentType() {
         return paymentType;
     }
@@ -407,6 +403,8 @@ public class Lottery {
         this.paymentType = paymentType == null ? null : paymentType.trim();
     }
 
+    private Integer freeDrawThreshold;
+
     public Integer getFreeDrawThreshold() {
         return freeDrawThreshold;
     }
@@ -414,6 +412,8 @@ public class Lottery {
     public void setFreeDrawThreshold(Integer freeDrawThreshold) {
         this.freeDrawThreshold = freeDrawThreshold;
     }
+
+    private String delistStrategy;
 
     public String getDelistStrategy() {
         return delistStrategy;

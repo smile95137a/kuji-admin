@@ -85,6 +85,341 @@
     </if>
     'true' as QUERYID,
     <include refid="Base_Column_List" />
+    from recharge_plan
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from recharge_plan
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from recharge_plan
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RechargePlanExample">
+    delete from recharge_plan
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.RechargePlan">
+    insert into recharge_plan (id, name, description, 
+      amount, gold_coins, bonus_coins, 
+      is_active, order_num, start_date, 
+      end_date, created_at, updated_at, 
+      deleted_at)
+    values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, 
+      #{amount,jdbcType=BIGINT}, #{goldCoins,jdbcType=BIGINT}, #{bonusCoins,jdbcType=BIGINT}, 
+      #{isActive,jdbcType=TINYINT}, #{orderNum,jdbcType=INTEGER}, #{startDate,jdbcType=TIMESTAMP}, 
+      #{endDate,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, 
+      #{deletedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.RechargePlan">
+    insert into recharge_plan
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="name != null">
+        name,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="amount != null">
+        amount,
+      </if>
+      <if test="goldCoins != null">
+        gold_coins,
+      </if>
+      <if test="bonusCoins != null">
+        bonus_coins,
+      </if>
+      <if test="isActive != null">
+        is_active,
+      </if>
+      <if test="orderNum != null">
+        order_num,
+      </if>
+      <if test="startDate != null">
+        start_date,
+      </if>
+      <if test="endDate != null">
+        end_date,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+      <if test="deletedAt != null">
+        deleted_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="name != null">
+        #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="amount != null">
+        #{amount,jdbcType=BIGINT},
+      </if>
+      <if test="goldCoins != null">
+        #{goldCoins,jdbcType=BIGINT},
+      </if>
+      <if test="bonusCoins != null">
+        #{bonusCoins,jdbcType=BIGINT},
+      </if>
+      <if test="isActive != null">
+        #{isActive,jdbcType=TINYINT},
+      </if>
+      <if test="orderNum != null">
+        #{orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="startDate != null">
+        #{startDate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endDate != null">
+        #{endDate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deletedAt != null">
+        #{deletedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.RechargePlanExample" resultType="java.lang.Long">
+    select count(*) from recharge_plan
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update recharge_plan
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.name != null">
+        name = #{row.name,jdbcType=VARCHAR},
+      </if>
+      <if test="row.description != null">
+        description = #{row.description,jdbcType=VARCHAR},
+      </if>
+      <if test="row.amount != null">
+        amount = #{row.amount,jdbcType=BIGINT},
+      </if>
+      <if test="row.goldCoins != null">
+        gold_coins = #{row.goldCoins,jdbcType=BIGINT},
+      </if>
+      <if test="row.bonusCoins != null">
+        bonus_coins = #{row.bonusCoins,jdbcType=BIGINT},
+      </if>
+      <if test="row.isActive != null">
+        is_active = #{row.isActive,jdbcType=TINYINT},
+      </if>
+      <if test="row.orderNum != null">
+        order_num = #{row.orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="row.startDate != null">
+        start_date = #{row.startDate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.endDate != null">
+        end_date = #{row.endDate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.deletedAt != null">
+        deleted_at = #{row.deletedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update recharge_plan
+    set id = #{row.id,jdbcType=VARCHAR},
+      name = #{row.name,jdbcType=VARCHAR},
+      description = #{row.description,jdbcType=VARCHAR},
+      amount = #{row.amount,jdbcType=BIGINT},
+      gold_coins = #{row.goldCoins,jdbcType=BIGINT},
+      bonus_coins = #{row.bonusCoins,jdbcType=BIGINT},
+      is_active = #{row.isActive,jdbcType=TINYINT},
+      order_num = #{row.orderNum,jdbcType=INTEGER},
+      start_date = #{row.startDate,jdbcType=TIMESTAMP},
+      end_date = #{row.endDate,jdbcType=TIMESTAMP},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      deleted_at = #{row.deletedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RechargePlan">
+    update recharge_plan
+    <set>
+      <if test="name != null">
+        name = #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="amount != null">
+        amount = #{amount,jdbcType=BIGINT},
+      </if>
+      <if test="goldCoins != null">
+        gold_coins = #{goldCoins,jdbcType=BIGINT},
+      </if>
+      <if test="bonusCoins != null">
+        bonus_coins = #{bonusCoins,jdbcType=BIGINT},
+      </if>
+      <if test="isActive != null">
+        is_active = #{isActive,jdbcType=TINYINT},
+      </if>
+      <if test="orderNum != null">
+        order_num = #{orderNum,jdbcType=INTEGER},
+      </if>
+      <if test="startDate != null">
+        start_date = #{startDate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endDate != null">
+        end_date = #{endDate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deletedAt != null">
+        deleted_at = #{deletedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RechargePlan">
+    update recharge_plan
+    set name = #{name,jdbcType=VARCHAR},
+      description = #{description,jdbcType=VARCHAR},
+      amount = #{amount,jdbcType=BIGINT},
+      gold_coins = #{goldCoins,jdbcType=BIGINT},
+      bonus_coins = #{bonusCoins,jdbcType=BIGINT},
+      is_active = #{isActive,jdbcType=TINYINT},
+      order_num = #{orderNum,jdbcType=INTEGER},
+      start_date = #{startDate,jdbcType=TIMESTAMP},
+      end_date = #{endDate,jdbcType=TIMESTAMP},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      deleted_at = #{deletedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.RechargePlan">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="amount" jdbcType="BIGINT" property="amount" />
+    <result column="gold_coins" jdbcType="BIGINT" property="goldCoins" />
+    <result column="bonus_coins" jdbcType="BIGINT" property="bonusCoins" />
+    <result column="is_active" jdbcType="TINYINT" property="isActive" />
+    <result column="order_num" jdbcType="INTEGER" property="orderNum" />
+    <result column="start_date" jdbcType="TIMESTAMP" property="startDate" />
+    <result column="end_date" jdbcType="TIMESTAMP" property="endDate" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="deleted_at" jdbcType="TIMESTAMP" property="deletedAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, name, description, amount, gold_coins, bonus_coins, is_active, order_num, start_date, 
+    end_date, created_at, updated_at, deleted_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.RechargePlanExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
     from `recharge_plan`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />

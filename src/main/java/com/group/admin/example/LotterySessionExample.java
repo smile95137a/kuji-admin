@@ -995,6 +995,66 @@ public class LotterySessionExample {
             return (Criteria) this;
         }
 
+        public Criteria andDesignationDeadlineIsNull() {
+            addCriterion("designation_deadline is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineIsNotNull() {
+            addCriterion("designation_deadline is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineEqualTo(LocalDateTime value) {
+            addCriterion("designation_deadline =", value, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineNotEqualTo(LocalDateTime value) {
+            addCriterion("designation_deadline <>", value, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineGreaterThan(LocalDateTime value) {
+            addCriterion("designation_deadline >", value, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineGreaterThanOrEqualTo(LocalDateTime value) {
+            addCriterion("designation_deadline >=", value, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineLessThan(LocalDateTime value) {
+            addCriterion("designation_deadline <", value, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineLessThanOrEqualTo(LocalDateTime value) {
+            addCriterion("designation_deadline <=", value, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineIn(List<LocalDateTime> values) {
+            addCriterion("designation_deadline in", values, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineNotIn(List<LocalDateTime> values) {
+            addCriterion("designation_deadline not in", values, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineBetween(LocalDateTime value1, LocalDateTime value2) {
+            addCriterion("designation_deadline between", value1, value2, "designationDeadline");
+            return (Criteria) this;
+        }
+
+        public Criteria andDesignationDeadlineNotBetween(LocalDateTime value1, LocalDateTime value2) {
+            addCriterion("designation_deadline not between", value1, value2, "designationDeadline");
+            return (Criteria) this;
+        }
+
         public Criteria andStatusIsNull() {
             addCriterion("status is null");
             return (Criteria) this;

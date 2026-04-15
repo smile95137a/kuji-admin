@@ -9,7 +9,6 @@ public class LotteryTicket {
 
     private Integer ticketNumber;
 
-    /** 刮刮樂專用：刮開後揭露的號碼；一番賞/扭蛋為 null */
     private Integer revealedNumber;
 
     private String prizeId;

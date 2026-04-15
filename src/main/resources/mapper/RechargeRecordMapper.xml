@@ -93,6 +93,415 @@
     <include refid="Base_Column_List" />
     ,
     <include refid="Blob_Column_List" />
+    from recharge_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByExample" parameterType="com.group.admin.example.RechargeRecordExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from recharge_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from recharge_record
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from recharge_record
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.RechargeRecordExample">
+    delete from recharge_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.RechargeRecord">
+    insert into recharge_record (id, user_id, plan_id, 
+      amount, gold_coins, bonus_coins, 
+      payment_method, payment_status, payment_gateway, 
+      transaction_id, fail_reason, created_at, 
+      paid_at, payment_info)
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{planId,jdbcType=VARCHAR}, 
+      #{amount,jdbcType=BIGINT}, #{goldCoins,jdbcType=BIGINT}, #{bonusCoins,jdbcType=BIGINT}, 
+      #{paymentMethod,jdbcType=VARCHAR}, #{paymentStatus,jdbcType=VARCHAR}, #{paymentGateway,jdbcType=VARCHAR}, 
+      #{transactionId,jdbcType=VARCHAR}, #{failReason,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
+      #{paidAt,jdbcType=TIMESTAMP}, #{paymentInfo,jdbcType=LONGVARCHAR})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.RechargeRecord">
+    insert into recharge_record
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="planId != null">
+        plan_id,
+      </if>
+      <if test="amount != null">
+        amount,
+      </if>
+      <if test="goldCoins != null">
+        gold_coins,
+      </if>
+      <if test="bonusCoins != null">
+        bonus_coins,
+      </if>
+      <if test="paymentMethod != null">
+        payment_method,
+      </if>
+      <if test="paymentStatus != null">
+        payment_status,
+      </if>
+      <if test="paymentGateway != null">
+        payment_gateway,
+      </if>
+      <if test="transactionId != null">
+        transaction_id,
+      </if>
+      <if test="failReason != null">
+        fail_reason,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="paidAt != null">
+        paid_at,
+      </if>
+      <if test="paymentInfo != null">
+        payment_info,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="planId != null">
+        #{planId,jdbcType=VARCHAR},
+      </if>
+      <if test="amount != null">
+        #{amount,jdbcType=BIGINT},
+      </if>
+      <if test="goldCoins != null">
+        #{goldCoins,jdbcType=BIGINT},
+      </if>
+      <if test="bonusCoins != null">
+        #{bonusCoins,jdbcType=BIGINT},
+      </if>
+      <if test="paymentMethod != null">
+        #{paymentMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="paymentStatus != null">
+        #{paymentStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="paymentGateway != null">
+        #{paymentGateway,jdbcType=VARCHAR},
+      </if>
+      <if test="transactionId != null">
+        #{transactionId,jdbcType=VARCHAR},
+      </if>
+      <if test="failReason != null">
+        #{failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="paidAt != null">
+        #{paidAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="paymentInfo != null">
+        #{paymentInfo,jdbcType=LONGVARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.RechargeRecordExample" resultType="java.lang.Long">
+    select count(*) from recharge_record
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update recharge_record
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.planId != null">
+        plan_id = #{row.planId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.amount != null">
+        amount = #{row.amount,jdbcType=BIGINT},
+      </if>
+      <if test="row.goldCoins != null">
+        gold_coins = #{row.goldCoins,jdbcType=BIGINT},
+      </if>
+      <if test="row.bonusCoins != null">
+        bonus_coins = #{row.bonusCoins,jdbcType=BIGINT},
+      </if>
+      <if test="row.paymentMethod != null">
+        payment_method = #{row.paymentMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="row.paymentStatus != null">
+        payment_status = #{row.paymentStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="row.paymentGateway != null">
+        payment_gateway = #{row.paymentGateway,jdbcType=VARCHAR},
+      </if>
+      <if test="row.transactionId != null">
+        transaction_id = #{row.transactionId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.failReason != null">
+        fail_reason = #{row.failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.paidAt != null">
+        paid_at = #{row.paidAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.paymentInfo != null">
+        payment_info = #{row.paymentInfo,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExampleWithBLOBs" parameterType="map">
+    update recharge_record
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      plan_id = #{row.planId,jdbcType=VARCHAR},
+      amount = #{row.amount,jdbcType=BIGINT},
+      gold_coins = #{row.goldCoins,jdbcType=BIGINT},
+      bonus_coins = #{row.bonusCoins,jdbcType=BIGINT},
+      payment_method = #{row.paymentMethod,jdbcType=VARCHAR},
+      payment_status = #{row.paymentStatus,jdbcType=VARCHAR},
+      payment_gateway = #{row.paymentGateway,jdbcType=VARCHAR},
+      transaction_id = #{row.transactionId,jdbcType=VARCHAR},
+      fail_reason = #{row.failReason,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      paid_at = #{row.paidAt,jdbcType=TIMESTAMP},
+      payment_info = #{row.paymentInfo,jdbcType=LONGVARCHAR}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update recharge_record
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      plan_id = #{row.planId,jdbcType=VARCHAR},
+      amount = #{row.amount,jdbcType=BIGINT},
+      gold_coins = #{row.goldCoins,jdbcType=BIGINT},
+      bonus_coins = #{row.bonusCoins,jdbcType=BIGINT},
+      payment_method = #{row.paymentMethod,jdbcType=VARCHAR},
+      payment_status = #{row.paymentStatus,jdbcType=VARCHAR},
+      payment_gateway = #{row.paymentGateway,jdbcType=VARCHAR},
+      transaction_id = #{row.transactionId,jdbcType=VARCHAR},
+      fail_reason = #{row.failReason,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      paid_at = #{row.paidAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.RechargeRecord">
+    update recharge_record
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="planId != null">
+        plan_id = #{planId,jdbcType=VARCHAR},
+      </if>
+      <if test="amount != null">
+        amount = #{amount,jdbcType=BIGINT},
+      </if>
+      <if test="goldCoins != null">
+        gold_coins = #{goldCoins,jdbcType=BIGINT},
+      </if>
+      <if test="bonusCoins != null">
+        bonus_coins = #{bonusCoins,jdbcType=BIGINT},
+      </if>
+      <if test="paymentMethod != null">
+        payment_method = #{paymentMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="paymentStatus != null">
+        payment_status = #{paymentStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="paymentGateway != null">
+        payment_gateway = #{paymentGateway,jdbcType=VARCHAR},
+      </if>
+      <if test="transactionId != null">
+        transaction_id = #{transactionId,jdbcType=VARCHAR},
+      </if>
+      <if test="failReason != null">
+        fail_reason = #{failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="paidAt != null">
+        paid_at = #{paidAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="paymentInfo != null">
+        payment_info = #{paymentInfo,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.RechargeRecord">
+    update recharge_record
+    set user_id = #{userId,jdbcType=VARCHAR},
+      plan_id = #{planId,jdbcType=VARCHAR},
+      amount = #{amount,jdbcType=BIGINT},
+      gold_coins = #{goldCoins,jdbcType=BIGINT},
+      bonus_coins = #{bonusCoins,jdbcType=BIGINT},
+      payment_method = #{paymentMethod,jdbcType=VARCHAR},
+      payment_status = #{paymentStatus,jdbcType=VARCHAR},
+      payment_gateway = #{paymentGateway,jdbcType=VARCHAR},
+      transaction_id = #{transactionId,jdbcType=VARCHAR},
+      fail_reason = #{failReason,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      paid_at = #{paidAt,jdbcType=TIMESTAMP},
+      payment_info = #{paymentInfo,jdbcType=LONGVARCHAR}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.RechargeRecord">
+    update recharge_record
+    set user_id = #{userId,jdbcType=VARCHAR},
+      plan_id = #{planId,jdbcType=VARCHAR},
+      amount = #{amount,jdbcType=BIGINT},
+      gold_coins = #{goldCoins,jdbcType=BIGINT},
+      bonus_coins = #{bonusCoins,jdbcType=BIGINT},
+      payment_method = #{paymentMethod,jdbcType=VARCHAR},
+      payment_status = #{paymentStatus,jdbcType=VARCHAR},
+      payment_gateway = #{paymentGateway,jdbcType=VARCHAR},
+      transaction_id = #{transactionId,jdbcType=VARCHAR},
+      fail_reason = #{failReason,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      paid_at = #{paidAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.RechargeRecord">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="plan_id" jdbcType="VARCHAR" property="planId" />
+    <result column="amount" jdbcType="BIGINT" property="amount" />
+    <result column="gold_coins" jdbcType="BIGINT" property="goldCoins" />
+    <result column="bonus_coins" jdbcType="BIGINT" property="bonusCoins" />
+    <result column="payment_method" jdbcType="VARCHAR" property="paymentMethod" />
+    <result column="payment_status" jdbcType="VARCHAR" property="paymentStatus" />
+    <result column="payment_gateway" jdbcType="VARCHAR" property="paymentGateway" />
+    <result column="transaction_id" jdbcType="VARCHAR" property="transactionId" />
+    <result column="fail_reason" jdbcType="VARCHAR" property="failReason" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="paid_at" jdbcType="TIMESTAMP" property="paidAt" />
+  </resultMap>
+  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.RechargeRecord">
+    <result column="payment_info" jdbcType="LONGVARCHAR" property="paymentInfo" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_id, plan_id, amount, gold_coins, bonus_coins, payment_method, payment_status, 
+    payment_gateway, transaction_id, fail_reason, created_at, paid_at
+  </sql>
+  <sql id="Blob_Column_List">
+    payment_info
+  </sql>
+  <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.RechargeRecordExample" resultMap="ResultMapWithBLOBs">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
     from `recharge_record`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />

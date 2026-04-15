@@ -34,26 +34,13 @@ public interface LotteryMapper {
 
     int updateByPrimaryKey(Lottery row);
 
-    // ==================== 自訂方法 ====================
+    int updatePriceAfterGrandPrizeSoldOut(String lotteryId);
 
     List<Lottery> selectScheduledForPromotion();
 
     List<Lottery> selectDrawableForStart();
 
-    Lottery selectForUpdate(@Param("id") String id);
+    List<java.util.Map<String, Object>> selectPublicList(@Param("category") String category, @Param("storeId") String storeId, @Param("keyword") String keyword, @Param("sort") String sort, @Param("offset") int offset, @Param("pageSize") int pageSize);
 
-    int updatePriceAfterGrandPrizeSoldOut(@Param("id") String id);
-
-    List<java.util.Map<String, Object>> selectPublicList(
-            @Param("category") String category,
-            @Param("storeId") String storeId,
-            @Param("keyword") String keyword,
-            @Param("sort") String sort,
-            @Param("offset") int offset,
-            @Param("pageSize") int pageSize);
-
-    Long countPublicList(
-            @Param("category") String category,
-            @Param("storeId") String storeId,
-            @Param("keyword") String keyword);
+    Long countPublicList(@Param("category") String category, @Param("storeId") String storeId, @Param("keyword") String keyword);
 }

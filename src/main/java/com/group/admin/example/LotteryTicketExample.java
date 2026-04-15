@@ -305,6 +305,66 @@ public class LotteryTicketExample {
             return (Criteria) this;
         }
 
+        public Criteria andRevealedNumberIsNull() {
+            addCriterion("revealed_number is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberIsNotNull() {
+            addCriterion("revealed_number is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberEqualTo(Integer value) {
+            addCriterion("revealed_number =", value, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberNotEqualTo(Integer value) {
+            addCriterion("revealed_number <>", value, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberGreaterThan(Integer value) {
+            addCriterion("revealed_number >", value, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberGreaterThanOrEqualTo(Integer value) {
+            addCriterion("revealed_number >=", value, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberLessThan(Integer value) {
+            addCriterion("revealed_number <", value, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberLessThanOrEqualTo(Integer value) {
+            addCriterion("revealed_number <=", value, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberIn(List<Integer> values) {
+            addCriterion("revealed_number in", values, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberNotIn(List<Integer> values) {
+            addCriterion("revealed_number not in", values, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberBetween(Integer value1, Integer value2) {
+            addCriterion("revealed_number between", value1, value2, "revealedNumber");
+            return (Criteria) this;
+        }
+
+        public Criteria andRevealedNumberNotBetween(Integer value1, Integer value2) {
+            addCriterion("revealed_number not between", value1, value2, "revealedNumber");
+            return (Criteria) this;
+        }
+
         public Criteria andPrizeIdIsNull() {
             addCriterion("prize_id is null");
             return (Criteria) this;

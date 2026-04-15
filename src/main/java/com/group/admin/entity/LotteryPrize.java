@@ -25,8 +25,6 @@ public class LotteryPrize {
 
     private Long pointValue;
 
-    private Long recycleBonus;
-
     private Byte isLastPrize;
 
     private Byte isGrandPrize;
@@ -183,13 +181,5 @@ public class LotteryPrize {
 
     public void setContent(String content) {
         this.content = content == null ? null : content.trim();
-    }
-
-    public Long getRecycleBonus() {
-        return recycleBonus;
-    }
-
-    public void setRecycleBonus(Long recycleBonus) {
-        this.recycleBonus = recycleBonus;
     }
 }

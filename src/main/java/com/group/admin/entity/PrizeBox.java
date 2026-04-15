@@ -19,9 +19,6 @@ public class PrizeBox {
 
     private Byte isRecyclable;
 
-    /** 是否可出貨：1=可, 0=不可，預設 1 */
-    private Byte isShippable;
-
     private Long recycleBonus;
 
     private LocalDateTime recycledAt;
@@ -98,14 +95,6 @@ public class PrizeBox {
         this.isRecyclable = isRecyclable;
     }
 
-    public Byte getIsShippable() {
-        return isShippable;
-    }
-
-    public void setIsShippable(Byte isShippable) {
-        this.isShippable = isShippable;
-    }
-
     public Long getRecycleBonus() {
         return recycleBonus;
     }
@@ -154,4 +143,13 @@ public class PrizeBox {
         this.updatedAt = updatedAt;
     }
 
+    private Byte isShippable;
+
+    public Byte getIsShippable() {
+        return isShippable;
+    }
+
+    public void setIsShippable(Byte isShippable) {
+        this.isShippable = isShippable;
+    }
 }

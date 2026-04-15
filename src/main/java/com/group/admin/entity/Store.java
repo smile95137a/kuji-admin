@@ -37,8 +37,6 @@ public class Store {
 
     private String updatedBy;
 
-    private String createdBy;
-
     private String longDescription;
 
     private String remark;
@@ -179,14 +177,6 @@ public class Store {
         this.updatedBy = updatedBy == null ? null : updatedBy.trim();
     }
 
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy == null ? null : createdBy.trim();
-    }
-
     public String getLongDescription() {
         return longDescription;
     }
@@ -201,5 +191,15 @@ public class Store {
 
     public void setRemark(String remark) {
         this.remark = remark == null ? null : remark.trim();
+    }
+
+    private String createdBy;
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy == null ? null : createdBy.trim();
     }
 }

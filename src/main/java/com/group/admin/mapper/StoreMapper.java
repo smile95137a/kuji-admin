@@ -36,5 +36,5 @@ public interface StoreMapper {
 
     List<Store> selectEnabledStores(@Param("offset") int offset, @Param("limit") int limit);
 
-    long countEnabledStores();
+    Long countEnabledStores();
 }

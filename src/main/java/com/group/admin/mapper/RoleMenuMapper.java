@@ -28,11 +28,9 @@ public interface RoleMenuMapper {
 
     int updateByPrimaryKey(RoleMenu row);
 
-    // ===== Custom methods (not MBG-generated) =====
+    List<RoleMenu> selectByRoleId(String roleId);
 
-    List<RoleMenu> selectByRoleId(@Param("roleId") String roleId);
-
-    int deleteByRoleId(@Param("roleId") String roleId);
+    int deleteByRoleId(String roleId);
 
     int batchInsert(@Param("list") List<RoleMenu> list);
 }
