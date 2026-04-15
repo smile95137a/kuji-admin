@@ -457,7 +457,7 @@
       </if>
     </trim>
   </insert>
-  <select id="countByExample"parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
+  <select id="countByExample" parameterType="com.group.admin.example.LotteryExample" resultType="java.lang.Long">
     select count(*) from `lottery`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
