@@ -203,13 +203,13 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public void activateStore(String storeId) {
-        updateStoreStatusInternal(storeId, "ENABLED");
+        updateStoreStatusInternal(storeId, "ACTIVE");
     }
 
     @Override
     @Transactional
     public void deactivateStore(String storeId) {
-        updateStoreStatusInternal(storeId, "DISABLED");
+        updateStoreStatusInternal(storeId, "INACTIVE");
     }
 
     // ========== 014-store-management new implementations ==========
@@ -277,7 +277,7 @@ public class StoreServiceImpl implements StoreService {
         store.setInstagramUrl(req.getInstagramUrl());
         store.setLineId(req.getLineId());
         store.setRemark(req.getRemark());
-        store.setStatus("ENABLED");
+        store.setStatus("ACTIVE");
         store.setCreatedBy(operatorId);
         store.setCreatedAt(LocalDateTime.now());
         store.setUpdatedAt(LocalDateTime.now());
@@ -318,7 +318,7 @@ public class StoreServiceImpl implements StoreService {
 
         Map<String, Object> result = new HashMap<>();
 
-        if ("DISABLED".equals(req.getStatus())) {
+        if ("INACTIVE".equals(req.getStatus())) {
             // Check active lotteries before disabling
             if (!force) {
                 LotteryExample countExample = new LotteryExample();
@@ -345,18 +345,18 @@ public class StoreServiceImpl implements StoreService {
             lotterySetter.setUpdatedAt(LocalDateTime.now());
             int productsOffShelf = lotteryMapper.updateByExampleSelective(lotterySetter, lotteryFilter);
 
-            // Cascade: set banners DISABLED
+            // Cascade: set banners INACTIVE
             BannerExample bannerFilter = new BannerExample();
             bannerFilter.createCriteria()
                     .andStoreIdEqualTo(storeId)
-                    .andStatusEqualTo("ENABLED");
+                    .andStatusEqualTo("ACTIVE");
             Banner bannerSetter = new Banner();
-            bannerSetter.setStatus("DISABLED");
+            bannerSetter.setStatus("INACTIVE");
             bannerSetter.setUpdatedAt(LocalDateTime.now());
             int bannersDisabled = bannerMapper.updateByExampleSelective(bannerSetter, bannerFilter);
 
-            // Disable store
-            store.setStatus("DISABLED");
+            // Deactivate store
+            store.setStatus("INACTIVE");
             store.setUpdatedBy(operatorId);
             store.setUpdatedAt(LocalDateTime.now());
             storeMapper.updateByPrimaryKeySelective(store);
@@ -366,7 +366,7 @@ public class StoreServiceImpl implements StoreService {
             cascadeResult.put("bannersDisabled", bannersDisabled);
 
             result.put("id", storeId);
-            result.put("status", "DISABLED");
+            result.put("status", "INACTIVE");
             result.put("updatedAt", store.getUpdatedAt());
             result.put("cascadeResult", cascadeResult);
 
@@ -374,14 +374,14 @@ public class StoreServiceImpl implements StoreService {
                     storeId, productsOffShelf, bannersDisabled);
 
         } else {
-            // ENABLED: only update store status, do NOT restore products or banners (FR-005)
-            store.setStatus("ENABLED");
+            // ACTIVE: only update store status, do NOT restore products or banners (FR-005)
+            store.setStatus("ACTIVE");
             store.setUpdatedBy(operatorId);
             store.setUpdatedAt(LocalDateTime.now());
             storeMapper.updateByPrimaryKeySelective(store);
 
             result.put("id", storeId);
-            result.put("status", "ENABLED");
+            result.put("status", "ACTIVE");
             result.put("updatedAt", store.getUpdatedAt());
             result.put("cascadeResult", null);
             result.put("note", "商品與橫幅狀態未自動恢復，需手動重新啟用");
@@ -416,7 +416,7 @@ public class StoreServiceImpl implements StoreService {
     public StoreDetailRes getPublicStoreDetail(String storeId) {
         Store store = storeMapper.selectByPrimaryKey(storeId);
 
-        if (store == null || !"ENABLED".equals(store.getStatus())) {
+        if (store == null || !"ACTIVE".equals(store.getStatus())) {
             throw new BusinessException("NOT_FOUND", "店家不存在");
         }
 
@@ -566,7 +566,7 @@ public class StoreServiceImpl implements StoreService {
         StoreExample example = new StoreExample();
         StoreExample.Criteria criteria = example.createCriteria();
         if (Boolean.TRUE.equals(activeOnly)) {
-            criteria.andStatusEqualTo("ENABLED");
+            criteria.andStatusEqualTo("ACTIVE");
         }
         if (!isAdmin) {
             StoreUserExample sue = new StoreUserExample();
@@ -590,7 +590,7 @@ public class StoreServiceImpl implements StoreService {
         StoreExample example = new StoreExample();
         StoreExample.Criteria criteria = example.createCriteria();
         if (Boolean.TRUE.equals(activeOnly)) {
-            criteria.andStatusEqualTo("ENABLED");
+            criteria.andStatusEqualTo("ACTIVE");
         }
         if (keyword != null && !keyword.isBlank()) {
             criteria.andStoreNameLike("%" + keyword + "%");
@@ -610,7 +610,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public List<com.group.admin.res.common.EnumOption> getAllActiveStoreOptions() {
         StoreExample example = new StoreExample();
-        example.createCriteria().andStatusEqualTo("ENABLED");
+        example.createCriteria().andStatusEqualTo("ACTIVE");
         example.setOrderByClause("store_name ASC");
         return storeMapper.selectByExample(example).stream()
                 .map(s -> com.group.admin.res.common.EnumOption.builder()

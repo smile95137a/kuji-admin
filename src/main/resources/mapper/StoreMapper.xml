@@ -498,4 +498,16 @@
       updated_by = #{updatedBy,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
+  <select id="selectEnabledStores" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from store
+    where status = 'ACTIVE'
+    order by store_name ASC
+    limit #{limit} offset #{offset}
+  </select>
+
+  <select id="countEnabledStores" resultType="long">
+    select count(*) from store where status = 'ACTIVE'
+  </select>
+
 </mapper>
