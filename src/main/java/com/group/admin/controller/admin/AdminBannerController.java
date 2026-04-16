@@ -24,8 +24,8 @@ public class AdminBannerController {
 
     private final BannerService bannerService;
 
-    /** GET /admin/banners — list with optional status filter */
-    @GetMapping
+    /** POST /admin/banners — list with optional status filter */
+    @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','STORE_OWNER','STORE_EDITOR')")
     public ResponseEntity<List<BannerRes>> queryBanners(
             @RequestBody(required = false) QueryReq<BannerCondition> req) {
