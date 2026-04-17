@@ -74,10 +74,24 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
         }
         AdminUser user = users.get(0);
-        
+
+        // 帳號鎖定檢查
+        if (user.getLockedUntil() != null && LocalDateTime.now().isBefore(user.getLockedUntil())) {
+            throw new BusinessException(ErrorCodes.AUTH_ACCOUNT_LOCKED, "帳號已鎖定，請稍後再試");
+        }
+
         // 驗證密碼
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             log.warn("登入失敗：密碼錯誤 username={}", req.getUsername());
+            int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
+            AdminUser lockUpdate = new AdminUser();
+            lockUpdate.setId(user.getId());
+            lockUpdate.setFailedLoginAttempts(attempts);
+            if (attempts >= 5) {
+                lockUpdate.setLockedUntil(LocalDateTime.now().plusMinutes(15));
+                log.warn("🔒 後台帳號已鎖定 15 分鐘: username={}", req.getUsername());
+            }
+            adminUserMapper.updateByPrimaryKeySelective(lockUpdate);
             throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
         }
         
@@ -88,6 +102,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             throw new BusinessException(ErrorCodes.AUTH_ACCOUNT_DISABLED, "帳號已停用");
         }
         
+        // 重設失敗次數
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+
         // 取得角色列表
         List<String> roles = getUserRoles(user.getId());
         

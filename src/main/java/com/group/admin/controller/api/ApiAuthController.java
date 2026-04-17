@@ -4,10 +4,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.group.admin.util.SecurityUtils;
 
 import com.group.admin.entity.User;
 import com.group.admin.req.AuthGoogleReq;
@@ -186,5 +189,29 @@ public class ApiAuthController {
                 "error", e.getMessage()
             ));
         }
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "登出", description = "使前台用戶 token 失效")
+    public ResponseEntity<Void> logout() {
+        String userId = SecurityUtils.getCurrentApiUserId();
+        userService.logout(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/verify-email")
+    @Operation(summary = "Email 驗證", description = "使用驗證連結完成 Email 驗證")
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {
+        boolean ok = userService.verifyEmail(token);
+        if (!ok) throw new IllegalArgumentException("驗證連結已失效或不存在");
+        return ResponseEntity.ok(Map.of("message", "Email 驗證成功"));
+    }
+
+    @PostMapping("/resend-verification")
+    @Operation(summary = "重新發送驗證郵件", description = "重新發送 Email 驗證郵件")
+    public ResponseEntity<Void> resendVerification() {
+        String userId = SecurityUtils.getCurrentApiUserId();
+        userService.resendVerificationEmail(userId);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,6 +1,7 @@
 package com.group.admin.service;
 
 import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.req.user.FrontendUserCondition;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.FrontendUserRes;
@@ -67,4 +68,14 @@ public interface FrontendUserService {
      * @param id 會員 ID
      */
     void suspendUser(String id);
+
+    /**
+     * 解鎖帳號
+     */
+    void unlockUser(String userId);
+
+    /**
+     * 調整點數
+     */
+    void adjustUserCoin(String userId, CoinAdjustReq req);
 }

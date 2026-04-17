@@ -23,6 +23,7 @@ import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.UserMapper;
+import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.util.JwtUtil;
 
 import jakarta.servlet.FilterChain;
@@ -52,6 +53,7 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
     private final AdminUserMapper adminUserMapper;
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
+    private final UserTokenBlacklistService userTokenBlacklistService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -106,7 +108,7 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
             authenticateAdmin(request, email);
         } else {
             log.info("🔑 [ApiJwtAuthenticationFilter] 執行前台使用者認證: {}", email);
-            authenticateUser(request, email);
+            authenticateUser(request, email, token);
         }
 
         filterChain.doFilter(request, response);
@@ -181,8 +183,17 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
     /**
      * 認證前台使用者
      */
-    private void authenticateUser(HttpServletRequest request, String email) {
+    private void authenticateUser(HttpServletRequest request, String email, String token) {
         try {
+            String userId = jwtUtil.getUserId(token);
+            Integer tokenGen = getTokenGen(token);
+            if (userId != null && tokenGen != null) {
+                int currentGen = userTokenBlacklistService.getBlacklistGen(userId);
+                if (tokenGen < currentGen) {
+                    log.warn("🚫 用戶 token 已失效 (gen mismatch): email={}", email);
+                    return;
+                }
+            }
             UserExample example = new UserExample();
             example.createCriteria().andEmailEqualTo(email);
             List<User> users = userMapper.selectByExample(example);
@@ -213,6 +224,15 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
             
         } catch (Exception e) {
             log.error("❌ [API] 前台使用者認證失敗: {}", e.getMessage(), e);
+        }
+    }
+
+    private Integer getTokenGen(String token) {
+        try {
+            Long gen = jwtUtil.getGen(token);
+            return gen != null ? gen.intValue() : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 
