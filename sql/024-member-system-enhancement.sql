@@ -2,15 +2,59 @@
 -- Feature 024: 會員系統完善
 -- ============================================================
 
--- 1. user 表新增帳號鎖定欄位
-ALTER TABLE `user`
-    ADD COLUMN IF NOT EXISTS `failed_login_attempts` INT         NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS `locked_until`          DATETIME    DEFAULT NULL;
+-- 1. user 表新增帳號鎖定欄位（使用條件邏輯避免重複新增）
+DELIMITER $$
+CREATE PROCEDURE IF NOT EXISTS add_user_lockout_columns()
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN END;
+    
+    IF NOT EXISTS(
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'user' AND TABLE_SCHEMA = DATABASE() 
+        AND COLUMN_NAME = 'failed_login_attempts'
+    ) THEN
+        ALTER TABLE `user` ADD COLUMN `failed_login_attempts` INT NOT NULL DEFAULT 0;
+    END IF;
+    
+    IF NOT EXISTS(
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'user' AND TABLE_SCHEMA = DATABASE() 
+        AND COLUMN_NAME = 'locked_until'
+    ) THEN
+        ALTER TABLE `user` ADD COLUMN `locked_until` DATETIME DEFAULT NULL;
+    END IF;
+END$$
+DELIMITER ;
 
--- 2. admin_user 表新增帳號鎖定欄位
-ALTER TABLE `admin_user`
-    ADD COLUMN IF NOT EXISTS `failed_login_attempts` INT         NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS `locked_until`          DATETIME    DEFAULT NULL;
+CALL add_user_lockout_columns();
+DROP PROCEDURE IF EXISTS add_user_lockout_columns;
+
+-- 2. admin_user 表新增帳號鎖定欄位（使用條件邏輯避免重複新增）
+DELIMITER $$
+CREATE PROCEDURE IF NOT EXISTS add_admin_user_lockout_columns()
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN END;
+    
+    IF NOT EXISTS(
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'admin_user' AND TABLE_SCHEMA = DATABASE() 
+        AND COLUMN_NAME = 'failed_login_attempts'
+    ) THEN
+        ALTER TABLE `admin_user` ADD COLUMN `failed_login_attempts` INT NOT NULL DEFAULT 0;
+    END IF;
+    
+    IF NOT EXISTS(
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'admin_user' AND TABLE_SCHEMA = DATABASE() 
+        AND COLUMN_NAME = 'locked_until'
+    ) THEN
+        ALTER TABLE `admin_user` ADD COLUMN `locked_until` DATETIME DEFAULT NULL;
+    END IF;
+END$$
+DELIMITER ;
+
+CALL add_admin_user_lockout_columns();
+DROP PROCEDURE IF EXISTS add_admin_user_lockout_columns;
 
 -- 3. user_token_blacklist（前台 token 世代計數器，與後台 admin_token_blacklist 對稱）
 CREATE TABLE IF NOT EXISTS `user_token_blacklist` (
