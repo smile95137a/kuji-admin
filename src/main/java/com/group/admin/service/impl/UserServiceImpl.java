@@ -23,6 +23,8 @@ import com.group.admin.res.referral.ReferralCodeRes;
 import com.group.admin.service.EmailService;
 import com.group.admin.service.ReferralCodeService;
 import com.group.admin.service.UserService;
+import com.group.admin.service.LoginHistoryService;
+import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,8 @@ public class UserServiceImpl implements UserService {
     private final JwtUtil jwtUtil;
     private final ReferralCodeService referralCodeService;
     private final EmailService emailService;
+    private final LoginHistoryService loginHistoryService;
+    private final UserTokenBlacklistService userTokenBlacklistService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${google.client-id:}")
@@ -143,18 +147,42 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
         }
 
+        // 帳號鎖定檢查
+        if (user.getLockedUntil() != null && LocalDateTime.now().isBefore(user.getLockedUntil())) {
+            loginHistoryService.record(user.getId(), "user", "EMAIL", "LOCKED", "帳號已鎖定", null, null);
+            throw new IllegalArgumentException("帳號已鎖定，請於 " + user.getLockedUntil().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " 後再試");
+        }
+
         // 檢查是否為 OAuth 用戶（沒有密碼或 provider 不是 EMAIL）
         if (!"EMAIL".equals(user.getProvider())) {
             throw new IllegalArgumentException("Please use " + user.getProvider() + " to login");
         }
 
+        // Email 驗證檢查（EMAIL provider 才需要）
+        if (user.getEmailVerified() == null || user.getEmailVerified() == 0) {
+            throw new IllegalArgumentException("請先完成 Email 驗證");
+        }
+
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+            int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
+            User lockUpdate = new User();
+            lockUpdate.setId(user.getId());
+            lockUpdate.setFailedLoginAttempts(attempts);
+            if (attempts >= 5) {
+                lockUpdate.setLockedUntil(LocalDateTime.now().plusMinutes(15));
+                log.warn("🔒 用戶帳號已鎖定 15 分鐘: email={}", req.getEmail());
+            }
+            userMapper.updateByPrimaryKeySelective(lockUpdate);
+            loginHistoryService.record(user.getId(), "user", "EMAIL", "FAILED", "密碼錯誤", null, null);
             throw new IllegalArgumentException("Invalid email or password");
         }
 
-        // 更新最後登入時間
+        // 重設失敗次數並更新最後登入時間
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
         user.setLastLoginAt(LocalDateTime.now());
-        userMapper.updateByPrimaryKeySelective(user);
+        userMapper.updateByPrimaryKey(user);
+        loginHistoryService.record(user.getId(), "user", "EMAIL", "SUCCESS", null, null, null);
 
         // 生成 Token（包含 userId 和 userType）
         String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"));
@@ -382,5 +410,47 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updateUser(User user) {
         userMapper.updateByPrimaryKey(user);
+    }
+
+    @Override
+    public void logout(String userId) {
+        userTokenBlacklistService.invalidateUserTokens(userId);
+        log.info("✅ 前台用戶已登出: userId={}", userId);
+    }
+
+    @Override
+    public boolean verifyEmail(String token) {
+        UserExample example = new UserExample();
+        example.createCriteria()
+            .andEmailVerificationTokenEqualTo(token)
+            .andEmailVerificationExpiresGreaterThan(LocalDateTime.now());
+        List<User> users = userMapper.selectByExample(example);
+        if (users.isEmpty()) return false;
+        User user = users.get(0);
+        User update = new User();
+        update.setId(user.getId());
+        update.setEmailVerified((byte) 1);
+        update.setEmailVerificationToken(null);
+        update.setEmailVerificationExpires(null);
+        userMapper.updateByPrimaryKeySelective(update);
+        log.info("✅ Email 驗證成功: userId={}", user.getId());
+        return true;
+    }
+
+    @Override
+    public void resendVerificationEmail(String userId) {
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) throw new IllegalArgumentException("用戶不存在");
+        if (user.getEmailVerified() != null && user.getEmailVerified() == 1) {
+            throw new IllegalArgumentException("Email 已完成驗證");
+        }
+        String verificationToken = UUID.randomUUID().toString();
+        User update = new User();
+        update.setId(userId);
+        update.setEmailVerificationToken(verificationToken);
+        update.setEmailVerificationExpires(LocalDateTime.now().plusHours(24));
+        userMapper.updateByPrimaryKeySelective(update);
+        emailService.sendVerificationEmail(user.getEmail(), user.getNickname(), verificationToken);
+        log.info("✅ 重新發送驗證郵件: userId={}", userId);
     }
 }

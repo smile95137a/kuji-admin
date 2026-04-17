@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.UserTokenBlacklistMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.UserTokenBlacklist">
+    <id column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="blacklist_gen" jdbcType="INTEGER" property="blacklistGen" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    user_id, blacklist_gen, updated_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.UserTokenBlacklistExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from user_token_blacklist
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from user_token_blacklist
+    where user_id = #{userId,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from user_token_blacklist
+    where user_id = #{userId,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.UserTokenBlacklistExample">
+    delete from user_token_blacklist
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.UserTokenBlacklist">
+    insert into user_token_blacklist (user_id, blacklist_gen, updated_at)
+    values (#{userId,jdbcType=VARCHAR}, #{blacklistGen,jdbcType=INTEGER}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.UserTokenBlacklist">
+    insert into user_token_blacklist
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="blacklistGen != null">
+        blacklist_gen,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="blacklistGen != null">
+        #{blacklistGen,jdbcType=INTEGER},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.UserTokenBlacklistExample" resultType="java.lang.Long">
+    select count(*) from user_token_blacklist
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update user_token_blacklist
+    <set>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.blacklistGen != null">
+        blacklist_gen = #{row.blacklistGen,jdbcType=INTEGER},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update user_token_blacklist
+    set user_id = #{row.userId,jdbcType=VARCHAR},
+      blacklist_gen = #{row.blacklistGen,jdbcType=INTEGER},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.UserTokenBlacklist">
+    update user_token_blacklist
+    <set>
+      <if test="blacklistGen != null">
+        blacklist_gen = #{blacklistGen,jdbcType=INTEGER},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where user_id = #{userId,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.UserTokenBlacklist">
+    update user_token_blacklist
+    set blacklist_gen = #{blacklistGen,jdbcType=INTEGER},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where user_id = #{userId,jdbcType=VARCHAR}
+  </update>
+  <insert id="upsert" parameterType="com.group.admin.entity.UserTokenBlacklist">
+    INSERT INTO user_token_blacklist (user_id, blacklist_gen, updated_at)
+    VALUES (#{userId,jdbcType=VARCHAR}, #{blacklistGen,jdbcType=INTEGER}, NOW())
+    ON DUPLICATE KEY UPDATE blacklist_gen = blacklist_gen + 1, updated_at = NOW()
+  </insert>
+  <update id="incrementBlacklistGen" parameterType="java.lang.String">
+    INSERT INTO user_token_blacklist (user_id, blacklist_gen, updated_at)
+    VALUES (#{userId,jdbcType=VARCHAR}, 1, NOW())
+    ON DUPLICATE KEY UPDATE blacklist_gen = blacklist_gen + 1, updated_at = NOW()
+  </update>
+</mapper>

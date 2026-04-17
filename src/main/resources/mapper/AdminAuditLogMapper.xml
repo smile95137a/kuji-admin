@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.AdminAuditLogMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.AdminAuditLog">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="operator_id" jdbcType="VARCHAR" property="operatorId" />
+    <result column="operator_name" jdbcType="VARCHAR" property="operatorName" />
+    <result column="action" jdbcType="VARCHAR" property="action" />
+    <result column="target_type" jdbcType="VARCHAR" property="targetType" />
+    <result column="target_id" jdbcType="VARCHAR" property="targetId" />
+    <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.AdminAuditLog">
+    <result column="before_value" jdbcType="LONGVARCHAR" property="beforeValue" />
+    <result column="after_value" jdbcType="LONGVARCHAR" property="afterValue" />
+    <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, operator_id, operator_name, action, target_type, target_id, ip_address, created_at
+  </sql>
+  <sql id="Blob_Column_List">
+    before_value, after_value, remark
+  </sql>
+  <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.AdminAuditLogExample" resultMap="ResultMapWithBLOBs">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from admin_audit_log
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByExample" parameterType="com.group.admin.example.AdminAuditLogExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from admin_audit_log
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from admin_audit_log
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from admin_audit_log
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.AdminAuditLogExample">
+    delete from admin_audit_log
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.AdminAuditLog">
+    insert into admin_audit_log (id, operator_id, operator_name,
+      action, target_type, target_id,
+      ip_address, created_at, before_value,
+      after_value, remark
+      )
+    values (#{id,jdbcType=VARCHAR}, #{operatorId,jdbcType=VARCHAR}, #{operatorName,jdbcType=VARCHAR},
+      #{action,jdbcType=VARCHAR}, #{targetType,jdbcType=VARCHAR}, #{targetId,jdbcType=VARCHAR},
+      #{ipAddress,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{beforeValue,jdbcType=LONGVARCHAR},
+      #{afterValue,jdbcType=LONGVARCHAR}, #{remark,jdbcType=LONGVARCHAR}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.AdminAuditLog">
+    insert into admin_audit_log
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="operatorId != null">
+        operator_id,
+      </if>
+      <if test="operatorName != null">
+        operator_name,
+      </if>
+      <if test="action != null">
+        action,
+      </if>
+      <if test="targetType != null">
+        target_type,
+      </if>
+      <if test="targetId != null">
+        target_id,
+      </if>
+      <if test="ipAddress != null">
+        ip_address,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="beforeValue != null">
+        before_value,
+      </if>
+      <if test="afterValue != null">
+        after_value,
+      </if>
+      <if test="remark != null">
+        remark,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="operatorId != null">
+        #{operatorId,jdbcType=VARCHAR},
+      </if>
+      <if test="operatorName != null">
+        #{operatorName,jdbcType=VARCHAR},
+      </if>
+      <if test="action != null">
+        #{action,jdbcType=VARCHAR},
+      </if>
+      <if test="targetType != null">
+        #{targetType,jdbcType=VARCHAR},
+      </if>
+      <if test="targetId != null">
+        #{targetId,jdbcType=VARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="beforeValue != null">
+        #{beforeValue,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="afterValue != null">
+        #{afterValue,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="remark != null">
+        #{remark,jdbcType=LONGVARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.AdminAuditLogExample" resultType="java.lang.Long">
+    select count(*) from admin_audit_log
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update admin_audit_log
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.operatorId != null">
+        operator_id = #{row.operatorId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.operatorName != null">
+        operator_name = #{row.operatorName,jdbcType=VARCHAR},
+      </if>
+      <if test="row.action != null">
+        action = #{row.action,jdbcType=VARCHAR},
+      </if>
+      <if test="row.targetType != null">
+        target_type = #{row.targetType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.targetId != null">
+        target_id = #{row.targetId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.ipAddress != null">
+        ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.beforeValue != null">
+        before_value = #{row.beforeValue,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="row.afterValue != null">
+        after_value = #{row.afterValue,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="row.remark != null">
+        remark = #{row.remark,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExampleWithBLOBs" parameterType="map">
+    update admin_audit_log
+    set id = #{row.id,jdbcType=VARCHAR},
+      operator_id = #{row.operatorId,jdbcType=VARCHAR},
+      operator_name = #{row.operatorName,jdbcType=VARCHAR},
+      action = #{row.action,jdbcType=VARCHAR},
+      target_type = #{row.targetType,jdbcType=VARCHAR},
+      target_id = #{row.targetId,jdbcType=VARCHAR},
+      ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      before_value = #{row.beforeValue,jdbcType=LONGVARCHAR},
+      after_value = #{row.afterValue,jdbcType=LONGVARCHAR},
+      remark = #{row.remark,jdbcType=LONGVARCHAR}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update admin_audit_log
+    set id = #{row.id,jdbcType=VARCHAR},
+      operator_id = #{row.operatorId,jdbcType=VARCHAR},
+      operator_name = #{row.operatorName,jdbcType=VARCHAR},
+      action = #{row.action,jdbcType=VARCHAR},
+      target_type = #{row.targetType,jdbcType=VARCHAR},
+      target_id = #{row.targetId,jdbcType=VARCHAR},
+      ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.AdminAuditLog">
+    update admin_audit_log
+    <set>
+      <if test="operatorId != null">
+        operator_id = #{operatorId,jdbcType=VARCHAR},
+      </if>
+      <if test="operatorName != null">
+        operator_name = #{operatorName,jdbcType=VARCHAR},
+      </if>
+      <if test="action != null">
+        action = #{action,jdbcType=VARCHAR},
+      </if>
+      <if test="targetType != null">
+        target_type = #{targetType,jdbcType=VARCHAR},
+      </if>
+      <if test="targetId != null">
+        target_id = #{targetId,jdbcType=VARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        ip_address = #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="beforeValue != null">
+        before_value = #{beforeValue,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="afterValue != null">
+        after_value = #{afterValue,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="remark != null">
+        remark = #{remark,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.AdminAuditLog">
+    update admin_audit_log
+    set operator_id = #{operatorId,jdbcType=VARCHAR},
+      operator_name = #{operatorName,jdbcType=VARCHAR},
+      action = #{action,jdbcType=VARCHAR},
+      target_type = #{targetType,jdbcType=VARCHAR},
+      target_id = #{targetId,jdbcType=VARCHAR},
+      ip_address = #{ipAddress,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      before_value = #{beforeValue,jdbcType=LONGVARCHAR},
+      after_value = #{afterValue,jdbcType=LONGVARCHAR},
+      remark = #{remark,jdbcType=LONGVARCHAR}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.AdminAuditLog">
+    update admin_audit_log
+    set operator_id = #{operatorId,jdbcType=VARCHAR},
+      operator_name = #{operatorName,jdbcType=VARCHAR},
+      action = #{action,jdbcType=VARCHAR},
+      target_type = #{targetType,jdbcType=VARCHAR},
+      target_id = #{targetId,jdbcType=VARCHAR},
+      ip_address = #{ipAddress,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>

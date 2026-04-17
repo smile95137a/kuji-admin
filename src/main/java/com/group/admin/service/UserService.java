@@ -59,4 +59,19 @@ public interface UserService {
      * 更新使用者資料
      */
     void updateUser(User user);
+
+    /**
+     * 登出（使前台 token 失效）
+     */
+    void logout(String userId);
+
+    /**
+     * 驗證 Email（使用 token）
+     */
+    boolean verifyEmail(String token);
+
+    /**
+     * 重新發送 Email 驗證郵件
+     */
+    void resendVerificationEmail(String userId);
 }

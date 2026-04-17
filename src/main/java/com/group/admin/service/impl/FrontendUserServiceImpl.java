@@ -6,6 +6,7 @@ import com.group.admin.example.UserExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.req.user.FrontendUserCondition;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.FrontendUserRes;
@@ -254,5 +255,39 @@ public class FrontendUserServiceImpl implements FrontendUserService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    @Override
+    public void unlockUser(String userId) {
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) throw new BusinessException("用戶不存在");
+        User update = new User();
+        update.setId(userId);
+        update.setFailedLoginAttempts(0);
+        userMapper.updateByPrimaryKeySelective(update);
+        // Use full update to clear lockedUntil to null
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userMapper.updateByPrimaryKey(user);
+        log.info("✅ 前台用戶帳號已解鎖: userId={}", userId);
+    }
+
+    @Override
+    public void adjustUserCoin(String userId, CoinAdjustReq req) {
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) throw new BusinessException("用戶不存在");
+        if ("GOLD".equals(req.getCoinType())) {
+            long newGold = (user.getGoldCoins() == null ? 0L : user.getGoldCoins()) + req.getAmount();
+            if (newGold < 0) throw new BusinessException("金幣餘額不足");
+            user.setGoldCoins(newGold);
+        } else if ("BONUS".equals(req.getCoinType())) {
+            long newBonus = (user.getBonusCoins() == null ? 0L : user.getBonusCoins()) + req.getAmount();
+            if (newBonus < 0) throw new BusinessException("紅利不足");
+            user.setBonusCoins(newBonus);
+        } else {
+            throw new BusinessException("coinType 不合法，只支援 GOLD / BONUS");
+        }
+        userMapper.updateByPrimaryKey(user);
+        log.info("✅ 點數調整成功: userId={}, coinType={}, amount={}", userId, req.getCoinType(), req.getAmount());
     }
 }

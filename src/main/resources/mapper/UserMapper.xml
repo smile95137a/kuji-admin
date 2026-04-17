@@ -36,6 +36,8 @@
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
     <result column="total_recharged" jdbcType="BIGINT" property="totalRecharged" />
     <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="failed_login_attempts" jdbcType="INTEGER" property="failedLoginAttempts" />
+    <result column="locked_until" jdbcType="TIMESTAMP" property="lockedUntil" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -101,7 +103,7 @@
     district, address_detail, invoice_type, invoice_email, carrier_code, tax_id, company_name, 
     referral_code, referred_store_id, email_verification_token, email_verification_expires, 
     password_reset_token, password_reset_expires, last_login_at, created_at, updated_at, 
-    total_recharged, version
+    total_recharged, version, failed_login_attempts, locked_until
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.UserExample" resultMap="BaseResultMap">
     select
@@ -147,7 +149,7 @@
       email_verification_expires, password_reset_token, 
       password_reset_expires, last_login_at, 
       created_at, updated_at, total_recharged, 
-      version)
+      version, failed_login_attempts, locked_until)
     values (#{id,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR}, #{nickname,jdbcType=VARCHAR}, 
       #{password,jdbcType=VARCHAR}, #{avatar,jdbcType=VARCHAR}, #{provider,jdbcType=VARCHAR}, 
       #{providerId,jdbcType=VARCHAR}, #{goldCoins,jdbcType=BIGINT}, #{bonusCoins,jdbcType=BIGINT}, 
@@ -160,9 +162,9 @@
       #{emailVerificationExpires,jdbcType=TIMESTAMP}, #{passwordResetToken,jdbcType=VARCHAR}, 
       #{passwordResetExpires,jdbcType=TIMESTAMP}, #{lastLoginAt,jdbcType=TIMESTAMP}, 
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{totalRecharged,jdbcType=BIGINT}, 
-      #{version,jdbcType=INTEGER})
+      #{version,jdbcType=INTEGER}, #{failedLoginAttempts,jdbcType=INTEGER}, #{lockedUntil,jdbcType=TIMESTAMP})
   </insert>
-  <insert id="insertSelective" parameterType="com.group.admin.entity.User">
+  <insert id="insertSelective"parameterType="com.group.admin.entity.User">
     insert into `user`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -266,6 +268,12 @@
       </if>
       <if test="version != null">
         version,
+      </if>
+      <if test="failedLoginAttempts != null">
+        failed_login_attempts,
+      </if>
+      <if test="lockedUntil != null">
+        locked_until,
       </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
@@ -371,9 +379,15 @@
       <if test="version != null">
         #{version,jdbcType=INTEGER},
       </if>
+      <if test="failedLoginAttempts != null">
+        #{failedLoginAttempts,jdbcType=INTEGER},
+      </if>
+      <if test="lockedUntil != null">
+        #{lockedUntil,jdbcType=TIMESTAMP},
+      </if>
     </trim>
   </insert>
-  <select id="countByExample" parameterType="com.group.admin.example.UserExample" resultType="java.lang.Long">
+  <select id="countByExample"parameterType="com.group.admin.example.UserExample" resultType="java.lang.Long">
     select count(*) from `user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
@@ -484,6 +498,12 @@
       <if test="row.version != null">
         version = #{row.version,jdbcType=INTEGER},
       </if>
+      <if test="row.failedLoginAttempts != null">
+        failed_login_attempts = #{row.failedLoginAttempts,jdbcType=INTEGER},
+      </if>
+      <if test="row.lockedUntil != null">
+        locked_until = #{row.lockedUntil,jdbcType=TIMESTAMP},
+      </if>
     </set>
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
@@ -524,7 +544,9 @@
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
       total_recharged = #{row.totalRecharged,jdbcType=BIGINT},
-      version = #{row.version,jdbcType=INTEGER}
+      version = #{row.version,jdbcType=INTEGER},
+      failed_login_attempts = #{row.failedLoginAttempts,jdbcType=INTEGER},
+      locked_until = #{row.lockedUntil,jdbcType=TIMESTAMP}
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -631,6 +653,12 @@
       <if test="version != null">
         version = #{version,jdbcType=INTEGER},
       </if>
+      <if test="failedLoginAttempts != null">
+        failed_login_attempts = #{failedLoginAttempts,jdbcType=INTEGER},
+      </if>
+      <if test="lockedUntil != null">
+        locked_until = #{lockedUntil,jdbcType=TIMESTAMP},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -668,7 +696,9 @@
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       total_recharged = #{totalRecharged,jdbcType=BIGINT},
-      version = #{version,jdbcType=INTEGER}
+      version = #{version,jdbcType=INTEGER},
+      failed_login_attempts = #{failedLoginAttempts,jdbcType=INTEGER},
+      locked_until = #{lockedUntil,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 

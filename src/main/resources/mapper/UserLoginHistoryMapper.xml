@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.UserLoginHistoryMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.UserLoginHistory">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="user_type" jdbcType="VARCHAR" property="userType" />
+    <result column="login_time" jdbcType="TIMESTAMP" property="loginTime" />
+    <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
+    <result column="device_info" jdbcType="VARCHAR" property="deviceInfo" />
+    <result column="login_method" jdbcType="VARCHAR" property="loginMethod" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="fail_reason" jdbcType="VARCHAR" property="failReason" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_id, user_type, login_time, ip_address, device_info, login_method, status,
+    fail_reason, created_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.UserLoginHistoryExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    'true' as QUERYID,
+    <include refid="Base_Column_List" />
+    from user_login_history
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from user_login_history
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from user_login_history
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.UserLoginHistoryExample">
+    delete from user_login_history
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.UserLoginHistory">
+    insert into user_login_history (id, user_id, user_type,
+      login_time, ip_address, device_info,
+      login_method, status, fail_reason,
+      created_at
+      )
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{userType,jdbcType=VARCHAR},
+      #{loginTime,jdbcType=TIMESTAMP}, #{ipAddress,jdbcType=VARCHAR}, #{deviceInfo,jdbcType=VARCHAR},
+      #{loginMethod,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{failReason,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.UserLoginHistory">
+    insert into user_login_history
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="userType != null">
+        user_type,
+      </if>
+      <if test="loginTime != null">
+        login_time,
+      </if>
+      <if test="ipAddress != null">
+        ip_address,
+      </if>
+      <if test="deviceInfo != null">
+        device_info,
+      </if>
+      <if test="loginMethod != null">
+        login_method,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="failReason != null">
+        fail_reason,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="userType != null">
+        #{userType,jdbcType=VARCHAR},
+      </if>
+      <if test="loginTime != null">
+        #{loginTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="ipAddress != null">
+        #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="deviceInfo != null">
+        #{deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="loginMethod != null">
+        #{loginMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="failReason != null">
+        #{failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.UserLoginHistoryExample" resultType="java.lang.Long">
+    select count(*) from user_login_history
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update user_login_history
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userId != null">
+        user_id = #{row.userId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.userType != null">
+        user_type = #{row.userType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.loginTime != null">
+        login_time = #{row.loginTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.ipAddress != null">
+        ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="row.deviceInfo != null">
+        device_info = #{row.deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="row.loginMethod != null">
+        login_method = #{row.loginMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.failReason != null">
+        fail_reason = #{row.failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update user_login_history
+    set id = #{row.id,jdbcType=VARCHAR},
+      user_id = #{row.userId,jdbcType=VARCHAR},
+      user_type = #{row.userType,jdbcType=VARCHAR},
+      login_time = #{row.loginTime,jdbcType=TIMESTAMP},
+      ip_address = #{row.ipAddress,jdbcType=VARCHAR},
+      device_info = #{row.deviceInfo,jdbcType=VARCHAR},
+      login_method = #{row.loginMethod,jdbcType=VARCHAR},
+      status = #{row.status,jdbcType=VARCHAR},
+      fail_reason = #{row.failReason,jdbcType=VARCHAR},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.UserLoginHistory">
+    update user_login_history
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=VARCHAR},
+      </if>
+      <if test="userType != null">
+        user_type = #{userType,jdbcType=VARCHAR},
+      </if>
+      <if test="loginTime != null">
+        login_time = #{loginTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="ipAddress != null">
+        ip_address = #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="deviceInfo != null">
+        device_info = #{deviceInfo,jdbcType=VARCHAR},
+      </if>
+      <if test="loginMethod != null">
+        login_method = #{loginMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="failReason != null">
+        fail_reason = #{failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.UserLoginHistory">
+    update user_login_history
+    set user_id = #{userId,jdbcType=VARCHAR},
+      user_type = #{userType,jdbcType=VARCHAR},
+      login_time = #{loginTime,jdbcType=TIMESTAMP},
+      ip_address = #{ipAddress,jdbcType=VARCHAR},
+      device_info = #{deviceInfo,jdbcType=VARCHAR},
+      login_method = #{loginMethod,jdbcType=VARCHAR},
+      status = #{status,jdbcType=VARCHAR},
+      fail_reason = #{failReason,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>

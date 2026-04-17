@@ -142,4 +142,24 @@ public class AdminUser {
     public void setRemark(String remark) {
         this.remark = remark == null ? null : remark.trim();
     }
+
+    private Integer failedLoginAttempts;
+
+    private LocalDateTime lockedUntil;
+
+    public Integer getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(Integer failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public LocalDateTime getLockedUntil() {
+        return lockedUntil;
+    }
+
+    public void setLockedUntil(LocalDateTime lockedUntil) {
+        this.lockedUntil = lockedUntil;
+    }
 }

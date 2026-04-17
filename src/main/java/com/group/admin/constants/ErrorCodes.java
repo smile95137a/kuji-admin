@@ -68,6 +68,11 @@ public final class ErrorCodes {
      */
     public static final String AUTH_ACCOUNT_PENDING = "AUTH_ACCOUNT_002";
 
+    /**
+     * 帳號已鎖定
+     */
+    public static final String AUTH_ACCOUNT_LOCKED = "AUTH_ACCOUNT_003";
+
     // ==================== 使用者錯誤 (USER) ====================
     
     /**

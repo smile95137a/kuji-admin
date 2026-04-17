@@ -4,7 +4,10 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.user.FrontendUserCondition;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.FrontendUserRes;
+import com.group.admin.entity.UserLoginHistory;
+import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.service.FrontendUserService;
+import com.group.admin.service.LoginHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,6 +36,7 @@ import java.util.List;
 public class AdminFrontendUserController {
     
     private final FrontendUserService frontendUserService;
+    private final LoginHistoryService loginHistoryService;
     
     /**
      * 查詢前台會員列表
@@ -152,6 +156,30 @@ public class AdminFrontendUserController {
         
         frontendUserService.suspendUser(id);
         
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id:[a-f0-9\\-]{36}}/login-history")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "取得會員登入歷史", description = "查詢前台會員的登入記錄")
+    public ResponseEntity<List<UserLoginHistory>> getLoginHistory(@PathVariable String id) {
+        return ResponseEntity.ok(loginHistoryService.getHistory(id, "user", 50));
+    }
+
+    @PostMapping("/{id:[a-f0-9\\-]{36}}/unlock")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "解鎖帳號", description = "解除前台會員的帳號鎖定")
+    public ResponseEntity<Void> unlockUser(@PathVariable String id) {
+        frontendUserService.unlockUser(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id:[a-f0-9\\-]{36}}/coin-adjust")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "調整點數", description = "調整前台會員的金幣或紅利")
+    public ResponseEntity<Void> adjustCoin(@PathVariable String id,
+                                            @Valid @RequestBody CoinAdjustReq req) {
+        frontendUserService.adjustUserCoin(id, req);
         return ResponseEntity.ok().build();
     }
 }
