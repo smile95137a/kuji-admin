@@ -164,7 +164,7 @@
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{totalRecharged,jdbcType=BIGINT}, 
       #{version,jdbcType=INTEGER}, #{failedLoginAttempts,jdbcType=INTEGER}, #{lockedUntil,jdbcType=TIMESTAMP})
   </insert>
-  <insert id="insertSelective"parameterType="com.group.admin.entity.User">
+  <insert id="insertSelective" parameterType="com.group.admin.entity.User">
     insert into `user`
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -387,7 +387,7 @@
       </if>
     </trim>
   </insert>
-  <select id="countByExample"parameterType="com.group.admin.example.UserExample" resultType="java.lang.Long">
+  <select id="countByExample" parameterType="com.group.admin.example.UserExample" resultType="java.lang.Long">
     select count(*) from `user`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
