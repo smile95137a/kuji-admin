@@ -55,6 +55,7 @@ public class GlobalExceptionHandler {
         HttpStatus status = switch (ex.getErrorCode()) {
             case "USERNAME_CONFLICT", "CONFLICT", "ORDER_STATUS_CONFLICT" -> HttpStatus.CONFLICT;
             case "ACTIVE_LOTTERIES" -> HttpStatus.CONFLICT;
+            case "EMAIL_PROVIDER_CONFLICT" -> HttpStatus.CONFLICT;  // OAuth 帳號衝突 → 409
             case "NOT_FOUND" -> HttpStatus.NOT_FOUND;
             case "ORDER_ACCESS_DENIED", "FORBIDDEN" -> HttpStatus.FORBIDDEN;
             default -> HttpStatus.BAD_REQUEST;

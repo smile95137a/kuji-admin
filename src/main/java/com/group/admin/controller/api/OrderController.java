@@ -6,6 +6,7 @@ import com.group.admin.req.order.CreateOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.res.order.OrderDetailRes;
+import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.service.OrderService;
 import com.group.admin.util.SecurityUtils;
@@ -33,11 +34,11 @@ public class OrderController {
      * 驗證所有 prizeBoxIds 屬於當前使用者且狀態為 IN_BOX，按店家自動拆單
      */
     @PostMapping("/ship")
-    public ResponseEntity<List<String>> createOrder(@Valid @RequestBody CreateOrderReq req) {
+    public ResponseEntity<List<OrderPaymentInitRes>> createOrder(@Valid @RequestBody CreateOrderReq req) {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("🛒 [API] 建立訂單：userId={}, prizeBoxCount={}", userId, req.getPrizeBoxIds().size());
-        List<String> orderIds = orderService.createOrder(userId, req);
-        return ResponseEntity.ok(orderIds);
+        List<OrderPaymentInitRes> results = orderService.createOrdersFromPrizeBoxWithPayment(userId, req);
+        return ResponseEntity.ok(results);
     }
 
     /**

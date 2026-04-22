@@ -3,6 +3,7 @@ package com.group.admin.controller.api;
 import com.group.admin.req.prizebox.PrizeBoxRecycleReq;
 import com.group.admin.req.prizebox.PrizeBoxShipReq;
 import com.group.admin.res.PageResult;
+import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.prizebox.PrizeBoxItemRes;
 import com.group.admin.res.prizebox.PrizeBoxSummaryRes;
 import com.group.admin.res.prizebox.RecycleResultRes;
@@ -76,13 +77,13 @@ public class PrizeBoxController {
      * 出貨（將選定的獎品產生訂單）
      */
     @PostMapping("/ship")
-    public ResponseEntity<List<String>> shipPrizes(@Valid @RequestBody PrizeBoxShipReq req) {
+    public ResponseEntity<List<OrderPaymentInitRes>> shipPrizes(@Valid @RequestBody PrizeBoxShipReq req) {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("🔍 [API] 出貨獎品：userId={}, prizeBoxIds={}", userId, req.getPrizeBoxIds());
 
-        List<String> orderIds = prizeBoxService.shipPrizes(userId, req);
+        List<OrderPaymentInitRes> orderResults = prizeBoxService.shipPrizes(userId, req);
 
-        return ResponseEntity.ok(orderIds);
+        return ResponseEntity.ok(orderResults);
     }
 
     /**

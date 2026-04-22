@@ -8,8 +8,11 @@
     <result column="store_id" jdbcType="VARCHAR" property="storeId" />
     <result column="total_items" jdbcType="INTEGER" property="totalItems" />
     <result column="shipping_method" jdbcType="VARCHAR" property="shippingMethod" />
+    <result column="shipping_method_id" jdbcType="VARCHAR" property="shippingMethodId" />
+    <result column="shipping_fee" jdbcType="BIGINT" property="shippingFee" />
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="payment_status" jdbcType="VARCHAR" property="paymentStatus" />
+    <result column="payment_method" jdbcType="VARCHAR" property="paymentMethod" />
     <result column="recipient_name" jdbcType="VARCHAR" property="recipientName" />
     <result column="recipient_phone" jdbcType="VARCHAR" property="recipientPhone" />
     <result column="recipient_address" jdbcType="VARCHAR" property="recipientAddress" />
@@ -17,6 +20,8 @@
     <result column="store_name" jdbcType="VARCHAR" property="storeName" />
     <result column="store_address" jdbcType="VARCHAR" property="storeAddress" />
     <result column="tracking_no" jdbcType="VARCHAR" property="trackingNo" />
+    <result column="tracking_url" jdbcType="VARCHAR" property="trackingUrl" />
+    <result column="gomypay_trade_no" jdbcType="VARCHAR" property="gomypayTradeNo" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
@@ -85,9 +90,9 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, order_number, user_id, store_id, total_items, shipping_method, status, payment_status, 
+    id, order_number, user_id, store_id, total_items, shipping_method, shipping_method_id, shipping_fee, status, payment_status, payment_method,
     recipient_name, recipient_phone, recipient_address, store_code, store_name, store_address, 
-    tracking_no, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at, 
+    tracking_no, tracking_url, gomypay_trade_no, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at,
     cancelled_by, cancel_reason
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.OrderExample" resultMap="BaseResultMap">
@@ -552,4 +557,41 @@
     FROM `order`
     <include refid="Condition_Where_Clause" />
   </select>
+
+  <select id="selectByOrderNumber" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM `order`
+    WHERE order_number = #{orderNumber}
+    LIMIT 1
+  </select>
+
+  <update id="updatePaymentInit">
+    UPDATE `order`
+    SET shipping_fee = #{shippingFee},
+        payment_method = #{paymentMethod},
+        payment_status = #{paymentStatus},
+        status = #{status},
+        gomypay_trade_no = #{gomypayTradeNo},
+        updated_at = NOW()
+    WHERE id = #{orderId}
+  </update>
+
+  <update id="markShippingPaymentSuccess">
+    UPDATE `order`
+    SET payment_status = 'PAID',
+        status = 'PENDING',
+        gomypay_trade_no = CASE WHEN #{gomypayTradeNo} IS NULL OR #{gomypayTradeNo} = '' THEN gomypay_trade_no ELSE #{gomypayTradeNo} END,
+        updated_at = NOW()
+    WHERE id = #{orderId}
+  </update>
+
+  <update id="markShippingPaymentFailed">
+    UPDATE `order`
+    SET payment_status = 'FAILED',
+        gomypay_trade_no = CASE WHEN #{gomypayTradeNo} IS NULL OR #{gomypayTradeNo} = '' THEN gomypay_trade_no ELSE #{gomypayTradeNo} END,
+        remark = CASE WHEN #{remark} IS NULL OR #{remark} = '' THEN remark ELSE #{remark} END,
+        updated_at = NOW()
+    WHERE id = #{orderId}
+  </update>
 </mapper>

@@ -115,6 +115,8 @@
         </table>
         <table tableName="store_user" domainObjectName="StoreUser" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>
+        <table tableName="shipping_method" domainObjectName="ShippingMethod" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+        </table>
         <table tableName="system_log" domainObjectName="SystemLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>
         <table tableName="system_config" domainObjectName="SystemConfig" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">

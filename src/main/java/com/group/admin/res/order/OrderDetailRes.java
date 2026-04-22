@@ -154,6 +154,11 @@ public class OrderDetailRes {
      * 總金額（元）
      */
     private Long totalAmount;
+
+    /**
+     * 付款狀態（PAYMENT_PENDING/PAID/FAILED）
+     */
+    private String paymentStatus;
     
     /**
      * 付款方式（GOLD/BONUS）

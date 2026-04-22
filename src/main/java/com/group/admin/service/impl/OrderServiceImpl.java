@@ -3,12 +3,18 @@ package com.group.admin.service.impl;
 import com.group.admin.condition.OrderCondition;
 import com.group.admin.entity.*;
 import com.group.admin.enums.OrderStatusEnum;
+import com.group.admin.enums.PaymentStatusEnum;
 import com.group.admin.example.OrderExample;
 import com.group.admin.example.OrderItemExample;
 import com.group.admin.example.OrderStatusLogExample;
 import com.group.admin.example.PrizeBoxExample;
+import com.group.admin.example.ShippingMethodExample;
 import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.gateway.ShippingCallbackResult;
+import com.group.admin.gateway.ShippingPaymentGatewayClient;
+import com.group.admin.gateway.ShippingPaymentRequest;
+import com.group.admin.gateway.ShippingPaymentResult;
 import com.group.admin.mapper.*;
 import com.group.admin.repository.OrderRepository;
 import com.group.admin.req.common.QueryReq;
@@ -20,6 +26,7 @@ import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.req.order.UpdateOrderStatusReq;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderItemRes;
+import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.res.order.StatusLogRes;
 import com.group.admin.service.OrderService;
@@ -29,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -55,8 +63,10 @@ public class OrderServiceImpl implements OrderService {
     private final StoreMapper storeMapper;
     private final UserMapper userMapper;
     private final StoreUserMapper storeUserMapper;
+    private final ShippingMethodMapper shippingMethodMapper;
     private final OrderRepository orderRepository;
     private final ConsumptionRecordService consumptionRecordService;
+    private final ShippingPaymentGatewayClient shippingPaymentGatewayClient;
 
     private static final Long SHIPPING_FEE = 60L;
 
@@ -68,114 +78,43 @@ public class OrderServiceImpl implements OrderService {
             String shippingMethod, String recipientName,
             String recipientPhone, String recipientAddress,
             String storeCode, String storeName, String storeAddress) {
-        log.info("🔍 從賞品盒建立訂單：userId={}, prizeBoxCount={}", userId, prizeBoxIds.size());
+        CreateOrderReq req = new CreateOrderReq();
+        req.setPrizeBoxIds(prizeBoxIds);
+        req.setShippingMethod(shippingMethod);
+        req.setRecipientName(recipientName);
+        req.setRecipientPhone(recipientPhone);
+        req.setRecipientAddress(recipientAddress);
+        req.setStoreCode(storeCode);
+        req.setStoreName(storeName);
+        req.setStoreAddress(storeAddress);
 
-        List<PrizeBox> prizeBoxes = prizeBoxIds.stream()
-                .map(prizeBoxMapper::selectByPrimaryKey)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        Map<String, List<PrizeBox>> groupedByStore = prizeBoxes.stream()
-                .collect(Collectors.groupingBy(PrizeBox::getStoreId));
-
-        List<String> orderIds = new ArrayList<>();
-
-        for (Map.Entry<String, List<PrizeBox>> entry : groupedByStore.entrySet()) {
-            String storeId = entry.getKey();
-            List<PrizeBox> storePrizeBoxes = entry.getValue();
-
-            Order order = new Order();
-            order.setId(UUID.randomUUID().toString());
-            order.setOrderNumber(generateOrderNumber());
-            order.setUserId(userId);
-            order.setStoreId(storeId);
-            order.setStatus(OrderStatusEnum.PENDING.getCode());
-            order.setTotalItems(storePrizeBoxes.size());
-            order.setShippingMethod(shippingMethod);
-            order.setRecipientName(recipientName);
-            order.setRecipientPhone(recipientPhone);
-            order.setRecipientAddress(recipientAddress);
-            order.setStoreCode(storeCode);
-            order.setStoreName(storeName);
-            order.setStoreAddress(storeAddress);
-            order.setTrackingNo(null);
-            order.setRemark(null);
-            order.setCreatedAt(LocalDateTime.now());
-            order.setUpdatedAt(LocalDateTime.now());
-
-            orderMapper.insert(order);
-
-            for (PrizeBox prizeBox : storePrizeBoxes) {
-                Lottery lottery = lotteryMapper.selectByPrimaryKey(prizeBox.getLotteryId());
-                LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeBox.getPrizeId());
-
-                OrderItem item = new OrderItem();
-                item.setId(UUID.randomUUID().toString());
-                item.setOrderId(order.getId());
-                item.setPrizeBoxId(prizeBox.getId());
-                item.setLotteryId(prizeBox.getLotteryId());
-                item.setLotteryTitle(lottery != null ? lottery.getTitle() : "未知商品");
-                item.setLotteryImageUrl(lottery != null ? lottery.getImageUrl() : null);
-                item.setPrizeId(prizeBox.getPrizeId());
-                item.setPrizeName(prize != null ? prize.getName() : "未知獎品");
-                item.setPrizeImageUrl(prize != null ? prize.getImageUrl() : null);
-                item.setPrizeLevel(prize != null ? prize.getLevel() : null);
-                item.setCreatedAt(LocalDateTime.now());
-
-                orderItemMapper.insert(item);
-
-                prizeBox.setOrderId(order.getId());
-                prizeBoxMapper.updateByPrimaryKey(prizeBox);
-            }
-
-            recordStatusLog(order.getId(), null, OrderStatusEnum.PENDING.getCode(),
-                    null, null, null);
-
-            consumptionRecordService.recordConsumption(
-                userId,
-                "SHIPPING_FEE",
-                null,
-                null,
-                order.getId(),
-                order.getOrderNumber(),
-                SHIPPING_FEE,
-                0L,
-                String.format("訂單運費：%s（配送方式：%s）", order.getOrderNumber(), order.getShippingMethod())
-            );
-
-            orderIds.add(order.getId());
-        }
-
-        log.info("✅ 訂單建立完成：orderCount={}，總運費={}元", orderIds.size(), orderIds.size() * SHIPPING_FEE);
-        return orderIds;
+        List<OrderPaymentInitRes> initResults = createOrdersFromPrizeBoxWithPayment(userId, req);
+        return initResults.stream().map(OrderPaymentInitRes::getOrderId).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public List<String> createOrdersFromPrizeBox(String userId, CreateOrderReq req) {
-        log.info("🔍 從賞品盒建立訂單（DTO）：userId={}, prizeBoxCount={}", userId, req.getPrizeBoxIds().size());
+        List<OrderPaymentInitRes> initResults = createOrdersFromPrizeBoxWithPayment(userId, req);
+        return initResults.stream().map(OrderPaymentInitRes::getOrderId).collect(Collectors.toList());
+    }
 
-        // 驗證賞品盒所有權與狀態
-        List<PrizeBox> prizeBoxes = new ArrayList<>();
-        for (String boxId : req.getPrizeBoxIds()) {
-            PrizeBox box = prizeBoxMapper.selectByPrimaryKey(boxId);
-            if (box == null) {
-                throw new BusinessException("賞品盒不存在：" + boxId);
-            }
-            if (!userId.equals(box.getUserId())) {
-                throw new BusinessException("賞品盒不屬於當前玩家：" + boxId);
-            }
-            if (!"IN_BOX".equals(box.getStatus())) {
-                throw new BusinessException("賞品盒狀態不允許出貨：" + boxId);
-            }
-            prizeBoxes.add(box);
+    @Override
+    @Transactional
+    public List<OrderPaymentInitRes> createOrdersFromPrizeBoxWithPayment(String userId, CreateOrderReq req) {
+        log.info("🔍 從賞品盒建立訂單（含支付）：userId={}, prizeBoxCount={}", userId, req.getPrizeBoxIds().size());
+
+        ShippingMethod shippingMethod = resolveShippingMethod(req);
+        Long shippingFee = shippingMethod.getFee() != null ? shippingMethod.getFee() : SHIPPING_FEE;
+
+        if (req.getShippingFee() != null && !shippingFee.equals(req.getShippingFee())) {
+            throw new BusinessException("運費資訊已更新，請重新確認配送方式後再送出");
         }
 
-        // 按店家分組
-        Map<String, List<PrizeBox>> groupedByStore = prizeBoxes.stream()
-                .collect(Collectors.groupingBy(PrizeBox::getStoreId));
+        List<PrizeBox> prizeBoxes = validateAndLoadPrizeBoxes(userId, req.getPrizeBoxIds());
+        Map<String, List<PrizeBox>> groupedByStore = prizeBoxes.stream().collect(Collectors.groupingBy(PrizeBox::getStoreId));
 
-        List<String> orderIds = new ArrayList<>();
+        List<OrderPaymentInitRes> results = new ArrayList<>();
 
         for (Map.Entry<String, List<PrizeBox>> entry : groupedByStore.entrySet()) {
             String storeId = entry.getKey();
@@ -186,9 +125,10 @@ public class OrderServiceImpl implements OrderService {
             order.setOrderNumber(generateOrderNumber());
             order.setUserId(userId);
             order.setStoreId(storeId);
-            order.setStatus(OrderStatusEnum.PENDING.getCode());
+            order.setStatus(OrderStatusEnum.PAYMENT_PENDING.getCode());
+            order.setPaymentStatus(PaymentStatusEnum.PAYMENT_PENDING.getCode());
             order.setTotalItems(storePrizeBoxes.size());
-            order.setShippingMethod(req.getShippingMethod());
+            order.setShippingMethod(shippingMethod.getCode());
             order.setRecipientName(req.getRecipientName());
             order.setRecipientPhone(req.getRecipientPhone());
             order.setRecipientAddress(req.getRecipientAddress());
@@ -197,7 +137,6 @@ public class OrderServiceImpl implements OrderService {
             order.setStoreAddress(req.getStoreAddress());
             order.setCreatedAt(LocalDateTime.now());
             order.setUpdatedAt(LocalDateTime.now());
-
             orderMapper.insert(order);
 
             List<OrderItem> items = new ArrayList<>();
@@ -228,14 +167,24 @@ public class OrderServiceImpl implements OrderService {
                 orderItemMapper.batchInsertOrderItems(items);
             }
 
-            recordStatusLog(order.getId(), null, OrderStatusEnum.PENDING.getCode(),
+            ShippingPaymentResult paymentResult = initShippingPayment(order, shippingFee, shippingMethod, userId);
+            recordStatusLog(order.getId(), null, OrderStatusEnum.PAYMENT_PENDING.getCode(),
                     userId, "USER", null);
 
-            orderIds.add(order.getId());
+            results.add(OrderPaymentInitRes.builder()
+                    .orderId(order.getId())
+                    .orderNumber(order.getOrderNumber())
+                    .shippingFee(shippingFee)
+                    .paymentStatus(paymentResult.isSuccess()
+                            ? PaymentStatusEnum.PAYMENT_PENDING.getCode()
+                            : PaymentStatusEnum.FAILED.getCode())
+                    .paymentUrl(paymentResult.getPayUrl())
+                    .gatewayTradeNo(paymentResult.getGatewayTradeNo())
+                    .build());
         }
 
-        log.info("✅ 訂單建立完成：orderCount={}", orderIds.size());
-        return orderIds;
+        log.info("✅ 訂單建立完成（含支付初始化）：orderCount={}", results.size());
+        return results;
     }
 
     // ==================== 訂單查詢 ====================
@@ -583,7 +532,121 @@ public class OrderServiceImpl implements OrderService {
         log.info("✅ 出貨資訊已更新");
     }
 
+    @Override
+    @Transactional
+    public void handleShippingPaymentCallback(ShippingCallbackResult callbackResult) {
+        if (callbackResult == null || isBlank(callbackResult.getOrderNumber())) {
+            throw new BusinessException("付款回調資料不完整");
+        }
+
+        Order order = orderMapper.selectByOrderNumber(callbackResult.getOrderNumber());
+        if (order == null) {
+            throw new BusinessException("找不到對應訂單：" + callbackResult.getOrderNumber());
+        }
+
+        if (callbackResult.isSuccess()) {
+            orderMapper.markShippingPaymentSuccess(order.getId(), callbackResult.getGatewayTradeNo());
+
+            if (OrderStatusEnum.PAYMENT_PENDING.getCode().equals(order.getStatus())) {
+                recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_PENDING.getCode(), OrderStatusEnum.PENDING.getCode(),
+                        null, "SYSTEM", "GoMyPay 付款成功");
+            }
+            log.info("✅ 運費付款成功：orderId={}, orderNo={}", order.getId(), order.getOrderNumber());
+            return;
+        }
+
+        String errorMessage = callbackResult.getErrorMessage();
+        orderMapper.markShippingPaymentFailed(order.getId(), callbackResult.getGatewayTradeNo(), errorMessage);
+        log.warn("⚠️ 運費付款失敗：orderId={}, orderNo={}, reason={}",
+                order.getId(), order.getOrderNumber(), errorMessage);
+    }
+
     // ==================== 內部輔助方法 ====================
+
+    private List<PrizeBox> validateAndLoadPrizeBoxes(String userId, List<String> prizeBoxIds) {
+        List<PrizeBox> prizeBoxes = new ArrayList<>();
+        for (String boxId : prizeBoxIds) {
+            PrizeBox box = prizeBoxMapper.selectByPrimaryKey(boxId);
+            if (box == null) {
+                throw new BusinessException("賞品盒不存在：" + boxId);
+            }
+            if (!userId.equals(box.getUserId())) {
+                throw new BusinessException("賞品盒不屬於當前玩家：" + boxId);
+            }
+            if (!"IN_BOX".equals(box.getStatus())) {
+                throw new BusinessException("賞品盒狀態不允許出貨：" + boxId);
+            }
+            prizeBoxes.add(box);
+        }
+        return prizeBoxes;
+    }
+
+    private ShippingMethod resolveShippingMethod(CreateOrderReq req) {
+        ShippingMethod shippingMethod = null;
+
+        if (isNotBlank(req.getShippingMethodId())) {
+            shippingMethod = shippingMethodMapper.selectByPrimaryKey(req.getShippingMethodId());
+        }
+
+        if (shippingMethod == null && isNotBlank(req.getShippingMethod())) {
+            ShippingMethodExample example = new ShippingMethodExample();
+            example.createCriteria().andCodeEqualTo(req.getShippingMethod());
+            List<ShippingMethod> methods = shippingMethodMapper.selectByExample(example);
+            if (!methods.isEmpty()) {
+                shippingMethod = methods.get(0);
+            }
+        }
+
+        if (shippingMethod == null) {
+            throw new BusinessException("運送方式不存在");
+        }
+        if (!"ACTIVE".equals(shippingMethod.getStatus())) {
+            throw new BusinessException("運送方式已停用");
+        }
+        return shippingMethod;
+    }
+
+    private ShippingPaymentResult initShippingPayment(Order order, Long shippingFee, ShippingMethod shippingMethod, String userId) {
+        User user = userMapper.selectByPrimaryKey(userId);
+        ShippingPaymentRequest paymentRequest = ShippingPaymentRequest.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .amount(BigDecimal.valueOf(shippingFee))
+                .buyerName(reqValue(order.getRecipientName(), user != null ? user.getNickname() : null, "玩家"))
+                .buyerEmail(user != null ? user.getEmail() : null)
+                .buyerPhone(reqValue(order.getRecipientPhone(), null, ""))
+                .itemDescription("訂單運費 " + order.getOrderNumber() + "（" + shippingMethod.getName() + "）")
+                .build();
+
+        ShippingPaymentResult paymentResult = shippingPaymentGatewayClient.createPayment(paymentRequest);
+
+        if (paymentResult != null && paymentResult.isSuccess()) {
+            orderMapper.updatePaymentInit(order.getId(), shippingFee, "GOMYPAY",
+                    PaymentStatusEnum.PAYMENT_PENDING.getCode(), OrderStatusEnum.PAYMENT_PENDING.getCode(),
+                    paymentResult.getGatewayTradeNo());
+            return paymentResult;
+        }
+
+        String failedReason = paymentResult != null ? paymentResult.getErrorMessage() : "建立付款單失敗";
+        orderMapper.updatePaymentInit(order.getId(), shippingFee, "GOMYPAY",
+                PaymentStatusEnum.FAILED.getCode(), OrderStatusEnum.PAYMENT_PENDING.getCode(), null);
+        orderMapper.markShippingPaymentFailed(order.getId(), null, failedReason);
+
+        return ShippingPaymentResult.builder()
+                .success(false)
+                .errorMessage(failedReason)
+                .build();
+    }
+
+    private String reqValue(String primary, String secondary, String fallback) {
+        if (isNotBlank(primary)) {
+            return primary;
+        }
+        if (isNotBlank(secondary)) {
+            return secondary;
+        }
+        return fallback;
+    }
 
     private void validateTransition(OrderStatusEnum from, OrderStatusEnum to) {
         boolean valid = switch (to) {
@@ -711,8 +774,10 @@ public class OrderServiceImpl implements OrderService {
                 .subtotal(0L)
                 .shippingFee(SHIPPING_FEE)
                 .discount(0L)
-                .totalAmount(SHIPPING_FEE)
-                .paymentMethod("GOLD")
+                .totalAmount(order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE)
+                .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE)
+                .paymentStatus(order.getPaymentStatus())
+                .paymentMethod(order.getPaymentMethod())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .shippedAt(order.getShippedAt())
@@ -743,8 +808,10 @@ public class OrderServiceImpl implements OrderService {
                 .recipientName(order.getRecipientName())
                 .recipientPhone(order.getRecipientPhone())
                 .trackingNo(order.getTrackingNo())
-                .totalAmount(SHIPPING_FEE)
-                .paymentMethod("GOLD")
+                .totalAmount(order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE)
+                .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE)
+                .paymentStatus(order.getPaymentStatus())
+                .paymentMethod(order.getPaymentMethod())
                 .createdAt(order.getCreatedAt())
                 .shippedAt(order.getShippedAt())
                 .completedAt(order.getCompletedAt())

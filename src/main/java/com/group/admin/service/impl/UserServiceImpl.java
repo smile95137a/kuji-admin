@@ -243,6 +243,15 @@ public class UserServiceImpl implements UserService {
                 userMapper.insert(user);
                 log.info("Google OAuth 新用戶註冊: {}, userId={}", email, user.getId());
             } else {
+                // ✅ 帳號衝突檢查：EMAIL provider 帳號不能用 Google 登入（雙向不混用原則）
+                if (!"GOOGLE".equals(user.getProvider())) {
+                    log.warn("⚠️ 帳號衝突：email={} 已使用 {} 方式註冊，試圖用 Google 登入", email, user.getProvider());
+                    throw new com.group.admin.exception.BusinessException(
+                        "EMAIL_PROVIDER_CONFLICT",
+                        "此 Email 已用 Email/密碼方式註冊，請改用密碼登入"
+                    );
+                }
+
                 // ✅ 檢查會員狀態（停用或刪除的會員不能登入）
                 if ("INACTIVE".equals(user.getStatus())) {
                     throw new IllegalArgumentException("帳號已被停用，請聯繫客服");
@@ -254,20 +263,10 @@ public class UserServiceImpl implements UserService {
                     throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
                 }
 
-                // 已存在用戶
-                if ("EMAIL".equals(user.getProvider())) {
-                    // 如果是本地帳號，可以選擇綁定 Google 或拒絕
-                    // 這裡選擇允許 Google 登入並更新 provider 資訊
-                    user.setProvider("GOOGLE");
-                    user.setProviderId(googleId);
-                    if (user.getAvatar() == null && picture != null) {
-                        user.setAvatar(picture);
-                    }
-                }
                 // 更新登入時間
                 user.setLastLoginAt(LocalDateTime.now());
                 userMapper.updateByPrimaryKeySelective(user);
-                log.info("Google OAuth 用戶登入: {}", email);
+                log.info("✅ Google OAuth 用戶登入: {}", email);
             }
 
             // 生成 Token

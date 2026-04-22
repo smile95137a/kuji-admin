@@ -9,6 +9,7 @@ import com.group.admin.mapper.*;
 import com.group.admin.req.prizebox.PrizeBoxRecycleReq;
 import com.group.admin.req.prizebox.PrizeBoxShipReq;
 import com.group.admin.res.PageResult;
+import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.prizebox.PrizeBoxItemRes;
 import com.group.admin.res.prizebox.PrizeBoxSummaryRes;
 import com.group.admin.res.prizebox.RecycleResultRes;
@@ -105,7 +106,7 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
 
     @Override
     @Transactional
-    public List<String> shipPrizes(String userId, PrizeBoxShipReq req) {
+    public List<OrderPaymentInitRes> shipPrizes(String userId, PrizeBoxShipReq req) {
         log.info("🔍 出貨獎品：userId={}, prizeBoxIds={}", userId, req.getPrizeBoxIds());
 
         // 優先使用已儲存地址
@@ -164,31 +165,26 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
         }
 
         // 為每個店家建立訂單
-        List<String> orderIds = new ArrayList<>();
+        List<OrderPaymentInitRes> orderResults = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : groupedByStore.entrySet()) {
-            List<String> storeOrderIds = orderService.createOrdersFromPrizeBox(
-                    userId,
-                    entry.getValue(),
-                    req.getShippingMethod(),
-                    req.getRecipientName(),
-                    req.getRecipientPhone(),
-                    req.getRecipientAddress(),
-                    req.getStoreCode(),
-                    req.getStoreName(),
-                    req.getStoreAddress()
-            );
-            orderIds.addAll(storeOrderIds);
+            com.group.admin.req.order.CreateOrderReq createOrderReq = new com.group.admin.req.order.CreateOrderReq();
+            createOrderReq.setPrizeBoxIds(entry.getValue());
+            createOrderReq.setShippingMethod(req.getShippingMethod());
+            createOrderReq.setShippingMethodId(req.getShippingMethodId());
+            createOrderReq.setShippingFee(req.getShippingFee());
+            createOrderReq.setRecipientName(req.getRecipientName());
+            createOrderReq.setRecipientPhone(req.getRecipientPhone());
+            createOrderReq.setRecipientAddress(req.getRecipientAddress());
+            createOrderReq.setStoreCode(req.getStoreCode());
+            createOrderReq.setStoreName(req.getStoreName());
+            createOrderReq.setStoreAddress(req.getStoreAddress());
+
+            List<OrderPaymentInitRes> storeResults = orderService.createOrdersFromPrizeBoxWithPayment(userId, createOrderReq);
+            orderResults.addAll(storeResults);
         }
 
-        // 更新獎品盒狀態
-        for (PrizeBox prizeBox : prizeBoxes) {
-            prizeBox.setStatus(PrizeBoxStatusEnum.SHIPPED.getCode());
-            prizeBox.setShippedAt(LocalDateTime.now());
-            prizeBoxMapper.updateByPrimaryKey(prizeBox);
-        }
-
-        log.info("✅ 出貨完成：orderCount={}", orderIds.size());
-        return orderIds;
+        log.info("✅ 出貨完成（含支付初始化）：orderCount={}", orderResults.size());
+        return orderResults;
     }
 
     @Override

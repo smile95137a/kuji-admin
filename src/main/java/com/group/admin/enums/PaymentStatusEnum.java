@@ -11,9 +11,10 @@ import lombok.Getter;
 @Getter
 public enum PaymentStatusEnum implements DisplayableEnum {
 
-    PENDING("PENDING", "待支付"),
-    SUCCESS("SUCCESS", "支付成功"),
+    PAYMENT_PENDING("PAYMENT_PENDING", "待付款"),
+    PAID("PAID", "已付款"),
     FAILED("FAILED", "支付失敗"),
+    REFUNDED("REFUNDED", "已退款"),
     CANCELLED("CANCELLED", "已取消");
 
     private final String code;
