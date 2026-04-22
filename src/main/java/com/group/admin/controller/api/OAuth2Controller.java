@@ -1,21 +1,23 @@
 package com.group.admin.controller.api;
 
+import com.group.admin.req.AuthGoogleReq;
+import com.group.admin.res.AuthRes;
+import com.group.admin.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.group.admin.exception.BusinessException;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.Map;
-
 /**
- * OAuth2 認證控制器
+ * 前台 OAuth2 認證控制器
+ *
+ * <p>採前端主導（A 方案）：前端取得 Google ID Token 後 POST 給後端，
+ * 後端向 Google 驗證並簽發系統 JWT。</p>
+ *
+ * <p>後台（/admin/**）不支援 OAuth，僅前台使用。</p>
  */
 @Slf4j
 @RestController
@@ -23,28 +25,26 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OAuth2Controller {
 
-    @GetMapping("/success")
-    public ResponseEntity<Map<String, Object>> oauth2LoginSuccess(
-            @AuthenticationPrincipal OAuth2User principal) {
-        
-        if (principal == null) {
-            log.warn("OAuth2 login success but principal is null");
-            throw new BusinessException("認證失敗");
-        }
+    private final UserService userService;
 
-        String email = principal.getAttribute("email");
-        log.info("OAuth2 login success for user: {}", email != null ? email : "unknown");
-        
-        return ResponseEntity.ok(Map.of(
-            "email", principal.getAttribute("email") != null ? principal.getAttribute("email") : "",
-            "name", principal.getAttribute("name") != null ? principal.getAttribute("name") : "",
-            "message", "OAuth2 登入成功，請實作 JWT token 產生邏輯"
-        ));
-    }
-
-    @GetMapping("/failure")
-    public ResponseEntity<Map<String, String>> oauth2LoginFailure() {
-        log.error("OAuth2 login failed");
-        throw new BusinessException("OAuth2 登入失敗");
+    /**
+     * Google OAuth2 登入 / 自動註冊
+     *
+     * <p>前端取得 Google ID Token 後呼叫此 API。
+     * 後端向 Google tokeninfo endpoint 驗證 token，
+     * 查詢或建立帳號，並簽發系統 JWT。</p>
+     *
+     * <p>帳號衝突規則：同一 Email 只能有一種 provider，
+     * 若 Email 已用 local 方式註冊則回傳 409 EMAIL_PROVIDER_CONFLICT。</p>
+     *
+     * @param req 包含 Google ID Token
+     * @return AuthRes（accessToken, refreshToken, isNewUser, user）
+     */
+    @PostMapping("/google")
+    public ResponseEntity<AuthRes> googleLogin(@RequestBody AuthGoogleReq req) {
+        log.info("🔍 Google OAuth2 登入請求");
+        AuthRes res = userService.loginWithGoogle(req);
+        log.info("✅ Google OAuth2 登入成功, isNewUser={}", res.getIsNewUser());
+        return ResponseEntity.ok(res);
     }
 }

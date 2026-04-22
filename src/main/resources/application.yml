@@ -81,12 +81,22 @@ app:
   name: KUJI 一番賞
   frontend-url: http://localhost:3000
 
+jwt:
+  secret: myDevSecret123  # 開發環境預設值，正式環境應使用環境變數覆蓋
+
 payment:
   gateway:
-    provider: stub
+    provider: gomypay                   # stub | gomypay
     stub:
       always-success: true
     callback-base-url: http://localhost:8080
+    gomypay:
+      api-url: https://n.gomypay.asia/TestShopApi.aspx    # 測試環境；正式: https://n.gomypay.asia/ShopApi.aspx
+      shop-id: ${GOMYPAY_SHOP_ID:TestShopId}              # 商店代號（向 GoMyPay 申請）
+      hash-key: ${GOMYPAY_HASH_KEY:TestHashKey}           # Hash Key（向 GoMyPay 申請）
+      hash-iv: ${GOMYPAY_HASH_IV:TestHashIV}              # Hash IV（向 GoMyPay 申請）
+      return-url: ${GOMYPAY_RETURN_URL:http://localhost:3000/order/payment-result}  # 付款後跳轉前台
+      notify-url: ${GOMYPAY_NOTIFY_URL:http://localhost:8080/api/payment/callback}  # GoMyPay 非同步通知
 
 wallet:
   recharge-order:

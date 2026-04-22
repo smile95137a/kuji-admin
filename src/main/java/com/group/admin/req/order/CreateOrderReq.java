@@ -19,6 +19,12 @@ public class CreateOrderReq {
     @NotBlank(message = "請選擇配送方式")
     private String shippingMethod;
 
+    /** 運送方式 ID（建議前端優先傳） */
+    private String shippingMethodId;
+
+    /** 前端帶入運費，後端會再驗證（可選） */
+    private Long shippingFee;
+
     @NotBlank(message = "收件人姓名不可為空")
     @Size(max = 100, message = "收件人姓名不可超過 100 字元")
     private String recipientName;

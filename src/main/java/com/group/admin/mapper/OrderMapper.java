@@ -34,4 +34,20 @@ public interface OrderMapper {
     List<Order> selectByCondition(@Param("condition") OrderCondition condition);
 
     long countByCondition(@Param("condition") OrderCondition condition);
+
+    Order selectByOrderNumber(@Param("orderNumber") String orderNumber);
+
+    int updatePaymentInit(@Param("orderId") String orderId,
+                          @Param("shippingFee") Long shippingFee,
+                          @Param("paymentMethod") String paymentMethod,
+                          @Param("paymentStatus") String paymentStatus,
+                          @Param("status") String status,
+                          @Param("gomypayTradeNo") String gomypayTradeNo);
+
+    int markShippingPaymentSuccess(@Param("orderId") String orderId,
+                                   @Param("gomypayTradeNo") String gomypayTradeNo);
+
+    int markShippingPaymentFailed(@Param("orderId") String orderId,
+                                  @Param("gomypayTradeNo") String gomypayTradeNo,
+                                  @Param("remark") String remark);
 }

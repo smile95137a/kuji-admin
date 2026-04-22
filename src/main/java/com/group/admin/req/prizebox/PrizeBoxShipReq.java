@@ -27,6 +27,12 @@ public class PrizeBoxShipReq {
      */
     @NotBlank(message = "請選擇配送方式")
     private String shippingMethod;
+
+    /** 運送方式 ID（對應 shipping_method.id） */
+    private String shippingMethodId;
+
+    /** 前端帶入運費（後端仍會以 DB 為準驗證） */
+    private Long shippingFee;
     
     /**
      * 收件人姓名（若無 userAddressId 則必填）

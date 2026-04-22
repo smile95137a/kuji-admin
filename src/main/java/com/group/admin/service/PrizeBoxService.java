@@ -6,6 +6,7 @@ import com.group.admin.res.PageResult;
 import com.group.admin.res.prizebox.PrizeBoxItemRes;
 import com.group.admin.res.prizebox.PrizeBoxSummaryRes;
 import com.group.admin.res.prizebox.RecycleResultRes;
+import com.group.admin.res.order.OrderPaymentInitRes;
 
 import java.util.List;
 
@@ -53,7 +54,7 @@ public interface PrizeBoxService {
      * @param req    出貨請求（包含獎品列表、收件資訊等）
      * @return 訂單 ID 列表
      */
-    List<String> shipPrizes(String userId, PrizeBoxShipReq req);
+    List<OrderPaymentInitRes> shipPrizes(String userId, PrizeBoxShipReq req);
 
     /**
      * 回收獎品（轉換為紅利）

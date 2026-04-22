@@ -17,7 +17,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/banner")
+@RequestMapping({"/banner", "/banners"})
 @RequiredArgsConstructor
 public class BannerController {
 

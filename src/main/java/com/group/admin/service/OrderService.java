@@ -8,7 +8,9 @@ import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.UpdateOrderStatusReq;
 import com.group.admin.res.order.OrderDetailRes;
+import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.order.OrderRes;
+import com.group.admin.gateway.ShippingCallbackResult;
 
 import java.util.List;
 
@@ -20,6 +22,8 @@ public interface OrderService {
                                           String storeCode, String storeName, String storeAddress);
 
     List<String> createOrdersFromPrizeBox(String userId, CreateOrderReq req);
+
+    List<OrderPaymentInitRes> createOrdersFromPrizeBoxWithPayment(String userId, CreateOrderReq req);
 
     List<OrderRes> getOrders(QueryReq<OrderCondition> req);
 
@@ -52,6 +56,8 @@ public interface OrderService {
     }
 
     OrderRes cancelOrder(String id, OrderCancelReq req, String operatorId, String operatorType);
+
+    void handleShippingPaymentCallback(ShippingCallbackResult callbackResult);
 
     void submitShippingInfo(String orderId, com.group.admin.req.order.ShipInfoReq req, String userId);
 

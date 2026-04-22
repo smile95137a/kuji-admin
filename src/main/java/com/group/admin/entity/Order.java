@@ -15,9 +15,15 @@ public class Order {
 
     private String shippingMethod;
 
+    private String shippingMethodId;
+
+    private Long shippingFee;
+
     private String status;
 
     private String paymentStatus;
+
+    private String paymentMethod;
 
     private String recipientName;
 
@@ -32,6 +38,10 @@ public class Order {
     private String storeAddress;
 
     private String trackingNo;
+
+    private String trackingUrl;
+
+    private String gomypayTradeNo;
 
     private String remark;
 
@@ -97,6 +107,22 @@ public class Order {
         this.shippingMethod = shippingMethod == null ? null : shippingMethod.trim();
     }
 
+    public String getShippingMethodId() {
+        return shippingMethodId;
+    }
+
+    public void setShippingMethodId(String shippingMethodId) {
+        this.shippingMethodId = shippingMethodId == null ? null : shippingMethodId.trim();
+    }
+
+    public Long getShippingFee() {
+        return shippingFee;
+    }
+
+    public void setShippingFee(Long shippingFee) {
+        this.shippingFee = shippingFee;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -111,6 +137,14 @@ public class Order {
 
     public void setPaymentStatus(String paymentStatus) {
         this.paymentStatus = paymentStatus == null ? null : paymentStatus.trim();
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod == null ? null : paymentMethod.trim();
     }
 
     public String getRecipientName() {
@@ -167,6 +201,22 @@ public class Order {
 
     public void setTrackingNo(String trackingNo) {
         this.trackingNo = trackingNo == null ? null : trackingNo.trim();
+    }
+
+    public String getTrackingUrl() {
+        return trackingUrl;
+    }
+
+    public void setTrackingUrl(String trackingUrl) {
+        this.trackingUrl = trackingUrl == null ? null : trackingUrl.trim();
+    }
+
+    public String getGomypayTradeNo() {
+        return gomypayTradeNo;
+    }
+
+    public void setGomypayTradeNo(String gomypayTradeNo) {
+        this.gomypayTradeNo = gomypayTradeNo == null ? null : gomypayTradeNo.trim();
     }
 
     public String getRemark() {

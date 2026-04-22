@@ -1,0 +1,198 @@
+# 08 - 報表與統計分析
+
+> **路由前綴**：`/admin/report`  
+> **允許角色**：ADMIN / STORE_OWNER（StoreEditor 無法查看報表）
+
+---
+
+## 資料隔離
+
+- **ADMIN**：可查詢任何店家的報表，`condition.storeId` 選填
+- **STORE_OWNER**：只能查詢自己店家，`storeId` 後端強制注入，前端傳了也無效
+
+---
+
+## 營業額報表
+
+```
+POST /api/admin/report/revenue
+Authorization: Bearer {token}
+```
+
+### 請求
+```typescript
+interface RevenueReportCondition {
+  storeId?: string;         // Admin 可選；StoreOwner 後端自動注入
+  startDate?: string;       // 開始日期（YYYY-MM-DD）
+  endDate?: string;         // 結束日期（YYYY-MM-DD）
+  groupBy?: 'DAY' | 'WEEK' | 'MONTH';  // 統計維度（預設 DAY）
+}
+```
+
+### 回應
+```typescript
+interface RevenueReportRes {
+  summary: {
+    totalRevenue: number;         // 總營業額（金幣）
+    totalOrders: number;          // 總訂單數
+    totalDraws: number;           // 總抽獎次數
+    avgRevenuePerDay: number;
+  };
+  daily: {
+    date: string;                 // YYYY-MM-DD
+    revenue: number;
+    orderCount: number;
+    drawCount: number;
+  }[];
+  byStore?: {                     // Admin 才有，依店家分群
+    storeId: string;
+    storeName: string;
+    revenue: number;
+    orderCount: number;
+  }[];
+}
+```
+
+---
+
+## 開獎結果報表
+
+```
+POST /api/admin/report/lottery-result
+Authorization: Bearer {token}
+```
+
+### 請求
+```typescript
+interface LotteryResultReportCondition {
+  storeId?: string;
+  lotteryId?: string;   // 篩選特定商品
+  startDate?: string;
+  endDate?: string;
+}
+```
+
+### 回應
+```typescript
+interface LotteryResultReportRes {
+  summary: {
+    totalDraws: number;
+    totalGrandPrizes: number;     // 大賞出現次數
+    completionRate: number;       // 商品完銷率（%）
+  };
+  prizeStats: {                   // 各獎品抽取統計
+    prizeId: string;
+    prizeName: string;
+    prizeLevel: string;
+    totalQuantity: number;
+    drawnQuantity: number;
+    remainingQuantity: number;
+    drawRate: number;             // 已抽出率（%）
+  }[];
+  lotteryStats: {                 // 各商品統計
+    lotteryId: string;
+    lotteryTitle: string;
+    totalDraws: number;
+    revenue: number;
+    isCompleted: boolean;
+  }[];
+}
+```
+
+---
+
+## 推薦碼報表
+
+```
+POST /api/admin/report/referral
+Authorization: Bearer {token}
+```
+
+### 請求
+```typescript
+interface ReferralReportCondition {
+  storeId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+```
+
+### 回應
+```typescript
+interface ReferralReportRes {
+  summary: {
+    totalReferrals: number;       // 推薦總次數
+    activeReferralCodes: number;  // 啟用中推薦碼數
+    totalRewardGiven: number;     // 累計發放紅利點數
+  };
+  daily: {
+    date: string;
+    referralCount: number;
+    rewardGiven: number;
+  }[];
+  ranking: {                      // 推薦碼排行（前 10）
+    referralCode: string;
+    ownerName: string;
+    referralCount: number;
+    rewardGiven: number;
+  }[];
+}
+```
+
+---
+
+## 儲值報表
+
+```
+POST /api/admin/report/recharge
+Authorization: Bearer {token}（需 ADMIN）
+```
+
+### 請求
+```typescript
+interface RechargeReportCondition {
+  startDate?: string;
+  endDate?: string;
+  planId?: string;  // 篩選特定儲值方案
+}
+```
+
+### 回應
+```typescript
+interface RechargeReportRes {
+  summary: {
+    totalAmount: number;    // 實際收入金額（台幣）
+    totalGoldIssued: number;// 發放金幣總數
+    totalBonusIssued: number;
+    orderCount: number;
+  };
+  daily: {
+    date: string;
+    amount: number;
+    goldIssued: number;
+    orderCount: number;
+  }[];
+  planStats: {              // 各儲值方案統計
+    planId: string;
+    planName: string;
+    amount: number;
+    orderCount: number;
+  }[];
+}
+```
+
+---
+
+## 前端 UI 建議
+
+### 報表頁面
+- 日期範圍快捷選項：今天/本週/本月/上月/自訂
+- 圖表：
+  - 折線圖（日期 × 營業額）
+  - 長條圖（各商品業績比較）
+  - 圓餅圖（獎品等級分佈）
+- 表格支援匯出（CSV / Excel）
+
+### 注意事項
+- 所有金額單位為**金幣**（不是台幣），除了儲值報表的 `amount` 是台幣
+- `remaining` 欄位代表庫存，若需換算比率使用 `drawnQuantity / totalQuantity`

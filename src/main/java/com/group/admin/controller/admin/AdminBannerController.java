@@ -33,6 +33,14 @@ public class AdminBannerController {
         return ResponseEntity.ok(bannerService.queryBanners(req));
     }
 
+    /** GET /admin/banners — backward-compatible list endpoint for older clients/tests */
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_OWNER','STORE_EDITOR')")
+    public ResponseEntity<List<BannerRes>> queryBannersLegacy() {
+        log.info("📋 後台查詢 Banner 列表（legacy GET）");
+        return ResponseEntity.ok(bannerService.queryBanners(null));
+    }
+
     /** GET /admin/banners/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<BannerRes> getBannerById(@PathVariable String id) {
