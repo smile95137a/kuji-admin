@@ -22,7 +22,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/news")
+@RequestMapping("/news")
 @RequiredArgsConstructor
 @Tag(name = "前台-最新消息", description = "前台最新消息瀏覽（無需登入）")
 public class NewsController {

@@ -92,7 +92,7 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromHttpUrl(safe(properties.getApiUrl()));
         params.forEach(builder::queryParam);
-        return builder.build(true).encode(StandardCharsets.UTF_8).toUriString();
+        return builder.build(false).encode(StandardCharsets.UTF_8).toUriString();
     }
 
     private String safe(String value) {

@@ -19,7 +19,7 @@ import java.util.List;
  * 權限：公開（登入後可用）
  */
 @RestController
-@RequestMapping("/api/shipping-methods")
+@RequestMapping("/shipping-methods")
 @RequiredArgsConstructor
 @Tag(name = "前台運送方式", description = "查詢可用運送方式列表")
 public class ShippingMethodController {

@@ -17,6 +17,7 @@ import com.group.admin.entity.Role;
 import com.group.admin.entity.RoleMenu;
 import com.group.admin.entity.Store;
 import com.group.admin.entity.StoreUser;
+import com.group.admin.entity.ShippingMethod;
 import com.group.admin.entity.SystemConfig;
 import com.group.admin.entity.User;
 import com.group.admin.example.MenuExample;
@@ -28,6 +29,7 @@ import com.group.admin.mapper.LotteryPrizeMapper;
 import com.group.admin.mapper.MenuMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.RoleMenuMapper;
+import com.group.admin.mapper.ShippingMethodMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.mapper.SystemConfigMapper;
@@ -65,6 +67,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserMapper userMapper;
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
+    private final ShippingMethodMapper shippingMethodMapper;
     
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -106,6 +109,7 @@ public class DataInitializer implements CommandLineRunner {
             initializeStores();
             initializeTestUsers();
             initializeLotteries();
+            initializeShippingMethods();
             initializeSystemConfigs();
             
             log.info("========================================");
@@ -117,6 +121,41 @@ public class DataInitializer implements CommandLineRunner {
             log.error("資料初始化失敗：{}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * 初始化運送方式（可重複執行，具 idempotent）
+     */
+    private void initializeShippingMethods() {
+        log.info("初始化運送方式...");
+        insertShippingMethodIfAbsent("HOME_DELIVERY", "宅配到府", "黑貓宅急便", 100, 1);
+        insertShippingMethodIfAbsent("SEVEN_ELEVEN", "7-11 取貨", "綠界", 60, 2);
+        insertShippingMethodIfAbsent("FAMILY_MART", "全家取貨", "綠界", 60, 3);
+        log.info("✓ 運送方式初始化完成");
+    }
+
+    private void insertShippingMethodIfAbsent(String code, String name, String provider, long fee, int sortOrder) {
+        // 檢查是否已存在
+        com.group.admin.example.ShippingMethodExample example = new com.group.admin.example.ShippingMethodExample();
+        example.createCriteria().andCodeEqualTo(code);
+        if (shippingMethodMapper.countByExample(example) > 0) {
+            log.info("  ℹ️ 運送方式已存在：{}", code);
+            return;
+        }
+
+        ShippingMethod method = new ShippingMethod();
+        method.setId(UUID.randomUUID().toString());
+        method.setCode(code);
+        method.setName(name);
+        method.setProvider(provider);
+        method.setFee(fee);
+        method.setStatus("ACTIVE");
+        method.setSortOrder(sortOrder);
+        method.setCreatedAt(LocalDateTime.now());
+        method.setUpdatedAt(LocalDateTime.now());
+        
+        shippingMethodMapper.insertSelective(method);
+        log.info("  ✓ 建立運送方式：code={}, name={}, fee={}", code, name, fee);
     }
 
     /**

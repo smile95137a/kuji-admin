@@ -615,7 +615,7 @@ public class OrderServiceImpl implements OrderService {
                 .buyerName(reqValue(order.getRecipientName(), user != null ? user.getNickname() : null, "玩家"))
                 .buyerEmail(user != null ? user.getEmail() : null)
                 .buyerPhone(reqValue(order.getRecipientPhone(), null, ""))
-                .itemDescription("訂單運費 " + order.getOrderNumber() + "（" + shippingMethod.getName() + "）")
+                .itemDescription("訂單運費 " + order.getOrderNumber() + " (" + shippingMethod.getName() + ")")
                 .build();
 
         ShippingPaymentResult paymentResult = shippingPaymentGatewayClient.createPayment(paymentRequest);
