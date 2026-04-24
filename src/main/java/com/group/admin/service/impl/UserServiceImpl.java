@@ -10,9 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.group.admin.entity.User;
+import com.group.admin.exception.BusinessException;
 import com.group.admin.example.UserExample;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.AuthGoogleReq;
@@ -55,22 +57,23 @@ public class UserServiceImpl implements UserService {
     private String googleClientId;
 
     @Override
+    @Transactional
     public User register(AuthRegisterReq req) {
         // 驗證密碼確認
-        if (!req.getPassword().equals(req.getConfirmPassword())) {
+        if (!req.getPassword().equals(req.getConfirmedPassword())) {
             throw new IllegalArgumentException("密碼與確認密碼不一致");
         }
         
         // 使用 Example 模式檢查 Email 是否已存在
         User existing = findByEmail(req.getEmail());
         if (existing != null) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new BusinessException("CONFLICT", "此 Email 已被註冊");
         }
 
         User user = new User();
         user.setId(UUID.randomUUID().toString()); // 使用 UUID
         user.setEmail(req.getEmail());
-        user.setNickname(req.getNickname());
+        user.setNickname(resolveNickname(req));
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setProvider("EMAIL"); // 本地註冊
         user.setGoldCoins(0L);
@@ -148,7 +151,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthRes login(AuthLoginReq req) {
-        User user = findByEmail(req.getEmail());
+        User user = normalizeLegacyProvider(findByEmail(req.getEmail()));
         if (user == null) {
             throw new IllegalArgumentException("Invalid email or password");
         }
@@ -172,7 +175,7 @@ public class UserServiceImpl implements UserService {
 
         // 檢查是否為 OAuth 用戶（沒有密碼或 provider 不是 EMAIL）
         if (!"EMAIL".equals(user.getProvider())) {
-            throw new IllegalArgumentException("Please use " + user.getProvider() + " to login");
+            throw new IllegalArgumentException("此帳號使用 " + user.getProvider() + " 登入，請使用對應登入方式");
         }
 
         // Email 驗證檢查（EMAIL provider 才需要）
@@ -260,10 +263,11 @@ public class UserServiceImpl implements UserService {
                 userMapper.insert(user);
                 log.info("Google OAuth 新用戶註冊: {}, userId={}", email, user.getId());
             } else {
+                user = normalizeLegacyProvider(user);
                 // ✅ 帳號衝突檢查：EMAIL provider 帳號不能用 Google 登入（雙向不混用原則）
                 if (!"GOOGLE".equals(user.getProvider())) {
                     log.warn("⚠️ 帳號衝突：email={} 已使用 {} 方式註冊，試圖用 Google 登入", email, user.getProvider());
-                    throw new com.group.admin.exception.BusinessException(
+                    throw new BusinessException(
                         "EMAIL_PROVIDER_CONFLICT",
                         "此 Email 已用 Email/密碼方式註冊，請改用密碼登入"
                     );
@@ -366,7 +370,7 @@ public class UserServiceImpl implements UserService {
         log.info("📧 請求重設密碼: email={}", email);
         
         // 查詢使用者
-        User user = findByEmail(email);
+        User user = normalizeLegacyProvider(findByEmail(email));
         if (user == null) {
             // 為了安全，即使使用者不存在也不報錯
             log.warn("⚠️ 使用者不存在，但不回報錯誤: email={}", email);
@@ -468,5 +472,42 @@ public class UserServiceImpl implements UserService {
         userMapper.updateByPrimaryKeySelective(update);
         emailService.sendVerificationEmail(user.getEmail(), user.getNickname(), verificationToken);
         log.info("✅ 重新發送驗證郵件: userId={}", userId);
+    }
+
+    private String resolveNickname(AuthRegisterReq req) {
+        if (req.getNickname() != null && !req.getNickname().isBlank()) {
+            return req.getNickname().trim();
+        }
+        return req.getEmail().split("@")[0];
+    }
+
+    private User normalizeLegacyProvider(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        boolean hasPassword = user.getPassword() != null && !user.getPassword().isBlank();
+        boolean looksLikeCorruptedGoogle = "GOOGLE".equals(user.getProvider()) && hasPassword;
+        boolean looksLikeLegacyEmail = (user.getProvider() == null || user.getProvider().isBlank()) && hasPassword;
+
+        if (!looksLikeCorruptedGoogle && !looksLikeLegacyEmail) {
+            return user;
+        }
+
+        User update = new User();
+        update.setId(user.getId());
+        update.setProvider("EMAIL");
+        update.setProviderId(null);
+        if (user.getEmailVerified() == null || user.getEmailVerified() == 0) {
+            update.setEmailVerified((byte) 1);
+            user.setEmailVerified((byte) 1);
+        }
+        update.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKeySelective(update);
+
+        user.setProvider("EMAIL");
+        user.setProviderId(null);
+        log.warn("🔧 修復舊會員 provider 異常: email={}, repairedTo=EMAIL", user.getEmail());
+        return user;
     }
 }

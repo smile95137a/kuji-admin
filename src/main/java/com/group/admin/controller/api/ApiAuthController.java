@@ -61,7 +61,7 @@ public class ApiAuthController {
         log.info("用戶註冊請求: {}", req.getEmail());
         
         // 驗證密碼一致性（Controller 層額外檢查）
-        if (!req.getPassword().equals(req.getConfirmPassword())) {
+        if (!req.getPassword().equals(req.getConfirmedPassword())) {
             log.warn("密碼確認不一致: {}", req.getEmail());
             throw new IllegalArgumentException("密碼與確認密碼不一致");
         }
