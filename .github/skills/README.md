@@ -14,6 +14,17 @@
 
 開發者在編寫代碼或進行特定任務時，應該**參照相應的 SKILL**。
 
+每個 skill 至少要有 `SKILL.md`，若有需要可再拆分：
+
+```text
+skill-name/
+├── SKILL.md
+├── scripts/
+├── references/
+├── templates/
+└── assets/
+```
+
 ---
 
 ## 可用的 SKILL 列表
@@ -22,7 +33,7 @@
 |-----------|------|--------|
 | 🎰 **抽獎流程** | [draw-flow/SKILL.md](draw-flow/SKILL.md) | 實作 GACHA / OFFICIAL_ICHIBAN / SCRATCH_MODE 抽獎 |
 | 🔐 **JWT 雙鏈安全架構** | [jwt-dual-chain/SKILL.md](jwt-dual-chain/SKILL.md) | 後台/前台路由分離、認證除錯、權限管理 |
-| 🛠️ **MyBatis Generator** | [mbg-workflow/SKILL.md](mbg-workflow/SKILL.md) | Entity 新增、Mapper 生成、Example 查詢 |
+| 🛠️ **MyBatis Generator** | [mbg-workflow/SKILL.md](mbg-workflow/SKILL.md) | Entity 新增、Mapper 生成、Example 查詢、腳本化重生 |
 | 📦 **賞品盒管理** | [prize-box-management/SKILL.md](prize-box-management/SKILL.md) | 賞品盒狀態轉移、出貨、回收換紅利 |
 | 📋 **訂單生命週期** | [order-lifecycle/SKILL.md](order-lifecycle/SKILL.md) | 訂單狀態、支付、退款、多店家隔離 |
 | 🔑 **RBAC 權限系統** | [rbac-menu-setup/SKILL.md](rbac-menu-setup/SKILL.md) | 角色定義、選單樹、權限檢查 |
@@ -287,8 +298,9 @@ Controller 方法：
 快速流程：
 1. `mkdir .github/skills/my-new-skill`
 2. 選擇一個**結構相似**的現有 SKILL.md（例如 `draw-flow/SKILL.md`） **複製作為參考**
-3. 修改 YAML frontmatter（name、description） 和內容
-4. 提交 PR，請團隊審查
+3. 若 skill 有腳本、範本或補充文件，放入 `scripts/`、`templates/`、`references/`
+4. 修改 YAML frontmatter（name、description） 和內容
+5. 提交 PR，請團隊審查
 
 參考這些標準 SKILL：
 - **工作流程/架構**：[draw-flow](draw-flow/SKILL.md)、[order-lifecycle](order-lifecycle/SKILL.md)

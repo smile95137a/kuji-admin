@@ -51,7 +51,7 @@ CREATE TABLE `banner` (
 
 ## Step 2：更新 generatorConfig.xml
 
-配置檔位置：`src/main/resources/generatorConfig.xml`
+配置檔位置：`generatorConfig.xml`（專案根目錄）
 
 在 `</context>` 前新增 `<table>` 元素：
 
@@ -80,12 +80,22 @@ javaClientGenerator → com.group.admin.mapper     (XXXMapper.java 介面)
 
 ## Step 3：執行 MBG
 
-```bash
-mvn mybatis-generator:generate
+此專案**優先使用**封裝好的 PowerShell 腳本：
+
+```powershell
+.\run-mbg.ps1
 ```
 
-> ⚠️ MBG 會覆寫已存在的相同檔案，但不會刪除手動新增的方法。
-> 若 Mapper.java 已有手動自定義方法，建議先備份。
+內部實際執行的 helper 位於：
+
+```text
+.github/skills/mbg-workflow/scripts/run-mbg.ps1
+```
+
+根目錄 `run-mbg.ps1` 是相容入口，方便開發者直接在 repo root 執行。
+
+> ⚠️ 此腳本會先備份並刪除 MBG 管理的 Mapper XML，再執行 MBG，以降低重複 `ResultMap` 問題。
+> ⚠️ 如果有手寫 SQL 混在同一份 Mapper XML，重新生成後一定要人工檢查。
 
 執行後產生的檔案：
 ```
@@ -167,8 +177,11 @@ int deleteBannerByStoreId(@Param("storeId") String storeId);
 
 ## 常用命令速查
 
-```bash
-# 重新生成所有 Entity/Mapper（以 generatorConfig.xml 為準）
+```powershell
+# 建議入口：重新生成所有 Entity/Mapper
+.\run-mbg.ps1
+
+# 若只想直接跑 MBG 原生命令
 mvn mybatis-generator:generate
 
 # 建構並確認編譯通過
@@ -177,3 +190,7 @@ mvn clean package -DskipTests
 # 開發模式啟動
 mvn spring-boot:run
 ```
+
+## 參考資料
+
+- [Project workflow reference](references/workflow.md)

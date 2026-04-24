@@ -266,6 +266,10 @@ SELECT * FROM prize WHERE remaining > 0;
 ├── skills/                          # Skills 主目錄
 │   ├── skill-name-1/
 │   │   ├── SKILL.md                 # 必須有
+│   │   ├── scripts/                 # 可選：可執行腳本
+│   │   │   └── helper.ps1
+│   │   ├── references/              # 可選：補充文件
+│   │   │   └── workflow.md
 │   │   ├── examples/                # 可選：範例程式碼
 │   │   │   └── ExampleController.java
 │   │   └── templates/               # 可選：模版文件
@@ -407,6 +411,7 @@ Skill 之間避免相互依賴。如果 Skill A 參考 Skill B，使用相對連
 4. **驗證**
    - 使用本文「檢查清單」驗證
    - 在 Markdown 預覽中檢查格式
+   - 若 skill 帶腳本，確認腳本路徑與呼叫方式清楚
    - 請 code reviewer 審查
 
 5. **提交**
@@ -415,7 +420,7 @@ Skill 之間避免相互依賴。如果 Skill A 參考 Skill B，使用相對連
    git commit -m "feat(skill): add my-new-skill skill"
    ```
    
-   💡 **提示**：不要建立外部的 TEMPLATE.md 文件，直接參照現有的標準 SKILL.md
+   💡 **提示**：不要建立外部的 TEMPLATE.md 文件，直接參照現有的標準 SKILL.md；若有自動化腳本，請收斂在 skill 自己的 `scripts/` 目錄
 
 ---
 

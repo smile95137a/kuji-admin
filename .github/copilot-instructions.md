@@ -7,6 +7,29 @@ kuji-admin 專案的 Copilot 指南（中文）
 
 # kuji-admin Copilot 指南
 
+## 工作規則（短版）
+
+### 必須
+- 先遵守專案規則，再落實需求，不得用需求推翻既有分層、回傳格式、權限模型
+- 遇到**跨多檔案 / 影響 DB / 改行為**的需求時，必須先提問、先討論，再開始實作
+- 只修改**直接相關檔案**；跨模組重構、批量整理、提交 commit 前都要先確認
+- 新的 spec、功能需求或修復工作，原則上都從 `main` 切出新分支進行，不直接在 `main` 實作
+- 要合回 `main` 前，必須至少確認：測試通過、可打包、可啟動、可編譯
+- DB 異動固定走：`DDL → 套用 DB → 更新 generatorConfig.xml → .\run-mbg.ps1 → 編譯`
+- 所有文件、規則與補充說明都以**中文**為主，必要技術名詞保留英文
+
+### 建議
+- 主規則保持精簡，領域細則拆到 `instructions/` 與 `skills/`
+- 每個需求先確認邊界、輸入輸出、是否改動既有行為
+- 所有前台或後台清單查詢都應有明確排序，不依賴資料庫自然順序
+
+### 禁止
+- 禁止 AI 自行腦補需求或過度設計
+- 禁止未經討論就擴大修改範圍
+- 禁止直接在 `main` 分支上承接新的 spec 或開發需求
+- 禁止把手寫 SQL 直接混入 MBG 管理區
+- 禁止用英文為主撰寫專案內部規則文件
+
 ## 摘要
 - **技術棧**：Spring Boot 3.3.3 + Java 21 + MyBatis 3.0.5 + Spring Security + JWT
 - **啟動類**：`com.group.admin.AdminApplication`
@@ -24,7 +47,10 @@ mvn spring-boot:run
 # 或用 JAR 執行
 java -jar target/admin-1.0.0.jar
 
-# MyBatis Generator（重新生成 Entity/Mapper/Example）
+# MyBatis Generator（建議入口）
+.\run-mbg.ps1
+
+# 或直接跑 MBG
 mvn mybatis-generator:generate
 ```
 
@@ -200,7 +226,7 @@ private static final String ROLE_ADMIN = "ADMIN";       // ❌
 
 ## 開發工作流程
 
-1. **新增 Entity**：執行 MyBatis Generator（記得更新 generatorConfig.xml）
+1. **新增 Entity**：先更新根目錄 `generatorConfig.xml`，再執行 `.\run-mbg.ps1`
 2. **新增 API**：Controller → Service → Mapper/XML
 3. **測試**：使用 Postman/curl 測試，檢查 JWT token 格式
 4. **驗證**：執行 `mvn clean package -DskipTests` 確保編譯通過
