@@ -98,8 +98,25 @@ public class UserServiceImpl implements UserService {
         user.setUpdatedAt(LocalDateTime.now());
 
         userMapper.insert(user);
-        log.info("新使用者註冊成功: {}, provider: EMAIL", user.getEmail());
-        
+        log.info("✅ 新使用者註冊成功: {}, provider: EMAIL", user.getEmail());
+
+        // ✅ 發送 Email 驗證信（讓用戶登出後仍能再登入）
+        try {
+            String verificationToken = UUID.randomUUID().toString();
+            User verifyUpdate = new User();
+            verifyUpdate.setId(user.getId());
+            verifyUpdate.setEmailVerificationToken(verificationToken);
+            verifyUpdate.setEmailVerificationExpires(LocalDateTime.now().plusHours(24));
+            userMapper.updateByPrimaryKeySelective(verifyUpdate);
+            // 同步到 user 物件供後續使用
+            user.setEmailVerificationToken(verificationToken);
+            emailService.sendVerificationEmail(user.getEmail(), user.getNickname(), verificationToken);
+            log.info("📧 驗證信已發送: email={}", user.getEmail());
+        } catch (Exception e) {
+            // 驗證信發送失敗不影響註冊流程（用戶可以從前端觸發重送）
+            log.warn("⚠️ 驗證信發送失敗（不影響註冊）: email={}, error={}", user.getEmail(), e.getMessage());
+        }
+
         // ✅ 處理推薦碼（如果有提供）
         if (req.getReferralCode() != null && !req.getReferralCode().trim().isEmpty()) {
             log.info("🎁 處理推薦碼: {}", req.getReferralCode());
