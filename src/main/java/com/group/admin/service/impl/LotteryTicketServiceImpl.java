@@ -376,6 +376,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             result.add(res);
         }
         
+        result.sort(java.util.Comparator.comparing(
+                LotteryTicketRes::getTicketNumber,
+                java.util.Comparator.nullsLast(Integer::compareTo)
+        ));
         return result;
     }
 
@@ -1246,6 +1250,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         List<com.group.admin.res.lottery.TicketListResponse.TicketView> views = tickets.stream().map(t -> {
             if ("AVAILABLE".equals(t.getStatus())) {
                 return com.group.admin.res.lottery.TicketListResponse.TicketView.builder()
+                        .id(t.getId())
                         .ticketNumber(t.getTicketNumber())
                         .status(t.getStatus())
                         .build();
@@ -1264,6 +1269,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                     }
                 }
                 return com.group.admin.res.lottery.TicketListResponse.TicketView.builder()
+                        .id(t.getId())
                         .ticketNumber(t.getTicketNumber())
                         .status(t.getStatus())
                         .revealedNumber(t.getRevealedNumber())
@@ -1274,7 +1280,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                         .isGrandPrize(isGrandPrize)
                         .build();
             }
-        }).collect(Collectors.toList());
+        }).sorted(java.util.Comparator.comparing(
+                com.group.admin.res.lottery.TicketListResponse.TicketView::getTicketNumber,
+                java.util.Comparator.nullsLast(Integer::compareTo)
+        )).collect(Collectors.toList());
 
         return com.group.admin.res.lottery.TicketListResponse.builder()
                 .lotteryId(lotteryId)

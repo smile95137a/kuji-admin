@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -883,9 +884,15 @@ public class LotteryServiceImpl implements LotteryService {
         
         log.info("✅ 查詢成功: 共 {} 筆", lotteries.size());
         
-        return lotteries.stream()
+        List<LotteryRes> results = lotteries.stream()
                 .map(this::convertToResNew)
                 .collect(Collectors.toList());
+
+        if (condition != null && "ON_SHELF".equals(condition.getStatus())) {
+            sortFrontendVisibleLotteries(results);
+        }
+
+        return results;
     }
     
     /**
@@ -1307,6 +1314,45 @@ public class LotteryServiceImpl implements LotteryService {
         }
         int totalDraws = lottery.getTotalDraws() != null ? lottery.getTotalDraws() : 0;
         return Math.max(0, lottery.getMaxDraws() - totalDraws);
+    }
+
+    private void sortFrontendVisibleLotteries(List<LotteryRes> lotteries) {
+        Map<String, Integer> grandPrizeRemainingCache = new HashMap<>();
+        lotteries.sort(
+                Comparator.comparingInt((LotteryRes lottery) -> frontendDisplayPriority(lottery, grandPrizeRemainingCache))
+                        .thenComparing(LotteryRes::getOrderNum, Comparator.nullsLast(Integer::compareTo))
+                        .thenComparing(LotteryRes::getHotCount, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(LotteryRes::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+        );
+    }
+
+    private int frontendDisplayPriority(LotteryRes lottery, Map<String, Integer> grandPrizeRemainingCache) {
+        boolean onShelf = "ON_SHELF".equals(lottery.getStatus());
+        boolean soldOut = lottery.getRemainingDraws() != null && lottery.getRemainingDraws() <= 0;
+        int grandPrizeRemaining = grandPrizeRemainingCache.computeIfAbsent(
+                lottery.getId(),
+                this::countGrandPrizeRemaining
+        );
+        boolean grandPrizeSoldOut = grandPrizeRemaining <= 0 && hasAnyGrandPrizeConfigured(lottery.getId());
+
+        if (onShelf && !soldOut && !grandPrizeSoldOut) {
+            return 0;
+        }
+        if (onShelf && !soldOut) {
+            return 1;
+        }
+        if (onShelf) {
+            return 2;
+        }
+        return 3;
+    }
+
+    private boolean hasAnyGrandPrizeConfigured(String lotteryId) {
+        LotteryPrizeExample example = new LotteryPrizeExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andIsGrandPrizeEqualTo((byte) 1);
+        return lotteryPrizeMapper.countByExample(example) > 0;
     }
 
     /**

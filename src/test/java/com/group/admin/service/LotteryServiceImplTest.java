@@ -1,0 +1,152 @@
+package com.group.admin.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.group.admin.entity.Lottery;
+import com.group.admin.entity.LotteryPrize;
+import com.group.admin.example.LotteryPrizeExample;
+import com.group.admin.mapper.LotteryDrawRecordMapper;
+import com.group.admin.mapper.LotteryMapper;
+import com.group.admin.mapper.LotteryPrizeMapper;
+import com.group.admin.mapper.PointLogMapper;
+import com.group.admin.mapper.StoreMapper;
+import com.group.admin.mapper.UserMapper;
+import com.group.admin.req.common.QueryReq;
+import com.group.admin.req.lottery.LotteryCondition;
+import com.group.admin.res.lottery.LotteryRes;
+import com.group.admin.service.impl.LotteryServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("LotteryService 單元測試")
+class LotteryServiceImplTest {
+
+    @Mock private LotteryMapper lotteryMapper;
+    @Mock private LotteryPrizeMapper lotteryPrizeMapper;
+    @Mock private LotteryDrawRecordMapper drawRecordMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private PointLogMapper pointLogMapper;
+    @Mock private StoreMapper storeMapper;
+    @Mock private LotteryTicketService lotteryTicketService;
+
+    private LotteryServiceImpl lotteryService;
+
+    @BeforeEach
+    void setUp() {
+        lotteryService = new LotteryServiceImpl(
+                lotteryMapper,
+                lotteryPrizeMapper,
+                drawRecordMapper,
+                userMapper,
+                pointLogMapper,
+                new ObjectMapper(),
+                storeMapper,
+                lotteryTicketService
+        );
+    }
+
+    @Test
+    @DisplayName("前台上架列表應優先顯示大獎未抽完商品")
+    void queryLotteries_OnShelf_ShouldSortActiveBeforeGrandSoldOutAndSoldOut() {
+        Lottery soldOut = lottery("sold-out", 10, 10, 0, LocalDateTime.of(2026, 4, 1, 0, 0));
+        Lottery grandSoldOut = lottery("grand-sold-out", 10, 2, 1, LocalDateTime.of(2026, 4, 2, 0, 0));
+        Lottery active = lottery("active", 10, 2, 9, LocalDateTime.of(2026, 4, 3, 0, 0));
+
+        when(lotteryMapper.selectByExample(any())).thenReturn(List.of(soldOut, grandSoldOut, active));
+        when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class)))
+                .thenAnswer(invocation -> filterPrizes(invocation.getArgument(0)));
+        when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class)))
+                .thenAnswer(invocation -> (long) filterPrizes(invocation.getArgument(0)).size());
+
+        QueryReq<LotteryCondition> req = new QueryReq<>();
+        LotteryCondition condition = new LotteryCondition();
+        condition.setStatus("ON_SHELF");
+        req.setCondition(condition);
+
+        List<LotteryRes> result = lotteryService.queryLotteries(req);
+
+        assertThat(result).extracting(LotteryRes::getId)
+                .containsExactly("active", "grand-sold-out", "sold-out");
+    }
+
+    private Lottery lottery(String id, int maxDraws, int totalDraws, int orderNum, LocalDateTime createdAt) {
+        Lottery lottery = new Lottery();
+        lottery.setId(id);
+        lottery.setStoreId("store-1");
+        lottery.setTitle(id);
+        lottery.setCategory("OFFICIAL_ICHIBAN");
+        lottery.setPlayMode("LOTTERY_MODE");
+        lottery.setPricePerDraw(100L);
+        lottery.setStatus("ON_SHELF");
+        lottery.setMaxDraws(maxDraws);
+        lottery.setTotalDraws(totalDraws);
+        lottery.setOrderNum(orderNum);
+        lottery.setCreatedAt(createdAt);
+        lottery.setUpdatedAt(createdAt);
+        return lottery;
+    }
+
+    private List<LotteryPrize> filterPrizes(LotteryPrizeExample example) {
+        String lotteryId = null;
+        boolean grandPrizeOnlyFlag = false;
+        boolean remainingPositiveOnlyFlag = false;
+
+        for (LotteryPrizeExample.Criteria criteria : example.getOredCriteria()) {
+            for (LotteryPrizeExample.Criterion criterion : criteria.getAllCriteria()) {
+                if ("lottery_id =".equals(criterion.getCondition())) {
+                    lotteryId = (String) criterion.getValue();
+                } else if ("is_grand_prize =".equals(criterion.getCondition())) {
+                    grandPrizeOnlyFlag = Byte.valueOf((byte) 1).equals(criterion.getValue());
+                } else if ("remaining >".equals(criterion.getCondition())) {
+                    remainingPositiveOnlyFlag = true;
+                }
+            }
+        }
+
+        final boolean grandPrizeOnly = grandPrizeOnlyFlag;
+        final boolean remainingPositiveOnly = remainingPositiveOnlyFlag;
+        List<LotteryPrize> prizes = prizeData().getOrDefault(lotteryId, List.of());
+        return prizes.stream()
+                .filter(prize -> !grandPrizeOnly || (prize.getIsGrandPrize() != null && prize.getIsGrandPrize() == 1))
+                .filter(prize -> !remainingPositiveOnly || (prize.getRemaining() != null && prize.getRemaining() > 0))
+                .toList();
+    }
+
+    private Map<String, List<LotteryPrize>> prizeData() {
+        return Map.of(
+                "active", List.of(
+                        prize("active-grand", (byte) 1, 1, 1),
+                        prize("active-normal", (byte) 0, 7, 9)
+                ),
+                "grand-sold-out", List.of(
+                        prize("grand-sold-out-grand", (byte) 1, 0, 1),
+                        prize("grand-sold-out-normal", (byte) 0, 5, 9)
+                ),
+                "sold-out", List.of(
+                        prize("sold-out-grand", (byte) 1, 0, 1),
+                        prize("sold-out-normal", (byte) 0, 0, 9)
+                )
+        );
+    }
+
+    private LotteryPrize prize(String id, Byte isGrandPrize, Integer remaining, Integer quantity) {
+        LotteryPrize prize = new LotteryPrize();
+        prize.setId(id);
+        prize.setIsGrandPrize(isGrandPrize);
+        prize.setRemaining(remaining);
+        prize.setQuantity(quantity);
+        return prize;
+    }
+}

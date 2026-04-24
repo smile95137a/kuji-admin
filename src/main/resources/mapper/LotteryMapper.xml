@@ -881,10 +881,97 @@
       </if>
     </where>
     <choose>
-      <when test="sort != null and sort == 'hot'">ORDER BY l.hot_count DESC, l.created_at DESC</when>
-      <when test="sort != null and sort == 'price_asc'">ORDER BY l.price_per_draw ASC</when>
-      <when test="sort != null and sort == 'price_desc'">ORDER BY l.price_per_draw DESC</when>
-      <otherwise>ORDER BY l.order_num ASC, l.created_at DESC</otherwise>
+      <when test="sort != null and sort == 'hot'">
+        ORDER BY
+          CASE
+            WHEN COALESCE(l.max_draws, 0) &gt; 0 AND COALESCE(l.total_draws, 0) &gt;= COALESCE(l.max_draws, 0) THEN 2
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+                AND COALESCE(gp.remaining, 0) &gt; 0
+            ) THEN 0
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+            ) THEN 1
+            ELSE 0
+          END ASC,
+          l.hot_count DESC,
+          l.order_num ASC,
+          l.created_at DESC
+      </when>
+      <when test="sort != null and sort == 'price_asc'">
+        ORDER BY
+          CASE
+            WHEN COALESCE(l.max_draws, 0) &gt; 0 AND COALESCE(l.total_draws, 0) &gt;= COALESCE(l.max_draws, 0) THEN 2
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+                AND COALESCE(gp.remaining, 0) &gt; 0
+            ) THEN 0
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+            ) THEN 1
+            ELSE 0
+          END ASC,
+          l.price_per_draw ASC,
+          l.order_num ASC,
+          l.created_at DESC
+      </when>
+      <when test="sort != null and sort == 'price_desc'">
+        ORDER BY
+          CASE
+            WHEN COALESCE(l.max_draws, 0) &gt; 0 AND COALESCE(l.total_draws, 0) &gt;= COALESCE(l.max_draws, 0) THEN 2
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+                AND COALESCE(gp.remaining, 0) &gt; 0
+            ) THEN 0
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+            ) THEN 1
+            ELSE 0
+          END ASC,
+          l.price_per_draw DESC,
+          l.order_num ASC,
+          l.created_at DESC
+      </when>
+      <otherwise>
+        ORDER BY
+          CASE
+            WHEN COALESCE(l.max_draws, 0) &gt; 0 AND COALESCE(l.total_draws, 0) &gt;= COALESCE(l.max_draws, 0) THEN 2
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+                AND COALESCE(gp.remaining, 0) &gt; 0
+            ) THEN 0
+            WHEN EXISTS (
+              SELECT 1
+              FROM lottery_prize gp
+              WHERE gp.lottery_id = l.id
+                AND gp.is_grand_prize = 1
+            ) THEN 1
+            ELSE 0
+          END ASC,
+          l.order_num ASC,
+          l.created_at DESC
+      </otherwise>
     </choose>
     LIMIT #{limit} OFFSET #{offset}
   </select>

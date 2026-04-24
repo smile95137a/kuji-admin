@@ -40,6 +40,7 @@ public class TicketListResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class TicketView {
 
+        private String id;
         private Integer ticketNumber;
         private String status;
 
