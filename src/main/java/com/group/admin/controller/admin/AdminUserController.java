@@ -8,6 +8,8 @@ import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.res.common.EnumOption;
 import com.group.admin.service.AdminUserService;
+import com.group.admin.entity.User;
+import com.group.admin.service.UserService;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,6 +44,7 @@ import java.util.Map;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final UserService userService;
 
     /**
      * 建立店家負責人帳號
@@ -287,5 +290,54 @@ public class AdminUserController {
         List<EnumOption> options = adminUserService.getAllUserOptions();
         log.info("✅ [後台] 返回 {} 個用戶選項", options.size());
         return ResponseEntity.ok(options);
+    }
+
+    /**
+     * 修復前台用戶 provider 被誤改的帳號（Admin 專用，一次性修復工具）
+     *
+     * <p>問題背景：舊版程式碼在 EMAIL 帳號嘗試 Google OAuth 時，會靜默將 provider 改為 GOOGLE，
+     * 導致用戶無法再用密碼登入。本 endpoint 將指定 email 的帳號強制恢復為 EMAIL provider。</p>
+     *
+     * @param email 要修復的前台用戶 email
+     * @return 修復結果
+     */
+    @PostMapping("/repair-provider")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "修復前台用戶 provider（一次性）", description = "將被誤合併為 GOOGLE provider 的帳號還原為 EMAIL")
+    public ResponseEntity<Map<String, Object>> repairUserProvider(@RequestParam String email) {
+        log.info("🔧 [後台] 修復前台用戶 provider: email={}", email);
+
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "找不到此 Email 的用戶: " + email
+            ));
+        }
+
+        String oldProvider = user.getProvider();
+        if ("EMAIL".equals(oldProvider)) {
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "此帳號已是 EMAIL provider，無需修復",
+                "email", email,
+                "provider", oldProvider
+            ));
+        }
+
+        // 強制還原為 EMAIL provider
+        user.setProvider("EMAIL");
+        user.setProviderId(null);
+        user.setEmailVerified((byte) 1);  // 既有老帳號直接驗證
+        userService.updateUser(user);
+
+        log.info("✅ [後台] provider 修復成功: email={}, {} → EMAIL", email, oldProvider);
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "修復成功",
+            "email", email,
+            "oldProvider", oldProvider,
+            "newProvider", "EMAIL"
+        ));
     }
 }
