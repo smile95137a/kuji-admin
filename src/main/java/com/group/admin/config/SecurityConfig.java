@@ -86,6 +86,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
                         .requestMatchers("/api/ws/**").permitAll()        // WebSocket
                         .requestMatchers("/api/recharge-plan/**").permitAll()  // 儲值方案
+                        .requestMatchers("/api/recharge-plans/**").permitAll() // 儲值方案（複數路由）
+                        .requestMatchers("/api/recharge/payment-methods").permitAll() // 支付方式查詢
                         .requestMatchers("/api/shipping-methods/**").permitAll()  // 配送方式
                         .requestMatchers("/api/payment/callback", "/api/payment/callback/**").permitAll() // GoMyPay callback
                         .requestMatchers("/api/stores/list").permitAll()        // 公開店家列表（舊路由）

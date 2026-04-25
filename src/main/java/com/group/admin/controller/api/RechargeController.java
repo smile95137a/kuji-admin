@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 前台使用者儲值 API
@@ -82,6 +84,28 @@ public class RechargeController {
         return ResponseEntity.ok(res);
     }
     
+    /**
+     * 查詢可用支付方式
+     * 
+     * 前端在儲值前先呼叫此 API，取得支援的支付方式清單，
+     * 再將 code 帶入 POST /recharge 的 paymentMethod 欄位。
+     */
+    @GetMapping("/payment-methods")
+    public ResponseEntity<List<Map<String, String>>> getPaymentMethods() {
+        List<Map<String, String>> methods = List.of(
+            buildMethod("GOMYPAY", "信用卡 / 行動支付", "透過 GoMyPay 金流平台付款，支援 VISA、MasterCard、JCB 及街口、LINE Pay 等行動支付")
+        );
+        return ResponseEntity.ok(methods);
+    }
+
+    private Map<String, String> buildMethod(String code, String name, String description) {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("code", code);
+        m.put("name", name);
+        m.put("description", description);
+        return m;
+    }
+
     /**
      * 記錄支付失敗
      * 

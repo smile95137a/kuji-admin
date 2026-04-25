@@ -19,11 +19,10 @@ public class RechargeReq {
     private String planId;
     
     /**
-     * 支付方式（必填）
-     * 例：CREDIT_CARD, CONVENIENCE_STORE, TRANSFER 等
+     * 支付方式（選填，預設 GOMYPAY）
+     * 目前支援：GOMYPAY（信用卡／行動支付，由 GoMyPay 金流處理）
      */
-    @NotBlank(message = "支付方式不可為空")
-    private String paymentMethod;
+    private String paymentMethod = "GOMYPAY";
     
     /**
      * 支付備註（選填）

@@ -230,7 +230,7 @@ public class UserController {
      * @param file 圖片檔案（限制 5MB，支援 jpg/png/gif/webp）
      * @return 圖片 URL
      */
-    @PostMapping("/avatar")
+    @PostMapping({"/avatar", "/me/avatar"})
     @Operation(summary = "上傳使用者頭像", description = "上傳頭像圖片到 S3，返回圖片 URL")
     public ResponseEntity<Map<String, String>> uploadAvatar(
             @RequestParam("file") 
@@ -271,7 +271,7 @@ public class UserController {
      * @param file 圖片檔案
      * @return 更新後的使用者資訊（含新頭像 URL）
      */
-    @PostMapping("/avatar/update")
+    @PostMapping({"/avatar/update", "/me/avatar/update"})
     @Operation(summary = "上傳並更新頭像（一步完成）", description = "上傳頭像到 S3 並自動更新使用者資料")
     public ResponseEntity<UserRes> uploadAndUpdateAvatar(
             @RequestParam("file") 
