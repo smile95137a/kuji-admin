@@ -397,6 +397,7 @@ public class DataInitializer implements CommandLineRunner {
         admin.setCreatedBy(null);
         admin.setCreatedAt(LocalDateTime.now());
         admin.setUpdatedAt(LocalDateTime.now());
+        admin.setFailedLoginAttempts(0);
         adminUserMapper.insert(admin);
         assignRole(ADMIN_USER_ID, ROLE_ADMIN_ID);
 
@@ -414,6 +415,7 @@ public class DataInitializer implements CommandLineRunner {
         owner1.setRemark("測試用店家負責人");
         owner1.setCreatedAt(LocalDateTime.now());
         owner1.setUpdatedAt(LocalDateTime.now());
+        owner1.setFailedLoginAttempts(0);
         adminUserMapper.insert(owner1);
         assignRole(STORE_OWNER_1_ID, ROLE_STORE_OWNER_ID);
 
@@ -431,6 +433,7 @@ public class DataInitializer implements CommandLineRunner {
         owner2.setRemark("測試用店家負責人");
         owner2.setCreatedAt(LocalDateTime.now());
         owner2.setUpdatedAt(LocalDateTime.now());
+        owner2.setFailedLoginAttempts(0);
         adminUserMapper.insert(owner2);
         assignRole(STORE_OWNER_2_ID, ROLE_STORE_OWNER_ID);
 
@@ -448,6 +451,7 @@ public class DataInitializer implements CommandLineRunner {
         editor.setRemark("測試用店家編輯人員");
         editor.setCreatedAt(LocalDateTime.now());
         editor.setUpdatedAt(LocalDateTime.now());
+        editor.setFailedLoginAttempts(0);
         adminUserMapper.insert(editor);
         assignRole(STORE_EDITOR_1_ID, ROLE_STORE_EDITOR_ID);
 

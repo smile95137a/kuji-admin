@@ -101,6 +101,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         adminUser.setCreatedBy(currentUserId);
         adminUser.setCreatedAt(LocalDateTime.now());
         adminUser.setRemark(req.getRemark());
+        adminUser.setFailedLoginAttempts(0);
         adminUserMapper.insert(adminUser);
 
         // 綁定 StoreOwner 角色
@@ -182,6 +183,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         adminUser.setCreatedBy(currentUserId);
         adminUser.setCreatedAt(LocalDateTime.now());
         adminUser.setRemark(req.getRemark());
+        adminUser.setFailedLoginAttempts(0);
         adminUserMapper.insert(adminUser);
 
         // 綁定 StoreEditor 角色
