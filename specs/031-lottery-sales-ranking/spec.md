@@ -127,3 +127,4 @@ Admin 需要跨所有店家比較商品表現，找出平台最熱門的商品�
 | drawCount/revenue 是時間範圍篩選還是全生命期？ | **全生命期累積統計**（不受日期過濾） |
 | CANCELLED 訂單是否計入 revenue？ | **排除**，只計算有效訂單 |
 | revenue 計算方式？ | 透過 `order_item.lottery_id` JOIN `order`，不直接使用 order 表 |
+| revenue 單位？ | **金幣點數**（不轉換貨幣，例如 100 次 × 80 點 = 8000 點） |
