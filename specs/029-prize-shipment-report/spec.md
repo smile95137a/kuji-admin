@@ -132,3 +132,4 @@ Admin 需要比較各店家的出貨時效，找出效率差的店家進行輔�
 | 報表基於 Order 還是 PrizeBox？ | **Order**（有完整 PENDING/PREPARING/SHIPPED/COMPLETED 狀態） |
 | avgShipDays 計算起點？ | **新增 `preparing_at` 欄位**，計算 `preparing_at → shipped_at` |
 | CANCELLED 訂單是否計入？ | **排除** |
+| dailyDetails 每天計什麼？ | **只計 SHIPPED 狀態變更的實際出貨數**（按 shipped_at 日期分組） |
