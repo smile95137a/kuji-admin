@@ -125,3 +125,4 @@ Admin 需要了解新會員的 7 天與 30 天留存率，以評估用戶體驗�
 |------|------|
 | ARPU 包含 Gold 還是 Gold+Bonus？ | **兩者都計算但分開呈現**：`arpuGold` 和 `arpuBonus` 各自獨立 |
 | StoreEditor 可否存取？ | **僅 Admin**，店家無法查看整體會員報表 |
+| 「活躍會員」定義？ | **有任一行為即算活躍**：登入（last_login_at）OR 儲值（RECHARGE）OR 抽獎（DRAWN）OR 建立訂單（order 建立） |
