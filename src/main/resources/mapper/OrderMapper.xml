@@ -506,55 +506,61 @@
     <where>
       <if test="condition != null">
         <if test="condition.storeId != null and condition.storeId != ''">
-          AND store_id = #{condition.storeId}
+          AND o.store_id = #{condition.storeId}
         </if>
         <if test="condition.userId != null and condition.userId != ''">
-          AND user_id = #{condition.userId}
+          AND o.user_id = #{condition.userId}
+        </if>
+        <if test="condition.userKeyword != null and condition.userKeyword != ''">
+          AND (u.nickname LIKE CONCAT('%', #{condition.userKeyword}, '%')
+               OR u.email LIKE CONCAT('%', #{condition.userKeyword}, '%')
+               OR u.phone_number LIKE CONCAT('%', #{condition.userKeyword}, '%'))
         </if>
         <if test="condition.status != null and condition.status != ''">
-          AND status = #{condition.status}
+          AND o.status = #{condition.status}
         </if>
         <if test="condition.shippingStatus != null and condition.shippingStatus != ''">
-          AND status = #{condition.shippingStatus}
+          AND o.status = #{condition.shippingStatus}
         </if>
         <if test="condition.shippingMethod != null and condition.shippingMethod != ''">
-          AND shipping_method = #{condition.shippingMethod}
+          AND o.shipping_method = #{condition.shippingMethod}
         </if>
         <if test="condition.orderNo != null and condition.orderNo != ''">
-          AND order_number LIKE CONCAT('%', #{condition.orderNo}, '%')
+          AND o.order_number LIKE CONCAT('%', #{condition.orderNo}, '%')
         </if>
         <if test="condition.recipientName != null and condition.recipientName != ''">
-          AND recipient_name LIKE CONCAT('%', #{condition.recipientName}, '%')
+          AND o.recipient_name LIKE CONCAT('%', #{condition.recipientName}, '%')
         </if>
         <if test="condition.recipientPhone != null and condition.recipientPhone != ''">
-          AND recipient_phone LIKE CONCAT('%', #{condition.recipientPhone}, '%')
+          AND o.recipient_phone LIKE CONCAT('%', #{condition.recipientPhone}, '%')
         </if>
         <if test="condition.createdAtStart != null">
-          AND created_at &gt;= #{condition.createdAtStart}
+          AND o.created_at &gt;= #{condition.createdAtStart}
         </if>
         <if test="condition.createdAtEnd != null">
-          AND created_at &lt; DATE_ADD(#{condition.createdAtEnd}, INTERVAL 1 DAY)
+          AND o.created_at &lt; DATE_ADD(#{condition.createdAtEnd}, INTERVAL 1 DAY)
         </if>
         <if test="condition.keyword != null and condition.keyword != ''">
-          AND (order_number LIKE CONCAT('%', #{condition.keyword}, '%')
-               OR recipient_name LIKE CONCAT('%', #{condition.keyword}, '%')
-               OR recipient_phone LIKE CONCAT('%', #{condition.keyword}, '%'))
+          AND (o.order_number LIKE CONCAT('%', #{condition.keyword}, '%')
+               OR o.recipient_name LIKE CONCAT('%', #{condition.keyword}, '%')
+               OR o.recipient_phone LIKE CONCAT('%', #{condition.keyword}, '%'))
         </if>
       </if>
     </where>
   </sql>
 
   <select id="selectByCondition" resultMap="BaseResultMap">
-    SELECT
-    <include refid="Base_Column_List" />
-    FROM `order`
+    SELECT o.*
+    FROM `order` o
+    LEFT JOIN `user` u ON o.user_id = u.id
     <include refid="Condition_Where_Clause" />
-    ORDER BY created_at DESC
+    ORDER BY o.created_at DESC
   </select>
 
   <select id="countByCondition" resultType="java.lang.Long">
     SELECT COUNT(*)
-    FROM `order`
+    FROM `order` o
+    LEFT JOIN `user` u ON o.user_id = u.id
     <include refid="Condition_Where_Clause" />
   </select>
 

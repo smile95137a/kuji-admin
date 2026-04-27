@@ -130,6 +130,19 @@ public class AdminUserController {
     }
 
     /**
+     * 條件查詢後台帳號列表
+     */
+    @PostMapping("/list")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "條件查詢後台帳號列表", description = "支援 keyword / status / storeId / roleCode 過濾")
+    public ResponseEntity<List<AdminUserRes>> queryAdminUsers(
+            @RequestBody(required = false) com.group.admin.req.common.QueryReq<com.group.admin.req.admin.AdminUserCondition> req) {
+        log.info("條件查詢後台帳號列表");
+        List<AdminUserRes> res = adminUserService.queryAdminUsers(req);
+        return ResponseEntity.ok(res);
+    }
+
+    /**
      * 取得指定店家的所有帳號
      * 
      * @param storeId 店家 ID

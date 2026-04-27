@@ -1,5 +1,7 @@
 package com.group.admin.service;
 
+import com.group.admin.req.admin.AdminUserCondition;
+import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
@@ -49,6 +51,11 @@ public interface AdminUserService {
      * 停用帳號（由操作者指定）
      */
     void disableAdminUser(String userId, String operatorId);
+
+    /**
+     * 條件查詢後台使用者列表
+     */
+    List<AdminUserRes> queryAdminUsers(QueryReq<AdminUserCondition> req);
 
     /**
      * 取得所有後台用戶選項（用於下拉選單）

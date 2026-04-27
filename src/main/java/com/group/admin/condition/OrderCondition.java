@@ -25,6 +25,11 @@ public class OrderCondition extends BaseCondition {
     private String storeId;
     
     /**
+     * 玩家關鍵字搜尋（OR 比對 nickname / email / phone_number）
+     */
+    private String userKeyword;
+
+    /**
      * 玩家 ID
      */
     private String userId;

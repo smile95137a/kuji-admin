@@ -21,6 +21,9 @@ public class FrontendUserCondition extends BaseCondition {
     
     @Schema(description = "暱稱（模糊查詢）")
     private String nickname;
+
+    @Schema(description = "手機號碼（模糊查詢）")
+    private String phone;
     
     @Schema(description = "狀態（ACTIVE/INACTIVE/SUSPENDED）")
     private String status;

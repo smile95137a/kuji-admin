@@ -52,6 +52,9 @@ public class FrontendUserServiceImpl implements FrontendUserService {
             if (isNotBlank(condition.getNickname())) {
                 criteria.andNicknameLike("%" + condition.getNickname() + "%");
             }
+            if (isNotBlank(condition.getPhone())) {
+                criteria.andPhoneNumberLike("%" + condition.getPhone() + "%");
+            }
             if (condition.getStatus() != null) {
                 criteria.andStatusEqualTo(condition.getStatus());
             }
@@ -76,11 +79,13 @@ public class FrontendUserServiceImpl implements FrontendUserService {
                 );
             }
             if (isNotBlank(condition.getKeyword())) {
-                // 關鍵字搜尋：Email 或暱稱
+                // 關鍵字搜尋：Email 或暱稱 或手機號碼
                 UserExample.Criteria orCriteria = example.or();
                 orCriteria.andEmailLike("%" + condition.getKeyword() + "%");
                 orCriteria = example.or();
                 orCriteria.andNicknameLike("%" + condition.getKeyword() + "%");
+                orCriteria = example.or();
+                orCriteria.andPhoneNumberLike("%" + condition.getKeyword() + "%");
             }
         }
         

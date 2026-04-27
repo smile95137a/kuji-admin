@@ -30,6 +30,8 @@ import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
+import com.group.admin.req.admin.AdminUserCondition;
+import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
@@ -394,6 +396,90 @@ public class AdminUserServiceImpl implements AdminUserService {
         adminUserMapper.updateByPrimaryKeySelective(user);
 
         log.info("✅ 密碼修改成功：userId={}", userId);
+    }
+
+    @Override
+    public List<AdminUserRes> queryAdminUsers(QueryReq<AdminUserCondition> req) {
+        AdminUserCondition condition = req != null ? req.getCondition() : null;
+
+        // 1. 如果指定了 storeId，先從 store_user 取出符合的 adminUserIds
+        List<String> storeFilteredIds = null;
+        if (condition != null && condition.getStoreId() != null && !condition.getStoreId().isEmpty()) {
+            StoreUserExample storeUserExample = new StoreUserExample();
+            storeUserExample.createCriteria().andStoreIdEqualTo(condition.getStoreId());
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
+            storeFilteredIds = storeUsers.stream()
+                    .map(StoreUser::getAdminUserId)
+                    .collect(Collectors.toList());
+            if (storeFilteredIds.isEmpty()) {
+                return new ArrayList<>();
+            }
+        }
+
+        // 2. 如果指定了 roleCode，先從 admin_user_role 取出符合的 adminUserIds
+        List<String> roleFilteredIds = null;
+        if (condition != null && condition.getRoleCode() != null && !condition.getRoleCode().isEmpty()) {
+            RoleExample roleExample = new RoleExample();
+            roleExample.createCriteria().andCodeEqualTo(condition.getRoleCode());
+            List<Role> roles = roleMapper.selectByExample(roleExample);
+            if (roles.isEmpty()) {
+                return new ArrayList<>();
+            }
+            String roleId = roles.get(0).getId();
+            AdminUserRoleExample adminUserRoleExample = new AdminUserRoleExample();
+            adminUserRoleExample.createCriteria().andRoleIdEqualTo(roleId);
+            List<AdminUserRole> adminUserRoles = adminUserRoleMapper.selectByExample(adminUserRoleExample);
+            roleFilteredIds = adminUserRoles.stream()
+                    .map(AdminUserRole::getAdminUserId)
+                    .collect(Collectors.toList());
+            if (roleFilteredIds.isEmpty()) {
+                return new ArrayList<>();
+            }
+        }
+
+        // 3. 合併 ID 過濾（storeId + roleCode 取交集）
+        List<String> combinedIds = null;
+        if (storeFilteredIds != null && roleFilteredIds != null) {
+            combinedIds = storeFilteredIds.stream()
+                    .filter(roleFilteredIds::contains)
+                    .collect(Collectors.toList());
+            if (combinedIds.isEmpty()) {
+                return new ArrayList<>();
+            }
+        } else if (storeFilteredIds != null) {
+            combinedIds = storeFilteredIds;
+        } else if (roleFilteredIds != null) {
+            combinedIds = roleFilteredIds;
+        }
+
+        // 4. 建立 AdminUser 查詢條件
+        AdminUserExample example = new AdminUserExample();
+        AdminUserExample.Criteria criteria = example.createCriteria();
+
+        if (combinedIds != null) {
+            criteria.andIdIn(combinedIds);
+        }
+        if (condition != null) {
+            if (condition.getStatus() != null && !condition.getStatus().isEmpty()) {
+                criteria.andStatusEqualTo(condition.getStatus());
+            }
+            if (condition.getKeyword() != null && !condition.getKeyword().isEmpty()) {
+                // keyword OR 搜尋：先加 email 條件於主 criteria，再 or displayName
+                criteria.andEmailLike("%" + condition.getKeyword() + "%");
+                AdminUserExample.Criteria orCriteria = example.or();
+                if (combinedIds != null) {
+                    orCriteria.andIdIn(combinedIds);
+                }
+                if (condition.getStatus() != null && !condition.getStatus().isEmpty()) {
+                    orCriteria.andStatusEqualTo(condition.getStatus());
+                }
+                orCriteria.andDisplayNameLike("%" + condition.getKeyword() + "%");
+            }
+        }
+
+        example.setOrderByClause("created_at DESC");
+        List<AdminUser> users = adminUserMapper.selectByExample(example);
+        return users.stream().map(this::toAdminUserRes).collect(Collectors.toList());
     }
 
     @Override
