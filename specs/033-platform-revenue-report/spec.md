@@ -82,10 +82,10 @@ Admin 需要比較本期 vs 上期的營收表現，識別成長或衰退趨勢�
 ## Functional Requirements
 
 - **FR-001**: 時間範圍篩選（start/end），預設過去 30 天
-- **FR-002**: `totalRecharge` = 期間內所有 `wallet_transaction.type = 'RECHARGE'` 的 `amount` 加總
-- **FR-003**: `totalSpend` = 期間內所有 `wallet_transaction.type IN ('DRAW_DEDUCTION', 'BONUS_DEDUCTION')` 的 `amount` 加總
+- **FR-002**: `totalRecharge` = 期間內所有 `wallet_transaction.transaction_type = 'RECHARGE'` 的 `amount` 加總（coinType=GOLD）
+- **FR-003**: `totalSpend` = 期間內所有 `wallet_transaction.transaction_type = 'DRAW'` 的 `amount` 加總（含 GOLD 和 BONUS）
 - **FR-004**: `netRevenue` = `totalRecharge - totalSpend`
-- **FR-005**: `spendByType` 分別統計 Gold（DRAW_DEDUCTION）和 Bonus（BONUS_DEDUCTION）
+- **FR-005**: `spendByType` 分別統計：GOLD（`transactionType='DRAW' AND coinType='GOLD'`）和 BONUS（`transactionType='DRAW' AND coinType='BONUS'`）
 - **FR-006**: `dailyRevenue` 按 `wallet_transaction.created_at` 日期分組
 - **FR-007**: `storeBreakdown` 透過 `lottery_ticket` → `lottery.store_id` 關聯計算各店消費
 - **FR-008**: `drawCount` = 期間內 `lottery_ticket.status = 'DRAWN'` 的筆數
@@ -97,8 +97,8 @@ Admin 需要比較本期 vs 上期的營收表現，識別成長或衰退趨勢�
 
 | 欄位 | 來源 |
 |------|------|
-| totalRecharge | wallet_transaction (type=RECHARGE) |
-| totalSpend | wallet_transaction (type=DRAW_DEDUCTION + BONUS_DEDUCTION) |
+| totalRecharge | wallet_transaction (transactionType=RECHARGE, coinType=GOLD) |
+| totalSpend | wallet_transaction (transactionType=DRAW, 含 GOLD+BONUS) |
 | drawCount | lottery_ticket (status=DRAWN) |
 | storeBreakdown | lottery_ticket JOIN lottery (store_id) |
 | dailyRevenue | wallet_transaction GROUP BY DATE(created_at) |
