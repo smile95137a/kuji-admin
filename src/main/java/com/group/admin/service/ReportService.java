@@ -41,7 +41,13 @@ public interface ReportService {
      * @param req 查詢條件
      */
     BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req);
-    
+
+    /**
+     * 商品銷售排行報表
+     * @param req 查詢條件（包含店家ID、回傳筆數、排序欄位）
+     */
+    LotterySalesRankingRes getLotterySalesRanking(QueryReq<LotterySalesRankingCondition> req);
+
     /**
      * 儲存報表快照
      */

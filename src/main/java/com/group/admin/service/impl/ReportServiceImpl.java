@@ -646,4 +646,100 @@ public class ReportServiceImpl implements ReportService {
             default -> bonusType;
         };
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // US1 + US2 + US3: 商品銷售排行報表
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public LotterySalesRankingRes getLotterySalesRanking(QueryReq<LotterySalesRankingCondition> req) {
+
+        // 1. 解析條件（null-safe）
+        LotterySalesRankingCondition condition =
+                (req != null && req.getCondition() != null)
+                        ? req.getCondition()
+                        : new LotterySalesRankingCondition();
+
+        String storeId = condition.getStoreId();
+
+        // 2. FR-006: limit clamp（預設 20，最大 100）
+        int limit = Math.min(
+                condition.getLimit() != null ? condition.getLimit() : 20,
+                100);
+
+        // 3. FR-003: sortBy 白名單（只允許 drawCount / revenue，silent fallback to draw_count）
+        String sortBy = (req != null && "revenue".equalsIgnoreCase(req.getSortBy()))
+                ? "revenue"
+                : "draw_count";
+
+        log.info("📊 商品銷售排行: storeId={}, limit={}, sortBy={}", storeId, limit, sortBy);
+
+        // 4. 建立基礎 SQL（不含 ORDER BY / LIMIT）
+        String baseSql = """
+                SELECT
+                    l.id        AS lottery_id,
+                    l.title     AS lottery_title,
+                    s.store_name,
+                    COALESCE(dc.draw_count, 0) AS draw_count,
+                    COALESCE(rv.revenue,   0) AS revenue
+                FROM lottery l
+                JOIN store s ON l.store_id = s.id
+                LEFT JOIN (
+                    SELECT lottery_id, COUNT(*) AS draw_count
+                    FROM lottery_ticket
+                    WHERE status = 'DRAWN'
+                    GROUP BY lottery_id
+                ) dc ON dc.lottery_id = l.id
+                LEFT JOIN (
+                    SELECT oi.lottery_id,
+                           COUNT(oi.id) * MAX(l2.price_per_draw) AS revenue
+                    FROM order_item oi
+                    JOIN `order` o  ON o.id = oi.order_id
+                                   AND o.status != 'CANCELLED'  -- FR-005: exclude CANCELLED orders
+                    JOIN lottery l2 ON l2.id = oi.lottery_id
+                    GROUP BY oi.lottery_id
+                ) rv ON rv.lottery_id = l.id
+                WHERE 1 = 1
+                """;
+
+        // 5. FR-007/FR-008: storeId 過濾（StoreOwner 強制帶入；Admin null 表示跨平台）
+        List<Object> params = new ArrayList<>();
+        StringBuilder sqlBuilder = new StringBuilder(baseSql);
+        if (storeId != null) {
+            sqlBuilder.append("AND l.store_id = ?\n");
+            params.add(storeId);
+        }
+        // FR-008: Admin cross-store — no WHERE filter when storeId is null
+
+        String filteredSql = sqlBuilder.toString();
+
+        // 6. totalRecords（不受 limit 影響）
+        String countSql = "SELECT COUNT(*) FROM (" + filteredSql + ") AS total_count";
+        Integer totalRecords = jdbcTemplate.queryForObject(countSql, Integer.class, params.toArray());
+        if (totalRecords == null) totalRecords = 0;
+
+        // 7. 主查詢：排序 + LIMIT（使用參數化綁定防止 SQL injection）
+        String querySql = filteredSql + " ORDER BY " + sortBy + " DESC LIMIT ?";
+        List<Object> queryParams = new ArrayList<>(params);
+        queryParams.add(limit);
+
+        // 8. 查詢並映射結果
+        List<LotterySalesRankingRes.LotterySalesItem> items = jdbcTemplate.query(
+                querySql,
+                (rs, rowNum) -> LotterySalesRankingRes.LotterySalesItem.builder()
+                        .lotteryId(rs.getString("lottery_id"))
+                        .lotteryTitle(rs.getString("lottery_title"))
+                        .storeName(rs.getString("store_name"))
+                        .drawCount(rs.getInt("draw_count"))
+                        .revenue(rs.getLong("revenue"))
+                        .rank(rowNum + 1)  // 1-based rank
+                        .build(),
+                queryParams.toArray());
+
+        // 9. 組裝回應
+        return LotterySalesRankingRes.builder()
+                .totalRecords(totalRecords)
+                .items(items)
+                .build();
+    }
 }
