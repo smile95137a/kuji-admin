@@ -114,4 +114,23 @@ public class AdminReportController {
         
         return ResponseEntity.ok(reportService.getBonusReport(req));
     }
+
+    /**
+     * 獎品出貨報表
+     */
+    @PostMapping("/prize-shipment")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    public ResponseEntity<PrizeShipmentReportRes> getPrizeShipmentReport(
+            @RequestBody(required = false) QueryReq<PrizeShipmentReportCondition> req) {
+
+        // StoreOwner 只能查自己店家的報表（後端強制覆蓋 storeId）
+        String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
+        if (currentStoreId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new PrizeShipmentReportCondition());
+            req.getCondition().setStoreId(currentStoreId);
+        }
+
+        return ResponseEntity.ok(reportService.getPrizeShipmentReport(req));
+    }
 }

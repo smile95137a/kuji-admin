@@ -59,6 +59,8 @@ public class Order {
 
     private String cancelReason;
 
+    private LocalDateTime preparingAt;
+
     public String getId() {
         return id;
     }
@@ -281,5 +283,13 @@ public class Order {
 
     public void setCancelReason(String cancelReason) {
         this.cancelReason = cancelReason == null ? null : cancelReason.trim();
+    }
+
+    public LocalDateTime getPreparingAt() {
+        return preparingAt;
+    }
+
+    public void setPreparingAt(LocalDateTime preparingAt) {
+        this.preparingAt = preparingAt;
     }
 }

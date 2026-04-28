@@ -1,6 +1,6 @@
 # admin Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-22
+Auto-generated from all feature plans. Last updated: 2026-04-28
 
 ## Active Technologies
 - Java 21 + Spring Boot 3.3.3, MyBatis 3.0.5, Spring Security 6, JWT, Lombok, JUnit 5 (003-game-management)
@@ -17,6 +17,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-22
 - Java 21 + Spring Boot 3.3.3, Spring Security 6, MyBatis 3.0.5, MyBatis Generator (Example pattern), JWT (jjwt), Lombok (012-referral-code)
 - MySQL 8.3 — tables `referral_code`, `referral_record`; FK relationships to `store` and `user` (012-referral-code)
 - [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (main)
+- Java 21 + Spring Boot 3.3.3, MyBatis 3.0.5, JdbcTemplate (報表 SQL 直接透過 JdbcTemplate 執行) (029-prize-shipment-report)
+- MySQL（InnoDB） (029-prize-shipment-report)
 
 - **Java 21** + **Spring Boot 3.3.3** + **MyBatis 3.0.5** + **Spring Security 6** + **JWT** (007-news-management)
 - **MySQL 8.3** on AWS RDS — primary data store
@@ -60,9 +62,9 @@ mvn test                        # Test
 - Logging: emoji prefixes (✅❌⚠️🔍➕✏️🗑️)
 
 ## Recent Changes
+- 029-prize-shipment-report: Added Java 21 + Spring Boot 3.3.3, MyBatis 3.0.5, JdbcTemplate (報表 SQL 直接透過 JdbcTemplate 執行)
+- 029-prize-shipment-report: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 - main: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-- main: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-- 012-referral-code: Added Java 21 + Spring Boot 3.3.3, Spring Security 6, MyBatis 3.0.5, MyBatis Generator (Example pattern), JWT (jjwt), Lombok
 
   - Entity: News (UUID PK, DRAFT/PUBLISHED/UNPUBLISHED, scheduled publish/unpublish)
   - Admin: POST/PUT/DELETE/GET /admin/news, GET /admin/news/{id}
