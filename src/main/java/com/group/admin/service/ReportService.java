@@ -41,6 +41,12 @@ public interface ReportService {
      * @param req 查詢條件
      */
     BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req);
+
+    /**
+     * 店家績效比較報表
+     * @param req 查詢條件（包含店家ID、時間範圍、排序欄位）
+     */
+    StorePerformanceReportRes getStorePerformanceReport(QueryReq<StorePerformanceCondition> req);
     
     /**
      * 儲存報表快照

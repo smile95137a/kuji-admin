@@ -11,6 +11,7 @@ import com.group.admin.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,6 +19,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 報表服務實作
@@ -644,6 +646,303 @@ public class ReportServiceImpl implements ReportService {
             case "PROMOTION" -> "活動贈送";
             case "ADJUSTMENT" -> "人工調整";
             default -> bonusType;
+        };
+    }
+
+    // ========== 店家績效報表 (034) ==========
+
+    /** 允許 sortBy 的白名單欄位 */
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "totalRevenue", "drawCount", "activeUsers", "shipRate", "overdueRate", "avgShipDays");
+
+    @Override
+    public StorePerformanceReportRes getStorePerformanceReport(QueryReq<StorePerformanceCondition> req) {
+        StorePerformanceCondition condition = req != null && req.getCondition() != null
+                ? req.getCondition() : new StorePerformanceCondition();
+
+        LocalDate startDate = condition.getStartDate() != null
+                ? condition.getStartDate() : LocalDate.now().minusDays(30);
+        LocalDate endDate = condition.getEndDate() != null
+                ? condition.getEndDate() : LocalDate.now();
+        String storeId = condition.getStoreId();
+
+        String rawSortBy = req != null ? req.getSortBy() : null;
+        String sortBy = (rawSortBy != null && ALLOWED_SORT_FIELDS.contains(rawSortBy))
+                ? rawSortBy : "totalRevenue";
+        String sortOrder = (req != null && req.getSortOrder() != null) ? req.getSortOrder() : "DESC";
+
+        log.info("📊 店家績效報表: storeId={}, {} ~ {}, sortBy={} {}", storeId, startDate, endDate, sortBy, sortOrder);
+
+        // --- KPI 查詢 ---
+        Map<String, Integer> drawCounts   = queryStoreDrawCount(storeId, startDate, endDate);
+        Map<String, Long>    revenues     = queryStoreTotalRevenue(storeId, startDate, endDate);
+        Map<String, Integer> activeUsersMap = queryStoreActiveUsers(storeId, startDate, endDate);
+        Map<String, OrderStats> orderStatsMap = queryStoreOrderStats(storeId, startDate, endDate);
+
+        // --- 取得店家清單 ---
+        String storeSql = storeId != null
+                ? "SELECT id, store_name FROM store WHERE id = ?"
+                : "SELECT id, store_name FROM store";
+        List<Map<String, Object>> storeRows = storeId != null
+                ? jdbcTemplate.queryForList(storeSql, storeId)
+                : jdbcTemplate.queryForList(storeSql);
+
+        // --- 組裝 StoreItem ---
+        List<StorePerformanceReportRes.StoreItem> storeItems = storeRows.stream().map(row -> {
+            String sid   = (String) row.get("id");
+            String sname = (String) row.get("store_name");
+
+            Integer dc = drawCounts.getOrDefault(sid, 0);
+            Long    rev = revenues.getOrDefault(sid, 0L);
+            Integer au  = activeUsersMap.getOrDefault(sid, 0);
+            OrderStats os = orderStatsMap.get(sid);
+
+            Double shipRate    = null;
+            Double overdueRate = null;
+            if (os != null) {
+                if (os.nonCancelled > 0) {
+                    shipRate = Math.round((double) os.shipped / os.nonCancelled * 100 * 10.0) / 10.0;
+                }
+                if (os.total > 0) {
+                    overdueRate = Math.round((double) os.overdue / os.total * 100 * 10.0) / 10.0;
+                }
+            }
+
+            return StorePerformanceReportRes.StoreItem.builder()
+                    .storeId(sid)
+                    .storeName(sname)
+                    .totalRevenue(rev)
+                    .drawCount(dc)
+                    .activeUsers(au)
+                    .shipRate(shipRate)
+                    .overdueRate(overdueRate)
+                    .avgShipDays(null) // TODO(029): replace with AVG(DATEDIFF(shipped_at, preparing_at)) after 029 merges
+                    .build();
+        }).collect(Collectors.toCollection(ArrayList::new));
+
+        // --- 在記憶體中排序 ---
+        Comparator<StorePerformanceReportRes.StoreItem> cmp = buildStoreComparator(sortBy);
+        storeItems.sort("ASC".equalsIgnoreCase(sortOrder) ? cmp : cmp.reversed());
+
+        // --- dailyStats：僅帶入 storeId 時回傳 ---
+        List<StorePerformanceReportRes.DailyStat> dailyStats = null;
+        if (storeId != null) {
+            dailyStats = queryStoreDailyStats(storeId, startDate, endDate);
+        }
+
+        return StorePerformanceReportRes.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .stores(storeItems)
+                .dailyStats(dailyStats)
+                .build();
+    }
+
+    /** drawCount：lottery_ticket status=DRAWN，透過 lottery.store_id */
+    private Map<String, Integer> queryStoreDrawCount(String storeId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end   = endDate.plusDays(1).atStartOfDay();
+
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT l.store_id, COUNT(*) AS draw_count
+                FROM lottery_ticket lt
+                JOIN lottery l ON lt.lottery_id = l.id
+                WHERE lt.status = 'DRAWN'
+                AND lt.drawn_at BETWEEN ? AND ?
+                """ + (storeId != null ? "AND l.store_id = ? " : "") + """
+                GROUP BY l.store_id
+                """;
+        if (storeId != null) params.add(storeId);
+
+        Map<String, Integer> result = new HashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs ->
+                result.put(rs.getString("store_id"), rs.getInt("draw_count")));
+        return result;
+    }
+
+    /** totalRevenue：ABS(SUM(wallet_transaction.amount)) WHERE transaction_type='DRAW' */
+    private Map<String, Long> queryStoreTotalRevenue(String storeId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end   = endDate.plusDays(1).atStartOfDay();
+
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT l.store_id, ABS(SUM(wt.amount)) AS total_revenue
+                FROM wallet_transaction wt
+                JOIN lottery_ticket lt ON wt.related_id = lt.id
+                JOIN lottery l ON lt.lottery_id = l.id
+                WHERE wt.transaction_type = 'DRAW'
+                AND wt.created_at BETWEEN ? AND ?
+                """ + (storeId != null ? "AND l.store_id = ? " : "") + """
+                GROUP BY l.store_id
+                """;
+        if (storeId != null) params.add(storeId);
+
+        Map<String, Long> result = new HashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs ->
+                result.put(rs.getString("store_id"), rs.getLong("total_revenue")));
+        return result;
+    }
+
+    /** activeUsers：抽獎(drawn_by) UNION 訂單(user_id) 的不重複用戶數，按 store_id 分組 */
+    private Map<String, Integer> queryStoreActiveUsers(String storeId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end   = endDate.plusDays(1).atStartOfDay();
+
+        String sql;
+        Object[] params;
+
+        if (storeId != null) {
+            sql = """
+                    SELECT t.store_id, COUNT(DISTINCT uid) AS active_users FROM (
+                      SELECT l.store_id, lt.drawn_by AS uid
+                      FROM lottery_ticket lt
+                      JOIN lottery l ON lt.lottery_id = l.id
+                      WHERE lt.drawn_at BETWEEN ? AND ? AND lt.drawn_by IS NOT NULL
+                      UNION
+                      SELECT o.store_id, o.user_id AS uid
+                      FROM `order` o
+                      WHERE o.created_at BETWEEN ? AND ?
+                    ) t WHERE t.store_id = ?
+                    GROUP BY t.store_id
+                    """;
+            params = new Object[]{start, end, start, end, storeId};
+        } else {
+            sql = """
+                    SELECT t.store_id, COUNT(DISTINCT uid) AS active_users FROM (
+                      SELECT l.store_id, lt.drawn_by AS uid
+                      FROM lottery_ticket lt
+                      JOIN lottery l ON lt.lottery_id = l.id
+                      WHERE lt.drawn_at BETWEEN ? AND ? AND lt.drawn_by IS NOT NULL
+                      UNION
+                      SELECT o.store_id, o.user_id AS uid
+                      FROM `order` o
+                      WHERE o.created_at BETWEEN ? AND ?
+                    ) t GROUP BY t.store_id
+                    """;
+            params = new Object[]{start, end, start, end};
+        }
+
+        Map<String, Integer> result = new HashMap<>();
+        jdbcTemplate.query(sql, params, (RowCallbackHandler) rs ->
+                result.put(rs.getString("store_id"), rs.getInt("active_users")));
+        return result;
+    }
+
+    /** 訂單出貨率 / 逾期率原始資料 */
+    private static class OrderStats {
+        long shipped;
+        long nonCancelled;
+        long overdue;
+        long total;
+    }
+
+    /** shipRate / overdueRate：單次 SQL 取所有需要的 order 統計 */
+    private Map<String, OrderStats> queryStoreOrderStats(String storeId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end   = endDate.plusDays(1).atStartOfDay();
+
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT store_id,
+                  SUM(CASE WHEN status IN ('SHIPPED','COMPLETED') THEN 1 ELSE 0 END) AS shipped,
+                  SUM(CASE WHEN status != 'CANCELLED' THEN 1 ELSE 0 END) AS non_cancelled,
+                  SUM(CASE WHEN status = 'PENDING' AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS overdue,
+                  COUNT(*) AS total
+                FROM `order`
+                WHERE created_at BETWEEN ? AND ?
+                """ + (storeId != null ? "AND store_id = ? " : "") + """
+                GROUP BY store_id
+                """;
+        if (storeId != null) params.add(storeId);
+
+        Map<String, OrderStats> result = new HashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs -> {
+            OrderStats os = new OrderStats();
+            os.shipped       = rs.getLong("shipped");
+            os.nonCancelled  = rs.getLong("non_cancelled");
+            os.overdue       = rs.getLong("overdue");
+            os.total         = rs.getLong("total");
+            result.put(rs.getString("store_id"), os);
+        });
+        return result;
+    }
+
+    /** dailyStats：每日 drawCount / revenue（from wallet_transaction） / newUsers */
+    private List<StorePerformanceReportRes.DailyStat> queryStoreDailyStats(
+            String storeId, LocalDate startDate, LocalDate endDate) {
+
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end   = endDate.plusDays(1).atStartOfDay();
+
+        // Step 1: 每日 drawCount + revenue
+        String dailySql = """
+                SELECT DATE(lt.drawn_at) AS stat_date,
+                       COUNT(*) AS draw_count,
+                       ABS(COALESCE(SUM(wt.amount), 0)) AS revenue
+                FROM lottery_ticket lt
+                JOIN lottery l ON lt.lottery_id = l.id
+                LEFT JOIN wallet_transaction wt ON wt.related_id = lt.id AND wt.transaction_type = 'DRAW'
+                WHERE l.store_id = ? AND lt.drawn_at BETWEEN ? AND ? AND lt.status = 'DRAWN'
+                GROUP BY DATE(lt.drawn_at)
+                ORDER BY stat_date
+                """;
+
+        // 使用 LinkedHashMap 保持日期排序
+        Map<LocalDate, StorePerformanceReportRes.DailyStat.DailyStatBuilder> builderMap = new LinkedHashMap<>();
+        jdbcTemplate.query(dailySql, new Object[]{storeId, start, end}, (RowCallbackHandler) rs -> {
+            LocalDate date = rs.getDate("stat_date").toLocalDate();
+            builderMap.put(date, StorePerformanceReportRes.DailyStat.builder()
+                    .date(date)
+                    .drawCount(rs.getInt("draw_count"))
+                    .revenue(rs.getLong("revenue"))
+                    .newUsers(0));
+        });
+
+        // Step 2: 每日 newUsers（首次在本店有活動的用戶數）
+        String newUsersSql = """
+                SELECT DATE(first_date) AS stat_date, COUNT(*) AS new_users FROM (
+                  SELECT uid, MIN(activity_date) AS first_date FROM (
+                    SELECT lt.drawn_by AS uid, DATE(lt.drawn_at) AS activity_date
+                    FROM lottery_ticket lt
+                    JOIN lottery l ON lt.lottery_id = l.id
+                    WHERE l.store_id = ? AND lt.drawn_at BETWEEN ? AND ? AND lt.drawn_by IS NOT NULL
+                    UNION ALL
+                    SELECT o.user_id AS uid, DATE(o.created_at) AS activity_date
+                    FROM `order` o
+                    WHERE o.store_id = ? AND o.created_at BETWEEN ? AND ?
+                  ) all_activity GROUP BY uid
+                ) first_seen GROUP BY DATE(first_date)
+                """;
+
+        jdbcTemplate.query(newUsersSql, new Object[]{storeId, start, end, storeId, start, end}, (RowCallbackHandler) rs -> {
+            LocalDate date = rs.getDate("stat_date").toLocalDate();
+            if (builderMap.containsKey(date)) {
+                builderMap.get(date).newUsers(rs.getInt("new_users"));
+            }
+        });
+
+        return builderMap.values().stream()
+                .map(StorePerformanceReportRes.DailyStat.DailyStatBuilder::build)
+                .collect(Collectors.toList());
+    }
+
+    /** 排序 Comparator 工廠（null-safe，預設 totalRevenue） */
+    private Comparator<StorePerformanceReportRes.StoreItem> buildStoreComparator(String sortBy) {
+        return switch (sortBy) {
+            case "drawCount" -> Comparator.comparingInt(
+                    (StorePerformanceReportRes.StoreItem i) -> i.getDrawCount() != null ? i.getDrawCount() : 0);
+            case "activeUsers" -> Comparator.comparingInt(
+                    (StorePerformanceReportRes.StoreItem i) -> i.getActiveUsers() != null ? i.getActiveUsers() : 0);
+            case "shipRate" -> Comparator.comparingDouble(
+                    (StorePerformanceReportRes.StoreItem i) -> i.getShipRate() != null ? i.getShipRate() : 0.0);
+            case "overdueRate" -> Comparator.comparingDouble(
+                    (StorePerformanceReportRes.StoreItem i) -> i.getOverdueRate() != null ? i.getOverdueRate() : 0.0);
+            case "avgShipDays" -> Comparator.comparingDouble(
+                    (StorePerformanceReportRes.StoreItem i) -> i.getAvgShipDays() != null ? i.getAvgShipDays() : 0.0);
+            default -> Comparator.comparingLong( // totalRevenue (default)
+                    (StorePerformanceReportRes.StoreItem i) -> i.getTotalRevenue() != null ? i.getTotalRevenue() : 0L);
         };
     }
 }
