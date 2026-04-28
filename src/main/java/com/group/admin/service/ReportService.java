@@ -41,6 +41,12 @@ public interface ReportService {
      * @param req 查詢條件
      */
     BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req);
+
+    /**
+     * 會員成長報表（Admin Only）
+     * @param req 查詢條件（startDate/endDate 為 null 時使用預設值：最近 30 天）
+     */
+    MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req);
     
     /**
      * 儲存報表快照

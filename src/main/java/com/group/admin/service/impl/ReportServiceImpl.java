@@ -613,8 +613,193 @@ public class ReportServiceImpl implements ReportService {
         return reportSnapshotRepository.selectByTypeAndPeriod(reportType, periodType, 100);
     }
     
+    // ========== 會員成長報表 ==========
+
+    @Override
+    public MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req) {
+        MemberGrowthReportCondition condition = req != null && req.getCondition() != null
+                ? req.getCondition() : new MemberGrowthReportCondition();
+
+        // 預設日期：最近 30 天
+        LocalDate endDate   = condition.getEndDate()   != null ? condition.getEndDate()   : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+
+        log.info("📊 產生會員成長報表: {} ~ {}", startDate, endDate);
+
+        LocalDateTime startDt = startDate.atStartOfDay();
+        LocalDateTime endDt   = endDate.plusDays(1).atStartOfDay();
+
+        // ── Q1: 新增會員總數 ──────────────────────────────────────────────────
+        Integer totalNewMembers = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user WHERE created_at BETWEEN ? AND ?",
+                Integer.class, startDt, endDt);
+        if (totalNewMembers == null) totalNewMembers = 0;
+
+        // 上期窗口（同等時長，緊接在 startDate 之前）
+        long periodDays = startDate.until(endDate).getDays() + 1;
+        LocalDate prevEndDate   = startDate.minusDays(1);
+        LocalDate prevStartDate = prevEndDate.minusDays(periodDays - 1);
+
+        Integer prevPeriodCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user WHERE created_at BETWEEN ? AND ?",
+                Integer.class,
+                prevStartDate.atStartOfDay(), prevEndDate.plusDays(1).atStartOfDay());
+        if (prevPeriodCount == null) prevPeriodCount = 0;
+
+        BigDecimal growthRate = null;
+        if (prevPeriodCount > 0) {
+            growthRate = new BigDecimal(totalNewMembers - prevPeriodCount)
+                    .multiply(new BigDecimal("100"))
+                    .divide(new BigDecimal(prevPeriodCount), 1, RoundingMode.HALF_UP);
+        }
+
+        // ── Q2: 每日明細（補零）──────────────────────────────────────────────
+        List<Map<String, Object>> dailyRows = jdbcTemplate.queryForList(
+                "SELECT DATE(created_at) AS d, COUNT(*) AS cnt " +
+                "FROM user WHERE created_at BETWEEN ? AND ? " +
+                "GROUP BY DATE(created_at)",
+                startDt, endDt);
+
+        Map<LocalDate, Integer> dailyMap = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> row : dailyRows) {
+            Object d = row.get("d");
+            LocalDate date = (d instanceof java.sql.Date)
+                    ? ((java.sql.Date) d).toLocalDate()
+                    : LocalDate.parse(d.toString());
+            dailyMap.put(date, toInteger(row.get("cnt")));
+        }
+
+        List<MemberGrowthReportRes.DailyNewMember> dailyNewMembers = new ArrayList<>();
+        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+            dailyNewMembers.add(MemberGrowthReportRes.DailyNewMember.builder()
+                    .date(d)
+                    .count(dailyMap.getOrDefault(d, 0))
+                    .build());
+        }
+
+        // ── Q3: 按 provider 分類 ─────────────────────────────────────────────
+        List<Map<String, Object>> providerRows = jdbcTemplate.queryForList(
+                "SELECT provider, COUNT(*) AS cnt " +
+                "FROM user WHERE created_at BETWEEN ? AND ? " +
+                "GROUP BY provider",
+                startDt, endDt);
+
+        Map<String, Integer> registrationByProvider = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> row : providerRows) {
+            String provider = row.get("provider") != null ? row.get("provider").toString() : "UNKNOWN";
+            registrationByProvider.put(provider, toInteger(row.get("cnt")));
+        }
+
+        // ── Q4: 活躍會員（4-table UNION）────────────────────────────────────
+        String activeSql =
+                "SELECT COUNT(DISTINCT user_id) FROM (" +
+                "  SELECT id AS user_id FROM user WHERE last_login_at BETWEEN ? AND ? " +
+                "  UNION " +
+                "  SELECT user_id FROM wallet_transaction WHERE transaction_type='RECHARGE' AND created_at BETWEEN ? AND ? " +
+                "  UNION " +
+                "  SELECT drawn_by AS user_id FROM lottery_ticket WHERE status='DRAWN' AND drawn_at BETWEEN ? AND ? " +
+                "  UNION " +
+                "  SELECT user_id FROM `order` WHERE status != 'CANCELLED' AND created_at BETWEEN ? AND ?" +
+                ") t";
+
+        Integer activeMembers = jdbcTemplate.queryForObject(
+                activeSql, Integer.class,
+                startDt, endDt,
+                startDt, endDt,
+                startDt, endDt,
+                startDt, endDt);
+        if (activeMembers == null) activeMembers = 0;
+
+        // ── Q5/Q6: ARPU (Gold / Bonus) ──────────────────────────────────────
+        BigDecimal arpuGold;
+        BigDecimal arpuBonus;
+        if (activeMembers == 0) {
+            arpuGold  = new BigDecimal("0.0");
+            arpuBonus = new BigDecimal("0.0");
+        } else {
+            BigDecimal goldTotal = jdbcTemplate.queryForObject(
+                    "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction " +
+                    "WHERE transaction_type='DRAW' AND coin_type='GOLD' AND created_at BETWEEN ? AND ?",
+                    BigDecimal.class, startDt, endDt);
+            BigDecimal bonusTotal = jdbcTemplate.queryForObject(
+                    "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction " +
+                    "WHERE transaction_type='DRAW' AND coin_type='BONUS' AND created_at BETWEEN ? AND ?",
+                    BigDecimal.class, startDt, endDt);
+            if (goldTotal  == null) goldTotal  = BigDecimal.ZERO;
+            if (bonusTotal == null) bonusTotal = BigDecimal.ZERO;
+
+            BigDecimal activeBD = new BigDecimal(activeMembers);
+            arpuGold  = goldTotal .divide(activeBD, 1, RoundingMode.HALF_UP);
+            arpuBonus = bonusTotal.divide(activeBD, 1, RoundingMode.HALF_UP);
+        }
+
+        // ── Q7/Q8: 留存率（前一個完整月份）─────────────────────────────────
+        BigDecimal retention7Days  = null;
+        BigDecimal retention30Days = null;
+
+        LocalDate prevMonthStart = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate prevMonthEnd   = prevMonthStart.plusMonths(1).minusDays(1);
+
+        Integer prevMonthTotal = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user WHERE created_at BETWEEN ? AND ?",
+                Integer.class,
+                prevMonthStart.atStartOfDay(), prevMonthEnd.plusDays(1).atStartOfDay());
+        if (prevMonthTotal == null) prevMonthTotal = 0;
+
+        if (prevMonthTotal > 0) {
+            String retentionSql =
+                "SELECT COUNT(DISTINCT u.id) FROM user u " +
+                "WHERE u.created_at BETWEEN ? AND ? " +
+                "AND EXISTS (" +
+                "  SELECT 1 FROM user u2 WHERE u2.id = u.id " +
+                "    AND u2.last_login_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
+                "  UNION ALL " +
+                "  SELECT 1 FROM wallet_transaction wt WHERE wt.user_id = u.id " +
+                "    AND wt.transaction_type = 'RECHARGE' " +
+                "    AND wt.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
+                "  UNION ALL " +
+                "  SELECT 1 FROM lottery_ticket lt WHERE lt.drawn_by = u.id " +
+                "    AND lt.status = 'DRAWN' " +
+                "    AND lt.drawn_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
+                "  UNION ALL " +
+                "  SELECT 1 FROM `order` o WHERE o.user_id = u.id " +
+                "    AND o.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY)" +
+                ")";
+
+            LocalDateTime pmStart = prevMonthStart.atStartOfDay();
+            LocalDateTime pmEnd   = prevMonthEnd.plusDays(1).atStartOfDay();
+
+            Integer retained7 = jdbcTemplate.queryForObject(retentionSql, Integer.class,
+                    pmStart, pmEnd, 7, 7, 7, 7);
+            Integer retained30 = jdbcTemplate.queryForObject(retentionSql, Integer.class,
+                    pmStart, pmEnd, 30, 30, 30, 30);
+            if (retained7  == null) retained7  = 0;
+            if (retained30 == null) retained30 = 0;
+
+            BigDecimal baseBD = new BigDecimal(prevMonthTotal);
+            retention7Days  = new BigDecimal(retained7 ).multiply(new BigDecimal("100"))
+                    .divide(baseBD, 1, RoundingMode.HALF_UP);
+            retention30Days = new BigDecimal(retained30).multiply(new BigDecimal("100"))
+                    .divide(baseBD, 1, RoundingMode.HALF_UP);
+        }
+
+        return MemberGrowthReportRes.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .totalNewMembers(totalNewMembers)
+                .growthRate(growthRate)
+                .registrationByProvider(registrationByProvider)
+                .dailyNewMembers(dailyNewMembers)
+                .activeMembers(activeMembers)
+                .arpuGold(arpuGold)
+                .arpuBonus(arpuBonus)
+                .retention7Days(retention7Days)
+                .retention30Days(retention30Days)
+                .build();
+    }
+
     // ========== 工具方法 ==========
-    
+
     private BigDecimal toBigDecimal(Object value) {
         if (value == null) return BigDecimal.ZERO;
         if (value instanceof BigDecimal) return (BigDecimal) value;

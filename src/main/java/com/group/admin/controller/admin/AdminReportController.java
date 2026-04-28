@@ -104,14 +104,30 @@ public class AdminReportController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<BonusReportRes> getBonusReport(
             @RequestBody QueryReq<BonusReportCondition> req) {
-        
+
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
         if (currentStoreId != null) {
             if (req == null) req = new QueryReq<>();
             if (req.getCondition() == null) req.setCondition(new BonusReportCondition());
             req.getCondition().setStoreId(currentStoreId);
         }
-        
+
         return ResponseEntity.ok(reportService.getBonusReport(req));
+    }
+
+    /**
+     * 會員成長報表（Admin Only）
+     */
+    @io.swagger.v3.oas.annotations.Operation(summary = "會員成長報表", description = "Admin Only")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "查詢成功"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "非 ADMIN 角色"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未提供 JWT 或已過期")
+    })
+    @PostMapping("/member-growth")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberGrowthReportRes> getMemberGrowthReport(
+            @RequestBody QueryReq<MemberGrowthReportCondition> req) {
+        return ResponseEntity.ok(reportService.getMemberGrowthReport(req));
     }
 }
