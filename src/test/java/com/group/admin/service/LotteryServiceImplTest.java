@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
 import com.group.admin.example.LotteryPrizeExample;
+import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.LotteryDrawRecordMapper;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
@@ -12,6 +13,8 @@ import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
+import com.group.admin.req.lottery.LotteryCreateReq;
+import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.impl.LotteryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +29,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +48,7 @@ class LotteryServiceImplTest {
     @Mock private LotteryTicketService lotteryTicketService;
 
     private LotteryServiceImpl lotteryService;
+    private Lottery insertedLottery;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +62,12 @@ class LotteryServiceImplTest {
                 storeMapper,
                 lotteryTicketService
         );
+        insertedLottery = null;
+        lenient().doAnswer(invocation -> {
+            insertedLottery = invocation.getArgument(0, Lottery.class);
+            return 1;
+        }).when(lotteryMapper).insert(any(Lottery.class));
+        lenient().when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class))).thenReturn(List.of());
     }
 
     @Test
@@ -148,5 +161,98 @@ class LotteryServiceImplTest {
         prize.setRemaining(remaining);
         prize.setQuantity(quantity);
         return prize;
+    }
+
+    @Test
+    @DisplayName("CUSTOM_GACHA + SCRATCH_MODE 可接受 freeDrawThreshold = null")
+    void createLottery_ScratchMode_NullThreshold_ShouldSucceed() {
+        LotteryCreateReq req = new LotteryCreateReq();
+        req.setStoreId("store-1");
+        req.setTitle("scratch");
+        req.setCategory("CUSTOM_GACHA");
+        req.setSubCategory("SCRATCH_MODE");
+        req.setGameMode("RANDOM");
+        req.setPricePerDraw(100L);
+
+        LotteryRes res = lotteryService.createLottery(req);
+
+        assertThat(res.getPlayMode()).isEqualTo("SCRATCH_MODE");
+        assertThat(res.getDelistStrategy()).isEqualTo("GRAND_PRIZE_DRAWN");
+        assertThat(res.getFreeDrawThreshold()).isNull();
+        assertThat(insertedLottery).isNotNull();
+        assertThat(insertedLottery.getFreeDrawThreshold()).isNull();
+    }
+
+    @Test
+    @DisplayName("CUSTOM_GACHA + SCRATCH_MODE 的 freeDrawThreshold = 0 應拒絕")
+    void createLottery_ScratchMode_ZeroThreshold_ShouldFail() {
+        LotteryCreateReq req = new LotteryCreateReq();
+        req.setStoreId("store-1");
+        req.setTitle("scratch");
+        req.setCategory("CUSTOM_GACHA");
+        req.setSubCategory("SCRATCH_MODE");
+        req.setGameMode("SCRATCH_STORE");
+        req.setPricePerDraw(100L);
+        req.setFreeDrawThreshold(0);
+
+        assertThrows(BusinessException.class, () -> lotteryService.createLottery(req));
+    }
+
+    @Test
+    @DisplayName("CUSTOM_GACHA + LOTTERY_MODE 會清空 gameMode 與 freeDrawThreshold")
+    void createLottery_CustomLotteryMode_ShouldNormalizeFields() {
+        LotteryCreateReq req = new LotteryCreateReq();
+        req.setStoreId("store-1");
+        req.setTitle("custom-lottery");
+        req.setCategory("CUSTOM_GACHA");
+        req.setSubCategory("LOTTERY_MODE");
+        req.setGameMode("SCRATCH_PLAYER");
+        req.setPricePerDraw(100L);
+        req.setFreeDrawThreshold(5);
+
+        LotteryRes res = lotteryService.createLottery(req);
+
+        assertThat(res.getPlayMode()).isEqualTo("LOTTERY_MODE");
+        assertThat(res.getGameMode()).isNull();
+        assertThat(res.getFreeDrawThreshold()).isNull();
+        assertThat(res.getDelistStrategy()).isEqualTo("ALL_DRAWN");
+        assertThat(insertedLottery.getGameMode()).isNull();
+        assertThat(insertedLottery.getFreeDrawThreshold()).isNull();
+    }
+
+    @Test
+    @DisplayName("未指定 paymentType 時應預設為 GOLD")
+    void createLottery_PaymentTypeMissing_ShouldDefaultGold() {
+        LotteryCreateReq req = new LotteryCreateReq();
+        req.setStoreId("store-1");
+        req.setTitle("payment-default");
+        req.setCategory("OFFICIAL_ICHIBAN");
+        req.setPricePerDraw(100L);
+        req.setDelistStrategy("MANUAL");
+
+        LotteryRes res = lotteryService.createLottery(req);
+
+        assertThat(res.getPaymentType()).isEqualTo("GOLD");
+        assertThat(insertedLottery.getPaymentType()).isEqualTo("GOLD");
+    }
+
+    @Test
+    @DisplayName("非 DRAFT 商品不可修改 paymentType")
+    void updateLottery_NonDraftChangePaymentType_ShouldFail() {
+        Lottery existing = new Lottery();
+        existing.setId("lottery-1");
+        existing.setStatus("ON_SHELF");
+        existing.setCategory("OFFICIAL_ICHIBAN");
+        existing.setSubCategory(null);
+        existing.setGameMode("TICKET");
+        existing.setPlayMode("LOTTERY_MODE");
+        existing.setPaymentType("GOLD");
+        existing.setDelistStrategy("MANUAL");
+        when(lotteryMapper.selectByPrimaryKey("lottery-1")).thenReturn(existing);
+
+        LotteryUpdateReq req = new LotteryUpdateReq();
+        req.setPaymentType("BONUS");
+
+        assertThrows(BusinessException.class, () -> lotteryService.updateLottery("lottery-1", req));
     }
 }

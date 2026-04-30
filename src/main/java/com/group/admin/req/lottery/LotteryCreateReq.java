@@ -92,13 +92,15 @@ public class LotteryCreateReq {
     /**
      * 是否允許多抽
      */
-    @Schema(description = "是否允許多抽", example = "true")
+    @Deprecated
+    @Schema(description = "已廢棄欄位（後端忽略）", example = "true", deprecated = true)
     private Boolean allowMultiDraw;
 
     /**
      * 多抽選項
      */
-    @Schema(description = "多抽選項列表", example = "[10, 50]")
+    @Deprecated
+    @Schema(description = "已廢棄欄位（後端忽略）", example = "[10, 50]", deprecated = true)
     private List<Integer> multiDrawOptions;
 
     /**
@@ -227,15 +229,15 @@ public class LotteryCreateReq {
     private Integer bonusCostPerDraw;
 
     /**
-     * 付款方式：GOLD（預設）/ BONUS / FREE
+     * 付款方式：GOLD（預設）/ BONUS
      */
-    @Schema(description = "付款方式：GOLD/BONUS/FREE（預設 GOLD）", example = "GOLD")
+    @Schema(description = "付款方式：GOLD/BONUS（預設 GOLD）", example = "GOLD")
     private String paymentType;
 
     /**
-     * 免費抽門檻（刮刮樂專用，累計抽幾次後免費抽一次）
+     * 免費抽門檻（刮刮樂專用）
      */
-    @Schema(description = "免費抽門檻（刮刮樂：累計幾次後觸發免費抽）", example = "10")
+    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA+SCRATCH_MODE；NULL=未啟用；若有值必須>=1）", example = "10")
     private Integer freeDrawThreshold;
 
     /**

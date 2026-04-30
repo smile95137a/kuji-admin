@@ -88,19 +88,26 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setImageUrl(req.getImageUrl());
         lottery.setCategory(req.getCategory());
         lottery.setSubCategory(req.getSubCategory());
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
+        String resolvedGameMode = resolveGameMode(req.getCategory(), req.getSubCategory(), req.getGameMode());
+        String resolvedDelistStrategy = resolveDelistStrategy(
+                req.getCategory(),
+                req.getSubCategory(),
+                req.getDelistStrategy()
+        );
+        Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
+                req.getCategory(),
+                req.getSubCategory(),
+                req.getFreeDrawThreshold()
+        );
+        String normalizedPaymentType = normalizePaymentType(req.getPaymentType());
+
         lottery.setPricePerDraw(req.getPricePerDraw());
         lottery.setDiscountedPrice(req.getDiscountedPrice());
         lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
-        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        lottery.setAllowMultiDraw(null);
         lottery.setBonusEnabled(req.getBonusEnabled());
-        
-        if (req.getMultiDrawOptions() != null) {
-            try {
-                lottery.setMultiDrawOptions(objectMapper.writeValueAsString(req.getMultiDrawOptions()));
-            } catch (JsonProcessingException e) {
-                log.warn("多抽選項序列化失敗", e);
-            }
-        }
+        lottery.setMultiDrawOptions(null);
         
         if (req.getTags() != null) {
             try {
@@ -123,8 +130,8 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setEndTime(req.getEndTime());
         lottery.setMaxDraws(req.getMaxDraws());
         lottery.setTotalDraws(0);
-        lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory()));
-        lottery.setGameMode(req.getGameMode());
+        lottery.setPlayMode(resolvedPlayMode);
+        lottery.setGameMode(resolvedGameMode);
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
         lottery.setHotCount(req.getHotCount());
@@ -137,13 +144,9 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setUpdatedAt(LocalDateTime.now());
         lottery.setRemark(req.getRemark());
         // T007: paymentType / delistStrategy defaults; freeDrawThreshold validation
-        lottery.setPaymentType(req.getPaymentType() != null ? req.getPaymentType() : "GOLD");
-        lottery.setDelistStrategy(req.getDelistStrategy() != null ? req.getDelistStrategy() : "ALL_DRAWN");
-        lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
-        String resolvedPm = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
-        if ("SCRATCH_MODE".equals(resolvedPm) && req.getFreeDrawThreshold() == null) {
-            throw new BusinessException("刮刮樂商品必須設定免費抽門檻");
-        }
+        lottery.setPaymentType(normalizedPaymentType);
+        lottery.setDelistStrategy(resolvedDelistStrategy);
+        lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
         
         lotteryMapper.insert(lottery);
         log.info("抽獎商品創建成功: id={}", lottery.getId());
@@ -175,6 +178,22 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("已上架的商品不可修改內容，請先下架再編輯");
         }
         
+        String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
+        String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory);
+        String requestGameMode = req.getGameMode() != null ? req.getGameMode() : lottery.getGameMode();
+        String resolvedGameMode = resolveGameMode(currentCategory, currentSubCategory, requestGameMode);
+        String requestDelistStrategy = req.getDelistStrategy() != null ? req.getDelistStrategy() : lottery.getDelistStrategy();
+        String resolvedDelistStrategy = resolveDelistStrategy(currentCategory, currentSubCategory, requestDelistStrategy);
+        Integer requestFreeDrawThreshold = req.getFreeDrawThreshold() != null
+                ? req.getFreeDrawThreshold()
+                : lottery.getFreeDrawThreshold();
+        Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
+                currentCategory,
+                currentSubCategory,
+                requestFreeDrawThreshold
+        );
+
         if (req.getTitle() != null) lottery.setTitle(req.getTitle());
         if (req.getDescription() != null) lottery.setDescription(req.getDescription());
         if (req.getImageUrl() != null) lottery.setImageUrl(req.getImageUrl());
@@ -183,16 +202,9 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getPricePerDraw() != null) lottery.setPricePerDraw(req.getPricePerDraw());
         if (req.getDiscountedPrice() != null) lottery.setDiscountedPrice(req.getDiscountedPrice());
         if (req.getAutoDiscountEnabled() != null) lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
-        if (req.getAllowMultiDraw() != null) lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+        if (req.getAllowMultiDraw() != null) lottery.setAllowMultiDraw(null);
         if (req.getBonusEnabled() != null) lottery.setBonusEnabled(req.getBonusEnabled());
-        
-        if (req.getMultiDrawOptions() != null) {
-            try {
-                lottery.setMultiDrawOptions(objectMapper.writeValueAsString(req.getMultiDrawOptions()));
-            } catch (JsonProcessingException e) {
-                log.warn("多抽選項序列化失敗", e);
-            }
-        }
+        if (req.getMultiDrawOptions() != null) lottery.setMultiDrawOptions(null);
         
         if (req.getTags() != null) {
             try {
@@ -215,16 +227,18 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getEndTime() != null) lottery.setEndTime(req.getEndTime());
         if (req.getMaxDraws() != null) lottery.setMaxDraws(req.getMaxDraws());
         if (req.getOrderNum() != null) lottery.setOrderNum(req.getOrderNum());
-        if (req.getPlayMode() != null || req.getCategory() != null || req.getSubCategory() != null) {
-            String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
-            String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
-            lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory));
-        }
+        lottery.setPlayMode(resolvedPlayMode);
+        lottery.setGameMode(resolvedGameMode);
+        lottery.setDelistStrategy(resolvedDelistStrategy);
+        lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
         if (req.getStatus() != null) lottery.setStatus(req.getStatus());
         // T008: new fields update
-        if (req.getPaymentType() != null) lottery.setPaymentType(req.getPaymentType());
-        if (req.getFreeDrawThreshold() != null) lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
-        if (req.getDelistStrategy() != null) lottery.setDelistStrategy(req.getDelistStrategy());
+        if (req.getPaymentType() != null) {
+            if (!LotteryStatusEnum.DRAFT.getCode().equals(status)) {
+                throw new BusinessException("非草稿商品不可修改 paymentType");
+            }
+            lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
+        }
         // ✅ 不再設定 weight
         if (req.getRemark() != null) lottery.setRemark(req.getRemark());
         
@@ -752,6 +766,13 @@ public class LotteryServiceImpl implements LotteryService {
         res.setRemark(lottery.getRemark());
         res.setTotalPrizes(sumQuantityByLotteryId(lottery.getId()));
         res.setRemainingPrizes(sumRemainingByLotteryId(lottery.getId()));
+        res.setPaymentType(isNotBlank(lottery.getPaymentType()) ? lottery.getPaymentType() : "GOLD");
+        res.setFreeDrawThreshold(sanitizeFreeDrawThresholdForResponse(
+                lottery.getCategory(),
+                lottery.getSubCategory(),
+                lottery.getFreeDrawThreshold()
+        ));
+        res.setDelistStrategy(isNotBlank(lottery.getDelistStrategy()) ? lottery.getDelistStrategy() : "MANUAL");
         return res;
     }
 
@@ -914,21 +935,29 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setDescription(req.getDescription());
         lottery.setCategory(req.getCategory());
         lottery.setSubCategory(req.getSubCategory());
-        lottery.setGameMode(req.getGameMode());
 
         // 自動推算 playMode：前端不需要傳，後端根據 category + subCategory 決定
         String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
+        String resolvedGameMode = resolveGameMode(req.getCategory(), req.getSubCategory(), req.getGameMode());
+        String resolvedDelistStrategy = resolveDelistStrategy(
+                req.getCategory(),
+                req.getSubCategory(),
+                req.getDelistStrategy()
+        );
+        Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
+                req.getCategory(),
+                req.getSubCategory(),
+                req.getFreeDrawThreshold()
+        );
         lottery.setPlayMode(resolvedPlayMode);
+        lottery.setGameMode(resolvedGameMode);
 
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : "OFF_SHELF");
         lottery.setPricePerDraw(req.getPricePerDraw());
         lottery.setDiscountedPrice(req.getDiscountedPrice());
         lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
-        lottery.setAllowMultiDraw(req.getAllowMultiDraw() != null && req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
-        if (req.getMultiDrawOptions() != null && !req.getMultiDrawOptions().isEmpty()) {
-            lottery.setMultiDrawOptions(req.getMultiDrawOptions().stream()
-                    .map(String::valueOf).collect(Collectors.joining(",")));
-        }
+        lottery.setAllowMultiDraw(null);
+        lottery.setMultiDrawOptions(null);
         lottery.setMaxDraws(req.getMaxDraws());
         lottery.setTotalDraws(0);
         lottery.setImageUrl(req.getImageUrl());
@@ -944,12 +973,9 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
         lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
         // T007: paymentType / delistStrategy defaults; freeDrawThreshold validation
-        lottery.setPaymentType(req.getPaymentType() != null ? req.getPaymentType() : "GOLD");
-        lottery.setDelistStrategy(req.getDelistStrategy() != null ? req.getDelistStrategy() : "ALL_DRAWN");
-        lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
-        if ("SCRATCH_MODE".equals(resolvedPlayMode) && req.getFreeDrawThreshold() == null) {
-            throw new BusinessException("刮刮樂商品必須設定免費抽門檻");
-        }
+        lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
+        lottery.setDelistStrategy(resolvedDelistStrategy);
+        lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
         if (req.getTags() != null && !req.getTags().isEmpty()) {
             lottery.setTags(String.join(",", req.getTags()));
         }
@@ -979,6 +1005,22 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("商品不存在");
         }
         
+        String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
+        String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory);
+        String requestGameMode = req.getGameMode() != null ? req.getGameMode() : lottery.getGameMode();
+        String resolvedGameMode = resolveGameMode(currentCategory, currentSubCategory, requestGameMode);
+        String requestDelistStrategy = req.getDelistStrategy() != null ? req.getDelistStrategy() : lottery.getDelistStrategy();
+        String resolvedDelistStrategy = resolveDelistStrategy(currentCategory, currentSubCategory, requestDelistStrategy);
+        Integer requestFreeDrawThreshold = req.getFreeDrawThreshold() != null
+                ? req.getFreeDrawThreshold()
+                : lottery.getFreeDrawThreshold();
+        Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
+                currentCategory,
+                currentSubCategory,
+                requestFreeDrawThreshold
+        );
+
         // 更新欄位（所有欄位都是可選的）
         if (req.getTitle() != null) {
             lottery.setTitle(req.getTitle());
@@ -995,15 +1037,8 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getSubCategory() != null) {
             lottery.setSubCategory(req.getSubCategory());
         }
-        if (req.getPlayMode() != null || req.getCategory() != null || req.getSubCategory() != null) {
-            // 有任何分類相關欄位更新時，重新推算 playMode
-            String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
-            String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
-            lottery.setPlayMode(resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory));
-        }
-        if (req.getGameMode() != null) {
-            lottery.setGameMode(req.getGameMode());
-        }
+        lottery.setPlayMode(resolvedPlayMode);
+        lottery.setGameMode(resolvedGameMode);
         if (req.getPricePerDraw() != null) {
             lottery.setPricePerDraw(req.getPricePerDraw());
         }
@@ -1014,11 +1049,10 @@ public class LotteryServiceImpl implements LotteryService {
             lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
         }
         if (req.getAllowMultiDraw() != null) {
-            lottery.setAllowMultiDraw(req.getAllowMultiDraw() ? (byte) 1 : (byte) 0);
+            lottery.setAllowMultiDraw(null);
         }
         if (req.getMultiDrawOptions() != null) {
-            lottery.setMultiDrawOptions(req.getMultiDrawOptions().stream()
-                    .map(String::valueOf).collect(Collectors.joining(",")));
+            lottery.setMultiDrawOptions(null);
         }
         if (req.getBonusEnabled() != null) {
             lottery.setBonusEnabled(req.getBonusEnabled());
@@ -1069,9 +1103,14 @@ public class LotteryServiceImpl implements LotteryService {
             lottery.setGalleryImages(req.getGalleryImages().stream().collect(Collectors.joining(",")));
         }
         // T008: new fields update
-        if (req.getPaymentType() != null) lottery.setPaymentType(req.getPaymentType());
-        if (req.getFreeDrawThreshold() != null) lottery.setFreeDrawThreshold(req.getFreeDrawThreshold());
-        if (req.getDelistStrategy() != null) lottery.setDelistStrategy(req.getDelistStrategy());
+        if (req.getPaymentType() != null) {
+            if (!LotteryStatusEnum.DRAFT.getCode().equals(lottery.getStatus())) {
+                throw new BusinessException("非草稿商品不可修改 paymentType");
+            }
+            lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
+        }
+        lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
+        lottery.setDelistStrategy(resolvedDelistStrategy);
         
         lottery.setUpdatedAt(LocalDateTime.now());
         
@@ -1298,9 +1337,13 @@ public class LotteryServiceImpl implements LotteryService {
         res.setDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers());
         res.setTicketsGenerated(lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1);
         // T009: new fields
-        res.setPaymentType(lottery.getPaymentType() != null ? lottery.getPaymentType() : "GOLD");
-        res.setFreeDrawThreshold(lottery.getFreeDrawThreshold());
-        res.setDelistStrategy(lottery.getDelistStrategy() != null ? lottery.getDelistStrategy() : "ALL_DRAWN");
+        res.setPaymentType(isNotBlank(lottery.getPaymentType()) ? lottery.getPaymentType() : "GOLD");
+        res.setFreeDrawThreshold(sanitizeFreeDrawThresholdForResponse(
+                lottery.getCategory(),
+                lottery.getSubCategory(),
+                lottery.getFreeDrawThreshold()
+        ));
+        res.setDelistStrategy(isNotBlank(lottery.getDelistStrategy()) ? lottery.getDelistStrategy() : "MANUAL");
         
         return res;
     }
@@ -1369,15 +1412,12 @@ public class LotteryServiceImpl implements LotteryService {
      * SCRATCH（舊值，已棄用）      -                → SCRATCH_MODE
      * </pre>
      *
-     * @param explicit    前端明確傳入的 playMode（優先使用，不為 null 時直接採用）
+     * @param explicit    前端傳入值（僅保留參數相容，實際上不採用）
      * @param category    商品大分類
      * @param subCategory 自製賞子類型
      * @return 推算後的 playMode
      */
     private String resolvePlayMode(String explicit, String category, String subCategory) {
-        if (explicit != null && !explicit.isBlank()) {
-            return explicit; // 前端明確指定時尊重傳入值
-        }
         if (category == null) {
             return "LOTTERY_MODE";
         }
@@ -1387,6 +1427,80 @@ public class LotteryServiceImpl implements LotteryService {
             case "SCRATCH" -> "SCRATCH_MODE"; // 舊資料相容
             default -> "LOTTERY_MODE";
         };
+    }
+
+    private String resolveGameMode(String category, String subCategory, String requestGameMode) {
+        if ("OFFICIAL_ICHIBAN".equals(category) || "TRADING_CARD".equals(category)) {
+            return "TICKET";
+        }
+        if ("GACHA".equals(category)) {
+            return "RANDOM";
+        }
+        if ("CUSTOM_GACHA".equals(category)) {
+            if ("SCRATCH_MODE".equals(subCategory)) {
+                if (!isNotBlank(requestGameMode)) {
+                    throw new BusinessException("刮刮樂商品必須設定 gameMode");
+                }
+                if (!List.of("SCRATCH_STORE", "SCRATCH_PLAYER", "RANDOM").contains(requestGameMode)) {
+                    throw new BusinessException("刮刮樂 gameMode 僅允許 SCRATCH_STORE/SCRATCH_PLAYER/RANDOM");
+                }
+                return requestGameMode;
+            }
+            return null;
+        }
+        throw new BusinessException("不支援的商品分類: " + category);
+    }
+
+    private String resolveDelistStrategy(String category, String subCategory, String requestDelistStrategy) {
+        if ("OFFICIAL_ICHIBAN".equals(category)) {
+            if (!isNotBlank(requestDelistStrategy)) {
+                throw new BusinessException("OFFICIAL_ICHIBAN 必須設定 delistStrategy");
+            }
+            if (!List.of("GRAND_PRIZE_DRAWN", "ALL_DRAWN", "MANUAL").contains(requestDelistStrategy)) {
+                throw new BusinessException("delistStrategy 僅允許 GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL");
+            }
+            return requestDelistStrategy;
+        }
+        if ("TRADING_CARD".equals(category) || "GACHA".equals(category)) {
+            return "ALL_DRAWN";
+        }
+        if ("CUSTOM_GACHA".equals(category)) {
+            return "SCRATCH_MODE".equals(subCategory) ? "GRAND_PRIZE_DRAWN" : "ALL_DRAWN";
+        }
+        throw new BusinessException("不支援的商品分類: " + category);
+    }
+
+    private Integer normalizeFreeDrawThreshold(String category, String subCategory, Integer threshold) {
+        if (!"CUSTOM_GACHA".equals(category) || !"SCRATCH_MODE".equals(subCategory)) {
+            return null;
+        }
+        if (threshold == null) {
+            return null;
+        }
+        if (threshold < 1) {
+            throw new BusinessException("免費抽門檻必須大於或等於 1");
+        }
+        return threshold;
+    }
+
+    private Integer sanitizeFreeDrawThresholdForResponse(String category, String subCategory, Integer threshold) {
+        if (!"CUSTOM_GACHA".equals(category) || !"SCRATCH_MODE".equals(subCategory)) {
+            return null;
+        }
+        if (threshold == null || threshold < 1) {
+            return null;
+        }
+        return threshold;
+    }
+
+    private String normalizePaymentType(String paymentType) {
+        if (!isNotBlank(paymentType)) {
+            return "GOLD";
+        }
+        if (!List.of("GOLD", "BONUS").contains(paymentType)) {
+            throw new BusinessException("paymentType 僅允許 GOLD/BONUS");
+        }
+        return paymentType;
     }
 
     // ==================== 複製商品功能 ====================
@@ -1425,8 +1539,8 @@ public class LotteryServiceImpl implements LotteryService {
         newLottery.setPricePerDraw(sourceLottery.getPricePerDraw());
         newLottery.setDiscountedPrice(sourceLottery.getDiscountedPrice());
         newLottery.setAutoDiscountEnabled(sourceLottery.getAutoDiscountEnabled());
-        newLottery.setAllowMultiDraw(sourceLottery.getAllowMultiDraw());
-        newLottery.setMultiDrawOptions(sourceLottery.getMultiDrawOptions());
+        newLottery.setAllowMultiDraw(null);
+        newLottery.setMultiDrawOptions(null);
         newLottery.setScheduledAt(sourceLottery.getScheduledAt());
         newLottery.setStartTime(sourceLottery.getStartTime());
         newLottery.setEndTime(sourceLottery.getEndTime());
@@ -1434,9 +1548,16 @@ public class LotteryServiceImpl implements LotteryService {
         // ✅ 抽數相關：重置為 0
         newLottery.setTotalDraws(0);
         newLottery.setMaxDraws(sourceLottery.getMaxDraws());
-        newLottery.setProtectionDraws(sourceLottery.getProtectionDraws());
-        newLottery.setProtectionMinutes(sourceLottery.getProtectionMinutes());
+        newLottery.setProtectionDraws(null);
+        newLottery.setProtectionMinutes(null);
         newLottery.setFreeDrawEnabled(sourceLottery.getFreeDrawEnabled());
+        newLottery.setPaymentType(isNotBlank(sourceLottery.getPaymentType()) ? sourceLottery.getPaymentType() : "GOLD");
+        newLottery.setFreeDrawThreshold(sanitizeFreeDrawThresholdForResponse(
+                sourceLottery.getCategory(),
+                sourceLottery.getSubCategory(),
+                sourceLottery.getFreeDrawThreshold()
+        ));
+        newLottery.setDelistStrategy(isNotBlank(sourceLottery.getDelistStrategy()) ? sourceLottery.getDelistStrategy() : "MANUAL");
         newLottery.setDesignatedPrizeNumbers(sourceLottery.getDesignatedPrizeNumbers());
         
         // ✅ 籤號生成標記：根據參數決定
@@ -1854,6 +1975,9 @@ public class LotteryServiceImpl implements LotteryService {
                 .galleryImages(lotteryRes.getGalleryImages())
                 .theme(lotteryRes.getTheme())
                 .hotCount(lotteryRes.getHotCount())
+                .paymentType(lotteryRes.getPaymentType())
+                .freeDrawThreshold(lotteryRes.getFreeDrawThreshold())
+                .delistStrategy(lotteryRes.getDelistStrategy())
                 .orderNum(lotteryRes.getOrderNum())
                 .remark(lotteryRes.getRemark())
                 .content(lotteryRes.getContent())

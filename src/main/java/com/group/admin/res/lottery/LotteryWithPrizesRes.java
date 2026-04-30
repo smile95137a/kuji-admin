@@ -62,10 +62,12 @@ public class LotteryWithPrizesRes {
     @Schema(description = "是否啟用自動降價", example = "true")
     private Boolean autoDiscountEnabled;
     
-    @Schema(description = "是否允許多抽", example = "true")
+    @Deprecated
+    @Schema(description = "已廢棄欄位", example = "true", deprecated = true)
     private Boolean allowMultiDraw;
     
-    @Schema(description = "多抽選項", example = "[10, 50]")
+    @Deprecated
+    @Schema(description = "已廢棄欄位", example = "[10, 50]", deprecated = true)
     private List<Integer> multiDrawOptions;
     
     @Schema(description = "是否啟用紅利", example = "true")
@@ -88,6 +90,15 @@ public class LotteryWithPrizesRes {
     
     @Schema(description = "熱門度", example = "999")
     private Integer hotCount;
+
+    @Schema(description = "付款方式：GOLD/BONUS", example = "GOLD")
+    private String paymentType;
+
+    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA+SCRATCH_MODE；NULL=未啟用）", example = "10")
+    private Integer freeDrawThreshold;
+
+    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
+    private String delistStrategy;
     
     @Schema(description = "顯示排序", example = "1")
     private Integer orderNum;

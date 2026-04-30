@@ -115,13 +115,15 @@ public class LotteryRes {
     /**
      * 是否允許多抽
      */
-    @Schema(description = "是否允許多抽", example = "true")
+    @Deprecated
+    @Schema(description = "已廢棄欄位", example = "true", deprecated = true)
     private Boolean allowMultiDraw;
 
     /**
      * 多抽選項
      */
-    @Schema(description = "多抽選項列表", example = "[10, 50]")
+    @Deprecated
+    @Schema(description = "已廢棄欄位", example = "[10, 50]", deprecated = true)
     private List<Integer> multiDrawOptions;
 
     /**
@@ -267,13 +269,15 @@ public class LotteryRes {
     /**
      * 保護抽數（大獎保底機制）
      */
-    @Schema(description = "保護抽數（幾抽內必出大獎）", example = "50")
+    @Deprecated
+    @Schema(description = "已廢棄欄位", example = "50", deprecated = true)
     private Integer protectionDraws;
     
     /**
      * 保護時間（分鐘）
      */
-    @Schema(description = "保護時間（分鐘，搶購保護）", example = "10")
+    @Deprecated
+    @Schema(description = "已廢棄欄位", example = "10", deprecated = true)
     private Integer protectionMinutes;
     
     /**
@@ -307,15 +311,15 @@ public class LotteryRes {
     private Boolean ticketsGenerated;
 
     /**
-     * 付款方式：GOLD / BONUS / FREE
+     * 付款方式：GOLD / BONUS
      */
-    @Schema(description = "付款方式", example = "GOLD")
+    @Schema(description = "付款方式：GOLD/BONUS", example = "GOLD")
     private String paymentType;
 
     /**
      * 免費抽門檻（刮刮樂）
      */
-    @Schema(description = "免費抽門檻", example = "10")
+    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA+SCRATCH_MODE；NULL=未啟用）", example = "10")
     private Integer freeDrawThreshold;
 
     /**

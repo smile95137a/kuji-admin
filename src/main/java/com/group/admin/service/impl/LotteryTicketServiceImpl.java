@@ -575,8 +575,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             extendProtection(sessionInfo.sessionId());
         }
         
-        // 讀取 paymentType，預設為 GOLD（Spec 019 尚未加此欄位時的安全預設值）
-        String paymentType = "GOLD";
+        String paymentType = resolvePaymentType(lottery);
 
         // 扣款（依 paymentType 決定扣金幣或紅利，不做混合扣款）
         try {
@@ -762,8 +761,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             extendProtection(sessionInfo.sessionId());
         }
         
-        // 讀取 paymentType，預設為 GOLD（Spec 019 尚未加此欄位時的安全預設值）
-        String paymentType = "GOLD";
+        String paymentType = resolvePaymentType(lottery);
 
         // 扣款（依 paymentType 決定扣金幣或紅利，不做混合扣款）
         try {
@@ -1361,6 +1359,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
 
         log.info("✅ 非大獎自動分配完成: {} 個籤位已分配獎品，剩餘 {} 個籤位保持謝謝惠顧",
                 assignCount, unassigned.size() - assignCount);
+    }
+
+    private String resolvePaymentType(Lottery lottery) {
+        return "BONUS".equalsIgnoreCase(lottery.getPaymentType()) ? "BONUS" : "GOLD";
     }
 
     // ==================== 內部輔助 ====================

@@ -71,9 +71,10 @@ public class LotteryDrawController {
             return ResponseEntity.status(401).build();
         }
         
-        log.info("🎰 抽獎請求: lotteryId={}, userId={}, count={}, ticket列表長度={}", 
+        log.info("🎰 抽獎請求: lotteryId={}, userId={}, count={}, ticket列表長度={}, ticketNumber={}", 
                 lotteryId, userId, request.getCount(), 
-                request.getTickets() != null ? request.getTickets().size() : 0);
+                request.getTickets() != null ? request.getTickets().size() : 0,
+                request.getTicketNumber());
         
         // 驗證 count（提前驗證，避免不必要的查詢）
         Integer count = request.getCount();
@@ -273,6 +274,32 @@ public class LotteryDrawController {
             // 執行批次抽獎
             for (String ticketId : tickets) {
                 DrawResult r = ticketService.drawByTicketId(lotteryId, userId, ticketId);
+
+                // 防呆：指定票券抽獎時，回傳票券必須與請求完全一致，避免票券對應錯亂
+                if (r.success() && (r.ticketId() == null || !ticketId.equals(r.ticketId()))) {
+                    log.error("❌ 指定票券回傳不一致: lotteryId={}, requestedTicketId={}, returnedTicketId={}",
+                            lotteryId, ticketId, r.ticketId());
+                    results.add(new DrawResult(
+                            false,
+                            ticketId,
+                            0,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            false,
+                            false,
+                            0L,
+                            "系統偵測到票券對應不一致，請重新整理後重試",
+                            false,
+                            null,
+                            null,
+                            null
+                    ));
+                    continue;
+                }
+
                 results.add(r);
             }
         } else if (request.getTicketNumber() != null) {

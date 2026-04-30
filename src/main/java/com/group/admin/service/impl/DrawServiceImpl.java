@@ -104,8 +104,7 @@ public class DrawServiceImpl implements DrawService {
             throw new BusinessException("使用者不存在");
         }
         
-        // 讀取 paymentType，預設為 GOLD（spec 019 尚未加此欄位時的安全預設值）
-        String paymentType = "GOLD";
+        String paymentType = resolvePaymentType(lottery);
         
         Long gold = user.getGoldCoins() != null ? user.getGoldCoins() : 0L;
         Long bonus = user.getBonusCoins() != null ? user.getBonusCoins() : 0L;
@@ -235,7 +234,7 @@ public class DrawServiceImpl implements DrawService {
             result.setPrizeImageUrl(drawnPrize.getImageUrl());
             result.setIsGrandPrize(drawnPrize.getIsGrandPrize() != null && drawnPrize.getIsGrandPrize() == 1);
             result.setIsLastPrize(isLastPrize || (drawnPrize.getIsLastPrize() != null && drawnPrize.getIsLastPrize() == 1));
-            result.setCostType("GOLD");
+            result.setCostType(paymentType);
             result.setCostAmount(pricePerDraw);
             result.setDrawTime(java.time.LocalDateTime.now());
             if (priceChanged) {
@@ -350,5 +349,9 @@ public class DrawServiceImpl implements DrawService {
         
         // 預設值
         return 10L;
+    }
+
+    private String resolvePaymentType(Lottery lottery) {
+        return "BONUS".equalsIgnoreCase(lottery.getPaymentType()) ? "BONUS" : "GOLD";
     }
 }

@@ -9,6 +9,9 @@
     <result column="category" jdbcType="VARCHAR" property="category" />
     <result column="sub_category" jdbcType="VARCHAR" property="subCategory" />
     <result column="game_mode" jdbcType="VARCHAR" property="gameMode" />
+    <result column="payment_type" jdbcType="VARCHAR" property="paymentType" />
+    <result column="free_draw_threshold" jdbcType="INTEGER" property="freeDrawThreshold" />
+    <result column="delist_strategy" jdbcType="VARCHAR" property="delistStrategy" />
     <result column="price_per_draw" jdbcType="BIGINT" property="pricePerDraw" />
     <result column="discounted_price" jdbcType="BIGINT" property="discountedPrice" />
     <result column="auto_discount_enabled" jdbcType="TINYINT" property="autoDiscountEnabled" />
@@ -103,8 +106,9 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, store_id, title, image_url, category, sub_category, game_mode, price_per_draw, 
-    discounted_price, auto_discount_enabled, allow_multi_draw, multi_draw_options, scheduled_at, 
+    id, store_id, title, image_url, category, sub_category, game_mode, payment_type, 
+    free_draw_threshold, delist_strategy, price_per_draw, discounted_price, auto_discount_enabled, 
+    allow_multi_draw, multi_draw_options, scheduled_at, 
     start_time, end_time, total_draws, max_draws, protection_draws, protection_minutes, 
     free_draw_enabled, designated_prize_numbers, tickets_generated, status, order_num, 
     weight, created_by, created_at, updated_at, play_mode, hot_count, theme, tags, bonus_enabled, 
@@ -166,11 +170,11 @@
   <insert id="insert" parameterType="com.group.admin.entity.Lottery">
     insert into lottery (id, store_id, title, 
       image_url, category, sub_category, 
-      game_mode, price_per_draw, discounted_price, 
-      auto_discount_enabled, allow_multi_draw, multi_draw_options, 
+      game_mode, payment_type, free_draw_threshold, 
+      delist_strategy, price_per_draw, discounted_price, 
+      auto_discount_enabled, 
       scheduled_at, start_time, end_time, 
-      total_draws, max_draws, protection_draws, 
-      protection_minutes, free_draw_enabled, designated_prize_numbers, 
+      total_draws, max_draws, free_draw_enabled, designated_prize_numbers, 
       tickets_generated, status, order_num, 
       weight, created_by, created_at, 
       updated_at, play_mode, hot_count, 
@@ -180,11 +184,11 @@
       )
     values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
       #{imageUrl,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{subCategory,jdbcType=VARCHAR}, 
-      #{gameMode,jdbcType=VARCHAR}, #{pricePerDraw,jdbcType=BIGINT}, #{discountedPrice,jdbcType=BIGINT}, 
-      #{autoDiscountEnabled,jdbcType=TINYINT}, #{allowMultiDraw,jdbcType=TINYINT}, #{multiDrawOptions,jdbcType=VARCHAR}, 
+      #{gameMode,jdbcType=VARCHAR}, #{paymentType,jdbcType=VARCHAR}, #{freeDrawThreshold,jdbcType=INTEGER}, 
+      #{delistStrategy,jdbcType=VARCHAR}, #{pricePerDraw,jdbcType=BIGINT}, #{discountedPrice,jdbcType=BIGINT}, 
+      #{autoDiscountEnabled,jdbcType=TINYINT}, 
       #{scheduledAt,jdbcType=TIMESTAMP}, #{startTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, 
-      #{totalDraws,jdbcType=INTEGER}, #{maxDraws,jdbcType=INTEGER}, #{protectionDraws,jdbcType=INTEGER}, 
-      #{protectionMinutes,jdbcType=INTEGER}, #{freeDrawEnabled,jdbcType=TINYINT}, #{designatedPrizeNumbers,jdbcType=VARCHAR}, 
+      #{totalDraws,jdbcType=INTEGER}, #{maxDraws,jdbcType=INTEGER}, #{freeDrawEnabled,jdbcType=TINYINT}, #{designatedPrizeNumbers,jdbcType=VARCHAR}, 
       #{ticketsGenerated,jdbcType=TINYINT}, #{status,jdbcType=VARCHAR}, #{orderNum,jdbcType=INTEGER}, 
       #{weight,jdbcType=INTEGER}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
       #{updatedAt,jdbcType=TIMESTAMP}, #{playMode,jdbcType=VARCHAR}, #{hotCount,jdbcType=INTEGER}, 
@@ -217,6 +221,15 @@
       <if test="gameMode != null">
         game_mode,
       </if>
+      <if test="paymentType != null">
+        payment_type,
+      </if>
+      <if test="freeDrawThreshold != null">
+        free_draw_threshold,
+      </if>
+      <if test="delistStrategy != null">
+        delist_strategy,
+      </if>
       <if test="pricePerDraw != null">
         price_per_draw,
       </if>
@@ -225,12 +238,6 @@
       </if>
       <if test="autoDiscountEnabled != null">
         auto_discount_enabled,
-      </if>
-      <if test="allowMultiDraw != null">
-        allow_multi_draw,
-      </if>
-      <if test="multiDrawOptions != null">
-        multi_draw_options,
       </if>
       <if test="scheduledAt != null">
         scheduled_at,
@@ -246,12 +253,6 @@
       </if>
       <if test="maxDraws != null">
         max_draws,
-      </if>
-      <if test="protectionDraws != null">
-        protection_draws,
-      </if>
-      <if test="protectionMinutes != null">
-        protection_minutes,
       </if>
       <if test="freeDrawEnabled != null">
         free_draw_enabled,
@@ -336,6 +337,15 @@
       <if test="gameMode != null">
         #{gameMode,jdbcType=VARCHAR},
       </if>
+      <if test="paymentType != null">
+        #{paymentType,jdbcType=VARCHAR},
+      </if>
+      <if test="freeDrawThreshold != null">
+        #{freeDrawThreshold,jdbcType=INTEGER},
+      </if>
+      <if test="delistStrategy != null">
+        #{delistStrategy,jdbcType=VARCHAR},
+      </if>
       <if test="pricePerDraw != null">
         #{pricePerDraw,jdbcType=BIGINT},
       </if>
@@ -344,12 +354,6 @@
       </if>
       <if test="autoDiscountEnabled != null">
         #{autoDiscountEnabled,jdbcType=TINYINT},
-      </if>
-      <if test="allowMultiDraw != null">
-        #{allowMultiDraw,jdbcType=TINYINT},
-      </if>
-      <if test="multiDrawOptions != null">
-        #{multiDrawOptions,jdbcType=VARCHAR},
       </if>
       <if test="scheduledAt != null">
         #{scheduledAt,jdbcType=TIMESTAMP},
@@ -365,12 +369,6 @@
       </if>
       <if test="maxDraws != null">
         #{maxDraws,jdbcType=INTEGER},
-      </if>
-      <if test="protectionDraws != null">
-        #{protectionDraws,jdbcType=INTEGER},
-      </if>
-      <if test="protectionMinutes != null">
-        #{protectionMinutes,jdbcType=INTEGER},
       </if>
       <if test="freeDrawEnabled != null">
         #{freeDrawEnabled,jdbcType=TINYINT},
@@ -464,6 +462,15 @@
       <if test="row.gameMode != null">
         game_mode = #{row.gameMode,jdbcType=VARCHAR},
       </if>
+      <if test="row.paymentType != null">
+        payment_type = #{row.paymentType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.freeDrawThreshold != null">
+        free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
+      </if>
+      <if test="row.delistStrategy != null">
+        delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR},
+      </if>
       <if test="row.pricePerDraw != null">
         price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
       </if>
@@ -472,12 +479,6 @@
       </if>
       <if test="row.autoDiscountEnabled != null">
         auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
-      </if>
-      <if test="row.allowMultiDraw != null">
-        allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
-      </if>
-      <if test="row.multiDrawOptions != null">
-        multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
       </if>
       <if test="row.scheduledAt != null">
         scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
@@ -493,12 +494,6 @@
       </if>
       <if test="row.maxDraws != null">
         max_draws = #{row.maxDraws,jdbcType=INTEGER},
-      </if>
-      <if test="row.protectionDraws != null">
-        protection_draws = #{row.protectionDraws,jdbcType=INTEGER},
-      </if>
-      <if test="row.protectionMinutes != null">
-        protection_minutes = #{row.protectionMinutes,jdbcType=INTEGER},
       </if>
       <if test="row.freeDrawEnabled != null">
         free_draw_enabled = #{row.freeDrawEnabled,jdbcType=TINYINT},
@@ -574,18 +569,17 @@
       category = #{row.category,jdbcType=VARCHAR},
       sub_category = #{row.subCategory,jdbcType=VARCHAR},
       game_mode = #{row.gameMode,jdbcType=VARCHAR},
+      payment_type = #{row.paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR},
       price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
-      allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
-      multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
       scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
       start_time = #{row.startTime,jdbcType=TIMESTAMP},
       end_time = #{row.endTime,jdbcType=TIMESTAMP},
       total_draws = #{row.totalDraws,jdbcType=INTEGER},
       max_draws = #{row.maxDraws,jdbcType=INTEGER},
-      protection_draws = #{row.protectionDraws,jdbcType=INTEGER},
-      protection_minutes = #{row.protectionMinutes,jdbcType=INTEGER},
       free_draw_enabled = #{row.freeDrawEnabled,jdbcType=TINYINT},
       designated_prize_numbers = #{row.designatedPrizeNumbers,jdbcType=VARCHAR},
       tickets_generated = #{row.ticketsGenerated,jdbcType=TINYINT},
@@ -619,18 +613,17 @@
       category = #{row.category,jdbcType=VARCHAR},
       sub_category = #{row.subCategory,jdbcType=VARCHAR},
       game_mode = #{row.gameMode,jdbcType=VARCHAR},
+      payment_type = #{row.paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR},
       price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
-      allow_multi_draw = #{row.allowMultiDraw,jdbcType=TINYINT},
-      multi_draw_options = #{row.multiDrawOptions,jdbcType=VARCHAR},
       scheduled_at = #{row.scheduledAt,jdbcType=TIMESTAMP},
       start_time = #{row.startTime,jdbcType=TIMESTAMP},
       end_time = #{row.endTime,jdbcType=TIMESTAMP},
       total_draws = #{row.totalDraws,jdbcType=INTEGER},
       max_draws = #{row.maxDraws,jdbcType=INTEGER},
-      protection_draws = #{row.protectionDraws,jdbcType=INTEGER},
-      protection_minutes = #{row.protectionMinutes,jdbcType=INTEGER},
       free_draw_enabled = #{row.freeDrawEnabled,jdbcType=TINYINT},
       designated_prize_numbers = #{row.designatedPrizeNumbers,jdbcType=VARCHAR},
       tickets_generated = #{row.ticketsGenerated,jdbcType=TINYINT},
@@ -672,6 +665,15 @@
       <if test="gameMode != null">
         game_mode = #{gameMode,jdbcType=VARCHAR},
       </if>
+      <if test="paymentType != null">
+        payment_type = #{paymentType,jdbcType=VARCHAR},
+      </if>
+      <if test="freeDrawThreshold != null">
+        free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
+      </if>
+      <if test="delistStrategy != null">
+        delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
+      </if>
       <if test="pricePerDraw != null">
         price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
       </if>
@@ -680,12 +682,6 @@
       </if>
       <if test="autoDiscountEnabled != null">
         auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
-      </if>
-      <if test="allowMultiDraw != null">
-        allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
-      </if>
-      <if test="multiDrawOptions != null">
-        multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
       </if>
       <if test="scheduledAt != null">
         scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
@@ -701,12 +697,6 @@
       </if>
       <if test="maxDraws != null">
         max_draws = #{maxDraws,jdbcType=INTEGER},
-      </if>
-      <if test="protectionDraws != null">
-        protection_draws = #{protectionDraws,jdbcType=INTEGER},
-      </if>
-      <if test="protectionMinutes != null">
-        protection_minutes = #{protectionMinutes,jdbcType=INTEGER},
       </if>
       <if test="freeDrawEnabled != null">
         free_draw_enabled = #{freeDrawEnabled,jdbcType=TINYINT},
@@ -779,18 +769,17 @@
       category = #{category,jdbcType=VARCHAR},
       sub_category = #{subCategory,jdbcType=VARCHAR},
       game_mode = #{gameMode,jdbcType=VARCHAR},
+      payment_type = #{paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
       price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
-      allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
-      multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
       scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
       start_time = #{startTime,jdbcType=TIMESTAMP},
       end_time = #{endTime,jdbcType=TIMESTAMP},
       total_draws = #{totalDraws,jdbcType=INTEGER},
       max_draws = #{maxDraws,jdbcType=INTEGER},
-      protection_draws = #{protectionDraws,jdbcType=INTEGER},
-      protection_minutes = #{protectionMinutes,jdbcType=INTEGER},
       free_draw_enabled = #{freeDrawEnabled,jdbcType=TINYINT},
       designated_prize_numbers = #{designatedPrizeNumbers,jdbcType=VARCHAR},
       tickets_generated = #{ticketsGenerated,jdbcType=TINYINT},
@@ -821,18 +810,17 @@
       category = #{category,jdbcType=VARCHAR},
       sub_category = #{subCategory,jdbcType=VARCHAR},
       game_mode = #{gameMode,jdbcType=VARCHAR},
+      payment_type = #{paymentType,jdbcType=VARCHAR},
+      free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
+      delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
       price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
-      allow_multi_draw = #{allowMultiDraw,jdbcType=TINYINT},
-      multi_draw_options = #{multiDrawOptions,jdbcType=VARCHAR},
       scheduled_at = #{scheduledAt,jdbcType=TIMESTAMP},
       start_time = #{startTime,jdbcType=TIMESTAMP},
       end_time = #{endTime,jdbcType=TIMESTAMP},
       total_draws = #{totalDraws,jdbcType=INTEGER},
       max_draws = #{maxDraws,jdbcType=INTEGER},
-      protection_draws = #{protectionDraws,jdbcType=INTEGER},
-      protection_minutes = #{protectionMinutes,jdbcType=INTEGER},
       free_draw_enabled = #{freeDrawEnabled,jdbcType=TINYINT},
       designated_prize_numbers = #{designatedPrizeNumbers,jdbcType=VARCHAR},
       tickets_generated = #{ticketsGenerated,jdbcType=TINYINT},
@@ -858,6 +846,8 @@
     SELECT l.id, l.store_id AS storeId, s.store_name AS storeName,
            l.title, l.image_url AS imageUrl, l.category, l.sub_category AS subCategory,
            l.game_mode AS gameMode, l.play_mode AS playMode,
+           l.payment_type AS paymentType, l.free_draw_threshold AS freeDrawThreshold,
+           l.delist_strategy AS delistStrategy,
            l.price_per_draw AS pricePerDraw, l.discounted_price AS discountedPrice,
            l.auto_discount_enabled AS autoDiscountEnabled,
            l.allow_multi_draw AS allowMultiDraw, l.multi_draw_options AS multiDrawOptions,

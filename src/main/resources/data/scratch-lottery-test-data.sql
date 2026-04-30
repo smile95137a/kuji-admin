@@ -22,6 +22,7 @@ SET @lottery_id_1 = UUID();
 
 INSERT INTO lottery (
     id, store_id, title, description, category, sub_category, play_mode,
+    payment_type, free_draw_threshold, delist_strategy,
     price_per_draw, max_draws, total_value, image_url, 
     bonus_points_per_draw, bonus_cost_per_draw,
     status, hot_count, theme, order_num, remark,
@@ -34,6 +35,9 @@ INSERT INTO lottery (
     'CUSTOM_GACHA',           -- 自製賞
     'SCRATCH_MODE',           -- 刮刮樂型
     'SCRATCH_MODE',           -- 刮刮樂模式
+    'GOLD',                   -- 支付方式
+    NULL,                     -- 未啟用免費抽/免單機制
+    'GRAND_PRIZE_DRAWN',      -- 刮刮樂固定下架策略
     50,                       -- 每抽50元
     30,                       -- 總共30抽
     2500,                     -- 總價值2500元
@@ -65,6 +69,7 @@ SET @lottery_id_2 = UUID();
 
 INSERT INTO lottery (
     id, store_id, title, description, category, sub_category, play_mode,
+    payment_type, free_draw_threshold, delist_strategy,
     price_per_draw, max_draws, total_value, image_url,
     bonus_points_per_draw, bonus_cost_per_draw,
     status, hot_count, theme, order_num, remark,
@@ -77,6 +82,9 @@ INSERT INTO lottery (
     'CUSTOM_GACHA',
     'SCRATCH_MODE',
     'SCRATCH_MODE',
+    'BONUS',                  -- 支付方式
+    NULL,                     -- 未啟用免費抽/免單機制
+    'GRAND_PRIZE_DRAWN',
     80,                       -- 每抽80元
     50,                       -- 總共50抽
     5000,                     -- 總價值5000元
@@ -108,6 +116,7 @@ SET @lottery_id_3 = UUID();
 
 INSERT INTO lottery (
     id, store_id, title, description, category, sub_category, play_mode,
+    payment_type, free_draw_threshold, delist_strategy,
     price_per_draw, max_draws, total_value, image_url,
     bonus_points_per_draw, bonus_cost_per_draw,
     status, hot_count, theme, order_num, remark,
@@ -120,6 +129,9 @@ INSERT INTO lottery (
     'CUSTOM_GACHA',
     'SCRATCH_MODE',
     'SCRATCH_MODE',
+    'GOLD',
+    NULL,
+    'GRAND_PRIZE_DRAWN',
     60,                       -- 每抽60元
     40,                       -- 總共40抽
     3500,                     -- 總價值3500元
