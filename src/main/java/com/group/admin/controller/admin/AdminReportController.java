@@ -132,6 +132,25 @@ public class AdminReportController {
     }
 
     /**
+     * 商品銷售排行報表
+     * StoreOwner 後端強制綁定 storeId；Admin 可帶 storeId 或查全平台
+     */
+    @PostMapping("/lottery-sales")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    public ResponseEntity<LotterySalesRankingRes> getLotterySalesRanking(
+            @RequestBody QueryReq<LotterySalesRankingCondition> req) {
+
+        String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
+        if (currentStoreId != null) {
+            if (req == null) req = new QueryReq<>();
+            if (req.getCondition() == null) req.setCondition(new LotterySalesRankingCondition());
+            req.getCondition().setStoreId(currentStoreId);
+        }
+
+        return ResponseEntity.ok(reportService.getLotterySalesRanking(req));
+    }
+
+    /**
      * 獎品出貨報表
      */
     @PostMapping("/prize-shipment")

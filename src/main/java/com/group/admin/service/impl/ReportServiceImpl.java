@@ -798,6 +798,82 @@ public class ReportServiceImpl implements ReportService {
                 .build();
     }
 
+    @Override
+    public LotterySalesRankingRes getLotterySalesRanking(QueryReq<LotterySalesRankingCondition> req) {
+        LotterySalesRankingCondition condition = (req != null && req.getCondition() != null)
+                ? req.getCondition()
+                : new LotterySalesRankingCondition();
+
+        String storeId = condition.getStoreId();
+        int limit = Math.min(condition.getLimit() != null ? condition.getLimit() : 20, 100);
+        String sortBy = (req != null && "revenue".equalsIgnoreCase(req.getSortBy()))
+                ? "revenue"
+                : "draw_count";
+
+        log.info("📊 商品銷售排行: storeId={}, limit={}, sortBy={}", storeId, limit, sortBy);
+
+        String baseSql = """
+                SELECT
+                    l.id        AS lottery_id,
+                    l.title     AS lottery_title,
+                    s.store_name,
+                    COALESCE(dc.draw_count, 0) AS draw_count,
+                    COALESCE(rv.revenue, 0) AS revenue
+                FROM lottery l
+                JOIN store s ON l.store_id = s.id
+                LEFT JOIN (
+                    SELECT lottery_id, COUNT(*) AS draw_count
+                    FROM lottery_ticket
+                    WHERE status = 'DRAWN'
+                    GROUP BY lottery_id
+                ) dc ON dc.lottery_id = l.id
+                LEFT JOIN (
+                    SELECT oi.lottery_id,
+                           COUNT(oi.id) * MAX(l2.price_per_draw) AS revenue
+                    FROM order_item oi
+                    JOIN `order` o ON o.id = oi.order_id
+                                  AND o.status != 'CANCELLED'
+                    JOIN lottery l2 ON l2.id = oi.lottery_id
+                    GROUP BY oi.lottery_id
+                ) rv ON rv.lottery_id = l.id
+                WHERE 1 = 1
+                """;
+
+        List<Object> params = new ArrayList<>();
+        StringBuilder sqlBuilder = new StringBuilder(baseSql);
+        if (storeId != null) {
+            sqlBuilder.append("AND l.store_id = ?\n");
+            params.add(storeId);
+        }
+
+        String filteredSql = sqlBuilder.toString();
+        String countSql = "SELECT COUNT(*) FROM (" + filteredSql + ") AS total_count";
+        Integer totalRecords = jdbcTemplate.queryForObject(countSql, Integer.class, params.toArray());
+        if (totalRecords == null) totalRecords = 0;
+
+        String querySql = filteredSql + " ORDER BY " + sortBy + " DESC LIMIT ?";
+        List<Object> queryParams = new ArrayList<>(params);
+        queryParams.add(limit);
+
+        List<LotterySalesRankingRes.LotterySalesItem> items = jdbcTemplate.query(
+                querySql,
+                (rs, rowNum) -> LotterySalesRankingRes.LotterySalesItem.builder()
+                        .lotteryId(rs.getString("lottery_id"))
+                        .lotteryTitle(rs.getString("lottery_title"))
+                        .storeName(rs.getString("store_name"))
+                        .drawCount(rs.getInt("draw_count"))
+                        .revenue(rs.getLong("revenue"))
+                        .rank(rowNum + 1)
+                        .build(),
+                queryParams.toArray()
+        );
+
+        return LotterySalesRankingRes.builder()
+                .totalRecords(totalRecords)
+                .items(items)
+                .build();
+    }
+
     // ========== 工具方法 ==========
 
     private BigDecimal toBigDecimal(Object value) {
