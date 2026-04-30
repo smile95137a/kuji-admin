@@ -49,6 +49,12 @@ public interface ReportService {
     MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req);
     
     /**
+     * 店家績效比較報表
+     * @param req 查詢條件（包含店家ID、時間範圍、排序欄位）
+     */
+    StorePerformanceReportRes getStorePerformanceReport(QueryReq<StorePerformanceCondition> req);
+
+    /**
      * 商品銷售排行報表
      * @param req 查詢條件（包含店家ID、回傳筆數、排序欄位）
      */

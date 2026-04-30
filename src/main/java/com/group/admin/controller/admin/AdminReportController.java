@@ -151,6 +151,29 @@ public class AdminReportController {
     }
 
     /**
+     * 店家績效比較報表
+     */
+    @PostMapping("/store-performance")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    public ResponseEntity<StorePerformanceReportRes> getStorePerformanceReport(
+            @RequestBody QueryReq<StorePerformanceCondition> req) {
+
+        if (req == null) req = new QueryReq<>();
+        if (req.getCondition() == null) req.setCondition(new StorePerformanceCondition());
+
+        String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
+        if (currentStoreId != null) {
+            String requested = req.getCondition().getStoreId();
+            if (requested != null && !requested.equals(currentStoreId)) {
+                return ResponseEntity.status(403).build();
+            }
+            req.getCondition().setStoreId(currentStoreId);
+        }
+
+        return ResponseEntity.ok(reportService.getStorePerformanceReport(req));
+    }
+
+    /**
      * 獎品出貨報表
      */
     @PostMapping("/prize-shipment")
