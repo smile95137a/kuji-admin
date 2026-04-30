@@ -99,7 +99,7 @@ public class LotteryDrawController {
             Object lock = ticketServiceImpl.getGachaLock(lotteryId);
             synchronized (lock) {
                 log.info("🔒 扭蛋 synchronized 開始: lotteryId={}", lotteryId);
-                List<DrawResult> results = executeDraws(lotteryId, userId, request);
+                List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
                 log.info("🔓 扭蛋 synchronized 結束: lotteryId={}", lotteryId);
                 return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, null));
             }
@@ -135,7 +135,7 @@ public class LotteryDrawController {
         }
         
         // 執行抽獎
-        List<DrawResult> results = executeDraws(lotteryId, userId, request);
+        List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
         
         // 🆕 取得更新後的場次資訊（包含保護結束時間）
         SessionInfo updatedSession = ticketService.getActiveSession(lotteryId, userId);
@@ -232,9 +232,13 @@ public class LotteryDrawController {
     /**
      * 執行批次抽獎（統一處理票券模式和隨機模式）
      */
-    private List<DrawResult> executeDraws(String lotteryId, String userId, DrawRequest request) {
+    private List<DrawResult> executeDraws(String lotteryId, String userId, DrawRequest request, String playMode, String category) {
         List<DrawResult> results = new java.util.ArrayList<>();
-        
+
+        boolean isScratchMode = "SCRATCH_MODE".equals(playMode) || "SCRATCH_CARD_MODE".equals(playMode);
+        // 自製抽籤型：玩家必須選籤號，禁止隨機
+        boolean isCustomLotteryMode = "CUSTOM_GACHA".equals(category) && "LOTTERY_MODE".equals(playMode);
+
         if (request.getTickets() != null && !request.getTickets().isEmpty()) {
             List<String> tickets = request.getTickets();
             Integer count = request.getCount();
@@ -271,8 +275,27 @@ public class LotteryDrawController {
                 DrawResult r = ticketService.drawByTicketId(lotteryId, userId, ticketId);
                 results.add(r);
             }
+        } else if (request.getTicketNumber() != null) {
+            // 刮刮樂格號模式：直接用 ticketNumber 抽（只支援單張）
+            if (request.getCount() != null && request.getCount() > 1) {
+                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                        "ticketNumber 模式每次只能抽 1 張", false, null, null, null));
+                return results;
+            }
+            DrawResult r = ticketService.draw(lotteryId, userId, request.getTicketNumber(), 1);
+            results.add(r);
+        } else if (isScratchMode) {
+            // ⚠️ 刮刮樂模式禁止隨機抽：玩家必須指定要刮哪張（傳 ticket UUID 或 ticketNumber）
+            log.warn("❌ 刮刮樂模式未指定票券位置，拒絕隨機抽: lotteryId={}", lotteryId);
+            results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                    "刮刮樂模式必須指定票券（傳 ticket UUID 或 ticketNumber）", false, null, null, null));
+        } else if (isCustomLotteryMode) {
+            // ⚠️ 自製抽籤型禁止隨機抽：玩家必須選籤號（傳 ticket UUID 或 ticketNumber）
+            log.warn("❌ 自製抽籤型未指定籤號，拒絕隨機抽: lotteryId={}", lotteryId);
+            results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                    "自製抽籤型必須指定籤號（傳 ticket UUID 或 ticketNumber）", false, null, null, null));
         } else {
-            // 隨機抽獎
+            // 隨機抽獎（GACHA 扭蛋 / OFFICIAL_ICHIBAN 一番賞 / TRADING_CARD 卡牌）
             for (int i = 0; i < request.getCount(); i++) {
                 DrawResult r = ticketService.draw(lotteryId, userId, null, 1);
                 results.add(r);
@@ -340,14 +363,19 @@ public class LotteryDrawController {
     public static class DrawRequest {
         private Integer count;  // 必填：抽獎次數（1-10）
         
-        @com.fasterxml.jackson.annotation.JsonProperty("ticket")
-        private List<String> tickets;  // 選填：指定票券的 UUID 列表
+        @com.fasterxml.jackson.annotation.JsonAlias({"ticket", "tickets"})
+        private List<String> tickets;  // 選填：指定票券的 UUID 列表（接受 "ticket" 或 "tickets" 兩種 key）
+
+        private Integer ticketNumber;  // 選填：刮刮樂專用，指定格子的物理序號（1-N），與 ticket UUID 二擇一
 
         public Integer getCount() { return count; }
         public void setCount(Integer count) { this.count = count; }
 
         public List<String> getTickets() { return tickets; }
         public void setTickets(List<String> tickets) { this.tickets = tickets; }
+
+        public Integer getTicketNumber() { return ticketNumber; }
+        public void setTicketNumber(Integer ticketNumber) { this.ticketNumber = ticketNumber; }
     }
 
     /**

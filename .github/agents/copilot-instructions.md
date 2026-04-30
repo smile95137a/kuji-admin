@@ -19,6 +19,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-28
 - [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (main)
 - Java 21 + Spring Boot 3.3.3 + MyBatis Generator (entities/mappers), JdbcTemplate (analytics SQL), Lombok, Swagger/OpenAPI (030-member-growth-report)
 - MySQL（`user`、`lottery_ticket`、`wallet_transaction`、`order` 表） (030-member-growth-report)
+- Java 21 + Spring Boot 3.3.3, MyBatis 3.0.5, JdbcTemplate (報表 SQL 直接透過 JdbcTemplate 執行) (029-prize-shipment-report)
+- MySQL（InnoDB） (029-prize-shipment-report)
 
 - **Java 21** + **Spring Boot 3.3.3** + **MyBatis 3.0.5** + **Spring Security 6** + **JWT** (007-news-management)
 - **MySQL 8.3** on AWS RDS — primary data store
@@ -63,7 +65,7 @@ mvn test                        # Test
 
 ## Recent Changes
 - 030-member-growth-report: Added Java 21 + Spring Boot 3.3.3 + MyBatis Generator (entities/mappers), JdbcTemplate (analytics SQL), Lombok, Swagger/OpenAPI
-- main: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+- 029-prize-shipment-report: Added Java 21 + Spring Boot 3.3.3, MyBatis 3.0.5, JdbcTemplate (報表 SQL 直接透過 JdbcTemplate 執行)
 - main: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 
   - Entity: News (UUID PK, DRAFT/PUBLISHED/UNPUBLISHED, scheduled publish/unpublish)

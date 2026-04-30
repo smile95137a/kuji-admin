@@ -30,6 +30,7 @@
     <result column="cancelled_at" jdbcType="TIMESTAMP" property="cancelledAt" />
     <result column="cancelled_by" jdbcType="VARCHAR" property="cancelledBy" />
     <result column="cancel_reason" jdbcType="VARCHAR" property="cancelReason" />
+    <result column="preparing_at" jdbcType="TIMESTAMP" property="preparingAt" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -93,7 +94,7 @@
     id, order_number, user_id, store_id, total_items, shipping_method, shipping_method_id, shipping_fee, status, payment_status, payment_method,
     recipient_name, recipient_phone, recipient_address, store_code, store_name, store_address, 
     tracking_no, tracking_url, gomypay_trade_no, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at,
-    cancelled_by, cancel_reason
+    cancelled_by, cancel_reason, preparing_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.OrderExample" resultMap="BaseResultMap">
     select
@@ -134,7 +135,7 @@
       store_name, store_address, tracking_no, 
       remark, created_at, updated_at, 
       shipped_at, completed_at, cancelled_at, 
-      cancelled_by, cancel_reason)
+      cancelled_by, cancel_reason, preparing_at)
     values (#{id,jdbcType=VARCHAR}, #{orderNumber,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, 
       #{storeId,jdbcType=VARCHAR}, #{totalItems,jdbcType=INTEGER}, #{shippingMethod,jdbcType=VARCHAR}, 
       #{status,jdbcType=VARCHAR}, #{paymentStatus,jdbcType=VARCHAR}, #{recipientName,jdbcType=VARCHAR}, 
@@ -142,7 +143,7 @@
       #{storeName,jdbcType=VARCHAR}, #{storeAddress,jdbcType=VARCHAR}, #{trackingNo,jdbcType=VARCHAR}, 
       #{remark,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, 
       #{shippedAt,jdbcType=TIMESTAMP}, #{completedAt,jdbcType=TIMESTAMP}, #{cancelledAt,jdbcType=TIMESTAMP}, 
-      #{cancelledBy,jdbcType=VARCHAR}, #{cancelReason,jdbcType=VARCHAR})
+      #{cancelledBy,jdbcType=VARCHAR}, #{cancelReason,jdbcType=VARCHAR}, #{preparingAt,jdbcType=TIMESTAMP})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Order">
     insert into `order`
@@ -216,6 +217,9 @@
       <if test="cancelReason != null">
         cancel_reason,
       </if>
+      <if test="preparingAt != null">
+        preparing_at,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -286,6 +290,9 @@
       </if>
       <if test="cancelReason != null">
         #{cancelReason,jdbcType=VARCHAR},
+      </if>
+      <if test="preparingAt != null">
+        #{preparingAt,jdbcType=TIMESTAMP},
       </if>
     </trim>
   </insert>
@@ -470,6 +477,9 @@
       <if test="cancelReason != null">
         cancel_reason = #{cancelReason,jdbcType=VARCHAR},
       </if>
+      <if test="preparingAt != null">
+        preparing_at = #{preparingAt,jdbcType=TIMESTAMP},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -496,7 +506,8 @@
       completed_at = #{completedAt,jdbcType=TIMESTAMP},
       cancelled_at = #{cancelledAt,jdbcType=TIMESTAMP},
       cancelled_by = #{cancelledBy,jdbcType=VARCHAR},
-      cancel_reason = #{cancelReason,jdbcType=VARCHAR}
+      cancel_reason = #{cancelReason,jdbcType=VARCHAR},
+      preparing_at = #{preparingAt,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 

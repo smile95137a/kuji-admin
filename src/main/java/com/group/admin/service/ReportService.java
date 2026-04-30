@@ -49,6 +49,12 @@ public interface ReportService {
     MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req);
     
     /**
+     * 獎品出貨報表
+     * @param req 查詢條件（包含店家ID、時間範圍等）
+     */
+    PrizeShipmentReportRes getPrizeShipmentReport(QueryReq<PrizeShipmentReportCondition> req);
+
+    /**
      * 儲存報表快照
      */
     void saveReportSnapshot(String reportType, String periodType, String storeId, 

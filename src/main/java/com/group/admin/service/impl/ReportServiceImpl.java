@@ -831,4 +831,208 @@ public class ReportServiceImpl implements ReportService {
             default -> bonusType;
         };
     }
+
+    // ============================= 獎品出貨報表 =============================
+
+    @Override
+    public PrizeShipmentReportRes getPrizeShipmentReport(QueryReq<PrizeShipmentReportCondition> req) {
+        PrizeShipmentReportCondition condition = (req != null && req.getCondition() != null)
+                ? req.getCondition()
+                : new PrizeShipmentReportCondition();
+
+        String storeId = condition.getStoreId();
+
+        // 日期預設：最近 30 天
+        LocalDate endDate   = condition.getEndDate()   != null ? condition.getEndDate()   : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+
+        log.info("📦 產生獎品出貨報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
+
+        // --- US1: 狀態計數 ---
+        Map<String, Object> statusCounts = queryStatusCounts(storeId, startDate, endDate);
+        Integer pendingCount   = toInt(statusCounts.get("pending_count"));
+        Integer preparingCount = toInt(statusCounts.get("preparing_count"));
+        Integer shippedCount   = toInt(statusCounts.get("shipped_count"));
+        Integer completedCount = toInt(statusCounts.get("completed_count"));
+
+        // --- US1: 每日出貨明細 ---
+        List<PrizeShipmentReportRes.DailyShipment> dailyDetails =
+                queryDailyDetails(storeId, startDate, endDate);
+
+        // --- US2: 平均出貨天數 ---
+        BigDecimal avgShipDays = queryAvgShipDays(storeId, startDate, endDate);
+
+        // --- US2: 逾期未備貨計數（不受日期範圍限制） ---
+        Integer overdueCount = queryOverdueCount(storeId);
+
+        // --- US3: 跨店家統計（Admin 限定：storeId == null） ---
+        List<PrizeShipmentReportRes.StoreShipment> storeDetails = null;
+        if (storeId == null) {
+            storeDetails = queryStoreDetails(startDate, endDate);
+        }
+
+        return PrizeShipmentReportRes.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .pendingCount(pendingCount)
+                .preparingCount(preparingCount)
+                .shippedCount(shippedCount)
+                .completedCount(completedCount)
+                .avgShipDays(avgShipDays)
+                .overdueCount(overdueCount)
+                .dailyDetails(dailyDetails)
+                .storeDetails(storeDetails)
+                .build();
+    }
+
+    /** T011: 4 個狀態計數 */
+    private Map<String, Object> queryStatusCounts(String storeId, LocalDate startDate, LocalDate endDate) {
+        String sql = """
+                SELECT
+                    SUM(CASE WHEN status = 'PENDING'    THEN 1 ELSE 0 END) AS pending_count,
+                    SUM(CASE WHEN status = 'PREPARING'  THEN 1 ELSE 0 END) AS preparing_count,
+                    SUM(CASE WHEN status = 'SHIPPED'    THEN 1 ELSE 0 END) AS shipped_count,
+                    SUM(CASE WHEN status = 'COMPLETED'  THEN 1 ELSE 0 END) AS completed_count
+                FROM `order`
+                WHERE status NOT IN ('CANCELLED', 'PAYMENT_PENDING')
+                  AND created_at BETWEEN ? AND ?
+                """;
+
+        List<Object> params = new ArrayList<>();
+        params.add(startDate.atStartOfDay());
+        params.add(endDate.plusDays(1).atStartOfDay());
+
+        if (storeId != null) {
+            sql += " AND store_id = ?";
+            params.add(storeId);
+        }
+
+        Map<String, Object> result = jdbcTemplate.queryForMap(sql, params.toArray());
+        return result != null ? result : new HashMap<>();
+    }
+
+    /** T012: 每日出貨明細，按 DATE(shipped_at) 分組 */
+    private List<PrizeShipmentReportRes.DailyShipment> queryDailyDetails(
+            String storeId, LocalDate startDate, LocalDate endDate) {
+
+        String sql = """
+                SELECT
+                    DATE(shipped_at) AS date,
+                    COUNT(*) AS shipped_count
+                FROM `order`
+                WHERE status IN ('SHIPPED', 'COMPLETED')
+                  AND shipped_at BETWEEN ? AND ?
+                """;
+
+        List<Object> params = new ArrayList<>();
+        params.add(startDate.atStartOfDay());
+        params.add(endDate.plusDays(1).atStartOfDay());
+
+        if (storeId != null) {
+            sql += " AND store_id = ?";
+            params.add(storeId);
+        }
+        sql += " GROUP BY DATE(shipped_at) ORDER BY date";
+
+        return jdbcTemplate.query(sql, params.toArray(), (rs, rowNum) ->
+                PrizeShipmentReportRes.DailyShipment.builder()
+                        .date(rs.getDate("date").toLocalDate())
+                        .shippedCount(rs.getInt("shipped_count"))
+                        .build()
+        );
+    }
+
+    /** T016: 平均出貨天數（preparing_at → shipped_at），精確至 0.1 天 */
+    private BigDecimal queryAvgShipDays(String storeId, LocalDate startDate, LocalDate endDate) {
+        String sql = """
+                SELECT ROUND(AVG(DATEDIFF(shipped_at, preparing_at)), 1) AS avg_ship_days
+                FROM `order`
+                WHERE status IN ('SHIPPED', 'COMPLETED')
+                  AND preparing_at IS NOT NULL
+                  AND shipped_at IS NOT NULL
+                  AND created_at BETWEEN ? AND ?
+                """;
+
+        List<Object> params = new ArrayList<>();
+        params.add(startDate.atStartOfDay());
+        params.add(endDate.plusDays(1).atStartOfDay());
+
+        if (storeId != null) {
+            sql += " AND store_id = ?";
+            params.add(storeId);
+        }
+
+        return jdbcTemplate.queryForObject(sql, params.toArray(), BigDecimal.class);
+    }
+
+    /** T017: 逾期未備貨計數（intentionally 不受日期範圍過濾，反映即時狀態） */
+    private Integer queryOverdueCount(String storeId) {
+        String sql = """
+                SELECT COUNT(*) AS overdue_count
+                FROM `order`
+                WHERE status = 'PENDING'
+                  AND created_at < NOW() - INTERVAL 7 DAY
+                """;
+
+        List<Object> params = new ArrayList<>();
+
+        if (storeId != null) {
+            sql += " AND store_id = ?";
+            params.add(storeId);
+        }
+
+        Long count = jdbcTemplate.queryForObject(sql, params.toArray(), Long.class);
+        return count != null ? count.intValue() : 0;
+    }
+
+    /** T019: 跨店家統計（Admin 限定，storeId == null 時執行） */
+    private List<PrizeShipmentReportRes.StoreShipment> queryStoreDetails(
+            LocalDate startDate, LocalDate endDate) {
+
+        String sql = """
+                SELECT
+                    store_id,
+                    store_name,
+                    SUM(CASE WHEN status = 'PENDING'    THEN 1 ELSE 0 END) AS pending_count,
+                    SUM(CASE WHEN status = 'PREPARING'  THEN 1 ELSE 0 END) AS preparing_count,
+                    SUM(CASE WHEN status = 'SHIPPED'    THEN 1 ELSE 0 END) AS shipped_count,
+                    SUM(CASE WHEN status = 'COMPLETED'  THEN 1 ELSE 0 END) AS completed_count,
+                    ROUND(AVG(CASE
+                        WHEN status IN ('SHIPPED', 'COMPLETED')
+                             AND preparing_at IS NOT NULL
+                             AND shipped_at IS NOT NULL
+                        THEN DATEDIFF(shipped_at, preparing_at)
+                    END), 1) AS avg_ship_days,
+                    SUM(CASE
+                        WHEN status = 'PENDING' AND created_at < NOW() - INTERVAL 7 DAY
+                        THEN 1 ELSE 0
+                    END) AS overdue_count
+                FROM `order`
+                WHERE status NOT IN ('CANCELLED', 'PAYMENT_PENDING')
+                  AND created_at BETWEEN ? AND ?
+                GROUP BY store_id, store_name
+                ORDER BY avg_ship_days DESC
+                """;
+
+        return jdbcTemplate.query(sql,
+                new Object[]{startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay()},
+                (rs, rowNum) -> PrizeShipmentReportRes.StoreShipment.builder()
+                        .storeId(rs.getString("store_id"))
+                        .storeName(rs.getString("store_name"))
+                        .pendingCount(rs.getInt("pending_count"))
+                        .preparingCount(rs.getInt("preparing_count"))
+                        .shippedCount(rs.getInt("shipped_count"))
+                        .completedCount(rs.getInt("completed_count"))
+                        .avgShipDays(rs.getBigDecimal("avg_ship_days"))
+                        .overdueCount(rs.getInt("overdue_count"))
+                        .build()
+        );
+    }
+
+    /** null 安全的 Integer 轉換（處理 SUM 在無資料時回傳 null） */
+    private Integer toInt(Object value) {
+        if (value == null) return 0;
+        if (value instanceof Number) return ((Number) value).intValue();
+        return 0;
+    }
 }

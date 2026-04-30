@@ -295,6 +295,7 @@ public class OrderServiceImpl implements OrderService {
 
         String fromStatus = order.getStatus();
         order.setStatus(OrderStatusEnum.PREPARING.getCode());
+        order.setPreparingAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateByPrimaryKeySelective(order);
 
