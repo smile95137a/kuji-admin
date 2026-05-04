@@ -22,6 +22,7 @@ import com.group.admin.entity.SystemConfig;
 import com.group.admin.entity.User;
 import com.group.admin.example.MenuExample;
 import com.group.admin.example.RoleExample;
+import com.group.admin.example.RoleMenuExample;
 import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.LotteryMapper;
@@ -97,6 +98,13 @@ public class DataInitializer implements CommandLineRunner {
         // 檢查是否已有資料（避免重複初始化）
         if (isDataAlreadyInitialized()) {
             initializeSystemConfigs();
+            // 補救：若 role_menu 表為空（資料庫已有角色但權限從未初始化），重新執行
+            if (isRoleMenuEmpty()) {
+                log.warn("⚠️ role_menu 表為空，執行補救初始化角色權限...");
+                loadRoleIdsFromDb();
+                initializeRoleMenuPermissions();
+                log.info("✅ role_menu 補救初始化完成");
+            }
             log.info("系統資料已存在，跳過初始化");
             return;
         }
@@ -197,6 +205,34 @@ public class DataInitializer implements CommandLineRunner {
         RoleExample example = new RoleExample();
         example.createCriteria().andCodeEqualTo("ROLE_ADMIN");
         return roleMapper.selectByExample(example).size() > 0;
+    }
+
+    /**
+     * 檢查 role_menu 表是否為空（用於補救初始化）
+     */
+    private boolean isRoleMenuEmpty() {
+        RoleMenuExample example = new RoleMenuExample();
+        return roleMenuMapper.countByExample(example) == 0;
+    }
+
+    /**
+     * 從 DB 讀取角色 ID（補救初始化時使用）
+     */
+    private void loadRoleIdsFromDb() {
+        RoleExample ex = new RoleExample();
+        ex.createCriteria().andCodeEqualTo("ROLE_ADMIN");
+        roleMapper.selectByExample(ex).stream().findFirst().ifPresent(r -> ROLE_ADMIN_ID = r.getId());
+
+        ex = new RoleExample();
+        ex.createCriteria().andCodeEqualTo("ROLE_STORE_OWNER");
+        roleMapper.selectByExample(ex).stream().findFirst().ifPresent(r -> ROLE_STORE_OWNER_ID = r.getId());
+
+        ex = new RoleExample();
+        ex.createCriteria().andCodeEqualTo("ROLE_STORE_EDITOR");
+        roleMapper.selectByExample(ex).stream().findFirst().ifPresent(r -> ROLE_STORE_EDITOR_ID = r.getId());
+
+        log.info("✅ 從 DB 讀取角色 ID: ADMIN={}, STORE_OWNER={}, STORE_EDITOR={}",
+                ROLE_ADMIN_ID, ROLE_STORE_OWNER_ID, ROLE_STORE_EDITOR_ID);
     }
 
     /**

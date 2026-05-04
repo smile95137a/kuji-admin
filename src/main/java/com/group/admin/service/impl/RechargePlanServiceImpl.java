@@ -46,7 +46,9 @@ public class RechargePlanServiceImpl implements RechargePlanService {
         plan.setGoldCoins(req.getGoldCoins());
         plan.setBonusCoins(req.getBonusCoins() != null ? req.getBonusCoins() : 0L);
         plan.setIsActive((byte) 1); // MyBatis 生成的 isActive 為 Byte 類型
-        plan.setOrderNum(0); // 預設排序
+        plan.setOrderNum(req.getDisplayOrder() != null ? req.getDisplayOrder() : 0);
+        plan.setStartDate(req.getStartTime());
+        plan.setEndDate(req.getEndTime());
         plan.setCreatedAt(LocalDateTime.now());
         plan.setUpdatedAt(LocalDateTime.now());
         
@@ -83,6 +85,21 @@ public class RechargePlanServiceImpl implements RechargePlanService {
         }
         if (req.getIsActive() != null) {
             plan.setIsActive(req.getIsActive() ? (byte) 1 : (byte) 0);
+        }
+        if (req.getDisplayOrder() != null) {
+            plan.setOrderNum(req.getDisplayOrder());
+        }
+        // 活動時間段（傳 null 代表清除，以 isPromotional=false 為依據）
+        if (req.getIsPromotional() != null && !req.getIsPromotional()) {
+            plan.setStartDate(null);
+            plan.setEndDate(null);
+        } else {
+            if (req.getStartTime() != null) {
+                plan.setStartDate(req.getStartTime());
+            }
+            if (req.getEndTime() != null) {
+                plan.setEndDate(req.getEndTime());
+            }
         }
         
         plan.setUpdatedAt(LocalDateTime.now());
@@ -236,10 +253,19 @@ public class RechargePlanServiceImpl implements RechargePlanService {
      * 轉換為回應 DTO
      */
     private RechargePlanRes convertToRes(RechargePlan plan) {
-        // 計算優惠比例
         Long totalCoins = plan.getGoldCoins() + plan.getBonusCoins();
         Double discountRate = (totalCoins.doubleValue() / plan.getAmount().doubleValue() - 1) * 100;
-        
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean hasStart = plan.getStartDate() != null;
+        boolean hasEnd   = plan.getEndDate() != null;
+        // 有設定時間段的視為活動方案
+        boolean isPromotional = hasStart || hasEnd;
+        // 判斷是否在活動期間內
+        boolean isInPeriod = isPromotional
+                && ((!hasStart || !plan.getStartDate().isAfter(now))
+                &&  (!hasEnd   || !plan.getEndDate().isBefore(now)));
+
         return RechargePlanRes.builder()
                 .id(plan.getId())
                 .name(plan.getName())
@@ -248,6 +274,8 @@ public class RechargePlanServiceImpl implements RechargePlanService {
                 .goldCoins(plan.getGoldCoins())
                 .bonusCoins(plan.getBonusCoins())
                 .isActive(plan.getIsActive() == 1)
+                .isPromotional(isPromotional)
+                .isInPeriod(isInPeriod)
                 .startTime(plan.getStartDate())
                 .endTime(plan.getEndDate())
                 .displayOrder(plan.getOrderNum())

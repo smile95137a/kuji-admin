@@ -469,13 +469,22 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateByPrimaryKeySelective(order);
 
+        // 歸還賞品至賞品盒（IN_BOX 狀態，解除 orderId 綁定）
         restorePrizeBoxes(id);
+
+        // TODO:REFUND - 運費退款（待金流串接後實作）
+        // 取消時若訂單已付款，需退還運費 order.getShippingFee() 至用戶錢包或原支付管道
+        // 預計接口：paymentService.refundShipping(order.getPaymentNo(), order.getShippingFee())
+
+        // TODO:INVOICE - 發票作廢（待電子發票串接後實作）
+        // 若已開立發票，需呼叫電子發票 API 進行作廢
+        // 預計接口：invoiceService.voidInvoice(order.getInvoiceNo())
 
         recordStatusLog(id, fromStatus, OrderStatusEnum.CANCELLED.getCode(),
                 operatorId, operatorType,
                 cancelReason != null ? "取消原因：" + cancelReason : null);
 
-        log.info("✅ 訂單已取消，獎品已歸還");
+        log.info("✅ 訂單已取消（狀態：CANCELLED），獎品已歸還賞品盒");
     }
 
     @Override

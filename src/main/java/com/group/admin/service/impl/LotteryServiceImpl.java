@@ -2133,15 +2133,15 @@ public class LotteryServiceImpl implements LotteryService {
     
     // ==================== 狀態變更（含 FSM 驗證）====================
     
-    private static final Map<String, List<String>> VALID_TRANSITIONS = Map.of(
-        "DRAFT",       List.of("CONFIGURED", "ON_SHELF", "FORCED_OFF"),
-        "CONFIGURED",  List.of("ON_SHELF", "FORCED_OFF"),
-        "ON_SHELF",    List.of("OFF_SHELF", "DRAWABLE", "FORCED_OFF"),
-        "OFF_SHELF",   List.of("ON_SHELF", "FORCED_OFF"),
-        "DRAWABLE",    List.of("SOLD_OUT", "FORCED_OFF"),
-        "IN_PROGRESS", List.of("SOLD_OUT", "FORCED_OFF"),
-        "SOLD_OUT",    List.of("FORCED_OFF"),
-        "FORCED_OFF",  List.of("DRAFT")
+    private static final Map<String, List<String>> VALID_TRANSITIONS = Map.ofEntries(
+        Map.entry("DRAFT",       List.of("CONFIGURED", "ON_SHELF", "FORCED_OFF", "DELETED")),
+        Map.entry("CONFIGURED",  List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
+        Map.entry("ON_SHELF",    List.of("OFF_SHELF", "DRAWABLE", "FORCED_OFF")),
+        Map.entry("OFF_SHELF",   List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
+        Map.entry("DRAWABLE",    List.of("SOLD_OUT", "FORCED_OFF")),
+        Map.entry("IN_PROGRESS", List.of("SOLD_OUT", "FORCED_OFF")),
+        Map.entry("SOLD_OUT",    List.of("FORCED_OFF")),
+        Map.entry("FORCED_OFF",  List.of("DRAFT", "DELETED"))
     );
     
     @Override

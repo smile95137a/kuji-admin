@@ -91,17 +91,7 @@ public class RoleServiceImpl implements RoleService {
             throw new BusinessException("角色不存在: " + req.getId());
         }
 
-        // 如果修改了代碼，檢查是否重複
-        if (req.getCode() != null && !req.getCode().equals(role.getCode())) {
-            RoleExample checkExample = new RoleExample();
-            checkExample.createCriteria().andCodeEqualTo(req.getCode());
-            List<Role> existingRoles = roleMapper.selectByExample(checkExample);
-            if (!existingRoles.isEmpty()) {
-                throw new BusinessException("角色代碼已存在: " + req.getCode());
-            }
-            role.setCode(req.getCode());
-        }
-
+        // ⚠️ 角色代碼為系統識別碼，禁止修改
         if (req.getName() != null) {
             role.setName(req.getName());
         }

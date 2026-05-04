@@ -39,6 +39,7 @@ import com.group.admin.req.admin.UpdateAdminUserReq;
 import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.service.AdminAuthService;
 import com.group.admin.service.AdminUserService;
+import com.group.admin.service.EmailService;
 import com.group.admin.util.PasswordUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -70,6 +71,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordUtil passwordUtil;
     private final AdminAuthService adminAuthService;
+    private final EmailService emailService;
 
     /**
      * {@inheritDoc}
@@ -139,10 +141,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         storeUser.setCreatedAt(LocalDateTime.now());
         storeUserMapper.insert(storeUser);
 
-        log.info("店家負責人帳號建立成功：userId={}, storeId={}, 初始密碼={}",
-                adminUser.getId(), store.getId(), initialPassword);
+        log.info("店家負責人帳號建立成功：userId={}, storeId={}", adminUser.getId(), store.getId());
 
-        // TODO: 發送 Email 通知初始密碼
+        emailService.sendInitialPasswordEmail(adminUser.getEmail(), adminUser.getDisplayName(), initialPassword);
 
         return toAdminUserRes(adminUser);
     }
@@ -200,10 +201,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         storeUser.setCreatedAt(LocalDateTime.now());
         storeUserMapper.insert(storeUser);
 
-        log.info("店家編輯人員帳號建立成功：userId={}, storeId={}, 初始密碼={}",
-                adminUser.getId(), req.getStoreId(), initialPassword);
+        log.info("店家編輯人員帳號建立成功：userId={}, storeId={}", adminUser.getId(), req.getStoreId());
 
-        // TODO: 發送 Email 通知初始密碼
+        emailService.sendInitialPasswordEmail(adminUser.getEmail(), adminUser.getDisplayName(), initialPassword);
 
         return toAdminUserRes(adminUser);
     }
@@ -320,9 +320,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setUpdatedAt(LocalDateTime.now());
         adminUserMapper.updateByPrimaryKey(user);
 
-        log.info("密碼重設成功：userId={}, 新密碼={}", userId, newPassword);
+        log.info("密碼重設成功：userId={}", userId);
 
-        // TODO: 發送 Email 通知新密碼
+        emailService.sendInitialPasswordEmail(user.getEmail(), user.getDisplayName(), newPassword);
 
         return newPassword;
     }
