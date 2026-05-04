@@ -39,7 +39,7 @@ class NewsControllerTest extends BaseControllerTest {
     void getNewsList_ShouldReturnList() throws Exception {
         when(newsService.getPublishedNews(any())).thenReturn(Collections.emptyList());
         
-        mockMvc.perform(get("/api/news"))
+        mockMvc.perform(get("/news"))
                 .andExpect(status().isOk());
     }
 
@@ -50,7 +50,7 @@ class NewsControllerTest extends BaseControllerTest {
         mockRes.setStatus("PUBLISHED");
         when(newsService.getNewsById(anyString())).thenReturn(mockRes);
         
-        mockMvc.perform(get("/api/news/test-id"))
+        mockMvc.perform(get("/news/test-id"))
                 .andExpect(status().isOk());
     }
 }

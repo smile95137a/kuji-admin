@@ -35,7 +35,7 @@ Git 歷史請採用 Conventional Commit 標題，如 `feat(reports): ...`、`fix
 <!-- SPECKIT START -->
 ## SpecKit 目前焦點
 
-- 目前功能：`019-product-overhaul`
-- 功能規格：`specs/019-product-overhaul/spec.md`
-- 實作計畫：`specs/019-product-overhaul/plan.md`
+- 目前功能：`033-platform-revenue-report`
+- 功能規格：`specs/033-platform-revenue-report/spec.md`
+- 實作計畫：`specs/033-platform-revenue-report/plan.md`
 <!-- SPECKIT END -->

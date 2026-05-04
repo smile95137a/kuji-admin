@@ -1,5 +1,6 @@
 package com.group.admin.dto.res.report;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,9 +17,11 @@ import java.util.Map;
 public class MemberGrowthReportRes {
 
     /** 實際查詢起始日 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
     /** 實際查詢結束日 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
     // ── 新增會員統計 ──────────────────────────────
@@ -57,6 +60,7 @@ public class MemberGrowthReportRes {
     @Data
     @Builder
     public static class DailyNewMember {
+        @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate date;
         private Integer count;
     }

@@ -183,6 +183,63 @@ interface RechargeReportRes {
 
 ---
 
+## 平台營收總覽報表
+
+```
+POST /api/admin/report/platform-revenue
+Authorization: Bearer {token}（需 ADMIN）
+```
+
+### 請求
+```typescript
+interface PlatformRevenueReportCondition {
+  startDate?: string;  // YYYY-MM-DD，不傳時後端預設最近 30 天
+  endDate?: string;    // YYYY-MM-DD，不傳時後端預設今天
+}
+```
+
+### 回應
+```typescript
+interface PlatformRevenueReportRes {
+  startDate: string;
+  endDate: string;
+  totalRecharge: number;          // 平台總儲值金額（wallet_transaction.amount，RECHARGE）
+  totalSpend: number;             // 平台總消耗金額（目前僅統計 DRAW）
+  netRevenue: number;             // totalRecharge - totalSpend
+  drawCount: number;              // 抽獎交易筆數
+  rechargeGrowthRate?: number;    // 與上一個等長期間相比成長率，無基期時為 null
+  spendGrowthRate?: number;
+  spendByType: {
+    gold: number;                 // GOLD 消耗
+    bonus: number;                // BONUS 消耗
+  };
+  dailyRevenue: {
+    date: string;                 // YYYY-MM-DD
+    recharge: number;
+    spend: number;
+    netRevenue: number;
+  }[];
+  storeBreakdown: {
+    storeId: string;
+    storeName: string;
+    totalSpend: number;           // 該店商品的 DRAW 消耗
+    drawCount: number;
+  }[];
+}
+```
+
+### 前端實作重點
+
+- 此報表為 **Admin Only**，StoreOwner / StoreEditor 不應顯示入口。
+- 日期區間可不傳；若前端送空 body，後端會補成最近 30 天。
+- `dailyRevenue` 已由後端補零，前端可直接拿來畫折線圖，不需要自行補缺日。
+- `rechargeGrowthRate`、`spendGrowthRate` 可能是 `null`，代表上一期間沒有可比基期，前端應顯示 `--`。
+- `storeBreakdown` 目前只統計抽獎消耗，不代表一般商城訂單營收。
+
+詳細欄位與畫面建議請看 [13-platform-revenue-report.md](./13-platform-revenue-report.md)。
+
+---
+
 ## 前端 UI 建議
 
 ### 報表頁面

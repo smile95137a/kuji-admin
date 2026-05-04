@@ -1,5 +1,6 @@
 package com.group.admin.dto.res.report;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,9 +16,11 @@ import java.util.List;
 public class PrizeShipmentReportRes {
 
     /** 查詢開始日期 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
     /** 查詢結束日期 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
     // === 狀態計數（排除 CANCELLED、PAYMENT_PENDING） ===
@@ -60,6 +63,7 @@ public class PrizeShipmentReportRes {
     @Builder
     public static class DailyShipment {
         /** 出貨日期（shipped_at 的日期部分） */
+        @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate date;
         /** 當日出貨筆數（SHIPPED + COMPLETED 狀態） */
         private Integer shippedCount;

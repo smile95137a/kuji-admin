@@ -47,6 +47,12 @@ public interface ReportService {
      * @param req 查詢條件（startDate/endDate 為 null 時使用預設值：最近 30 天）
      */
     MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req);
+
+    /**
+     * 平台營收總覽報表（Admin Only）
+     * @param req 查詢條件（startDate/endDate 為 null 時使用預設值：最近 30 天）
+     */
+    PlatformRevenueReportRes getPlatformRevenueReport(QueryReq<PlatformRevenueReportCondition> req);
     
     /**
      * 店家績效比較報表

@@ -1,7 +1,9 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.annotation.AuditLog;
 import com.group.admin.condition.report.*;
 import com.group.admin.dto.res.report.*;
+import com.group.admin.enums.AuditLogType;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.service.ReportService;
 import com.group.admin.util.SecurityUtils;
@@ -128,7 +130,26 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MemberGrowthReportRes> getMemberGrowthReport(
             @RequestBody QueryReq<MemberGrowthReportCondition> req) {
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).build();
+        }
         return ResponseEntity.ok(reportService.getMemberGrowthReport(req));
+    }
+
+    /**
+     * 平台營收總覽報表（Admin Only）
+     */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "VIEW", targetType = "PLATFORM_REVENUE_REPORT")
+    @PostMapping("/platform-revenue")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PlatformRevenueReportRes> getPlatformRevenueReport(
+            @RequestBody(required = false) QueryReq<PlatformRevenueReportCondition> req) {
+
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).build();
+        }
+
+        return ResponseEntity.ok(reportService.getPlatformRevenueReport(req));
     }
 
     /**
@@ -153,6 +174,9 @@ public class AdminReportController {
     /**
      * 店家績效比較報表
      */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "店家績效比較報表",
+            description = "比較店家的抽獎消費、抽獎次數、活躍會員、出貨率、逾期率與平均出貨天數；Admin 可看全平台，StoreOwner 只能看自己的店家。")
     @PostMapping("/store-performance")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<StorePerformanceReportRes> getStorePerformanceReport(
@@ -176,6 +200,9 @@ public class AdminReportController {
     /**
      * 獎品出貨報表
      */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "獎品出貨報表",
+            description = "觀察訂單備貨、出貨與完成狀態，包含每日出貨趨勢、平均出貨天數與逾期未備貨數。")
     @PostMapping("/prize-shipment")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<PrizeShipmentReportRes> getPrizeShipmentReport(

@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
     
+    private static final String MYSQL_TEXT_COLLATION = "utf8mb4_unicode_ci";
+    private static final int MYSQL_TEXT_LENGTH = 64;
+
     private final JdbcTemplate jdbcTemplate;
     private final ReportSnapshotMapper reportSnapshotMapper;
     private final ReportSnapshotRepository reportSnapshotRepository;
@@ -116,12 +119,12 @@ public class ReportServiceImpl implements ReportService {
                 COALESCE(SUM(o.total_amount), 0) as revenue,
                 COUNT(*) as orders
             FROM `order` o
-            LEFT JOIN store s ON o.store_id = s.id
+            LEFT JOIN store s ON %s
             WHERE o.status IN ('PAID', 'COMPLETED')
             AND o.created_at BETWEEN ? AND ?
             GROUP BY o.store_id, s.name
             ORDER BY revenue DESC
-            """;
+            """.formatted(utf8mb4Eq("o.store_id", "s.id"));
         
         List<Object> storeParams = new ArrayList<>();
         storeParams.add(startDate.atStartOfDay());
@@ -169,11 +172,11 @@ public class ReportServiceImpl implements ReportService {
                 COUNT(DISTINCT u.id) as total_referrals,
                 COALESCE(SUM(wt.amount), 0) as total_bonus
             FROM user u
-            LEFT JOIN wallet_transaction wt ON wt.user_id = u.id 
+            LEFT JOIN wallet_transaction wt ON %s
                 AND wt.transaction_type = 'REFERRAL_BONUS'
             WHERE u.referred_store_id IS NOT NULL
             AND u.created_at BETWEEN ? AND ?
-            """;
+            """.formatted(utf8mb4Eq("wt.user_id", "u.id"));
         
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
@@ -202,16 +205,19 @@ public class ReportServiceImpl implements ReportService {
                 COUNT(DISTINCT ref.id) as referral_count,
                 COALESCE(SUM(wt.amount), 0) as total_bonus
             FROM user u
-            LEFT JOIN store s ON u.referred_store_id = s.id
-            LEFT JOIN user ref ON ref.referral_code = u.referral_code
-            LEFT JOIN wallet_transaction wt ON wt.user_id = u.id 
+            LEFT JOIN store s ON %s
+            LEFT JOIN user ref ON %s
+            LEFT JOIN wallet_transaction wt ON %s
                 AND wt.transaction_type = 'REFERRAL_BONUS'
             WHERE u.referral_code IS NOT NULL
             GROUP BY u.id, u.referral_code, u.nickname, s.name
             HAVING referral_count > 0
             ORDER BY referral_count DESC
             LIMIT 20
-            """;
+            """.formatted(
+                utf8mb4Eq("u.referred_store_id", "s.id"),
+                utf8mb4Eq("ref.referral_code", "u.referral_code"),
+                utf8mb4Eq("wt.user_id", "u.id"));
         
         List<ReferralReportRes.ReferralRanking> rankings = jdbcTemplate.query(rankingSql,
             (rs, rowNum) -> ReferralReportRes.ReferralRanking.builder()
@@ -279,13 +285,13 @@ public class ReportServiceImpl implements ReportService {
                 SUM(CASE WHEN p.status = 'WON' THEN 1 ELSE 0 END) as won_count,
                 SUM(CASE WHEN p.status != 'WON' THEN 1 ELSE 0 END) as remain_count
             FROM prize p
-            JOIN lottery l ON p.lottery_id = l.id
+            JOIN lottery l ON %s
             WHERE l.created_at BETWEEN ? AND ?
             """ + (storeId != null ? " AND l.store_id = ?" : "") +
             (lotteryId != null ? " AND p.lottery_id = ?" : "") + """
             GROUP BY p.level
             ORDER BY p.level
-            """;
+            """.formatted(utf8mb4Eq("p.lottery_id", "l.id"));
         
         List<Object> prizeParams = new ArrayList<>();
         prizeParams.add(startDate.atStartOfDay());
@@ -311,7 +317,7 @@ public class ReportServiceImpl implements ReportService {
         
         // 一番賞統計
         String lotterySql = """
-            SELECT 
+                SELECT 
                 l.id as lottery_id,
                 l.title as lottery_title,
                 s.name as store_name,
@@ -320,12 +326,12 @@ public class ReportServiceImpl implements ReportService {
                 (l.total_slots - l.sold_slots) as remain_slots,
                 l.price_per_draw * l.sold_slots as revenue
             FROM lottery l
-            LEFT JOIN store s ON l.store_id = s.id
+            LEFT JOIN store s ON %s
             WHERE l.created_at BETWEEN ? AND ?
             """ + (storeId != null ? " AND l.store_id = ?" : "") + """
             ORDER BY l.sold_slots DESC
             LIMIT 50
-            """;
+            """.formatted(utf8mb4Eq("l.store_id", "s.id"));
         
         List<Object> lotteryParams = new ArrayList<>();
         lotteryParams.add(startDate.atStartOfDay());
@@ -618,6 +624,52 @@ public class ReportServiceImpl implements ReportService {
     // ========== 會員成長報表 ==========
 
     @Override
+    public PlatformRevenueReportRes getPlatformRevenueReport(QueryReq<PlatformRevenueReportCondition> req) {
+        PlatformRevenueReportCondition condition = req != null && req.getCondition() != null
+                ? req.getCondition() : new PlatformRevenueReportCondition();
+
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate 不可晚於 endDate");
+        }
+
+        log.info("📊 產生平台營收總覽報表: {} ~ {}", startDate, endDate);
+
+        long totalRecharge = queryTotalRecharge(startDate, endDate);
+        long totalSpend = queryTotalSpend(startDate, endDate);
+        long drawCount = queryPlatformDrawCount(startDate, endDate);
+        PlatformRevenueReportRes.SpendByType spendByType = querySpendByType(startDate, endDate);
+
+        long netRevenue = totalRecharge - totalSpend;
+
+        LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
+        BigDecimal rechargeGrowthRate = calculateNullableGrowthRate(
+                BigDecimal.valueOf(totalRecharge),
+                BigDecimal.valueOf(queryTotalRecharge(previousRange[0], previousRange[1])));
+        BigDecimal spendGrowthRate = calculateNullableGrowthRate(
+                BigDecimal.valueOf(totalSpend),
+                BigDecimal.valueOf(queryTotalSpend(previousRange[0], previousRange[1])));
+
+        List<PlatformRevenueReportRes.DailyRevenueItem> dailyRevenue = buildDailyRevenue(startDate, endDate);
+        List<PlatformRevenueReportRes.StoreBreakdownItem> storeBreakdown = queryStoreBreakdown(startDate, endDate);
+
+        return PlatformRevenueReportRes.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .totalRecharge(totalRecharge)
+                .totalSpend(totalSpend)
+                .netRevenue(netRevenue)
+                .drawCount(drawCount)
+                .spendByType(spendByType)
+                .rechargeGrowthRate(rechargeGrowthRate)
+                .spendGrowthRate(spendGrowthRate)
+                .dailyRevenue(dailyRevenue)
+                .storeBreakdown(storeBreakdown)
+                .build();
+    }
+
+    @Override
     public MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req) {
         MemberGrowthReportCondition condition = req != null && req.getCondition() != null
                 ? req.getCondition() : new MemberGrowthReportCondition();
@@ -695,13 +747,13 @@ public class ReportServiceImpl implements ReportService {
         // ── Q4: 活躍會員（4-table UNION）────────────────────────────────────
         String activeSql =
                 "SELECT COUNT(DISTINCT user_id) FROM (" +
-                "  SELECT id AS user_id FROM user WHERE last_login_at BETWEEN ? AND ? " +
+                "  SELECT " + utf8mb4Text("id") + " AS user_id FROM user WHERE last_login_at BETWEEN ? AND ? " +
                 "  UNION " +
-                "  SELECT user_id FROM wallet_transaction WHERE transaction_type='RECHARGE' AND created_at BETWEEN ? AND ? " +
+                "  SELECT " + utf8mb4Text("user_id") + " AS user_id FROM wallet_transaction WHERE transaction_type='RECHARGE' AND created_at BETWEEN ? AND ? " +
                 "  UNION " +
-                "  SELECT drawn_by AS user_id FROM lottery_ticket WHERE status='DRAWN' AND drawn_at BETWEEN ? AND ? " +
+                "  SELECT " + utf8mb4Text("drawn_by") + " AS user_id FROM lottery_ticket WHERE status='DRAWN' AND drawn_at BETWEEN ? AND ? " +
                 "  UNION " +
-                "  SELECT user_id FROM `order` WHERE status != 'CANCELLED' AND created_at BETWEEN ? AND ?" +
+                "  SELECT " + utf8mb4Text("user_id") + " AS user_id FROM `order` WHERE status != 'CANCELLED' AND created_at BETWEEN ? AND ?" +
                 ") t";
 
         Integer activeMembers = jdbcTemplate.queryForObject(
@@ -753,18 +805,18 @@ public class ReportServiceImpl implements ReportService {
                 "SELECT COUNT(DISTINCT u.id) FROM user u " +
                 "WHERE u.created_at BETWEEN ? AND ? " +
                 "AND EXISTS (" +
-                "  SELECT 1 FROM user u2 WHERE u2.id = u.id " +
+                "  SELECT 1 FROM user u2 WHERE " + utf8mb4Eq("u2.id", "u.id") +
                 "    AND u2.last_login_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
                 "  UNION ALL " +
-                "  SELECT 1 FROM wallet_transaction wt WHERE wt.user_id = u.id " +
+                "  SELECT 1 FROM wallet_transaction wt WHERE " + utf8mb4Eq("wt.user_id", "u.id") +
                 "    AND wt.transaction_type = 'RECHARGE' " +
                 "    AND wt.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
                 "  UNION ALL " +
-                "  SELECT 1 FROM lottery_ticket lt WHERE lt.drawn_by = u.id " +
+                "  SELECT 1 FROM lottery_ticket lt WHERE " + utf8mb4Eq("lt.drawn_by", "u.id") +
                 "    AND lt.status = 'DRAWN' " +
                 "    AND lt.drawn_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
                 "  UNION ALL " +
-                "  SELECT 1 FROM `order` o WHERE o.user_id = u.id " +
+                "  SELECT 1 FROM `order` o WHERE " + utf8mb4Eq("o.user_id", "u.id") +
                 "    AND o.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY)" +
                 ")";
 
@@ -822,24 +874,29 @@ public class ReportServiceImpl implements ReportService {
                     COALESCE(dc.draw_count, 0) AS draw_count,
                     COALESCE(rv.revenue, 0) AS revenue
                 FROM lottery l
-                JOIN store s ON l.store_id = s.id
+                JOIN store s ON %s
                 LEFT JOIN (
                     SELECT lottery_id, COUNT(*) AS draw_count
                     FROM lottery_ticket
                     WHERE status = 'DRAWN'
                     GROUP BY lottery_id
-                ) dc ON dc.lottery_id = l.id
+                ) dc ON %s
                 LEFT JOIN (
                     SELECT oi.lottery_id,
                            COUNT(oi.id) * MAX(l2.price_per_draw) AS revenue
                     FROM order_item oi
-                    JOIN `order` o ON o.id = oi.order_id
+                    JOIN `order` o ON %s
                                   AND o.status != 'CANCELLED'
-                    JOIN lottery l2 ON l2.id = oi.lottery_id
+                    JOIN lottery l2 ON %s
                     GROUP BY oi.lottery_id
-                ) rv ON rv.lottery_id = l.id
+                ) rv ON %s
                 WHERE 1 = 1
-                """;
+                """.formatted(
+                utf8mb4Eq("l.store_id", "s.id"),
+                utf8mb4Eq("dc.lottery_id", "l.id"),
+                utf8mb4Eq("o.id", "oi.order_id"),
+                utf8mb4Eq("l2.id", "oi.lottery_id"),
+                utf8mb4Eq("rv.lottery_id", "l.id"));
 
         List<Object> params = new ArrayList<>();
         StringBuilder sqlBuilder = new StringBuilder(baseSql);
@@ -971,15 +1028,15 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime end = endDate.plusDays(1).atStartOfDay();
 
         List<Object> params = new ArrayList<>(List.of(start, end));
-        String sql = """
+        String sql = ("""
                 SELECT l.store_id, COUNT(*) AS draw_count
                 FROM lottery_ticket lt
-                JOIN lottery l ON lt.lottery_id = l.id
+                JOIN lottery l ON %s
                 WHERE lt.status = 'DRAWN'
                 AND lt.drawn_at BETWEEN ? AND ?
                 """ + (storeId != null ? "AND l.store_id = ? " : "") + """
                 GROUP BY l.store_id
-                """;
+                """).formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
         if (storeId != null) params.add(storeId);
 
         Map<String, Integer> result = new HashMap<>();
@@ -993,16 +1050,16 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime end = endDate.plusDays(1).atStartOfDay();
 
         List<Object> params = new ArrayList<>(List.of(start, end));
-        String sql = """
+        String sql = ("""
                 SELECT l.store_id, ABS(SUM(wt.amount)) AS total_revenue
                 FROM wallet_transaction wt
-                JOIN lottery_ticket lt ON wt.related_id = lt.id
-                JOIN lottery l ON lt.lottery_id = l.id
+                JOIN lottery_ticket lt ON %s
+                JOIN lottery l ON %s
                 WHERE wt.transaction_type = 'DRAW'
                 AND wt.created_at BETWEEN ? AND ?
                 """ + (storeId != null ? "AND l.store_id = ? " : "") + """
                 GROUP BY l.store_id
-                """;
+                """).formatted(utf8mb4Eq("wt.related_id", "lt.id"), utf8mb4Eq("lt.lottery_id", "l.id"));
         if (storeId != null) params.add(storeId);
 
         Map<String, Long> result = new HashMap<>();
@@ -1020,31 +1077,41 @@ public class ReportServiceImpl implements ReportService {
         if (storeId != null) {
             sql = """
                     SELECT t.store_id, COUNT(DISTINCT uid) AS active_users FROM (
-                      SELECT l.store_id, lt.drawn_by AS uid
+                      SELECT %s AS store_id, %s AS uid
                       FROM lottery_ticket lt
-                      JOIN lottery l ON lt.lottery_id = l.id
+                      JOIN lottery l ON %s
                       WHERE lt.drawn_at BETWEEN ? AND ? AND lt.drawn_by IS NOT NULL
                       UNION
-                      SELECT o.store_id, o.user_id AS uid
+                      SELECT %s AS store_id, %s AS uid
                       FROM `order` o
                       WHERE o.created_at BETWEEN ? AND ?
                     ) t WHERE t.store_id = ?
                     GROUP BY t.store_id
-                    """;
+                    """.formatted(
+                    utf8mb4Text("l.store_id"),
+                    utf8mb4Text("lt.drawn_by"),
+                    utf8mb4Eq("lt.lottery_id", "l.id"),
+                    utf8mb4Text("o.store_id"),
+                    utf8mb4Text("o.user_id"));
             params = new Object[]{start, end, start, end, storeId};
         } else {
             sql = """
                     SELECT t.store_id, COUNT(DISTINCT uid) AS active_users FROM (
-                      SELECT l.store_id, lt.drawn_by AS uid
+                      SELECT %s AS store_id, %s AS uid
                       FROM lottery_ticket lt
-                      JOIN lottery l ON lt.lottery_id = l.id
+                      JOIN lottery l ON %s
                       WHERE lt.drawn_at BETWEEN ? AND ? AND lt.drawn_by IS NOT NULL
                       UNION
-                      SELECT o.store_id, o.user_id AS uid
+                      SELECT %s AS store_id, %s AS uid
                       FROM `order` o
                       WHERE o.created_at BETWEEN ? AND ?
                     ) t GROUP BY t.store_id
-                    """;
+                    """.formatted(
+                    utf8mb4Text("l.store_id"),
+                    utf8mb4Text("lt.drawn_by"),
+                    utf8mb4Eq("lt.lottery_id", "l.id"),
+                    utf8mb4Text("o.store_id"),
+                    utf8mb4Text("o.user_id"));
             params = new Object[]{start, end, start, end};
         }
 
@@ -1095,12 +1162,12 @@ public class ReportServiceImpl implements ReportService {
                        COUNT(*) AS draw_count,
                        ABS(COALESCE(SUM(wt.amount), 0)) AS revenue
                 FROM lottery_ticket lt
-                JOIN lottery l ON lt.lottery_id = l.id
-                LEFT JOIN wallet_transaction wt ON wt.related_id = lt.id AND wt.transaction_type = 'DRAW'
+                JOIN lottery l ON %s
+                LEFT JOIN wallet_transaction wt ON %s AND wt.transaction_type = 'DRAW'
                 WHERE l.store_id = ? AND lt.drawn_at BETWEEN ? AND ? AND lt.status = 'DRAWN'
                 GROUP BY DATE(lt.drawn_at)
                 ORDER BY stat_date
-                """;
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"), utf8mb4Eq("wt.related_id", "lt.id"));
 
         Map<LocalDate, StorePerformanceReportRes.DailyStat.DailyStatBuilder> builderMap = new LinkedHashMap<>();
         jdbcTemplate.query(dailySql, new Object[]{storeId, start, end}, (RowCallbackHandler) rs -> {
@@ -1115,17 +1182,20 @@ public class ReportServiceImpl implements ReportService {
         String newUsersSql = """
                 SELECT DATE(first_date) AS stat_date, COUNT(*) AS new_users FROM (
                   SELECT uid, MIN(activity_date) AS first_date FROM (
-                    SELECT lt.drawn_by AS uid, DATE(lt.drawn_at) AS activity_date
+                    SELECT %s AS uid, DATE(lt.drawn_at) AS activity_date
                     FROM lottery_ticket lt
-                    JOIN lottery l ON lt.lottery_id = l.id
+                    JOIN lottery l ON %s
                     WHERE l.store_id = ? AND lt.drawn_at BETWEEN ? AND ? AND lt.drawn_by IS NOT NULL
                     UNION ALL
-                    SELECT o.user_id AS uid, DATE(o.created_at) AS activity_date
+                    SELECT %s AS uid, DATE(o.created_at) AS activity_date
                     FROM `order` o
                     WHERE o.store_id = ? AND o.created_at BETWEEN ? AND ?
                   ) all_activity GROUP BY uid
                 ) first_seen GROUP BY DATE(first_date)
-                """;
+                """.formatted(
+                utf8mb4Text("lt.drawn_by"),
+                utf8mb4Eq("lt.lottery_id", "l.id"),
+                utf8mb4Text("o.user_id"));
 
         jdbcTemplate.query(newUsersSql, new Object[]{storeId, start, end, storeId, start, end}, (RowCallbackHandler) rs -> {
             LocalDate date = rs.getDate("stat_date").toLocalDate();
@@ -1156,6 +1226,181 @@ public class ReportServiceImpl implements ReportService {
         };
     }
 
+    private long queryTotalRecharge(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        BigDecimal value = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(amount), 0)
+                FROM wallet_transaction
+                WHERE transaction_type = 'RECHARGE'
+                  AND coin_type = 'GOLD'
+                  AND created_at BETWEEN ? AND ?
+                """, BigDecimal.class, start, end);
+        return value != null ? value.longValue() : 0L;
+    }
+
+    private long queryTotalSpend(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        BigDecimal value = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(ABS(SUM(amount)), 0)
+                FROM wallet_transaction
+                WHERE transaction_type = 'DRAW'
+                  AND created_at BETWEEN ? AND ?
+                """, BigDecimal.class, start, end);
+        return value != null ? value.longValue() : 0L;
+    }
+
+    private PlatformRevenueReportRes.SpendByType querySpendByType(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT coin_type, COALESCE(ABS(SUM(amount)), 0) AS total
+                FROM wallet_transaction
+                WHERE transaction_type = 'DRAW'
+                  AND created_at BETWEEN ? AND ?
+                GROUP BY coin_type
+                """, start, end);
+
+        long gold = 0L;
+        long bonus = 0L;
+        for (Map<String, Object> row : rows) {
+            String coinType = row.get("coin_type") != null ? row.get("coin_type").toString() : "";
+            long total = toLong(row.get("total"));
+            if ("GOLD".equalsIgnoreCase(coinType)) {
+                gold = total;
+            } else if ("BONUS".equalsIgnoreCase(coinType)) {
+                bonus = total;
+            }
+        }
+
+        return PlatformRevenueReportRes.SpendByType.builder()
+                .gold(gold)
+                .bonus(bonus)
+                .build();
+    }
+
+    private long queryPlatformDrawCount(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        Long value = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM lottery_ticket
+                WHERE status = 'DRAWN'
+                  AND drawn_at BETWEEN ? AND ?
+                """, Long.class, start, end);
+        return value != null ? value : 0L;
+    }
+
+    private LocalDate[] calculatePreviousRange(LocalDate startDate, LocalDate endDate) {
+        long days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        LocalDate prevEnd = startDate.minusDays(1);
+        LocalDate prevStart = prevEnd.minusDays(days - 1);
+        return new LocalDate[]{prevStart, prevEnd};
+    }
+
+    private List<PlatformRevenueReportRes.DailyRevenueItem> buildDailyRevenue(LocalDate startDate, LocalDate endDate) {
+        Map<LocalDate, Long> rechargeMap = queryDailyAmountByType(startDate, endDate, "RECHARGE", "GOLD");
+        Map<LocalDate, Long> spendMap = queryDailyAmountByType(startDate, endDate, "DRAW", null);
+
+        List<PlatformRevenueReportRes.DailyRevenueItem> result = new ArrayList<>();
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            long recharge = rechargeMap.getOrDefault(date, 0L);
+            long spend = spendMap.getOrDefault(date, 0L);
+            result.add(PlatformRevenueReportRes.DailyRevenueItem.builder()
+                    .date(date)
+                    .recharge(recharge)
+                    .spend(spend)
+                    .net(recharge - spend)
+                    .build());
+        }
+        return result;
+    }
+
+    private Map<LocalDate, Long> queryDailyAmountByType(LocalDate startDate, LocalDate endDate, String transactionType, String coinType) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(transactionType, start, end));
+        String sql = """
+                SELECT DATE(created_at) AS stat_date,
+                       COALESCE(SUM(ABS(amount)), 0) AS total
+                FROM wallet_transaction
+                WHERE transaction_type = ?
+                  AND created_at BETWEEN ? AND ?
+                """;
+        if (coinType != null) {
+            sql += " AND coin_type = ? ";
+            params.add(coinType);
+        }
+        sql += " GROUP BY DATE(created_at) ORDER BY stat_date";
+
+        Map<LocalDate, Long> result = new LinkedHashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs ->
+                result.put(rs.getDate("stat_date").toLocalDate(), rs.getLong("total")));
+        return result;
+    }
+
+    private List<PlatformRevenueReportRes.StoreBreakdownItem> queryStoreBreakdown(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+
+        String spendSql = """
+                SELECT mapped.store_id,
+                       mapped.store_name,
+                       ABS(SUM(mapped.amount)) AS total_spend
+                FROM (
+                    SELECT COALESCE(%s, %s) AS store_id,
+                           s.store_name,
+                           wt.amount AS amount
+                    FROM wallet_transaction wt
+                    LEFT JOIN lottery_ticket lt ON %s
+                    LEFT JOIN lottery l ON %s
+                    LEFT JOIN `order` o ON %s
+                    LEFT JOIN store s ON %s
+                    WHERE wt.transaction_type = 'DRAW'
+                      AND wt.created_at BETWEEN ? AND ?
+                ) mapped
+                WHERE mapped.store_id IS NOT NULL
+                GROUP BY mapped.store_id, mapped.store_name
+                ORDER BY total_spend DESC
+                """.formatted(
+                utf8mb4Text("l.store_id"),
+                utf8mb4Text("o.store_id"),
+                utf8mb4Eq("wt.related_id", "lt.id"),
+                utf8mb4Eq("lt.lottery_id", "l.id"),
+                utf8mb4Eq("wt.related_id", "o.id"),
+                utf8mb4Eq("s.id", "COALESCE(l.store_id, o.store_id)"));
+
+        Map<String, Long> drawCounts = queryStoreDrawCountForPlatformRevenue(startDate, endDate);
+        List<PlatformRevenueReportRes.StoreBreakdownItem> result = new ArrayList<>();
+        jdbcTemplate.query(spendSql, new Object[]{start, end}, (RowCallbackHandler) rs -> {
+            String storeId = rs.getString("store_id");
+            result.add(PlatformRevenueReportRes.StoreBreakdownItem.builder()
+                    .storeId(storeId)
+                    .storeName(rs.getString("store_name"))
+                    .totalSpend(rs.getLong("total_spend"))
+                    .drawCount(drawCounts.getOrDefault(storeId, 0L))
+                    .build());
+        });
+        return result;
+    }
+
+    private Map<String, Long> queryStoreDrawCountForPlatformRevenue(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        Map<String, Long> result = new HashMap<>();
+        jdbcTemplate.query("""
+                SELECT l.store_id, COUNT(*) AS draw_count
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                WHERE lt.status = 'DRAWN'
+                  AND lt.drawn_at BETWEEN ? AND ?
+                GROUP BY l.store_id
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id")), new Object[]{start, end}, (RowCallbackHandler) rs ->
+                result.put(rs.getString("store_id"), rs.getLong("draw_count")));
+        return result;
+    }
+
     // ========== 工具方法 ==========
 
     private BigDecimal toBigDecimal(Object value) {
@@ -1170,6 +1415,12 @@ public class ReportServiceImpl implements ReportService {
         if (value instanceof Number) return ((Number) value).intValue();
         return 0;
     }
+
+    private long toLong(Object value) {
+        if (value == null) return 0L;
+        if (value instanceof Number) return ((Number) value).longValue();
+        return 0L;
+    }
     
     private BigDecimal calculateGrowthRate(BigDecimal current, BigDecimal previous) {
         if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
@@ -1178,6 +1429,15 @@ public class ReportServiceImpl implements ReportService {
         return current.subtract(previous)
                 .multiply(new BigDecimal("100"))
                 .divide(previous, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateNullableGrowthRate(BigDecimal current, BigDecimal previous) {
+        if (previous == null || previous.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return current.subtract(previous)
+                .multiply(new BigDecimal("100"))
+                .divide(previous, 1, RoundingMode.HALF_UP);
     }
     
     private String getBonusTypeName(String bonusType) {
@@ -1392,5 +1652,13 @@ public class ReportServiceImpl implements ReportService {
         if (value == null) return 0;
         if (value instanceof Number) return ((Number) value).intValue();
         return 0;
+    }
+
+    private String utf8mb4Text(String expr) {
+        return "CAST(" + expr + " AS CHAR(" + MYSQL_TEXT_LENGTH + ")) COLLATE " + MYSQL_TEXT_COLLATION;
+    }
+
+    private String utf8mb4Eq(String left, String right) {
+        return utf8mb4Text(left) + " = " + utf8mb4Text(right);
     }
 }

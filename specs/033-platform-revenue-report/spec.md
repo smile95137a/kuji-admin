@@ -87,7 +87,7 @@ Admin 需要比較本期 vs 上期的營收表現，識別成長或衰退趨勢�
 - **FR-004**: `netRevenue` = `totalRecharge - totalSpend`
 - **FR-005**: `spendByType` 分別統計：GOLD（`transactionType='DRAW' AND coinType='GOLD'`）和 BONUS（`transactionType='DRAW' AND coinType='BONUS'`）
 - **FR-006**: `dailyRevenue` 按 `wallet_transaction.created_at` 日期分組
-- **FR-007**: `storeBreakdown` 基於 `wallet_transaction.related_id` 的實體類型映射計算各店消費：若 `related_id` 指向 `lottery_ticket` 則 JOIN `lottery.store_id`；若指向 `order` 則 JOIN `order.store_id`；其他類型忽略或標記為 `unknown`。
+- **FR-007**: `storeBreakdown` 基於 `wallet_transaction.related_id` 的實體類型映射計算各店消費：若 `related_id` 指向 `lottery_ticket` 則 JOIN `lottery.store_id`；若指向 `order` 則 JOIN `order.store_id`。店家不可刪除（只能標記移除），因此 JOIN 應永遠可以解析。若真的無法 JOIN（資料異常），跳過該筆，不計入 storeBreakdown。
 - **FR-008**: `drawCount` = 期間內 `lottery_ticket.status = 'DRAWN'` 的筆數
 - **FR-009**: 權限：僅 Admin 可存取，StoreOwner 不可查看
 
@@ -166,3 +166,9 @@ Response:
 - Q: storeBreakdown 應如何處理 wallet_transaction.related_id 指向不同實體？ → A: 根據 related_id 類型映射：`lottery_ticket` → `lottery.store_id`；`order` → `order.store_id`；其他類型忽略或標記為 `unknown`。
 
 - Q: 在缺少 `related_type` 欄位的情況下，如何在 SQL 層辨識 related_id 的實體並確保 storeBreakdown 加總等於 totalSpend？ → A: 使用 left-join heuristic：`LEFT JOIN` `lottery_ticket` 與 `order`，依匹配結果分類；未匹配者歸為 `Unknown` bucket，並計入 `storeBreakdown` 總和以滿足 SC-002。
+
+### Session 2026-05-06
+
+- Q: growthRate 的「上期」定義？ → A: 前一個相同天數區間（往前推相同天數，例如查 30 天則比對前 30 天）。
+
+- Q: storeBreakdown 中 unknown bucket 是否要顯示？ → A: 不應出現，因為店家不可刪除（只能標記移除），DRAW 交易的 related_id 永遠能 JOIN 到 store。若真的發生無法 JOIN（資料異常），跳過該筆，不顯示 unknown bucket。SC-002 的條件調整為：正常情況下 storeBreakdown 加總等於 totalSpend。
