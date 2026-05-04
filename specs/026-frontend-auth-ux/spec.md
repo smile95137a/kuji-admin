@@ -6,6 +6,14 @@
 **Backend**: Feature 024 已完成所有 API，本 spec 為前台前端對應的 UX 改版規格  
 **Input**: 前台前端：Email 驗證流程與登入安全 UX（配合 Feature 024）
 
+## Clarifications
+
+### Session 2026-04-30
+
+- Q: 未驗證 Email 用戶要如何重送驗證信？ → A: `POST /api/auth/resend-verification` 為公開 API，body 帶 email，後端泛化回應並做 60 秒冷卻與 IP/email rate limit。
+- Q: 前台 Logout 的 token 撤銷範圍要怎麼定義？ → A: 登出時只撤銷目前 access token 與對應 refresh token，其他裝置維持登入。
+- Q: 驗證連結失效頁要如何重送驗證信？ → A: 驗證失敗/過期頁顯示 email 輸入框，使用者輸入後重送驗證信。
+
 ## API 對照（後端已就緒）
 
 | 功能 | Method | Path |
@@ -13,7 +21,7 @@
 | 登入（新增鎖定回應欄位） | POST | `/api/auth/login` |
 | 登出（撤銷 server token） | POST | `/api/auth/logout` |
 | Email 驗證（點擊連結） | GET | `/api/auth/verify-email?token=xxx` |
-| 重新發送驗證信 | POST | `/api/auth/resend-verification` |
+| 重新發送驗證信 | POST | `/api/auth/resend-verification`（公開 API，body 帶 email） |
 
 ### 登入回應格式（新增欄位）
 
@@ -32,17 +40,18 @@
 
 ### User Story 1 - 前台登出正確撤銷 Server Token (Priority: P1)
 
-用戶點擊登出按鈕時，前端除了清除本地儲存的 token，還必須呼叫後端 API 讓 token 在 server 端失效，確保舊 token 無法被繼續使用。
+用戶點擊登出按鈕時，前端除了清除本地儲存的 token，還必須呼叫後端 API 讓目前 session 的 token pair 在 server 端失效，確保該 session 的舊 token 無法被繼續使用。
 
 **Why this priority**: 現有前端可能只做本地清除（清 localStorage），Feature 024 已在後端實作 server-side 撤銷，前端必須改成呼叫 API 才能真正生效。若不更新，後端的安全機制形同虛設。
 
-**Independent Test**: 登入後複製 token → 點擊登出 → 用複製的舊 token 呼叫 `GET /api/user/me` → 應返回 401。
+**Independent Test**: 登入後複製目前 session token → 點擊登出 → 用複製的舊 token 呼叫 `GET /api/user/me` → 應返回 401；同一帳號其他裝置仍維持登入。
 
 **Acceptance Scenarios**:
 
 1. **Given** 用戶已登入，**When** 點擊登出按鈕，**Then** 前端呼叫 `POST /api/auth/logout`，成功後清除本地 token，導向首頁或登入頁。
 2. **Given** 用戶已登出，**When** 使用舊 token 訪問需要認證的頁面，**Then** 返回 401，前端導向登入頁。
 3. **Given** 呼叫登出 API 失敗（網路錯誤），**When** 發生錯誤，**Then** 前端仍清除本地 token 並導向登入頁（降級處理）。
+4. **Given** 同一帳號在其他裝置仍登入，**When** 目前裝置登出，**Then** 前端不得假設其他裝置也已登出。
 
 ---
 
@@ -74,7 +83,7 @@
 
 1. **Given** 用戶點擊驗證信中的連結（含 `?token=xxx`），**When** 前端路由接收到此連結，**Then** 自動呼叫 `GET /api/auth/verify-email?token=xxx`，顯示「驗證中...」loading 狀態。
 2. **Given** token 有效，**When** 後端返回成功，**Then** 顯示「Email 驗證成功！您現在可以登入了」，並提供「前往登入」按鈕。
-3. **Given** token 已過期或已使用，**When** 後端返回錯誤，**Then** 顯示「此驗證連結已失效，請重新申請」，並提供「重新發送驗證信」按鈕。
+3. **Given** token 已過期或已使用，**When** 後端返回錯誤，**Then** 顯示「此驗證連結已失效，請重新申請」，並提供 email 輸入框與「重新發送驗證信」按鈕。
 
 ---
 
@@ -100,6 +109,9 @@
 - 驗證連結落地頁：若用戶已登入狀態點擊驗證連結，驗證完成後導向個人資料頁而非登入頁。
 - 驗證成功後，若用戶是從登入錯誤（EMAIL_NOT_VERIFIED）流程過來，驗證完成後可直接顯示「驗證成功，請重新登入」並跳轉登入頁。
 - 登出 API 需攜帶 Authorization header（用戶已登入的 token）。
+- 一般登出僅作用於目前 session；本 spec 不包含「登出所有裝置」入口。
+- 重送驗證信 API 不需登入；前端送出 email，並接受後端泛化回應，不顯示帳號是否存在或已驗證。
+- 驗證失敗/過期頁若要重送驗證信，必須由使用者輸入 email；前端不得要求後端從失效 token 回傳 email。
 - Google OAuth 用戶不會有 Email 未驗證問題，不需顯示驗證相關提示。
 
 ---
@@ -115,7 +127,7 @@
 **Email 驗證落地頁**
 - **FR-003**: 前端路由 MUST 包含 `/verify-email` 頁面（或等效路徑），接收 `token` query parameter。
 - **FR-004**: 進入驗證頁面時，MUST 自動呼叫後端 API，不需用戶手動點擊。
-- **FR-005**: 驗證結果 MUST 分成成功/失敗兩種狀態頁面，成功提供「前往登入」，失敗提供「重新發送驗證信」。
+- **FR-005**: 驗證結果 MUST 分成成功/失敗兩種狀態頁面，成功提供「前往登入」，失敗提供 email 輸入框與「重新發送驗證信」。
 
 **登入錯誤處理**
 - **FR-006**: 登入失敗時，MUST 根據 `errorCode` 顯示對應訊息：
@@ -125,8 +137,9 @@
 - **FR-007**: 重送驗證信按鈕 MUST 在成功送出後進入 60 秒冷卻倒數，期間不可點擊。
 
 **重送驗證信**
-- **FR-008**: `POST /api/auth/resend-verification` 需攜帶 Authorization header（用未驗證用戶的 token）。
+- **FR-008**: `POST /api/auth/resend-verification` MUST 作為公開 API 呼叫，request body 攜帶 email，不依賴未驗證用戶 token。
 - **FR-009**: 後端若返回 429（太頻繁），MUST 顯示「請稍後再試」並維持按鈕不可點擊。
+- **FR-010**: 驗證失敗/過期頁重送驗證信前，MUST 要求使用者輸入 email 並通過基本 email 格式驗證。
 
 ---
 
@@ -148,4 +161,4 @@
 - 驗證連結 URL 由後端郵件中嵌入，格式為 `https://{domain}/verify-email?token=xxx`。
 - 前端路由需新增 `/verify-email` 且此頁面為 **公開路由**（無需登入）。
 - `POST /api/auth/resend-verification` 在 Feature 024 之前無對應前端功能，需全新開發。
-- `resend-verification` API 需要 Authorization header（用戶的 access token），前端需在未驗證狀態下暫存 token。
+- `resend-verification` API 不需要 Authorization header；前端不得為未驗證登入狀態暫存正式 access token。

@@ -1,0 +1,479 @@
+{
+  "metadata": {
+    "專案": "KUJI-Server",
+    "報表用途": "整理後端 API 測試案例，供 QA 執行、工程確認與上線前審核使用。",
+    "baseUrl": "http://localhost:8080/api",
+    "產生日期": "2026-04-30",
+    "測試範圍": [
+      "Spring Boot 後端 API",
+      "後台管理 API",
+      "前台會員與抽獎 API",
+      "訂單與付款失敗情境",
+      "權限與資料一致性"
+    ],
+    "代號說明": {
+      "P0": "重大風險，通常不可上線",
+      "P1": "核心流程，需優先確認",
+      "P2": "一般流程或次要功能",
+      "AQA": "後端 API 測試案例"
+    },
+    "認證範例": {
+      "admin": "Bearer {{admin_access_token}}",
+      "user": "Bearer {{user_access_token}}"
+    }
+  },
+  "cases": [
+    {
+      "id": "AQA-001",
+      "module": "會員認證",
+      "priority": "P1",
+      "type": "正向",
+      "testPurpose": "確認玩家可正常登入並取得 access token 與 refresh token。",
+      "precondition": "測試帳號存在且密碼正確。",
+      "method": "POST",
+      "path": "/auth/login",
+      "body": {
+        "email": "player.active@example.test",
+        "password": "TestPass123!"
+      },
+      "expected": {
+        "status": 200,
+        "success": true,
+        "fields": ["data.accessToken", "data.refreshToken"]
+      },
+      "successReason": "回傳 token 且可用於後續受保護 API。",
+      "failureReason": "帳號登入成功但無 token、欄位名稱錯誤、回應格式不符合規格。",
+      "evidenceRequired": ["API 回應", "requestId"]
+    },
+    {
+      "id": "AQA-002",
+      "module": "會員認證",
+      "priority": "P1",
+      "type": "負向",
+      "testPurpose": "確認錯誤密碼時不洩漏帳號資訊。",
+      "precondition": "測試帳號存在但輸入錯誤密碼。",
+      "method": "POST",
+      "path": "/auth/login",
+      "body": {
+        "email": "player.active@example.test",
+        "password": "wrong-password"
+      },
+      "expected": {
+        "status": [400, 401],
+        "success": false
+      },
+      "successReason": "錯誤回應一致，且未暴露帳號是否存在。",
+      "failureReason": "不同帳號狀態回傳不同訊息，或仍可登入成功。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-003",
+      "module": "會員資料",
+      "priority": "P1",
+      "type": "權限",
+      "testPurpose": "確認登入玩家可查詢自己的會員資料與錢包資訊。",
+      "precondition": "玩家 token 有效。",
+      "method": "GET",
+      "path": "/user/me",
+      "headers": {
+        "Authorization": "Bearer {{user_access_token}}"
+      },
+      "expected": {
+        "status": 200,
+        "success": true,
+        "fields": ["data.id", "data.goldCoins", "data.bonusCoins"]
+      },
+      "successReason": "正確回傳會員資訊與雙幣別欄位。",
+      "failureReason": "缺少必要欄位、查詢到錯誤使用者、回應格式異常。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-004",
+      "module": "會員資料",
+      "priority": "P1",
+      "type": "權限",
+      "testPurpose": "確認未登入時無法查詢 /user/me。",
+      "precondition": "不帶 Authorization header。",
+      "method": "GET",
+      "path": "/user/me",
+      "headers": {},
+      "expected": {
+        "status": 401,
+        "success": false
+      },
+      "successReason": "未登入請求被拒絕。",
+      "failureReason": "未登入仍可取得會員資料。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-005",
+      "module": "商品管理",
+      "priority": "P1",
+      "type": "正向",
+      "testPurpose": "確認管理員可建立含獎品的刮刮樂商品。",
+      "precondition": "Admin token 有效，測試商品資料已準備。",
+      "method": "POST",
+      "path": "/admin/lottery-with-prizes",
+      "headers": {
+        "Authorization": "Bearer {{admin_access_token}}"
+      },
+      "bodyRef": "qa/test-data/products.csv#lottery-scratch-001",
+      "expected": {
+        "status": [200, 201],
+        "success": true,
+        "fields": ["data.id"]
+      },
+      "successReason": "商品與獎品成功建立，回傳可追蹤的商品 id。",
+      "failureReason": "建立失敗、欄位驗證錯誤、建立後查無明細。",
+      "evidenceRequired": ["API 回應", "商品 id"]
+    },
+    {
+      "id": "AQA-006",
+      "module": "商品管理",
+      "priority": "P1",
+      "type": "邊界",
+      "testPurpose": "確認 pricePerDraw 不可為 0。",
+      "precondition": "Admin token 有效。",
+      "method": "POST",
+      "path": "/admin/lottery-with-prizes",
+      "headers": {
+        "Authorization": "Bearer {{admin_access_token}}"
+      },
+      "body": {
+        "name": "Invalid Zero Price",
+        "pricePerDraw": 0,
+        "totalStock": 10
+      },
+      "expected": {
+        "status": 400,
+        "success": false
+      },
+      "successReason": "非法價格被後端拒絕。",
+      "failureReason": "0 元價格被接受，導致資料規格失真。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-007",
+      "module": "商品管理",
+      "priority": "P1",
+      "type": "權限",
+      "testPurpose": "確認 StoreEditor 無法刪除不允許操作的商品。",
+      "precondition": "StoreEditor token 有效，且目標商品存在。",
+      "method": "DELETE",
+      "path": "/admin/lottery/{{other_store_lottery_id}}",
+      "headers": {
+        "Authorization": "Bearer {{store_editor_token}}"
+      },
+      "expected": {
+        "status": 403,
+        "success": false
+      },
+      "successReason": "權限控制正確阻擋操作。",
+      "failureReason": "可跨店刪除商品或無權限卻能操作成功。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-008",
+      "module": "前台瀏覽",
+      "priority": "P2",
+      "type": "正向",
+      "testPurpose": "確認前台瀏覽清單只回傳可展示商品。",
+      "precondition": "存在 ON_SHELF 與非 ON_SHELF 商品。",
+      "method": "POST",
+      "path": "/lottery/browse/list",
+      "body": {
+        "category": "CUSTOM_GACHA",
+        "page": 1,
+        "size": 20
+      },
+      "expected": {
+        "status": 200,
+        "success": true,
+        "onlyOnShelf": true
+      },
+      "successReason": "只回傳上架商品，資料欄位完整。",
+      "failureReason": "草稿或下架商品出現在前台。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-009",
+      "module": "抽獎流程",
+      "priority": "P1",
+      "type": "正向",
+      "testPurpose": "確認一般抽獎成功時只扣一次點數並建立賞品盒紀錄。",
+      "precondition": "玩家餘額足夠，商品可抽，Idempotency-Key 唯一。",
+      "method": "POST",
+      "path": "/lottery/draw/{{lottery_id}}/draw",
+      "headers": {
+        "Authorization": "Bearer {{funded_user_token}}",
+        "Idempotency-Key": "draw-success-001"
+      },
+      "body": {
+        "ticketNumbers": [1]
+      },
+      "expected": {
+        "status": 200,
+        "success": true,
+        "assertions": ["wallet debited once", "stock decremented once", "prizeBox created"]
+      },
+      "successReason": "扣點、庫存與賞品盒紀錄三者一致。",
+      "failureReason": "重複扣點、庫存未更新、賞品盒未建立或結果重複寫入。",
+      "evidenceRequired": ["API 回應", "餘額前後比對", "庫存前後比對"]
+    },
+    {
+      "id": "AQA-010",
+      "module": "抽獎流程",
+      "priority": "P1",
+      "type": "負向",
+      "testPurpose": "確認餘額不足時不可抽獎。",
+      "precondition": "玩家餘額低於抽獎費用。",
+      "method": "POST",
+      "path": "/lottery/random/{{lottery_id}}/draw",
+      "headers": {
+        "Authorization": "Bearer {{low_balance_user_token}}"
+      },
+      "body": {
+        "count": 1
+      },
+      "expected": {
+        "status": [400, 409],
+        "success": false,
+        "assertions": ["INSUFFICIENT_BALANCE", "wallet unchanged", "stock unchanged"]
+      },
+      "successReason": "請求被拒絕且資料完全不變。",
+      "failureReason": "抽獎失敗但仍扣點，或回應原因不清楚。",
+      "evidenceRequired": ["API 回應", "餘額前後比對"]
+    },
+    {
+      "id": "AQA-011",
+      "module": "抽獎流程",
+      "priority": "P1",
+      "type": "負向",
+      "testPurpose": "確認商品售完時不可再抽。",
+      "precondition": "商品 available_stock=0。",
+      "method": "POST",
+      "path": "/lottery/random/{{sold_out_lottery_id}}/draw",
+      "headers": {
+        "Authorization": "Bearer {{funded_user_token}}"
+      },
+      "body": {
+        "count": 1
+      },
+      "expected": {
+        "status": [400, 409],
+        "success": false,
+        "assertions": ["INSUFFICIENT_STOCK", "wallet unchanged"]
+      },
+      "successReason": "售完商品被正確阻擋且未扣點。",
+      "failureReason": "仍可抽獎或造成庫存負數。",
+      "evidenceRequired": ["API 回應", "庫存前後比對"]
+    },
+    {
+      "id": "AQA-012",
+      "module": "抽獎流程",
+      "priority": "P1",
+      "type": "重複請求",
+      "testPurpose": "確認相同抽獎請求只會成功一次。",
+      "precondition": "玩家餘額足夠，使用同一個 Idempotency-Key 重送。",
+      "method": "POST",
+      "path": "/lottery/draw/{{lottery_id}}/draw",
+      "headers": {
+        "Authorization": "Bearer {{funded_user_token}}",
+        "Idempotency-Key": "duplicate-draw-001"
+      },
+      "repeat": 2,
+      "body": {
+        "ticketNumbers": [2]
+      },
+      "expected": {
+        "status": [200, 409],
+        "assertions": ["only one successful draw", "single wallet debit"]
+      },
+      "successReason": "系統具備去重能力。",
+      "failureReason": "重複中獎、重複扣點、重複寫入獎品紀錄。",
+      "evidenceRequired": ["兩次 API 回應", "餘額前後比對"]
+    },
+    {
+      "id": "AQA-013",
+      "module": "抽獎流程",
+      "priority": "P0",
+      "type": "併發",
+      "testPurpose": "確認最後一抽併發時不會超賣。",
+      "precondition": "商品只剩 1 庫存，兩位玩家同時發送請求。",
+      "method": "POST",
+      "path": "/lottery/random/{{one_stock_lottery_id}}/draw",
+      "parallelUsers": [
+        "{{funded_user_token}}",
+        "{{funded_user_2_token}}"
+      ],
+      "body": {
+        "count": 1
+      },
+      "expected": {
+        "assertions": ["exactly one success", "stock never negative", "failed request not charged"]
+      },
+      "successReason": "最多只有一位玩家成功，資料一致。",
+      "failureReason": "雙方都成功、庫存負數、失敗方仍被扣點。",
+      "evidenceRequired": ["雙請求回應", "庫存前後比對", "兩位玩家餘額比對"]
+    },
+    {
+      "id": "AQA-014",
+      "module": "刮刮樂",
+      "priority": "P1",
+      "type": "回歸",
+      "testPurpose": "確認 tickets API 會保留所有格子並按 ticketNumber 排序。",
+      "precondition": "玩家已抽過至少一格刮刮樂。",
+      "method": "GET",
+      "path": "/lottery/draw/{{scratch_lottery_id}}/tickets",
+      "headers": {
+        "Authorization": "Bearer {{user_access_token}}"
+      },
+      "expected": {
+        "status": 200,
+        "success": true,
+        "assertions": ["all tickets returned", "sorted by ticketNumber asc", "DRAWN tickets retained"]
+      },
+      "successReason": "前端可依 ticketNumber 固定位置渲染。",
+      "failureReason": "已抽格消失、排序錯誤、格子位置無法穩定重建。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-015",
+      "module": "儲值流程",
+      "priority": "P1",
+      "type": "正向",
+      "testPurpose": "確認測試模式儲值完成後立即入帳。",
+      "precondition": "玩家已登入且儲值方案有效。",
+      "method": "POST",
+      "path": "/recharge",
+      "headers": {
+        "Authorization": "Bearer {{user_access_token}}"
+      },
+      "body": {
+        "planId": "{{active_recharge_plan_id}}"
+      },
+      "expected": {
+        "status": 200,
+        "success": true,
+        "fields": ["data.paymentStatus"],
+        "assertions": ["paymentStatus == COMPLETED", "wallet increased"]
+      },
+      "successReason": "儲值完成且雙幣別餘額同步更新。",
+      "failureReason": "儲值狀態錯誤、未入帳、需要不該出現的第三方付款流程。",
+      "evidenceRequired": ["API 回應", "儲值前後餘額"]
+    },
+    {
+      "id": "AQA-016",
+      "module": "儲值流程",
+      "priority": "P1",
+      "type": "負向",
+      "testPurpose": "確認無效方案不可建立儲值單。",
+      "precondition": "玩家已登入，使用不存在的 planId。",
+      "method": "POST",
+      "path": "/recharge",
+      "headers": {
+        "Authorization": "Bearer {{user_access_token}}"
+      },
+      "body": {
+        "planId": "00000000-0000-0000-0000-000000000000"
+      },
+      "expected": {
+        "status": [400, 404],
+        "success": false,
+        "assertions": ["wallet unchanged"]
+      },
+      "successReason": "無效方案被拒絕且錢包不變。",
+      "failureReason": "無效方案可入帳或建立了錯誤儲值紀錄。",
+      "evidenceRequired": ["API 回應"]
+    },
+    {
+      "id": "AQA-017",
+      "module": "訂單流程",
+      "priority": "P1",
+      "type": "正向",
+      "testPurpose": "確認賞品出貨申請可建立訂單。",
+      "precondition": "玩家有可出貨賞品且地址存在。",
+      "method": "POST",
+      "path": "/order/ship",
+      "headers": {
+        "Authorization": "Bearer {{user_access_token}}"
+      },
+      "body": {
+        "prizeBoxIds": ["{{prize_box_id}}"],
+        "addressId": "{{address_id}}",
+        "note": "QA shipping order"
+      },
+      "expected": {
+        "status": [200, 201],
+        "success": true,
+        "fields": ["data.orderId"]
+      },
+      "successReason": "訂單建立成功且可追蹤後續狀態。",
+      "failureReason": "賞品可選卻無法建立訂單，或建立後狀態異常。",
+      "evidenceRequired": ["API 回應", "orderId"]
+    },
+    {
+      "id": "AQA-018",
+      "module": "付款回呼",
+      "priority": "P0",
+      "type": "失敗情境",
+      "testPurpose": "確認付款成功但訂單建立失敗時，系統可追蹤且不留下孤兒資料。",
+      "precondition": "使用可模擬 callback 的測試環境。",
+      "method": "POST",
+      "path": "/payment/callback",
+      "bodyRef": "qa/test-data/orders.csv#payment-success-order-create-fail",
+      "expected": {
+        "status": [200, 409, 500],
+        "assertions": ["failure is traceable", "no orphan shipment", "compensation required if partial write occurs"]
+      },
+      "successReason": "失敗被記錄且資料不會留在半成功狀態。",
+      "failureReason": "回呼看似成功，但查無訂單或留下無法恢復的半成品資料。",
+      "evidenceRequired": ["API 回應", "系統日誌", "資料比對結果"]
+    },
+    {
+      "id": "AQA-019",
+      "module": "訂單流程",
+      "priority": "P0",
+      "type": "失敗情境",
+      "testPurpose": "確認訂單成功但庫存更新失敗時，系統會留下可補償資訊。",
+      "precondition": "可啟用 inventory update failure 測試情境。",
+      "method": "PUT",
+      "path": "/admin/orders/{{order_id}}/ship",
+      "headers": {
+        "Authorization": "Bearer {{admin_access_token}}"
+      },
+      "faultInjection": "inventory-update-failure",
+      "expected": {
+        "assertions": ["order success but inventory failure cannot remain silent", "status log records failure", "manual recovery path documented"]
+      },
+      "successReason": "問題被記錄、可回滾或可補償。",
+      "failureReason": "訂單狀態往前走了，但庫存與獎品狀態未同步且無任何警示。",
+      "evidenceRequired": ["API 回應", "status-log", "系統日誌"]
+    },
+    {
+      "id": "AQA-020",
+      "module": "後台權限",
+      "priority": "P1",
+      "type": "權限",
+      "testPurpose": "確認 StoreEditor 不可調整前台會員點數。",
+      "precondition": "StoreEditor token 有效，目標會員存在。",
+      "method": "POST",
+      "path": "/admin/frontend-users/{{user_id}}/coin-adjust",
+      "headers": {
+        "Authorization": "Bearer {{store_editor_token}}"
+      },
+      "body": {
+        "amount": 100,
+        "coinType": "GOLD",
+        "reason": "permission negative test"
+      },
+      "expected": {
+        "status": 403,
+        "success": false
+      },
+      "successReason": "後端正確阻擋超出角色範圍的操作。",
+      "failureReason": "店員可直接改動會員資產，形成重大權限漏洞。",
+      "evidenceRequired": ["API 回應"]
+    }
+  ]
+}

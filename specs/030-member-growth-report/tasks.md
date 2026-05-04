@@ -77,7 +77,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T012 [US3] Implement **Q7 + Q8** in `src/main/java/com/group/admin/service/impl/ReportServiceImpl.java`: compute `prevMonthStart = LocalDate.now().minusMonths(1).withDayOfMonth(1)` and `prevMonthEnd = prevMonthStart.plusMonths(1).minusDays(1)`; Q7 = `SELECT COUNT(*) FROM user WHERE created_at BETWEEN prevMonthStart AND prevMonthEnd+1day` for `prevMonthTotal`; return `null` for both retention fields when `prevMonthTotal=0`; Q8 (7-day window) = for each prev-month new member (`id`, `created_at`), count those with any active event within `[created_at, created_at+7days]` using 4-table UNION (same pattern as Q4 but per-user window); `retention7Days = retainedCount7 / prevMonthTotal * 100` scale=1 HALF_UP; repeat with 30-day window for `retention30Days`
+- [ ] T012 [US3] Implement **Q7 + Q8** in `src/main/java/com/group/admin/service/impl/ReportServiceImpl.java`: compute `prevMonthStart = LocalDate.now().minusMonths(1).withDayOfMonth(1)` and `prevMonthEnd = prevMonthStart.plusMonths(1).minusDays(1)`; Q7 = `SELECT COUNT(*) FROM user WHERE created_at BETWEEN prevMonthStart AND prevMonthEnd+1day` for `prevMonthTotal`; return `null` for both retention fields when `prevMonthTotal=0`; Q8 (7-day window) = for each prev-month new member (`id`, `created_at`), count those with any active event after `created_at` and within `(created_at, created_at+7days]` using 4-table UNION (same pattern as Q4 but per-user window), explicitly excluding the registration instant; `retention7Days = retainedCount7 / prevMonthTotal * 100` scale=1 HALF_UP; repeat with 30-day window for `retention30Days`
 
 **Checkpoint**: US3 fields correct; null returned when prev-month has no data
 

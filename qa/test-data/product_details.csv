@@ -1,0 +1,9 @@
+id,product_id,prize_name,prize_level,prize_type,stock,remaining_stock,weight,ticket_number,notes
+prize-std-a-001,lottery-standard-001,A賞模型,A,PHYSICAL,1,1,1,1,大獎
+prize-std-b-001,lottery-standard-001,B賞立牌,B,PHYSICAL,5,5,5,2,一般獎
+prize-std-none-001,lottery-standard-001,銘謝惠顧,NONE,NONE,74,74,74,,未中獎
+prize-scratch-a-001,lottery-scratch-001,刮刮大獎,A,PHYSICAL,1,1,1,7,預先指定大獎位置
+prize-scratch-none-001,lottery-scratch-001,銘謝惠顧,NONE,NONE,19,19,19,,安全隱藏 revealedNumber
+prize-random-a-soldout,lottery-random-001,售完大獎,A,PHYSICAL,1,0,1,,prize sold out 測試
+prize-random-b-001,lottery-random-001,一般扭蛋,B,PHYSICAL,29,29,29,,可抽獎
+prize-one-stock-001,lottery-one-stock-001,最後庫存獎,B,PHYSICAL,1,1,1,,併發測試

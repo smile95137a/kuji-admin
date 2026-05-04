@@ -1,0 +1,9 @@
+id,email,password,role,store_id,status,gold_coins,bonus_coins,total_recharge,notes
+user-active-001,player.active@example.test,TestPass123!,FRONTEND_USER,,ACTIVE,1500,200,3000,一般玩家足額
+user-low-balance-001,player.lowbalance@example.test,TestPass123!,FRONTEND_USER,,ACTIVE,10,0,0,餘額不足測試
+user-prize-001,player.prizebox@example.test,TestPass123!,FRONTEND_USER,,ACTIVE,800,100,1000,已有賞品盒
+user-suspended-001,player.suspended@example.test,TestPass123!,FRONTEND_USER,,SUSPENDED,500,0,500,停權權限測試
+admin-root-001,admin.root@example.test,AdminPass123!,ADMIN,,ACTIVE,,,,"全站管理員"
+admin-store-owner-001,owner.store-a@example.test,AdminPass123!,STORE_OWNER,store-a,ACTIVE,,,,"店主只能看 store-a"
+admin-store-editor-001,editor.store-a@example.test,AdminPass123!,STORE_EDITOR,store-a,ACTIVE,,,,"店員權限限制"
+admin-store-owner-002,owner.store-b@example.test,AdminPass123!,STORE_OWNER,store-b,ACTIVE,,,,"他店權限隔離"

@@ -65,7 +65,20 @@
         </table>
         <table tableName="email_log" domainObjectName="EmailLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>
+        <table tableName="log_admin_action" domainObjectName="LogAdminAction" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+        </table>
+        <table tableName="log_auth" domainObjectName="LogAuth" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+        </table>
+        <table tableName="log_draw" domainObjectName="LogDraw" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+        </table>
+        <table tableName="log_order" domainObjectName="LogOrder" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+        </table>
+        <table tableName="log_recharge" domainObjectName="LogRecharge" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+        </table>
         <table tableName="lottery" domainObjectName="Lottery" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
+            <columnOverride column="payment_type" javaType="java.lang.String" />
+            <columnOverride column="free_draw_threshold" javaType="java.lang.Integer" />
+            <columnOverride column="delist_strategy" javaType="java.lang.String" />
         </table>
         <table tableName="lottery_draw_record" domainObjectName="LotteryDrawRecord" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>
@@ -116,8 +129,6 @@
         <table tableName="store_user" domainObjectName="StoreUser" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>
         <table tableName="shipping_method" domainObjectName="ShippingMethod" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
-        </table>
-        <table tableName="system_log" domainObjectName="SystemLog" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>
         <table tableName="system_config" domainObjectName="SystemConfig" enableCountByExample="true" enableUpdateByExample="true" enableDeleteByExample="true" enableSelectByExample="true" selectByExampleQueryId="true" modelType="flat">
         </table>

@@ -1,0 +1,6 @@
+id,user_id,status,prize_box_ids,address_id,total_amount,payment_status,scenario,notes
+order-pending-001,user-prize-001,PENDING_PAYMENT,box-ship-001,address-001,80,PENDING,cancel_pending_payment,取消待付款訂單
+order-paid-001,user-prize-001,PAID,box-ship-002,address-001,80,COMPLETED,admin_shipping_flow,後台備貨出貨完成
+order-callback-fail-001,user-prize-001,PENDING_PAYMENT,box-ship-003,address-001,80,COMPLETED,payment-success-order-create-fail,付款成功但訂單建立失敗
+order-inventory-fail-001,user-prize-001,PAID,box-ship-004,address-001,80,COMPLETED,order-success-inventory-update-fail,訂單成功但庫存更新失敗
+order-refunded-001,user-active-001,REFUNDED,box-refund-001,address-002,80,REFUNDED,refund_visibility,退款狀態顯示

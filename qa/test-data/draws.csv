@@ -1,0 +1,9 @@
+id,user_id,product_id,draw_type,ticket_numbers,count,idempotency_key,expected_result,notes
+draw-success-001,user-active-001,lottery-standard-001,LOTTERY,"1",1,draw-success-001,SUCCESS,一般抽籤
+draw-low-balance-001,user-low-balance-001,lottery-standard-001,LOTTERY,"2",1,draw-low-balance-001,INSUFFICIENT_BALANCE,餘額不足
+draw-sold-out-001,user-active-001,lottery-sold-out-001,RANDOM,,1,draw-sold-out-001,INSUFFICIENT_STOCK,商品庫存不足
+draw-duplicate-001,user-active-001,lottery-standard-001,LOTTERY,"3",1,duplicate-draw-001,DUPLICATE_REQUEST,重複 requestId
+draw-concurrent-a,user-active-001,lottery-one-stock-001,RANDOM,,1,concurrent-last-stock,ONE_SUCCESS,併發帳號 A
+draw-concurrent-b,user-prize-001,lottery-one-stock-001,RANDOM,,1,concurrent-last-stock,ONE_FAILURE,併發帳號 B
+draw-prize-soldout-001,user-active-001,lottery-random-001,RANDOM,,1,draw-prize-soldout-001,NO_SOLD_OUT_PRIZE,售完大獎不得再出
+draw-scratch-001,user-active-001,lottery-scratch-001,SCRATCH,"7",1,draw-scratch-001,SUCCESS_FIXED_GRID,刮刮樂格子固定

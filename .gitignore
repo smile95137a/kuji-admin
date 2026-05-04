@@ -46,3 +46,9 @@ app.log
 ### 測試結果 ###
 test-result.txt
 temp_token.txt
+
+### Universal ###
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

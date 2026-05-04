@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LogRechargeMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.LogRecharge">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="user_id" jdbcType="VARCHAR" property="userId" />
+    <result column="recharge_id" jdbcType="VARCHAR" property="rechargeId" />
+    <result column="plan_id" jdbcType="VARCHAR" property="planId" />
+    <result column="plan_name" jdbcType="VARCHAR" property="planName" />
+    <result column="amount" jdbcType="BIGINT" property="amount" />
+    <result column="gold_added" jdbcType="BIGINT" property="goldAdded" />
+    <result column="bonus_added" jdbcType="BIGINT" property="bonusAdded" />
+    <result column="payment_method" jdbcType="VARCHAR" property="paymentMethod" />
+    <result column="payment_gateway_ref" jdbcType="VARCHAR" property="paymentGatewayRef" />
+    <result column="result" jdbcType="VARCHAR" property="result" />
+    <result column="error_message" jdbcType="VARCHAR" property="errorMessage" />
+    <result column="ip" jdbcType="VARCHAR" property="ip" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">and ${criterion.condition}</when>
+                <when test="criterion.singleValue">and ${criterion.condition} #{criterion.value}</when>
+                <when test="criterion.betweenValue">and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}</when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">#{listItem}</foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, user_id, recharge_id, plan_id, plan_name, amount, gold_added, bonus_added,
+    payment_method, payment_gateway_ref, `result`, error_message, ip, created_at
+  </sql>
+  <select id="selectByExample" parameterType="com.group.admin.example.LogRechargeExample" resultMap="BaseResultMap">
+    select <if test="distinct">distinct</if>
+    <include refid="Base_Column_List" />
+    from log_recharge
+    <if test="_parameter != null"><include refid="Example_Where_Clause" /></if>
+    <if test="orderByClause != null">order by ${orderByClause}</if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" /> from log_recharge where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from log_recharge where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.group.admin.example.LogRechargeExample">
+    delete from log_recharge
+    <if test="_parameter != null"><include refid="Example_Where_Clause" /></if>
+  </delete>
+  <insert id="insert" parameterType="com.group.admin.entity.LogRecharge">
+    insert into log_recharge (id, user_id, recharge_id, plan_id, plan_name, amount, gold_added,
+      bonus_added, payment_method, payment_gateway_ref, `result`, error_message, ip, created_at)
+    values (#{id,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{rechargeId,jdbcType=VARCHAR},
+            #{planId,jdbcType=VARCHAR}, #{planName,jdbcType=VARCHAR}, #{amount,jdbcType=BIGINT},
+            #{goldAdded,jdbcType=BIGINT}, #{bonusAdded,jdbcType=BIGINT}, #{paymentMethod,jdbcType=VARCHAR},
+            #{paymentGatewayRef,jdbcType=VARCHAR}, #{result,jdbcType=VARCHAR}, #{errorMessage,jdbcType=VARCHAR},
+            #{ip,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.group.admin.entity.LogRecharge">
+    insert into log_recharge
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="userId != null">user_id,</if>
+      <if test="rechargeId != null">recharge_id,</if>
+      <if test="planId != null">plan_id,</if>
+      <if test="planName != null">plan_name,</if>
+      <if test="amount != null">amount,</if>
+      <if test="goldAdded != null">gold_added,</if>
+      <if test="bonusAdded != null">bonus_added,</if>
+      <if test="paymentMethod != null">payment_method,</if>
+      <if test="paymentGatewayRef != null">payment_gateway_ref,</if>
+      <if test="result != null">`result`,</if>
+      <if test="errorMessage != null">error_message,</if>
+      <if test="ip != null">ip,</if>
+      <if test="createdAt != null">created_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+      <if test="userId != null">#{userId,jdbcType=VARCHAR},</if>
+      <if test="rechargeId != null">#{rechargeId,jdbcType=VARCHAR},</if>
+      <if test="planId != null">#{planId,jdbcType=VARCHAR},</if>
+      <if test="planName != null">#{planName,jdbcType=VARCHAR},</if>
+      <if test="amount != null">#{amount,jdbcType=BIGINT},</if>
+      <if test="goldAdded != null">#{goldAdded,jdbcType=BIGINT},</if>
+      <if test="bonusAdded != null">#{bonusAdded,jdbcType=BIGINT},</if>
+      <if test="paymentMethod != null">#{paymentMethod,jdbcType=VARCHAR},</if>
+      <if test="paymentGatewayRef != null">#{paymentGatewayRef,jdbcType=VARCHAR},</if>
+      <if test="result != null">#{result,jdbcType=VARCHAR},</if>
+      <if test="errorMessage != null">#{errorMessage,jdbcType=VARCHAR},</if>
+      <if test="ip != null">#{ip,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.group.admin.example.LogRechargeExample" resultType="java.lang.Long">
+    select count(*) from log_recharge
+    <if test="_parameter != null"><include refid="Example_Where_Clause" /></if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update log_recharge
+    <set>
+      <if test="row.result != null">`result` = #{row.result,jdbcType=VARCHAR},</if>
+    </set>
+    <if test="example != null"><include refid="Example_Where_Clause" /></if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update log_recharge
+    set id = #{row.id,jdbcType=VARCHAR}, `result` = #{row.result,jdbcType=VARCHAR}
+    <if test="example != null"><include refid="Example_Where_Clause" /></if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LogRecharge">
+    update log_recharge
+    <set>
+      <if test="result != null">`result` = #{result,jdbcType=VARCHAR},</if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.LogRecharge">
+    update log_recharge set `result` = #{result,jdbcType=VARCHAR} where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>

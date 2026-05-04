@@ -1,6 +1,8 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.annotation.AuditLog;
 import com.group.admin.constants.ApiPaths;
+import com.group.admin.enums.AuditLogType;
 import com.group.admin.req.auth.AdminLoginReq;
 import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.req.auth.RefreshTokenReq;
@@ -41,6 +43,7 @@ public class AdminAuthController {
      * @param req 登入請求
      * @return 登入回應（Token 與使用者資訊）
      */
+    @AuditLog(type = AuditLogType.AUTH, action = "EMAIL")
     @PostMapping("/login")
     @Operation(summary = "後台登入", description = "驗證帳號密碼，回傳 Access Token 及 Refresh Token")
     @ApiResponses({

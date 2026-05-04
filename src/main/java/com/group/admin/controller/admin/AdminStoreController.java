@@ -1,6 +1,8 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.annotation.AuditLog;
 import com.group.admin.condition.StoreCondition;
+import com.group.admin.enums.AuditLogType;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.store.CreateStoreReq;
 import com.group.admin.req.store.UpdateStoreReq;
@@ -110,6 +112,7 @@ public class AdminStoreController {
     /**
      * 建立店家（含負責人帳號）
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "CREATE", targetType = "STORE")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "建立店家", description = "建立店家並可選建立負責人帳號（ADMIN 專用）")
@@ -186,6 +189,7 @@ public class AdminStoreController {
      * @param req 更新請求
      * @return 更新後的店家資訊
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "UPDATE", targetType = "STORE")
     @PutMapping("/{storeId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "更新店家資訊", description = "店主或 Admin 可更新")
@@ -212,6 +216,7 @@ public class AdminStoreController {
      * @param req 狀態更新請求
      * @return 成功訊息
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "UPDATE_STATUS", targetType = "STORE")
     @PutMapping("/{storeId}/status")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "更新店家狀態", description = "啟用或停用店家（ADMIN 專用）；停用時加 ?force=true 強制下架所有商品")

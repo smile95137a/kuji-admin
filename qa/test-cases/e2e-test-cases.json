@@ -1,0 +1,165 @@
+{
+  "metadata": {
+    "專案": "KUJI 前後台 E2E 測試",
+    "報表用途": "整理前端到後端的完整流程驗證案例，供瀏覽器自動化或手動流程回歸使用。",
+    "framework": "Playwright 或等效瀏覽器自動化工具",
+    "產生日期": "2026-04-30",
+    "evidenceRoot": "qa/evidence",
+    "代號說明": {
+      "P0": "重大風險，通常不可上線",
+      "P1": "核心流程，需優先驗證",
+      "E2E": "前端到後端完整流程測試"
+    }
+  },
+  "suites": [
+    {
+      "id": "E2E-AUTH",
+      "name": "前台認證與會員中心",
+      "suitePurpose": "確認玩家登入、token 狀態與會員錢包頁面可正常運作。",
+      "cases": [
+        {
+          "id": "E2E-001",
+          "priority": "P1",
+          "title": "玩家登入後可查看錢包餘額",
+          "persona": "active_player",
+          "steps": ["open /login", "login with player.active@example.test", "navigate to profile/wallet", "reload page"],
+          "expected": ["會員仍維持登入狀態", "可看到 goldCoins 與 bonusCoins", "GET /api/user/me 成功"],
+          "successReason": "登入狀態可持續且會員錢包資訊正確顯示。",
+          "failureReason": "登入後頁面無法顯示資料、token 未帶入、重整後被登出。",
+          "evidence": ["截圖", "network trace"]
+        },
+        {
+          "id": "E2E-002",
+          "priority": "P1",
+          "title": "Token 過期且刷新失敗時導回登入頁",
+          "persona": "active_player",
+          "steps": ["login", "replace access token with expired token", "visit protected profile page", "force refresh token failure"],
+          "expected": ["受保護資料不應顯示", "使用者被導回登入頁", "有清楚提示"],
+          "successReason": "前端對 401 與 refresh 失敗處理正確。",
+          "failureReason": "頁面卡死、無提示、仍顯示舊資料或導頁異常。",
+          "evidence": ["截圖", "console trace"]
+        }
+      ]
+    },
+    {
+      "id": "E2E-ADMIN",
+      "name": "後台商品與權限",
+      "suitePurpose": "確認後台商品建立、前台可見性與角色權限限制。",
+      "cases": [
+        {
+          "id": "E2E-003",
+          "priority": "P1",
+          "title": "Admin 建立商品與獎品後可在前台瀏覽",
+          "persona": "admin",
+          "steps": ["login admin", "create lottery with prizes", "publish lottery", "open frontend browse page", "open lottery detail"],
+          "expected": ["建立 API 成功", "商品顯示為 ON_SHELF", "前台明細可看到庫存與獎項"],
+          "successReason": "前後台資料流一致，建立後可被正確展示。",
+          "failureReason": "後台建立成功但前台看不到，或明細資料不完整。",
+          "evidence": ["後台截圖", "前台截圖", "API 回應"]
+        },
+        {
+          "id": "E2E-004",
+          "priority": "P1",
+          "title": "StoreEditor 無法刪除商品或調整會員點數",
+          "persona": "store_editor",
+          "steps": ["login store editor", "open product detail", "attempt delete", "open frontend user detail", "attempt coin adjust"],
+          "expected": ["刪除按鈕隱藏或禁用", "若強送 API 會回 403", "點數調整被拒絕"],
+          "successReason": "UI 與 API 權限都正確限制角色能力。",
+          "failureReason": "前端看似有限制但 API 可繞過，或直接操作成功。",
+          "evidence": ["截圖", "network trace"]
+        }
+      ]
+    },
+    {
+      "id": "E2E-DRAW",
+      "name": "抽獎與刮刮樂流程",
+      "suitePurpose": "確認一般抽獎、餘額不足、刮刮樂格子穩定與最後一抽併發風險。",
+      "cases": [
+        {
+          "id": "E2E-005",
+          "priority": "P1",
+          "title": "餘額足夠時完成一次抽獎並更新賞品盒",
+          "persona": "funded_player",
+          "steps": ["open lottery detail", "click draw once", "confirm draw", "open prize box", "open wallet summary"],
+          "expected": ["畫面顯示抽獎結果", "錢包只扣一次", "賞品盒新增結果", "庫存減少一次"],
+          "successReason": "使用者看見的結果與後端扣點、庫存資料一致。",
+          "failureReason": "抽獎結果顯示成功但錢包或庫存沒有同步更新。",
+          "evidence": ["截圖", "network trace"]
+        },
+        {
+          "id": "E2E-006",
+          "priority": "P1",
+          "title": "餘額不足時不可抽獎",
+          "persona": "low_balance_player",
+          "steps": ["open lottery detail", "attempt draw", "confirm error", "refresh wallet"],
+          "expected": ["顯示餘額不足", "賞品盒不新增資料", "錢包不變"],
+          "successReason": "抽獎請求被正確阻擋，資料未受影響。",
+          "failureReason": "UI 提示錯誤但實際已扣點或已寫入抽獎結果。",
+          "evidence": ["截圖", "API 回應"]
+        },
+        {
+          "id": "E2E-007",
+          "priority": "P1",
+          "title": "刮刮樂抽完後格子位置不跳動",
+          "persona": "funded_player",
+          "steps": ["open scratch lottery", "capture initial grid positions", "draw one tile", "reload tickets", "compare grid positions"],
+          "expected": ["ticketNumber 控制固定格子位置", "DRAWN 格仍保留", "AVAILABLE 格不位移"],
+          "successReason": "前端依 ticketNumber 正確渲染固定格子。",
+          "failureReason": "重新整理後格子跳位，影響玩家辨識與遊戲體驗。",
+          "evidence": ["抽前截圖", "抽後截圖"]
+        },
+        {
+          "id": "E2E-008",
+          "priority": "P0",
+          "title": "同商品最後一抽併發不超賣",
+          "persona": "two_players",
+          "steps": ["prepare one-stock lottery", "start two browser contexts", "submit draw at same time", "refresh stock and wallets"],
+          "expected": ["只有一位玩家成功", "失敗玩家看到售完或衝突訊息", "庫存為 0 而非負數"],
+          "successReason": "併發控制正確，資料與畫面一致。",
+          "failureReason": "雙方都成功、庫存負數或失敗方仍被扣點。",
+          "evidence": ["雙視窗截圖", "network trace"]
+        }
+      ]
+    },
+    {
+      "id": "E2E-PAYMENT-ORDER",
+      "name": "儲值、付款與出貨",
+      "suitePurpose": "確認儲值入帳、賞品出貨申請與付款失敗情境可被追蹤。",
+      "cases": [
+        {
+          "id": "E2E-009",
+          "priority": "P1",
+          "title": "測試模式儲值完成後錢包即時更新",
+          "persona": "active_player",
+          "steps": ["open recharge page", "select active plan", "submit recharge", "return to wallet"],
+          "expected": ["不應跳轉 GoMyPay", "畫面顯示 COMPLETED", "金幣與紅利增加"],
+          "successReason": "測試模式儲值流程與規格一致。",
+          "failureReason": "誤導向第三方付款頁或入帳狀態延遲、錯誤。",
+          "evidence": ["截圖", "network trace"]
+        },
+        {
+          "id": "E2E-010",
+          "priority": "P1",
+          "title": "賞品盒申請出貨可建立訂單",
+          "persona": "player_with_prize",
+          "steps": ["open prize box", "select shippable prize", "choose address", "submit shipping request", "open order detail"],
+          "expected": ["成功建立訂單", "可看到付款或出貨狀態", "已選賞品離開可出貨池"],
+          "successReason": "賞品、訂單與地址資料正確串接。",
+          "failureReason": "訂單未建立、狀態不清楚、賞品重複可出貨。",
+          "evidence": ["截圖", "API 回應"]
+        },
+        {
+          "id": "E2E-011",
+          "priority": "P0",
+          "title": "付款成功但訂單建立失敗時可追蹤問題",
+          "persona": "qa_fault_injection",
+          "steps": ["enable callback fault scenario", "send payment success callback", "open admin order/search logs"],
+          "expected": ["不得無聲成功", "管理端或日誌可看到失敗資訊", "不應重複出貨"],
+          "successReason": "部分失敗情境被完整追蹤，便於補償。",
+          "failureReason": "付款已成功但系統沒有留下足夠的失敗資訊。",
+          "evidence": ["API 回應", "日誌摘錄"]
+        }
+      ]
+    }
+  ]
+}

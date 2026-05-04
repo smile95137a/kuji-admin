@@ -17,10 +17,10 @@
 
 ### 目標
 1. 以 **AOP + 自訂 annotation `@AuditLog`** 的方式，對重要操作自動切入記錄，零侵入業務邏輯。
-2. 所有非重要操作維持現有 SLF4J log，但**失敗時自動寫 `log_error_event` 表**。
+2. 所有非重要操作維持現有 SLF4J log；通用失敗事件表 `log_error_event` **不納入本次 scope**，另開 feature 處理。
 3. 使用 **`@Async` + ThreadPoolTaskExecutor** 非同步寫入，API 回應速度不受影響。
 4. **廢棄並刪除** 現有閒置的 `system_log` 相關程式碼（entity / mapper / example / repository / service / controller）。
-5. 分 5 張專用 Log 表，便於管理員按類別關聯查詢，不混用 JSON blob 替代欄位。
+5. 分 5 張專用 Log 表，便於管理員按類別關聯查詢，不混用 JSON blob 替代欄位；其中 `log_admin_action` 作為後續所有後台敏感操作審計的唯一標準。
 
 ---
 
@@ -183,7 +183,7 @@ public enum AuditLogType {
 | 情境 | 切入方式 | 寫表 |
 |------|---------|------|
 | 有 `@AuditLog` 的方法 | `@Around` 攔截，無論成功失敗都寫 | 對應的 log 表 |
-| 沒有 `@AuditLog` 但拋例外 | `GlobalExceptionHandler` 捕捉後呼叫 log service | （此 spec 不實作，待 033） |
+| 沒有 `@AuditLog` 但拋例外 | 維持現有 SLF4J / GlobalExceptionHandler 行為 | （此 spec 不實作 DB 錯誤事件表，另開 feature） |
 
 ### 2.4 AOP 取值來源
 
@@ -208,3 +208,7 @@ public enum AuditLogType {
 ## Clarifications
 ### Session 2026-04-28
 - Q: log_admin_action 的 before_snapshot 欄位由誰負責查詢與傳遞？AOP 還是 Service？ → A: Service 層查好 entity 狀態，透過 ThreadLocal 傳給 AOP。
+
+### Session 2026-04-30
+- Q: Audit Log 是否成為後續所有審計的唯一標準？ → A: 是，後台敏感操作統一寫 `log_admin_action`，不要再新增或沿用另一套 `admin_audit_log`。
+- Q: `log_error_event` 是否納入本次 scope？ → A: 先不做，032 固定為 5 張 log 表；錯誤事件表另開 feature。

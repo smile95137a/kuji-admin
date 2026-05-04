@@ -164,10 +164,10 @@ INSERT INTO `user` (id, email, password, nickname, avatar, provider, provider_id
 -- imageUrl (非 main_image_url)
 -- =============================================
 
-INSERT INTO lottery (id, store_id, title, description, category, sub_category, status, price_per_draw, discounted_price, auto_discount_enabled, allow_multi_draw, multi_draw_options, scheduled_at, start_time, end_time, total_draws, max_draws, order_num, weight, image_url, created_by, created_at, updated_at, remark) VALUES
-(1, 1, '鬼滅之刃一番賞', '超人氣鬼滅之刃一番賞，多款精美公仔等你來抽！', 'OFFICIAL_ICHIBAN', 'LOTTERY_MODE', 'ON_SHELF', 80, 720, 0, 1, '5,10', NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 80, 80, 1, 100, 'https://via.placeholder.com/400x300', 2, NOW(), NOW(), '測試用商品'),
-(2, 1, '咒術迴戰刮刮樂', '咒術迴戰限定刮刮樂，每張都有獎！', 'OFFICIAL_ICHIBAN', 'SCRATCH_CARD_MODE', 'ON_SHELF', 60, 540, 0, 1, '5,10', NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 60 DAY), 100, 100, 2, 90, 'https://via.placeholder.com/400x300', 2, NOW(), NOW(), '測試用商品'),
-(3, 2, '初音未來限定賞', '初音未來 15 週年紀念限定賞', 'GACHA', 'LOTTERY_MODE', 'DRAFT', 120, 1080, 1, 1, '5,10', DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 37 DAY), 50, 50, 1, 95, 'https://via.placeholder.com/400x300', 3, NOW(), NOW(), '測試用商品');
+INSERT INTO lottery (id, store_id, title, description, category, sub_category, status, payment_type, free_draw_threshold, delist_strategy, price_per_draw, discounted_price, auto_discount_enabled, allow_multi_draw, multi_draw_options, scheduled_at, start_time, end_time, total_draws, max_draws, order_num, weight, image_url, created_by, created_at, updated_at, remark) VALUES
+(1, 1, '鬼滅之刃一番賞', '超人氣鬼滅之刃一番賞，多款精美公仔等你來抽！', 'OFFICIAL_ICHIBAN', 'LOTTERY_MODE', 'ON_SHELF', 'GOLD', NULL, 'MANUAL', 80, 720, 0, 1, '5,10', NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 80, 80, 1, 100, 'https://via.placeholder.com/400x300', 2, NOW(), NOW(), '測試用商品'),
+(2, 1, '咒術迴戰刮刮樂', '咒術迴戰限定刮刮樂，每張都有獎！', 'OFFICIAL_ICHIBAN', 'SCRATCH_CARD_MODE', 'ON_SHELF', 'GOLD', NULL, 'MANUAL', 60, 540, 0, 1, '5,10', NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 60 DAY), 100, 100, 2, 90, 'https://via.placeholder.com/400x300', 2, NOW(), NOW(), '測試用商品'),
+(3, 2, '初音未來限定賞', '初音未來 15 週年紀念限定賞', 'GACHA', 'LOTTERY_MODE', 'DRAFT', 'GOLD', NULL, 'ALL_DRAWN', 120, 1080, 1, 1, '5,10', DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 37 DAY), 50, 50, 1, 95, 'https://via.placeholder.com/400x300', 3, NOW(), NOW(), '測試用商品');
 
 
 -- =============================================

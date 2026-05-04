@@ -234,10 +234,12 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getStatus() != null) lottery.setStatus(req.getStatus());
         // T008: new fields update
         if (req.getPaymentType() != null) {
-            if (!LotteryStatusEnum.DRAFT.getCode().equals(status)) {
+            String normalizedPaymentType = normalizePaymentType(req.getPaymentType());
+            if (!LotteryStatusEnum.DRAFT.getCode().equals(status)
+                    && !normalizedPaymentType.equals(lottery.getPaymentType())) {
                 throw new BusinessException("非草稿商品不可修改 paymentType");
             }
-            lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
+            lottery.setPaymentType(normalizedPaymentType);
         }
         // ✅ 不再設定 weight
         if (req.getRemark() != null) lottery.setRemark(req.getRemark());

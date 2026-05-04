@@ -2,7 +2,6 @@ package com.group.admin.scheduler;
 
 import com.group.admin.service.EmailService;
 import com.group.admin.service.LotteryService;
-import com.group.admin.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Component;
 public class ScheduledTasks {
     
     private final EmailService emailService;
-    private final SystemLogService systemLogService;
     private final LotteryService lotteryService;
     
     /**
@@ -38,13 +36,8 @@ public class ScheduledTasks {
      */
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupOldLogs() {
-        log.info("⏰ 執行日誌清除任務");
-        try {
-            int deleted = systemLogService.deleteOldLogs(90);
-            log.info("🗑️ 日誌清除完成: {} 筆", deleted);
-        } catch (Exception e) {
-            log.error("❌ 日誌清除任務失敗: {}", e.getMessage());
-        }
+        // 032 稽核日誌系統：舊 SystemLog 已移除，此排程保留供後續擴充
+        log.debug("⏰ 日誌清除任務跳過（新系統對應表由 log_* 接管）");
     }
 
     /**

@@ -1,0 +1,9 @@
+id,store_id,name,category,sub_category,game_mode,status,price_per_draw,total_stock,available_stock,display_order,notes
+lottery-standard-001,store-a,QA 官方一番賞,OFFICIAL_ICHIBAN,,LOTTERY,ON_SHELF,100,80,80,1,一般抽籤成功案例
+lottery-scratch-001,store-a,QA 刮刮樂測試,CUSTOM_GACHA,SCRATCH_MODE,SCRATCH_PLAYER,ON_SHELF,50,20,20,2,格子位置固定回歸
+lottery-random-001,store-a,QA 隨機扭蛋,GACHA,,RANDOM,ON_SHELF,80,30,30,3,加權隨機抽獎
+lottery-one-stock-001,store-a,QA 最後一抽併發,GACHA,,RANDOM,ON_SHELF,10,1,1,4,併發防超賣
+lottery-sold-out-001,store-a,QA 售完商品,GACHA,,RANDOM,ON_SHELF,100,10,0,5,庫存不足
+lottery-draft-001,store-a,QA 草稿商品,CUSTOM_GACHA,LOTTERY_MODE,LOTTERY,DRAFT,100,10,10,6,前台不可見
+lottery-other-store-001,store-b,QA 他店商品,GACHA,,RANDOM,ON_SHELF,100,10,10,7,權限隔離
+lottery-invalid-zero-price,store-a,QA 零元非法商品,GACHA,,RANDOM,DRAFT,0,10,10,8,邊界驗證

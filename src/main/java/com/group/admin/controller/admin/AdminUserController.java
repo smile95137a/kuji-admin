@@ -1,6 +1,8 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.annotation.AuditLog;
 import com.group.admin.constants.ApiPaths;
+import com.group.admin.enums.AuditLogType;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
 import com.group.admin.req.admin.UpdateAdminUserReq;
@@ -52,6 +54,7 @@ public class AdminUserController {
      * @param req 建立請求
      * @return 建立的帳號資訊
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "CREATE", targetType = "ADMIN_USER")
     @PostMapping("/store-owner")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "建立店家負責人帳號", description = "由 Admin 建立 StoreOwner 帳號並建立對應店家")
@@ -73,6 +76,7 @@ public class AdminUserController {
      * @param req 建立請求
      * @return 建立的帳號資訊
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "CREATE", targetType = "ADMIN_USER")
     @PostMapping("/store-editor")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "建立店家編輯人員帳號", description = "由 Admin 建立 StoreEditor 帳號並綁定到指定店家")
@@ -169,6 +173,7 @@ public class AdminUserController {
      * @param id 帳號 ID
      * @return 成功訊息
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "ENABLE", targetType = "ADMIN_USER")
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "啟用帳號", description = "啟用指定帳號")
@@ -188,6 +193,7 @@ public class AdminUserController {
     /**
      * 停用帳號
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "DISABLE", targetType = "ADMIN_USER")
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "停用帳號", description = "停用指定帳號，停用後無法登入")
@@ -230,6 +236,7 @@ public class AdminUserController {
     /**
      * 停用帳號（帶 operatorId）
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "DISABLE", targetType = "ADMIN_USER")
     @PostMapping("/{id}/disable")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "停用帳號", description = "停用指定帳號（ADMIN 專用）")
@@ -247,6 +254,7 @@ public class AdminUserController {
      * @param id 帳號 ID
      * @return 新的初始密碼
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "RESET_PASSWORD", targetType = "ADMIN_USER")
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "重設帳號密碼", description = "重設指定帳號的密碼，並設定首次登入需改密碼")
@@ -269,6 +277,7 @@ public class AdminUserController {
      * @param id 帳號 ID
      * @return 成功訊息
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "DELETE", targetType = "ADMIN_USER")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "刪除帳號", description = "刪除指定帳號（軟刪除，實際為停用）")

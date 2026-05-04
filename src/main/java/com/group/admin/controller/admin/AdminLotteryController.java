@@ -1,6 +1,8 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.annotation.AuditLog;
 import com.group.admin.entity.StoreUser;
+import com.group.admin.enums.AuditLogType;
 import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.StoreUserMapper;
@@ -118,6 +120,7 @@ public class AdminLotteryController {
      * @param req 商品建立請求
      * @return 建立的商品
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "CREATE", targetType = "LOTTERY")
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "新增商品", description = "自動帶入店家 ID")
@@ -170,6 +173,7 @@ public class AdminLotteryController {
      * @param req 更新請求
      * @return 更新後的商品
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "UPDATE", targetType = "LOTTERY")
     @PutMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "更新商品", description = "更新商品資訊")
@@ -241,6 +245,7 @@ public class AdminLotteryController {
      * @param id 商品 ID（UUID 格式）
      * @return 更新後的商品
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "ON_SHELF", targetType = "LOTTERY")
     @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/on-shelf")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "上架商品", description = "將商品設為上架狀態")
@@ -264,6 +269,7 @@ public class AdminLotteryController {
      * @param id 商品 ID（UUID 格式）
      * @return 更新後的商品
      */
+    @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "OFF_SHELF", targetType = "LOTTERY")
     @PostMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/off-shelf")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "下架商品", description = "將商品設為下架狀態")
