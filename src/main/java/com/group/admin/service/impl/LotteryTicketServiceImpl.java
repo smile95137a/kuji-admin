@@ -493,12 +493,28 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             actualTicketNumber = randomNumber;
         }
         
-        // 4. 更新籤位狀態為已抽
+        // 4. 以原子條件更新避免併發下重複抽到同一籤位
+        LocalDateTime drawTime = LocalDateTime.now();
+        LotteryTicket claimRow = new LotteryTicket();
+        claimRow.setStatus("DRAWN");
+        claimRow.setDrawnBy(userId);
+        claimRow.setDrawnAt(drawTime);
+        claimRow.setUpdatedAt(drawTime);
+
+        LotteryTicketExample claimExample = new LotteryTicketExample();
+        claimExample.createCriteria()
+            .andIdEqualTo(targetTicket.getId())
+            .andStatusEqualTo("AVAILABLE");
+        int affectedRows = lotteryTicketMapper.updateByExampleSelective(claimRow, claimExample);
+        if (affectedRows == 0) {
+            return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                "該籤位已被其他玩家搶先抽走，請重試", false, null, null, null);
+        }
+
         targetTicket.setStatus("DRAWN");
         targetTicket.setDrawnBy(userId);
-        targetTicket.setDrawnAt(LocalDateTime.now());
-        targetTicket.setUpdatedAt(LocalDateTime.now());
-        lotteryTicketMapper.updateByPrimaryKey(targetTicket);
+        targetTicket.setDrawnAt(drawTime);
+        targetTicket.setUpdatedAt(drawTime);
         
         log.info("✅ 籤位更新成功: ticketNumber={}, prizeLevel={}", 
                 actualTicketNumber, targetTicket.getPrizeLevel());

@@ -25,6 +25,8 @@
 
 ## 1. 抽獎系統 API
 
+> 商品公開查詢目前統一由 `LotteryController` 提供；`/api/lottery/**` 為主路徑，`/api/lottery/browse/**` 保留為相容路徑。
+
 ### 1.1 刮刮樂模式
 
 #### 遊戲規則

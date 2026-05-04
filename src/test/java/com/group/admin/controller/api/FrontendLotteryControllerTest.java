@@ -5,6 +5,7 @@ import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,9 @@ class FrontendLotteryControllerTest extends BaseControllerTest {
 
     @Mock
     private LotteryMapper lotteryMapper;
+
+    @Mock
+    private LotteryTicketService lotteryTicketService;
 
     @InjectMocks
     private LotteryController lotteryController;

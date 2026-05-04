@@ -204,6 +204,19 @@ public class LotteryUpdateReq {
     private String paymentType;
 
     /**
+     * 是否啟用免費抽
+     */
+    @Schema(description = "是否啟用免費抽", example = "false")
+    private Boolean freeDrawEnabled;
+
+    /**
+     * 免單保護抽數（開套者在此抽數內中大獎可免單）
+     */
+    @Min(value = 1, message = "免單保護抽數至少為 1")
+    @Schema(description = "免單保護抽數（開套者在此抽數內中大獎可免單）", example = "5")
+    private Integer protectionDraws;
+
+    /**
      * 免費抽門檻（刮刮樂專用）
      */
     @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA+SCRATCH_MODE；NULL=未啟用；若有值必須>=1）", example = "10")
@@ -214,4 +227,13 @@ public class LotteryUpdateReq {
      */
     @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
     private String delistStrategy;
+
+    /**
+     * 店家指定大獎號碼（SCRATCH_STORE 專用）
+     * 更新此欄位時，現有籤位會被刪除並重新生成
+     * 格式：逗號分隔或 JSON 陣列，例如 "5,12,30" 或 "[5,12,30]"
+     */
+    @Schema(description = "店家指定大獎 revealed_number（僅 SCRATCH_STORE；更新時籤位會重新生成；格式：'5,12,30' 或 '[5,12,30]'）",
+            example = "[5]")
+    private String designatedPrizeNumbers;
 }

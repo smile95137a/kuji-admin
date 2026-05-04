@@ -8,15 +8,15 @@
 
 | 原 API | 整合 API | 優勢 |
 |--------|---------|------|
-| POST /admin/lottery<br>POST /admin/lotteries/{id}/prizes | POST /admin/lottery-with-prizes | **一次完成** |
-| PUT /admin/lottery/{id}<br>PUT /admin/lotteries/prizes/{prizeId} | PUT /admin/lottery-with-prizes/{id} | **一次完成** |
-| GET /admin/lottery/{id}<br>GET /admin/lotteries/{id}/prizes | GET /admin/lottery-with-prizes/{id} | **一次返回** |
+| POST /admin/lottery<br>POST /admin/lotteries/{id}/prizes | POST /admin/lottery/with-prizes | **一次完成** |
+| PUT /admin/lottery/{id}<br>PUT /admin/lotteries/prizes/{prizeId} | PUT /admin/lottery/with-prizes/{id} | **一次完成** |
+| GET /admin/lottery/{id}<br>GET /admin/lotteries/{id}/prizes | GET /admin/lottery/with-prizes/{id} | **一次返回** |
 
 ## 🎯 API 清單
 
 ### 1️⃣ 建立商品與獎品
 
-**端點：** `POST /admin/lottery-with-prizes`
+**端點：** `POST /admin/lottery/with-prizes`
 
 **權限：** `ROLE_ADMIN`, `ROLE_STORE_OWNER`, `ROLE_STORE_EDITOR`
 
@@ -116,7 +116,7 @@
 
 ### 2️⃣ 更新商品與獎品
 
-**端點：** `PUT /admin/lottery-with-prizes/{lotteryId}`
+**端點：** `PUT /admin/lottery/with-prizes/{lotteryId}`
 
 **權限：** `ROLE_ADMIN`, `ROLE_STORE_OWNER`, `ROLE_STORE_EDITOR`
 
@@ -180,7 +180,7 @@
 
 ### 3️⃣ 查詢商品與獎品
 
-**端點：** `GET /admin/lottery-with-prizes/{lotteryId}`
+**端點：** `GET /admin/lottery/with-prizes/{lotteryId}`
 
 **權限：** `ROLE_ADMIN`, `ROLE_STORE_OWNER`, `ROLE_STORE_EDITOR`
 
@@ -249,7 +249,7 @@
 ```typescript
 // 1. 新增商品與獎品
 const createLotteryWithPrizes = async (data: LotteryWithPrizesCreateReq) => {
-  const response = await axios.post('/admin/lottery-with-prizes', data, {
+  const response = await axios.post('/admin/lottery/with-prizes', data, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;
@@ -257,7 +257,7 @@ const createLotteryWithPrizes = async (data: LotteryWithPrizesCreateReq) => {
 
 // 2. 更新商品與獎品
 const updateLotteryWithPrizes = async (lotteryId: string, data: LotteryWithPrizesUpdateReq) => {
-  const response = await axios.put(`/admin/lottery-with-prizes/${lotteryId}`, data, {
+  const response = await axios.put(`/admin/lottery/with-prizes/${lotteryId}`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;
@@ -265,7 +265,7 @@ const updateLotteryWithPrizes = async (lotteryId: string, data: LotteryWithPrize
 
 // 3. 查詢商品與獎品
 const getLotteryWithPrizes = async (lotteryId: string) => {
-  const response = await axios.get(`/admin/lottery-with-prizes/${lotteryId}`, {
+  const response = await axios.get(`/admin/lottery/with-prizes/${lotteryId}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;
@@ -308,7 +308,7 @@ const handleSubmit = async () => {
 **A:** 可以！整合 API 和原 API 是**並存**的，不會互相影響。
 
 - 原 API：`/admin/lottery/**`, `/admin/lotteries/{id}/prizes/**`
-- 整合 API：`/admin/lottery-with-prizes/**`
+- 整合 API：`/admin/lottery/with-prizes/**`
 
 ### Q2: 更新時獎品會被刪除嗎？
 **A:** 不會！更新邏輯是：

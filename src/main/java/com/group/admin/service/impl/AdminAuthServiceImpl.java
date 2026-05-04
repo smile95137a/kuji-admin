@@ -30,6 +30,7 @@ import com.group.admin.req.auth.RefreshTokenReq;
 import com.group.admin.res.auth.LoginRes;
 import com.group.admin.security.UserPrincipal;
 import com.group.admin.service.AdminAuthService;
+import com.group.admin.util.AuditContext;
 import com.group.admin.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -74,6 +75,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
         }
         AdminUser user = users.get(0);
+        AuditContext.setAuthResolvedUser(user.getId(), user.getEmail(), user.getUsername(), "ADMIN");
 
         // 帳號鎖定檢查
         if (user.getLockedUntil() != null && LocalDateTime.now().isBefore(user.getLockedUntil())) {

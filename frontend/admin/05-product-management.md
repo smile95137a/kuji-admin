@@ -2,7 +2,7 @@
 
 > **路由前綴**：  
 > - `/admin/lottery` — 商品基本 CRUD  
-> - `/admin/lottery-with-prizes` ← **推薦使用**：商品 + 獎品整合 CRUD  
+> - `/admin/lottery/with-prizes` ← **推薦使用**：商品 + 獎品整合 CRUD  
 > - `/admin/lotteries/{id}/prizes` — 獎品單獨管理  
 >
 > **允許角色**：ADMIN / STORE_OWNER / STORE_EDITOR
@@ -30,7 +30,7 @@
 ### 新增商品（含獎品一次完成）
 
 ```
-POST /api/admin/lottery-with-prizes
+POST /api/admin/lottery/with-prizes
 Authorization: Bearer {token}
 ```
 
@@ -115,7 +115,7 @@ interface PrizeRes {
 ### 更新商品（含獎品一次完成）
 
 ```
-PUT /api/admin/lottery-with-prizes/{id}
+PUT /api/admin/lottery/with-prizes/{id}
 Authorization: Bearer {token}
 ```
 
@@ -127,7 +127,7 @@ Authorization: Bearer {token}
 ### 查詢商品（含獎品）
 
 ```
-GET /api/admin/lottery-with-prizes/{id}
+GET /api/admin/lottery/with-prizes/{id}
 Authorization: Bearer {token}
 ```
 
@@ -254,7 +254,7 @@ Authorization: Bearer {token}
 5. 新增獎品列表（至少一個）
    - GACHA 類需填寫 `weight`
    - SCRATCH_STORE 模式需標記哪個獎品為大賞（`isGrandPrize=true`）
-6. 確認後呼叫 `POST /admin/lottery-with-prizes`（一次完成）
+6. 確認後呼叫 `POST /admin/lottery/with-prizes`（一次完成）
 
 ### 刮刮樂（SCRATCH_STORE）大賞指定
 - 前端在獎品列表中讓使用者勾選「此為大賞」（`isGrandPrize=true`）

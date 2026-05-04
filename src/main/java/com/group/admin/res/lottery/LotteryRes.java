@@ -269,8 +269,7 @@ public class LotteryRes {
     /**
      * 保護抽數（大獎保底機制）
      */
-    @Deprecated
-    @Schema(description = "已廢棄欄位", example = "50", deprecated = true)
+    @Schema(description = "免單保護抽數（開套者在此抽數內中大獎可免單）", example = "5")
     private Integer protectionDraws;
     
     /**

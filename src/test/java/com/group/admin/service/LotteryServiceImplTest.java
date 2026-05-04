@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
 import com.group.admin.example.LotteryPrizeExample;
+import com.group.admin.example.LotteryTicketExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.LotteryDrawRecordMapper;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
+import com.group.admin.mapper.LotteryTicketMapper;
 import com.group.admin.mapper.PointLogMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.UserMapper;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +51,7 @@ class LotteryServiceImplTest {
     @Mock private PointLogMapper pointLogMapper;
     @Mock private StoreMapper storeMapper;
     @Mock private LotteryTicketService lotteryTicketService;
+    @Mock private LotteryTicketMapper lotteryTicketMapper;
 
     private LotteryServiceImpl lotteryService;
     private Lottery insertedLottery;
@@ -60,7 +66,8 @@ class LotteryServiceImplTest {
                 pointLogMapper,
                 new ObjectMapper(),
                 storeMapper,
-                lotteryTicketService
+                lotteryTicketService,
+                lotteryTicketMapper
         );
         insertedLottery = null;
         lenient().doAnswer(invocation -> {
@@ -68,6 +75,8 @@ class LotteryServiceImplTest {
             return 1;
         }).when(lotteryMapper).insert(any(Lottery.class));
         lenient().when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class))).thenReturn(List.of());
+        lenient().when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class))).thenReturn(0L);
+        lenient().when(lotteryTicketMapper.countByExample(any(LotteryTicketExample.class))).thenReturn(0L);
     }
 
     @Test
@@ -237,6 +246,28 @@ class LotteryServiceImplTest {
     }
 
     @Test
+    @DisplayName("建立商品時應保存 freeDrawEnabled 與 protectionDraws")
+    void createLottery_WithFreeDrawSettings_ShouldPersistFields() {
+        LotteryCreateReq req = new LotteryCreateReq();
+        req.setStoreId("store-1");
+        req.setTitle("free-draw");
+        req.setCategory("CUSTOM_GACHA");
+        req.setSubCategory("SCRATCH_MODE");
+        req.setGameMode("RANDOM");
+        req.setPricePerDraw(100L);
+        req.setFreeDrawEnabled(true);
+        req.setProtectionDraws(5);
+
+        LotteryRes res = lotteryService.createLottery(req);
+
+        assertThat(insertedLottery).isNotNull();
+        assertThat(insertedLottery.getFreeDrawEnabled()).isEqualTo((byte) 1);
+        assertThat(insertedLottery.getProtectionDraws()).isEqualTo(5);
+        assertThat(res.getFreeDrawEnabled()).isTrue();
+        assertThat(res.getProtectionDraws()).isEqualTo(5);
+    }
+
+    @Test
     @DisplayName("非 DRAFT 商品不可修改 paymentType")
     void updateLottery_NonDraftChangePaymentType_ShouldFail() {
         Lottery existing = new Lottery();
@@ -254,5 +285,119 @@ class LotteryServiceImplTest {
         req.setPaymentType("BONUS");
 
         assertThrows(BusinessException.class, () -> lotteryService.updateLottery("lottery-1", req));
+    }
+
+    @Test
+    @DisplayName("更新商品時應寫入 freeDrawEnabled 與 protectionDraws")
+    void updateLottery_WithFreeDrawSettings_ShouldPersistFields() {
+        Lottery existing = new Lottery();
+        existing.setId("lottery-2");
+        existing.setStoreId("store-1");
+        existing.setTitle("before-update");
+        existing.setCategory("CUSTOM_GACHA");
+        existing.setSubCategory("SCRATCH_MODE");
+        existing.setGameMode("RANDOM");
+        existing.setPlayMode("SCRATCH_MODE");
+        existing.setStatus("DRAFT");
+        existing.setPricePerDraw(100L);
+        existing.setPaymentType("GOLD");
+        existing.setDelistStrategy("GRAND_PRIZE_DRAWN");
+        existing.setCreatedAt(LocalDateTime.of(2026, 5, 1, 0, 0));
+        existing.setUpdatedAt(LocalDateTime.of(2026, 5, 1, 0, 0));
+        when(lotteryMapper.selectByPrimaryKey("lottery-2")).thenReturn(existing);
+
+        LotteryUpdateReq req = new LotteryUpdateReq();
+        req.setFreeDrawEnabled(true);
+        req.setProtectionDraws(7);
+
+        LotteryRes res = lotteryService.updateLottery("lottery-2", req);
+
+        verify(lotteryMapper).updateByPrimaryKey(existing);
+        assertThat(existing.getFreeDrawEnabled()).isEqualTo((byte) 1);
+        assertThat(existing.getProtectionDraws()).isEqualTo(7);
+        assertThat(res.getFreeDrawEnabled()).isTrue();
+        assertThat(res.getProtectionDraws()).isEqualTo(7);
+    }
+
+    @Test
+    @DisplayName("GRAND_PRIZE_DRAWN 在最後一個大獎抽完後應轉為 ENDED")
+    void checkAndDelist_GrandPrizeDrawn_ShouldSetEnded() {
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-grand");
+        lottery.setStatus("ON_SHELF");
+        lottery.setDelistStrategy("GRAND_PRIZE_DRAWN");
+        when(lotteryMapper.selectByPrimaryKey("lottery-grand")).thenReturn(lottery);
+        when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class))).thenReturn(List.of(
+                prize("grand-1", (byte) 1, 0, 1)
+        ));
+
+        lotteryService.checkAndDelist("lottery-grand");
+
+        ArgumentCaptor<Lottery> captor = ArgumentCaptor.forClass(Lottery.class);
+        verify(lotteryMapper).updateByPrimaryKeySelective(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo("ENDED");
+    }
+
+    @Test
+    @DisplayName("ALL_DRAWN 在所有可抽內容耗盡後應轉為 ENDED")
+    void checkAndDelist_AllDrawnExhausted_ShouldSetEnded() {
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-all-drawn");
+        lottery.setStatus("ON_SHELF");
+        lottery.setDelistStrategy("ALL_DRAWN");
+        when(lotteryMapper.selectByPrimaryKey("lottery-all-drawn")).thenReturn(lottery);
+        when(lotteryTicketMapper.countByExample(any(LotteryTicketExample.class)))
+                .thenAnswer(invocation -> countTickets(invocation.getArgument(0), 10L, 0L));
+
+        lotteryService.checkAndDelist("lottery-all-drawn");
+
+        ArgumentCaptor<Lottery> captor = ArgumentCaptor.forClass(Lottery.class);
+        verify(lotteryMapper).updateByPrimaryKeySelective(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo("ENDED");
+    }
+
+    @Test
+    @DisplayName("MANUAL 在所有可抽內容耗盡後應轉為 SOLD_OUT")
+    void checkAndDelist_ManualExhausted_ShouldSetSoldOut() {
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-manual");
+        lottery.setStatus("ON_SHELF");
+        lottery.setDelistStrategy("MANUAL");
+        when(lotteryMapper.selectByPrimaryKey("lottery-manual")).thenReturn(lottery);
+        when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class))).thenReturn(0L);
+
+        lotteryService.checkAndDelist("lottery-manual");
+
+        ArgumentCaptor<Lottery> captor = ArgumentCaptor.forClass(Lottery.class);
+        verify(lotteryMapper).updateByPrimaryKeySelective(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo("SOLD_OUT");
+    }
+
+    @Test
+    @DisplayName("ALL_DRAWN 若仍有可抽籤位則不應提早下架")
+    void checkAndDelist_AllDrawnWithAvailableTickets_ShouldKeepOnShelf() {
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-available");
+        lottery.setStatus("ON_SHELF");
+        lottery.setDelistStrategy("ALL_DRAWN");
+        when(lotteryMapper.selectByPrimaryKey("lottery-available")).thenReturn(lottery);
+        when(lotteryTicketMapper.countByExample(any(LotteryTicketExample.class)))
+                .thenAnswer(invocation -> countTickets(invocation.getArgument(0), 10L, 3L));
+
+        lotteryService.checkAndDelist("lottery-available");
+
+        verify(lotteryMapper, never()).updateByPrimaryKeySelective(any(Lottery.class));
+    }
+
+    private long countTickets(LotteryTicketExample example, long totalCount, long availableCount) {
+        boolean availableOnly = false;
+        for (LotteryTicketExample.Criteria criteria : example.getOredCriteria()) {
+            for (LotteryTicketExample.Criterion criterion : criteria.getAllCriteria()) {
+                if ("status =".equals(criterion.getCondition()) && "AVAILABLE".equals(criterion.getValue())) {
+                    availableOnly = true;
+                }
+            }
+        }
+        return availableOnly ? availableCount : totalCount;
     }
 }

@@ -1,6 +1,6 @@
 # KUJI Admin 後台前端規範文件
 
-> **最後同步時間**：2026-04-14  
+> **最後同步時間**：2026-05-05  
 > **後端版本**：Spring Boot 3.3.3 / Java 21  
 > **Context Path**：`/api`（所有 API 以 `http://localhost:8080/api` 開頭）
 
@@ -18,11 +18,12 @@
 | [05-product-management.md](./05-product-management.md) | 商品(Lottery)管理、商品類型、獎品設定 |
 | [06-order-management.md](./06-order-management.md) | 訂單查詢、狀態流轉、出貨流程 |
 | [07-frontend-user-management.md](./07-frontend-user-management.md) | 前台玩家帳號管理 |
-| [08-report-analytics.md](./08-report-analytics.md) | 報表查詢（營業額/推薦碼/開獎結果） |
+| [08-report-analytics.md](./08-report-analytics.md) | 報表查詢（含平台營收總覽） |
 | [09-content-management.md](./09-content-management.md) | Banner、新聞、跑馬燈 |
 | [10-system-config.md](./10-system-config.md) | 系統參數管理 |
 | [11-shipping-management.md](./11-shipping-management.md) | 出貨方式管理 |
 | [12-system-log-and-updates.md](./12-system-log-and-updates.md) | 🆕 系統日誌 API + 後端修正通知 + 報表補全（5個）+ 疑問清單 |
+| [13-platform-revenue-report.md](./13-platform-revenue-report.md) | 平台營收總覽報表前端串接須知 |
 | [PROMPT-FOR-FRONTEND.md](./PROMPT-FOR-FRONTEND.md) | 給前端開發者的溝通 Prompt |
 
 ---
@@ -40,7 +41,7 @@ http://localhost:8080/api/swagger-ui.html
 ```
 POST /api/admin/auth/login
 GET  /api/admin/stores/options
-POST /api/admin/lottery-with-prizes
+POST /api/admin/lottery/with-prizes
 ```
 
 ### 3. 認證方式

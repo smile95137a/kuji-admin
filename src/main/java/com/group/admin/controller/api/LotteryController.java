@@ -4,8 +4,14 @@ import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryListReq;
+import com.group.admin.res.lottery.LotteryDetailRes;
+import com.group.admin.res.lottery.LotteryListItemRes;
+import com.group.admin.res.lottery.LotteryPrizeRes;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
+import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
+import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 前台商品公開 API
@@ -38,6 +45,7 @@ public class LotteryController {
 
     private final LotteryService lotteryService;
     private final LotteryMapper lotteryMapper;
+    private final LotteryTicketService lotteryTicketService;
 
     /**
      * 查詢上架中的商品列表（公開，分頁）
@@ -99,6 +107,34 @@ public class LotteryController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/browse/list")
+    @Operation(summary = "查詢商品列表（完整結構）", description = "前台查詢上架中的商品，返回與詳情頁相同結構（不含 tickets）")
+    public ResponseEntity<List<LotteryDetailRes>> browseLotteries(
+            @RequestBody(required = false) QueryReq<LotteryCondition> req) {
+
+        log.info("🔍 [前台] 查詢商品瀏覽列表: condition={}", req);
+
+        if (req == null) {
+            req = new QueryReq<>();
+        }
+        if (req.getCondition() == null) {
+            req.setCondition(new LotteryCondition());
+        }
+        req.getCondition().setStatus("ON_SHELF");
+
+        List<LotteryDetailRes> result = lotteryService.queryLotteries(req).stream()
+                .map(lotteryRes -> LotteryDetailRes.builder()
+                        .lottery(lotteryRes)
+                        .prizes(lotteryService.getPrizesByLotteryId(lotteryRes.getId()))
+                        .tickets(null)
+                        .session(null)
+                        .build())
+                .collect(Collectors.toList());
+
+        log.info("✅ 商品瀏覽列表查詢成功: 共 {} 筆", result.size());
+        return ResponseEntity.ok(result);
+    }
+
     /**
      * 取得商品詳情（公開）
      * 
@@ -147,7 +183,99 @@ public class LotteryController {
             log.warn("⚠️ 商品未上架: id={}, status={}", id, result.getStatus());
             return ResponseEntity.notFound().build();
         }
-        
+
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/browse/{id}/detail")
+    @Operation(summary = "取得商品詳情（完整版）", description = "包含商品資訊、獎品列表、籤位列表（安全版）、場次資訊")
+    public ResponseEntity<LotteryDetailRes> getLotteryDetail(@PathVariable String id) {
+
+        log.info("🔍 [前台] 查詢商品完整版詳情: lotteryId={}", id);
+
+        LotteryRes lottery = lotteryService.getLottery(id);
+        if (lottery == null) {
+            log.warn("⚠️ 商品不存在: id={}", id);
+            return ResponseEntity.notFound().build();
+        }
+        if (!"ON_SHELF".equals(lottery.getStatus())) {
+            log.warn("⚠️ 商品未上架: id={}, status={}", id, lottery.getStatus());
+            return ResponseEntity.notFound().build();
+        }
+
+        List<LotteryPrizeRes> prizes = lotteryService.getPrizesByLotteryId(id);
+        List<com.group.admin.res.lottery.LotteryTicketRes> tickets = lotteryTicketService.getTicketsForFrontend(id);
+
+        String userId = SecurityUtils.getCurrentUserId();
+        LotteryDetailRes.SessionInfoRes sessionInfo;
+        if (userId != null) {
+            boolean canDraw = lotteryTicketService.canDrawNow(id, userId);
+            LotteryTicketService.SessionInfo session = lotteryTicketService.getOrCreateSession(id, userId);
+            sessionInfo = LotteryDetailRes.SessionInfoRes.builder()
+                    .isOpener(session.isOpener())
+                    .openerNickname(null)
+                    .protectionEndTime(session.protectionEndTime() != null
+                            ? session.protectionEndTime().toString()
+                            : null)
+                    .status(session.status())
+                    .canDraw(canDraw)
+                    .cannotDrawReason(canDraw ? null : "商品正在被其他玩家抽獎中，請稍後再試")
+                    .build();
+        } else {
+            sessionInfo = LotteryDetailRes.SessionInfoRes.builder()
+                    .isOpener(false)
+                    .canDraw(false)
+                    .cannotDrawReason("請先登入")
+                    .build();
+        }
+
+        List<DesignatedWinningNumber> designatedWinningNumbers = lotteryTicketService.getDesignatedWinningNumbers(id);
+
+        LotteryDetailRes result = LotteryDetailRes.builder()
+                .lottery(lottery)
+                .prizes(prizes)
+                .tickets(tickets)
+                .session(sessionInfo)
+                .designatedWinningNumbers(designatedWinningNumbers)
+                .build();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/browse/store/{storeId}")
+    @Operation(summary = "查詢店家商品列表（簡化版）", description = "根據店家 ID 查詢該店家所有上架中的商品")
+    public ResponseEntity<List<LotteryListItemRes>> getLotteriesByStore(@PathVariable String storeId) {
+
+        log.info("🔍 [前台] 查詢店家商品: storeId={}", storeId);
+
+        QueryReq<LotteryCondition> req = new QueryReq<>();
+        LotteryCondition condition = new LotteryCondition();
+        condition.setStoreId(storeId);
+        condition.setStatus("ON_SHELF");
+        req.setCondition(condition);
+        req.setSortBy("created_at");
+        req.setSortOrder("DESC");
+
+        List<LotteryListItemRes> result = lotteryService.queryLotteries(req).stream()
+                .map(LotteryListItemRes::from)
+                .collect(Collectors.toList());
+
+        log.info("✅ 店家商品查詢成功: storeId={}, count={}", storeId, result.size());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/browse/{id}/hot")
+    @Operation(summary = "增加商品熱度", description = "使商品的 hotCount 加 1，用於追蹤商品熱門程度")
+    public ResponseEntity<Integer> incrementHotCount(@PathVariable String id) {
+
+        log.info("🔥 [前台] 增加商品熱度: lotteryId={}", id);
+
+        try {
+            int newHotCount = lotteryService.incrementHotCount(id);
+            return ResponseEntity.ok(newHotCount);
+        } catch (Exception e) {
+            log.error("❌ 熱度更新失敗: lotteryId={}, error={}", id, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

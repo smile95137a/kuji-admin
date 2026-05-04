@@ -8,6 +8,7 @@ import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.req.auth.RefreshTokenReq;
 import com.group.admin.res.auth.LoginRes;
 import com.group.admin.service.AdminAuthService;
+import com.group.admin.util.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -53,6 +54,7 @@ public class AdminAuthController {
     })
     public ResponseEntity<LoginRes> login(@Valid @RequestBody AdminLoginReq req) {
         log.info("後台登入請求：username={}", req.getUsername());
+        AuditContext.setAuthAttemptedUsername(req.getUsername());
         LoginRes res = adminAuthService.login(req);
         return ResponseEntity.ok(res);
     }

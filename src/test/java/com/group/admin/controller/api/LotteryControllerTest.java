@@ -5,6 +5,7 @@ import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class LotteryControllerTest extends BaseControllerTest {
 
     @Mock
     private LotteryMapper lotteryMapper;
+
+    @Mock
+    private LotteryTicketService lotteryTicketService;
 
     @InjectMocks
     private LotteryController lotteryController;
@@ -70,6 +74,31 @@ class LotteryControllerTest extends BaseControllerTest {
         when(lotteryService.getLottery(anyString())).thenReturn(mockRes);
 
         mockMvc.perform(get("/lottery/test-id"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("相容路徑 /lottery/browse/list 應可查詢")
+    void browseList_ShouldReturnOk() throws Exception {
+        doReturn(Collections.<LotteryRes>emptyList()).when(lotteryService).queryLotteries(any(QueryReq.class));
+
+        mockMvc.perform(post("/lottery/browse/list")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("相容路徑 /lottery/browse/{id}/detail 應可查詢")
+    void browseDetail_ShouldReturnOk() throws Exception {
+        LotteryRes mockRes = new LotteryRes();
+        mockRes.setStatus("ON_SHELF");
+        when(lotteryService.getLottery(anyString())).thenReturn(mockRes);
+        when(lotteryService.getPrizesByLotteryId(anyString())).thenReturn(Collections.emptyList());
+        when(lotteryTicketService.getTicketsForFrontend(anyString())).thenReturn(Collections.emptyList());
+        when(lotteryTicketService.getDesignatedWinningNumbers(anyString())).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/lottery/browse/test-id/detail"))
                 .andExpect(status().isOk());
     }
 }
