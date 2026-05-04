@@ -21,6 +21,8 @@
 | [08-report-analytics.md](./08-report-analytics.md) | 報表查詢（營業額/推薦碼/開獎結果） |
 | [09-content-management.md](./09-content-management.md) | Banner、新聞、跑馬燈 |
 | [10-system-config.md](./10-system-config.md) | 系統參數管理 |
+| [11-shipping-management.md](./11-shipping-management.md) | 出貨方式管理 |
+| [12-system-log-and-updates.md](./12-system-log-and-updates.md) | 🆕 系統日誌 API + 後端修正通知 + 報表補全（5個）+ 疑問清單 |
 | [PROMPT-FOR-FRONTEND.md](./PROMPT-FOR-FRONTEND.md) | 給前端開發者的溝通 Prompt |
 
 ---

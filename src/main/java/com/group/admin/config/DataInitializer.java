@@ -105,6 +105,10 @@ public class DataInitializer implements CommandLineRunner {
                 initializeRoleMenuPermissions();
                 log.info("✅ role_menu 補救初始化完成");
             }
+            // 補救：若報表子選單未完整初始化，補建缺少的選單
+            rescueMissingReportMenus();
+            // 補救：若系統設定子選單未建立，補建缺少的選單
+            rescueMissingSystemMenus();
             log.info("系統資料已存在，跳過初始化");
             return;
         }
@@ -322,16 +326,29 @@ public class DataInitializer implements CommandLineRunner {
         insertSubMenu(menuIds[2], "訂單列表", "ORDER_LIST", "/admin/orders/list", 1);
         insertSubMenu(menuIds[2], "配送管理", "SHIPPING_MANAGEMENT", "/admin/shipping", 2);
 
-        // 第二層選單 - 報表中心
-        insertSubMenu(menuIds[4], "營收報表", "REVENUE_REPORT", "/admin/reports/revenue", 1);
-        insertSubMenu(menuIds[4], "抽獎統計", "DRAW_STATISTICS", "/admin/reports/draw-stats", 2);
+        // 第二層選單 - 報表中心（完整 9 個）
+        insertSubMenu(menuIds[4], "營收報表",     "REVENUE_REPORT",       "/admin/reports/revenue",       1);
+        insertSubMenu(menuIds[4], "抽獎統計",     "DRAW_STATISTICS",      "/admin/reports/draw-stats",    2);
+        insertSubMenu(menuIds[4], "推薦碼報表",   "REFERRAL_REPORT",      "/admin/reports/referral",      3);
+        insertSubMenu(menuIds[4], "儲值報表",     "RECHARGE_REPORT",      "/admin/reports/recharge",      4);
+        insertSubMenu(menuIds[4], "贈送點數報表", "BONUS_REPORT",         "/admin/reports/bonus",         5);
+        insertSubMenu(menuIds[4], "會員成長報表", "MEMBER_GROWTH_REPORT", "/admin/reports/member-growth", 6);
+        insertSubMenu(menuIds[4], "商品銷售排行", "LOTTERY_SALES_REPORT", "/admin/reports/lottery-sales", 7);
+        insertSubMenu(menuIds[4], "店家績效比較", "STORE_PERF_REPORT",    "/admin/reports/store-perf",    8);
+        insertSubMenu(menuIds[4], "獎品出貨報表", "PRIZE_SHIPMENT_REPORT","/admin/reports/prize-shipment",9);
 
         // 第二層選單 - 權限管理
         insertSubMenu(menuIds[5], "角色管理", "ROLE_MANAGEMENT", "/admin/permissions/roles", 1);
         insertSubMenu(menuIds[5], "選單管理", "MENU_MANAGEMENT", "/admin/permissions/menus", 2);
         insertSubMenu(menuIds[5], "帳號管理", "ACCOUNT_MANAGEMENT", "/admin/permissions/accounts", 3);
 
-        log.info("✓ 選單資料初始化完成（19 筆）");
+        // 第二層選單 - 系統設定
+        insertSubMenu(menuIds[6], "系統日誌",   "SYSTEM_LOG",      "/admin/system/logs",      1);
+        insertSubMenu(menuIds[6], "跑馬燈管理", "MARQUEE_MANAGE",  "/admin/system/marquee",   2);
+        insertSubMenu(menuIds[6], "儲值方案",   "RECHARGE_MANAGE", "/admin/system/recharge",  3);
+        insertSubMenu(menuIds[6], "系統公告",   "SYSTEM_NOTICE",   "/admin/system/notices",   4);
+
+        log.info("✓ 選單資料初始化完成（30 筆）");
     }
 
     private void insertSubMenu(String parentId, String name, String code, String path, int orderNum) {
@@ -378,9 +395,15 @@ public class DataInitializer implements CommandLineRunner {
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "ORDER_MANAGEMENT", true, true, false);
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "ORDER_LIST", true, false, false);
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "SHIPPING_MANAGEMENT", true, true, false);
-        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "REPORT_CENTER", true, false, false);
-        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "REVENUE_REPORT", true, false, false);
-        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "DRAW_STATISTICS", true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "REPORT_CENTER",        true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "REVENUE_REPORT",       true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "DRAW_STATISTICS",      true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "REFERRAL_REPORT",      true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "RECHARGE_REPORT",      true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "BONUS_REPORT",         true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "LOTTERY_SALES_REPORT", true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "STORE_PERF_REPORT",    true, false, false);
+        assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "PRIZE_SHIPMENT_REPORT",true, false, false);
 
         // StoreEditor 權限（僅商品與訂單查看）
         assignMenuPermissionByCode(ROLE_STORE_EDITOR_ID, "LOTTERY_MANAGEMENT", true, true, false);
@@ -406,6 +429,126 @@ public class DataInitializer implements CommandLineRunner {
             roleMenu.setCanDelete(canDelete);
             roleMenu.setCreatedAt(LocalDateTime.now());
             roleMenuMapper.insert(roleMenu);
+        }
+    }
+
+    /**
+     * 補救：若報表子選單未完整初始化，補建缺少的選單並補充角色權限。
+     * 僅在既有 DB 上執行（避免全新安裝重複初始化）。
+     */
+    private void rescueMissingReportMenus() {
+        // 找父選單「報表中心」
+        MenuExample parentEx = new MenuExample();
+        parentEx.createCriteria().andCodeEqualTo("REPORT_CENTER");
+        Menu reportCenter = menuMapper.selectByExample(parentEx).stream().findFirst().orElse(null);
+        if (reportCenter == null) {
+            return; // 連父選單都沒有，等正式初始化來建立
+        }
+
+        // 定義應存在的報表子選單
+        String[][] reportMenus = {
+            {"營收報表",     "REVENUE_REPORT",        "/admin/reports/revenue",        "1"},
+            {"抽獎統計",     "DRAW_STATISTICS",       "/admin/reports/draw-stats",     "2"},
+            {"推薦碼報表",   "REFERRAL_REPORT",       "/admin/reports/referral",       "3"},
+            {"儲值報表",     "RECHARGE_REPORT",       "/admin/reports/recharge",       "4"},
+            {"贈送點數報表", "BONUS_REPORT",          "/admin/reports/bonus",          "5"},
+            {"會員成長報表", "MEMBER_GROWTH_REPORT",  "/admin/reports/member-growth",  "6"},
+            {"商品銷售排行", "LOTTERY_SALES_REPORT",  "/admin/reports/lottery-sales",  "7"},
+            {"店家績效比較", "STORE_PERF_REPORT",     "/admin/reports/store-perf",     "8"},
+            {"獎品出貨報表", "PRIZE_SHIPMENT_REPORT", "/admin/reports/prize-shipment", "9"},
+        };
+
+        boolean anyAdded = false;
+        if (ROLE_ADMIN_ID == null) loadRoleIdsFromDb();
+
+        for (String[] m : reportMenus) {
+            MenuExample ex = new MenuExample();
+            ex.createCriteria().andCodeEqualTo(m[1]);
+            boolean exists = !menuMapper.selectByExample(ex).isEmpty();
+            if (!exists) {
+                log.warn("⚠️ 補救：缺少報表子選單 [{}]，正在補建...", m[0]);
+                insertSubMenu(reportCenter.getId(), m[0], m[1], m[2], Integer.parseInt(m[3]));
+
+                // 補充 ROLE_ADMIN role_menu（Admin 全選單自動查詢，此處只補 StoreOwner）
+                MenuExample newEx = new MenuExample();
+                newEx.createCriteria().andCodeEqualTo(m[1]);
+                menuMapper.selectByExample(newEx).stream().findFirst().ifPresent(menu -> {
+                    // Admin 加 role_menu
+                    if (ROLE_ADMIN_ID != null) {
+                        RoleMenu rm = new RoleMenu();
+                        rm.setId(UUID.randomUUID().toString());
+                        rm.setRoleId(ROLE_ADMIN_ID);
+                        rm.setMenuId(menu.getId());
+                        rm.setCanView(true); rm.setCanEdit(true); rm.setCanDelete(true);
+                        rm.setCreatedAt(LocalDateTime.now());
+                        roleMenuMapper.insert(rm);
+                    }
+                    // StoreOwner 加 role_menu（MEMBER_GROWTH 僅 Admin 可見，跳過）
+                    if (ROLE_STORE_OWNER_ID != null && !"MEMBER_GROWTH_REPORT".equals(m[1])) {
+                        RoleMenu rm = new RoleMenu();
+                        rm.setId(UUID.randomUUID().toString());
+                        rm.setRoleId(ROLE_STORE_OWNER_ID);
+                        rm.setMenuId(menu.getId());
+                        rm.setCanView(true); rm.setCanEdit(false); rm.setCanDelete(false);
+                        rm.setCreatedAt(LocalDateTime.now());
+                        roleMenuMapper.insert(rm);
+                    }
+                });
+                anyAdded = true;
+            }
+        }
+
+        if (anyAdded) {
+            log.info("✅ 報表子選單補救完成");
+        }
+    }
+
+    /**
+     * 補救：若系統設定子選單未建立，補建缺少的選單（系統日誌、跑馬燈、儲值方案等）。
+     */
+    private void rescueMissingSystemMenus() {
+        MenuExample parentEx = new MenuExample();
+        parentEx.createCriteria().andCodeEqualTo("SYSTEM_SETTING");
+        Menu systemSetting = menuMapper.selectByExample(parentEx).stream().findFirst().orElse(null);
+        if (systemSetting == null) return;
+
+        String[][] systemMenus = {
+            {"系統日誌",   "SYSTEM_LOG",      "/admin/system/logs",     "1"},
+            {"跑馬燈管理", "MARQUEE_MANAGE",  "/admin/system/marquee",  "2"},
+            {"儲值方案",   "RECHARGE_MANAGE", "/admin/system/recharge", "3"},
+            {"系統公告",   "SYSTEM_NOTICE",   "/admin/system/notices",  "4"},
+        };
+
+        boolean anyAdded = false;
+        if (ROLE_ADMIN_ID == null) loadRoleIdsFromDb();
+
+        for (String[] m : systemMenus) {
+            MenuExample ex = new MenuExample();
+            ex.createCriteria().andCodeEqualTo(m[1]);
+            boolean exists = !menuMapper.selectByExample(ex).isEmpty();
+            if (!exists) {
+                log.warn("⚠️ 補救：缺少系統設定子選單 [{}]，正在補建...", m[0]);
+                insertSubMenu(systemSetting.getId(), m[0], m[1], m[2], Integer.parseInt(m[3]));
+
+                MenuExample newEx = new MenuExample();
+                newEx.createCriteria().andCodeEqualTo(m[1]);
+                menuMapper.selectByExample(newEx).stream().findFirst().ifPresent(menu -> {
+                    if (ROLE_ADMIN_ID != null) {
+                        RoleMenu rm = new RoleMenu();
+                        rm.setId(UUID.randomUUID().toString());
+                        rm.setRoleId(ROLE_ADMIN_ID);
+                        rm.setMenuId(menu.getId());
+                        rm.setCanView(true); rm.setCanEdit(true); rm.setCanDelete(true);
+                        rm.setCreatedAt(LocalDateTime.now());
+                        roleMenuMapper.insert(rm);
+                    }
+                });
+                anyAdded = true;
+            }
+        }
+
+        if (anyAdded) {
+            log.info("✅ 系統設定子選單補救完成");
         }
     }
 

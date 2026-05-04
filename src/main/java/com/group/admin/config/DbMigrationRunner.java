@@ -25,6 +25,7 @@ public class DbMigrationRunner implements CommandLineRunner {
 
         apply021();
         apply027();
+        apply032();
 
         log.info("✅ DbMigrationRunner 完成");
     }
@@ -93,6 +94,141 @@ public class DbMigrationRunner implements CommandLineRunner {
                 WHERE code = 'SEVEN_ELEVEN' AND tracking_url_template IS NULL
             """);
         }
+    }
+
+    // ==================== 032-audit-log-system ====================
+
+    private void apply032() {
+        // 五張 log 表，全部使用 CREATE TABLE IF NOT EXISTS 確保幂等
+        if (!tableExists("log_auth")) {
+            log.info("🔧 [032] 建立 log_auth 表...");
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS `log_auth` (
+                    `id`           VARCHAR(36)  NOT NULL PRIMARY KEY,
+                    `user_id`      VARCHAR(36)  NULL,
+                    `user_type`    VARCHAR(20)  NOT NULL,
+                    `email`        VARCHAR(255) NULL,
+                    `login_method` VARCHAR(30)  NOT NULL,
+                    `result`       VARCHAR(10)  NOT NULL,
+                    `error_message` VARCHAR(500) NULL,
+                    `ip`           VARCHAR(50)  NULL,
+                    `user_agent`   VARCHAR(500) NULL,
+                    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_log_auth_user_id`    (`user_id`),
+                    INDEX `idx_log_auth_email`      (`email`),
+                    INDEX `idx_log_auth_result`     (`result`),
+                    INDEX `idx_log_auth_created_at` (`created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='認證日誌（登入/登出/OAuth）'
+            """);
+        }
+
+        if (!tableExists("log_draw")) {
+            log.info("🔧 [032] 建立 log_draw 表...");
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS `log_draw` (
+                    `id`             VARCHAR(36)  NOT NULL PRIMARY KEY,
+                    `user_id`        VARCHAR(36)  NOT NULL,
+                    `lottery_id`     VARCHAR(36)  NOT NULL,
+                    `lottery_title`  VARCHAR(200) NULL,
+                    `category`       VARCHAR(50)  NULL,
+                    `play_mode`      VARCHAR(30)  NULL,
+                    `game_mode`      VARCHAR(30)  NULL,
+                    `ticket_id`      VARCHAR(36)  NULL,
+                    `ticket_number`  INT          NULL,
+                    `prize_level`    VARCHAR(20)  NULL,
+                    `prize_name`     VARCHAR(200) NULL,
+                    `is_grand_prize` TINYINT(1)   DEFAULT 0,
+                    `deducted_gold`  BIGINT       DEFAULT 0,
+                    `deducted_bonus` BIGINT       DEFAULT 0,
+                    `result`         VARCHAR(10)  NOT NULL,
+                    `error_message`  VARCHAR(500) NULL,
+                    `duration_ms`    INT          NULL,
+                    `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_log_draw_user_id`    (`user_id`),
+                    INDEX `idx_log_draw_lottery_id` (`lottery_id`),
+                    INDEX `idx_log_draw_result`     (`result`),
+                    INDEX `idx_log_draw_created_at` (`created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽獎日誌'
+            """);
+        }
+
+        if (!tableExists("log_recharge")) {
+            log.info("🔧 [032] 建立 log_recharge 表...");
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS `log_recharge` (
+                    `id`                  VARCHAR(36)  NOT NULL PRIMARY KEY,
+                    `user_id`             VARCHAR(36)  NOT NULL,
+                    `recharge_id`         VARCHAR(36)  NULL,
+                    `plan_id`             VARCHAR(36)  NULL,
+                    `plan_name`           VARCHAR(100) NULL,
+                    `amount`              BIGINT       NULL,
+                    `gold_added`          BIGINT       DEFAULT 0,
+                    `bonus_added`         BIGINT       DEFAULT 0,
+                    `payment_method`      VARCHAR(50)  NULL,
+                    `payment_gateway_ref` VARCHAR(200) NULL,
+                    `result`              VARCHAR(10)  NOT NULL,
+                    `error_message`       VARCHAR(500) NULL,
+                    `ip`                  VARCHAR(50)  NULL,
+                    `created_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_log_recharge_user_id`     (`user_id`),
+                    INDEX `idx_log_recharge_recharge_id` (`recharge_id`),
+                    INDEX `idx_log_recharge_result`      (`result`),
+                    INDEX `idx_log_recharge_created_at`  (`created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='儲值日誌'
+            """);
+        }
+
+        if (!tableExists("log_order")) {
+            log.info("🔧 [032] 建立 log_order 表...");
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS `log_order` (
+                    `id`              VARCHAR(36)  NOT NULL PRIMARY KEY,
+                    `operator_id`     VARCHAR(36)  NOT NULL,
+                    `operator_type`   VARCHAR(20)  NOT NULL,
+                    `order_id`        VARCHAR(36)  NOT NULL,
+                    `action`          VARCHAR(50)  NOT NULL,
+                    `prize_box_count` INT          NULL,
+                    `total_amount`    BIGINT       NULL,
+                    `tracking_number` VARCHAR(100) NULL,
+                    `result`          VARCHAR(10)  NOT NULL,
+                    `error_message`   VARCHAR(500) NULL,
+                    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_log_order_operator_id` (`operator_id`),
+                    INDEX `idx_log_order_order_id`    (`order_id`),
+                    INDEX `idx_log_order_action`      (`action`),
+                    INDEX `idx_log_order_created_at`  (`created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='訂單操作日誌'
+            """);
+        }
+
+        if (!tableExists("log_admin_action")) {
+            log.info("🔧 [032] 建立 log_admin_action 表...");
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS `log_admin_action` (
+                    `id`              VARCHAR(36)   NOT NULL PRIMARY KEY,
+                    `admin_id`        VARCHAR(36)   NOT NULL,
+                    `admin_email`     VARCHAR(255)  NULL,
+                    `admin_role`      VARCHAR(50)   NULL,
+                    `target_type`     VARCHAR(50)   NOT NULL,
+                    `target_id`       VARCHAR(36)   NULL,
+                    `target_name`     VARCHAR(200)  NULL,
+                    `action`          VARCHAR(50)   NOT NULL,
+                    `before_snapshot` MEDIUMTEXT    NULL,
+                    `after_snapshot`  MEDIUMTEXT    NULL,
+                    `result`          VARCHAR(10)   NOT NULL,
+                    `error_message`   VARCHAR(500)  NULL,
+                    `ip`              VARCHAR(50)   NULL,
+                    `created_at`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_log_admin_admin_id`    (`admin_id`),
+                    INDEX `idx_log_admin_target_type` (`target_type`),
+                    INDEX `idx_log_admin_target_id`   (`target_id`),
+                    INDEX `idx_log_admin_action`      (`action`),
+                    INDEX `idx_log_admin_created_at`  (`created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='後台管理操作日誌'
+            """);
+        }
+
+        log.info("✅ [032] 稽核日誌表確認完成");
     }
 
     // ==================== 工具方法 ====================
