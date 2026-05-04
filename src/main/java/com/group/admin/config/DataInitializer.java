@@ -569,6 +569,7 @@ public class DataInitializer implements CommandLineRunner {
         user1.setPhoneNumber("0955555555");
         user1.setGoldCoins(1000L);
         user1.setBonusCoins(500L);
+        user1.setFailedLoginAttempts(0);
         user1.setCreatedAt(LocalDateTime.now());
         user1.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user1);
@@ -586,6 +587,7 @@ public class DataInitializer implements CommandLineRunner {
         user2.setPhoneNumber("0966666666");
         user2.setGoldCoins(2500L);
         user2.setBonusCoins(300L);
+        user2.setFailedLoginAttempts(0);
         user2.setCreatedAt(LocalDateTime.now());
         user2.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user2);
@@ -603,6 +605,7 @@ public class DataInitializer implements CommandLineRunner {
         user3.setPhoneNumber(null);
         user3.setGoldCoins(500L);
         user3.setBonusCoins(100L);
+        user3.setFailedLoginAttempts(0);
         user3.setCreatedAt(LocalDateTime.now());
         user3.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user3);

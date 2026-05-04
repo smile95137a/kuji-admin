@@ -97,6 +97,7 @@ public class UserServiceImpl implements UserService {
         user.setAddressDetail(req.getAddress());
         // zipCode 目前 User entity 沒有此欄位，如需要請先更新資料表
         
+        user.setFailedLoginAttempts(0);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -256,6 +257,7 @@ public class UserServiceImpl implements UserService {
                 user.setVersion(0);
                 user.setStatus("ACTIVE");
                 user.setEmailVerified((byte) 1); // Google 已驗證 Email
+                user.setFailedLoginAttempts(0);
                 user.setLastLoginAt(LocalDateTime.now());
                 user.setCreatedAt(LocalDateTime.now());
                 user.setUpdatedAt(LocalDateTime.now());
