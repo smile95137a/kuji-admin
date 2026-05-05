@@ -153,9 +153,9 @@ public class LotteryController {
             return ResponseEntity.notFound().build();
         }
         
-        // DRAFT / CONFIGURED / FORCED_OFF 不對外公開
+        // DRAFT / FORCED_OFF 不對外公開
         String status = result.getStatus();
-        if ("DRAFT".equals(status) || "CONFIGURED".equals(status) || "FORCED_OFF".equals(status)) {
+        if ("DRAFT".equals(status) || "FORCED_OFF".equals(status)) {
             log.warn("⚠️ 商品不公開: id={}, status={}", id, status);
             return ResponseEntity.status(403).build();
         }

@@ -12,11 +12,8 @@ import lombok.Getter;
 public enum LotteryStatusEnum implements DisplayableEnum {
 
     DRAFT("DRAFT", "草稿"),
-    CONFIGURED("CONFIGURED", "已配置"),
-    OFF_SHELF("OFF_SHELF", "已下架"),
     ON_SHELF("ON_SHELF", "已上架"),
-    DRAWABLE("DRAWABLE", "可抽"),
-    IN_PROGRESS("IN_PROGRESS", "抽獎中"),
+    OFF_SHELF("OFF_SHELF", "已下架"),
     SOLD_OUT("SOLD_OUT", "售完"),
     ENDED("ENDED", "已結束"),
     FORCED_OFF("FORCED_OFF", "強制下架");

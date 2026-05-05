@@ -52,15 +52,5 @@ public class ScheduledTasks {
         }
     }
 
-    /**
-     * 每 60 秒自動開放可抽商品（ON_SHELF → DRAWABLE）
-     */
-    @Scheduled(fixedRate = 60000)
-    public void autoStartDrawable() {
-        try {
-            lotteryService.promoteDrawableLotteries();
-        } catch (Exception e) {
-            log.error("❌ 自動開放抽獎任務失敗: {}", e.getMessage());
-        }
-    }
+    // autoStartDrawable 已停用（DRAWABLE 狀態移除）
 }

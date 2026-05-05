@@ -432,8 +432,7 @@ public class LotteryServiceImpl implements LotteryService {
         }
 
         // 檢查商品狀態
-        if (!LotteryStatusEnum.ON_SHELF.getCode().equals(lottery.getStatus()) 
-                && !LotteryStatusEnum.IN_PROGRESS.getCode().equals(lottery.getStatus())) {
+        if (!LotteryStatusEnum.ON_SHELF.getCode().equals(lottery.getStatus())) {
             throw new BusinessException("商品未上架或已結束");
         }
 
@@ -463,12 +462,7 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("獎品已抽完，活動結束");
         }
 
-        // 更新狀態為抽獎中
-        if (LotteryStatusEnum.ON_SHELF.getCode().equals(lottery.getStatus())) {
-            lottery.setStatus(LotteryStatusEnum.IN_PROGRESS.getCode());
-            lottery.setUpdatedAt(LocalDateTime.now());
-            lotteryMapper.updateByPrimaryKey(lottery);
-        }
+        // 狀態維持 ON_SHELF，不再使用 IN_PROGRESS
 
         LotteryPrize selected = selectPrize(prizes, lotteryId);
 
@@ -2187,14 +2181,11 @@ public class LotteryServiceImpl implements LotteryService {
     // ==================== 狀態變更（含 FSM 驗證）====================
     
     private static final Map<String, List<String>> VALID_TRANSITIONS = Map.ofEntries(
-        Map.entry("DRAFT",       List.of("CONFIGURED", "ON_SHELF", "FORCED_OFF", "DELETED")),
-        Map.entry("CONFIGURED",  List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
-        Map.entry("ON_SHELF",    List.of("OFF_SHELF", "DRAWABLE", "FORCED_OFF")),
-        Map.entry("OFF_SHELF",   List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
-        Map.entry("DRAWABLE",    List.of("SOLD_OUT", "FORCED_OFF")),
-        Map.entry("IN_PROGRESS", List.of("SOLD_OUT", "FORCED_OFF")),
-        Map.entry("SOLD_OUT",    List.of("FORCED_OFF")),
-        Map.entry("FORCED_OFF",  List.of("DRAFT", "DELETED"))
+        Map.entry("DRAFT",      List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
+        Map.entry("ON_SHELF",   List.of("OFF_SHELF", "FORCED_OFF")),
+        Map.entry("OFF_SHELF",  List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
+        Map.entry("SOLD_OUT",   List.of("FORCED_OFF")),
+        Map.entry("FORCED_OFF", List.of("DRAFT", "DELETED"))
     );
     
     @Override
@@ -2397,15 +2388,7 @@ public class LotteryServiceImpl implements LotteryService {
 
     @Override
     public void promoteDrawableLotteries() {
-        log.info("⏰ [Scheduled] 檢查待開抽商品...");
-        List<Lottery> list = lotteryMapper.selectDrawableForStart();
-        for (Lottery l : list) {
-            Lottery upd = new Lottery();
-            upd.setId(l.getId());
-            upd.setStatus("DRAWABLE");
-            upd.setUpdatedAt(LocalDateTime.now());
-            lotteryMapper.updateByPrimaryKeySelective(upd);
-            log.info("✅ [Scheduled] 商品轉為可抽狀態：id={}, title={}", l.getId(), l.getTitle());
-        }
+        // DRAWABLE 狀態已移除，此方法保留介面相容性，不做任何事
+        log.debug("⏰ [Scheduled] promoteDrawableLotteries 已停用");
     }
 }

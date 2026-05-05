@@ -954,6 +954,20 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             // 有進行中的場次
             LotterySession activeSession = activeSessions.get(0);
             
+            // 🛡️ 保護時間逾期檢查：保護時間已到且非開套者 → 自動 EXPIRED，讓當前使用者成為新開套者
+            LocalDateTime now = LocalDateTime.now();
+            boolean isProtectionExpired = activeSession.getProtectionEndTime() != null
+                    && activeSession.getProtectionEndTime().isBefore(now)
+                    && !activeSession.getOpenerUserId().equals(userId);
+            if (isProtectionExpired) {
+                log.info("⏰ getOrCreateSession：保護時間已過，釋放舊場次: sessionId={}, protectionEnd={}",
+                        activeSession.getId(), activeSession.getProtectionEndTime());
+                activeSession.setStatus("EXPIRED");
+                activeSession.setCompletedAt(now);
+                activeSession.setUpdatedAt(now);
+                lotterySessionMapper.updateByPrimaryKey(activeSession);
+                // 繼續往下建立新場次
+            } else {
             // 🆕 SCRATCH_PLAYER 逾時檢查：若開套者未在 10 分鐘內指定大獎，自動釋放場次
             Lottery lotteryForTimeout = lotteryMapper.selectByPrimaryKey(lotteryId);
                 boolean isTimedOut = lotteryForTimeout != null
@@ -989,6 +1003,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             activeSession.setUpdatedAt(LocalDateTime.now());
             lotterySessionMapper.updateByPrimaryKey(activeSession);
             // 繼續往下建立新場次（當前使用者成為新開套者）
+            } // end else (isProtectionExpired)
         }
         
         // 建立新場次（當前使用者成為開套者）
