@@ -241,8 +241,10 @@ public class LotteryServiceImpl implements LotteryService {
         // T008: new fields update
         if (req.getPaymentType() != null) {
             String normalizedPaymentType = normalizePaymentType(req.getPaymentType());
+            // DB 舊資料 paymentType 可能為 null，視為預設值 "GOLD"
+            String existingPaymentType = lottery.getPaymentType() != null ? lottery.getPaymentType() : "GOLD";
             if (!LotteryStatusEnum.DRAFT.getCode().equals(status)
-                    && !normalizedPaymentType.equals(lottery.getPaymentType())) {
+                    && !normalizedPaymentType.equals(existingPaymentType)) {
                 throw new BusinessException("非草稿商品不可修改 paymentType");
             }
             lottery.setPaymentType(normalizedPaymentType);
@@ -1123,10 +1125,14 @@ public class LotteryServiceImpl implements LotteryService {
         }
         // T008: new fields update
         if (req.getPaymentType() != null) {
-            if (!LotteryStatusEnum.DRAFT.getCode().equals(lottery.getStatus())) {
+            String normalizedPaymentType = normalizePaymentType(req.getPaymentType());
+            // DB 舊資料 paymentType 可能為 null，視為預設值 "GOLD"
+            String existingPaymentType = lottery.getPaymentType() != null ? lottery.getPaymentType() : "GOLD";
+            if (!LotteryStatusEnum.DRAFT.getCode().equals(lottery.getStatus())
+                    && !normalizedPaymentType.equals(existingPaymentType)) {
                 throw new BusinessException("非草稿商品不可修改 paymentType");
             }
-            lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
+            lottery.setPaymentType(normalizedPaymentType);
         }
         if (req.getFreeDrawEnabled() != null) {
             lottery.setFreeDrawEnabled(req.getFreeDrawEnabled() ? (byte) 1 : (byte) 0);
