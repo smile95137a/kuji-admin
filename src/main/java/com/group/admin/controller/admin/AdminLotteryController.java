@@ -17,6 +17,8 @@ import com.group.admin.req.lottery.LotteryWithPrizesUpdateReq;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.res.lottery.LotteryWithPrizesRes;
 import com.group.admin.service.LotteryService;
+import com.group.admin.service.LotteryTicketService;
+import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,6 +53,7 @@ import java.util.List;
 public class AdminLotteryController {
 
     private final LotteryService lotteryService;
+    private final LotteryTicketService lotteryTicketService;
     private final StoreUserMapper storeUserMapper;
 
     /**
@@ -438,6 +441,45 @@ public class AdminLotteryController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 後台相容路由：指定刮刮樂大獎位置
+     *
+     * 相容舊版路徑：
+     * 1) /admin/lottery/{lotteryId}/designate-prize
+     * 2) /admin/lottery/{lotteryId}/designate-prize-positions
+     *
+     * 新版建議路徑：
+     * 3) /admin/lottery/{lotteryId}/designate
+     */
+    @PostMapping({
+            "/{lotteryId}/designate-prize",
+            "/{lotteryId}/designate-prize-positions",
+            "/{lotteryId}/designate"
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "指定刮刮樂大獎位置（後台相容路由）", description = "相容舊版 designate-prize 路徑")
+    public ResponseEntity<DesignatePrizeResponse> designatePrizePositions(
+            @PathVariable String lotteryId,
+            @RequestBody DesignatePrizeRequest req) {
+
+        String userId = SecurityUtils.getCurrentUserId();
+        int count = req == null || req.designations() == null ? 0 : req.designations().size();
+        log.info("🎯 [Admin] 指定大獎位置: lotteryId={}, userId={}, count={}", lotteryId, userId, count);
+
+        if (req == null || req.designations() == null || req.designations().isEmpty()) {
+            throw new BusinessException("designations 不可為空");
+        }
+
+        lotteryTicketService.designatePrizePositions(lotteryId, userId, req.designations());
+        List<DesignatedWinningNumber> designatedNumbers = lotteryTicketService.getDesignatedWinningNumbers(lotteryId);
+
+        return ResponseEntity.ok(new DesignatePrizeResponse(
+                true,
+                "大獎位置指定完成，共 " + req.designations().size() + " 個",
+                designatedNumbers
+        ));
+    }
+
     private String getStoreIdByUserId(String userId) {
         if (userId == null) return null;
         StoreUserExample example = new StoreUserExample();
@@ -451,4 +493,14 @@ public class AdminLotteryController {
         log.info("🏪 查詢到店家: userId={}, storeId={}", userId, storeId);
         return storeId;
     }
+
+    public record DesignatePrizeRequest(
+            List<LotteryTicketService.PrizeDesignation> designations
+    ) {}
+
+    public record DesignatePrizeResponse(
+            boolean success,
+            String message,
+            List<DesignatedWinningNumber> designatedWinningNumbers
+    ) {}
 }

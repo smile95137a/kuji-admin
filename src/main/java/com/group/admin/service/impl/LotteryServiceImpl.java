@@ -1849,10 +1849,10 @@ public class LotteryServiceImpl implements LotteryService {
         log.info("📝 更新商品與獎品: lotteryId={}, operatorId={}", lotteryId, operatorId);
         
         // Step 1: 更新商品（如果有提供 lottery 更新資訊）
+        // ⚠️ 使用新版 updateLottery(id, req) 而非舊版，避免已上架商品被誤攔截
         LotteryRes lotteryRes;
         if (req.getLottery() != null) {
-            req.getLottery().setId(lotteryId); // 確保 ID 正確
-            lotteryRes = updateLottery(req.getLottery(), operatorId);
+            lotteryRes = updateLottery(lotteryId, req.getLottery());
             log.info("✅ 商品更新成功: lotteryId={}", lotteryId);
         } else {
             // 沒有提供更新資訊，直接查詢現有資料
