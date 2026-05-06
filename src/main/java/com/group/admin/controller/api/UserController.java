@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.group.admin.entity.User;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.referral.ApplyReferralReq;
+import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.req.user.FrontendUserUpdateReq;
 import com.group.admin.res.user.UserRes;
 import com.group.admin.service.S3Service;
@@ -215,6 +216,18 @@ public class UserController {
         UserRes res = UserRes.from(user);
         
         return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/me/change-password")
+    @Operation(summary = "修改我的密碼", description = "前台已登入使用者修改自己的密碼")
+    public ResponseEntity<Void> changeMyPassword(@Valid @RequestBody ChangePasswordReq req) {
+        String userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        userService.changePassword(userId, req);
+        return ResponseEntity.ok().build();
     }
 
     /**

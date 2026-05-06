@@ -3,6 +3,7 @@ package com.group.admin.controller.admin;
 import com.group.admin.condition.CoinTransactionCondition;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.wallet.CoinAdjustReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.wallet.UserCoinRes;
 import com.group.admin.res.wallet.CoinTransactionRes;
 import com.group.admin.service.CoinService;
@@ -13,8 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 後台金幣管理 Controller
@@ -59,11 +58,11 @@ public class AdminCoinController {
      * 查詢交易記錄
      */
     @PostMapping("/transactions/list")
-    public ResponseEntity<List<CoinTransactionRes>> getTransactions(
+    public ResponseEntity<PageResult<CoinTransactionRes>> getTransactions(
             @RequestBody(required = false) QueryReq<CoinTransactionCondition> req) {
         log.info("🔍 [Admin] 查詢交易記錄");
         
-        List<CoinTransactionRes> transactions = coinService.getTransactions(req);
+        PageResult<CoinTransactionRes> transactions = coinService.getTransactions(req);
         
         return ResponseEntity.ok(transactions);
     }

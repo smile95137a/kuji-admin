@@ -184,15 +184,14 @@ public interface LotteryService {
     
     /**
      * 查詢商品列表（新架構）
-     * 
+     *
      * 使用 Condition + QueryReq 模式
-     * 所有查詢條件可選，MyBatis 動態 SQL
-     * 返回全部資料，前端做分頁
-     * 
+     * 所有查詢條件可選，回傳後端分頁結果
+     *
      * @param req 查詢請求（可選）
-     * @return 商品列表（全部資料）
+     * @return 商品列表分頁結果
      */
-    List<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req);
+    PageResult<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req);
     
     /**
      * 新增商品（新架構）

@@ -698,6 +698,12 @@
       <if test="maxDraws != null">
         max_draws = #{maxDraws,jdbcType=INTEGER},
       </if>
+      <if test="protectionDraws != null">
+        protection_draws = #{protectionDraws,jdbcType=INTEGER},
+      </if>
+      <if test="protectionMinutes != null">
+        protection_minutes = #{protectionMinutes,jdbcType=INTEGER},
+      </if>
       <if test="freeDrawEnabled != null">
         free_draw_enabled = #{freeDrawEnabled,jdbcType=TINYINT},
       </if>
@@ -780,6 +786,8 @@
       end_time = #{endTime,jdbcType=TIMESTAMP},
       total_draws = #{totalDraws,jdbcType=INTEGER},
       max_draws = #{maxDraws,jdbcType=INTEGER},
+      protection_draws = #{protectionDraws,jdbcType=INTEGER},
+      protection_minutes = #{protectionMinutes,jdbcType=INTEGER},
       free_draw_enabled = #{freeDrawEnabled,jdbcType=TINYINT},
       designated_prize_numbers = #{designatedPrizeNumbers,jdbcType=VARCHAR},
       tickets_generated = #{ticketsGenerated,jdbcType=TINYINT},
@@ -821,6 +829,8 @@
       end_time = #{endTime,jdbcType=TIMESTAMP},
       total_draws = #{totalDraws,jdbcType=INTEGER},
       max_draws = #{maxDraws,jdbcType=INTEGER},
+      protection_draws = #{protectionDraws,jdbcType=INTEGER},
+      protection_minutes = #{protectionMinutes,jdbcType=INTEGER},
       free_draw_enabled = #{freeDrawEnabled,jdbcType=TINYINT},
       designated_prize_numbers = #{designatedPrizeNumbers,jdbcType=VARCHAR},
       tickets_generated = #{ticketsGenerated,jdbcType=TINYINT},
@@ -1007,6 +1017,17 @@
     WHERE status     = 'ON_SHELF'
       AND start_time IS NOT NULL
       AND start_time &lt;= NOW()
+  </select>
+  <select id="selectByExampleWithPage" resultMap="BaseResultMap">
+    SELECT <include refid="Base_Column_List" />
+    FROM lottery
+    <if test="example != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="example != null and example.orderByClause != null">
+      ORDER BY ${example.orderByClause}
+    </if>
+    LIMIT #{limit} OFFSET #{offset}
   </select>
 
 </mapper>

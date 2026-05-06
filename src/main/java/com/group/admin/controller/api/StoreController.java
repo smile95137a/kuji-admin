@@ -1,6 +1,7 @@
 package com.group.admin.controller.api;
 
 import com.group.admin.res.PageResult;
+import com.group.admin.res.lottery.LotteryListItemRes;
 import com.group.admin.res.store.StoreDetailRes;
 import com.group.admin.res.store.StoreListItemRes;
 import com.group.admin.service.StoreService;
@@ -11,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -44,6 +47,24 @@ public class StoreController {
         log.info("🔍 [前台] 查詢店家詳情: id={}", id);
         StoreDetailRes result = storeService.getPublicStoreDetail(id);
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{storeId}/products")
+    @Operation(summary = "店家商品列表", description = "取得指定店家所有上架商品，依建立時間由新到舊排序")
+    public ResponseEntity<PageResult<LotteryListItemRes>> getStoreProducts(
+            @PathVariable
+            @Parameter(description = "店家 ID")
+            String storeId,
+            @RequestParam(defaultValue = "1")
+            @Parameter(description = "頁碼（從 1 開始）", example = "1")
+            int page,
+            @RequestParam(defaultValue = "20")
+            @Parameter(description = "每頁筆數", example = "20")
+            int size) {
+        log.info("🛍️ [前台] 查詢店家商品列表: storeId={}, page={}, size={}", storeId, page, size);
+        PageResult<LotteryListItemRes> products = storeService.getStoreProducts(storeId, page, size);
+        log.info("✅ [前台] 店家 {} 商品總數 {}", storeId, products.getTotal());
+        return ResponseEntity.ok(products);
     }
 }
 

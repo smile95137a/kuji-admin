@@ -568,6 +568,15 @@
     ORDER BY o.created_at DESC
   </select>
 
+  <select id="selectByConditionPaged" resultMap="BaseResultMap">
+    SELECT o.*
+    FROM `order` o
+    LEFT JOIN `user` u ON o.user_id = u.id
+    <include refid="Condition_Where_Clause" />
+    ORDER BY o.created_at DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
   <select id="countByCondition" resultType="java.lang.Long">
     SELECT COUNT(*)
     FROM `order` o

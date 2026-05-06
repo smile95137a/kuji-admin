@@ -31,13 +31,13 @@ public class QueryReq<T> {
     private T condition;
     
     /**
-     * 分頁參數（前端用，後端不做分頁處理）
-     * 前端可以根據此欄位進行前端分頁
+     * 分頁參數
+     * 前後台查詢都可共用
      */
     private Integer page;
     
     /**
-     * 每頁筆數（前端用，後端不做分頁處理）
+     * 每頁筆數
      */
     private Integer size;
     

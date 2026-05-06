@@ -47,6 +47,65 @@ public class AuditLogAspect {
     private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
+    // ---------------------------------------------------------------
+    // 自動攔截：admin 包下所有未標記 @AuditLog 的寫入操作
+    // 排除 DebugController 與 AdminSystemLogController（查詢用，不需記錄）
+    // ---------------------------------------------------------------
+
+    @Around("execution(* com.group.admin.controller.admin..*(..)) " +
+            "&& !@annotation(com.group.admin.annotation.AuditLog) " +
+            "&& !within(com.group.admin.controller.admin.DebugController) " +
+            "&& !within(com.group.admin.controller.admin.AdminSystemLogController)")
+    public Object autoAround(ProceedingJoinPoint joinPoint) throws Throwable {
+        HttpServletRequest request = getCurrentRequest();
+        if (request == null) return joinPoint.proceed();
+
+        String httpMethod = request.getMethod().toUpperCase();
+        // 只記錄寫入操作，GET/HEAD/OPTIONS 直接放行
+        if ("GET".equals(httpMethod) || "HEAD".equals(httpMethod) || "OPTIONS".equals(httpMethod)) {
+            return joinPoint.proceed();
+        }
+
+        String result = "SUCCESS";
+        String errorMessage = null;
+        Object response = null;
+        String beforeSnapshot = buildRequestSnapshot(joinPoint);
+
+        try {
+            response = joinPoint.proceed();
+            return response;
+        } catch (Throwable t) {
+            result = "FAIL";
+            errorMessage = t.getMessage();
+            throw t;
+        } finally {
+            String afterSnapshot = buildResponseSnapshot(response, result, joinPoint);
+            try {
+                String targetType = inferTargetTypeFromController(joinPoint);
+                String action     = inferActionFromRequest(httpMethod, joinPoint);
+                String adminId    = getCurrentUserId();
+                String adminEmail = getCurrentUserEmailOrUsername();
+                String adminRole  = getCurrentPrimaryRole();
+                String ip         = getClientIp();
+                String targetId   = inferTargetId(joinPoint, response);
+                String targetName = inferTargetName(joinPoint, response);
+
+                auditLogService.logAdminAction(adminId, adminEmail, adminRole,
+                        targetType, targetId, targetName,
+                        action, beforeSnapshot, afterSnapshot,
+                        result, errorMessage, ip);
+            } catch (Exception e) {
+                log.warn("⚠️ [AutoAudit] 自動日誌寫入失敗: {}", e.getMessage());
+            } finally {
+                AuditContext.clear();
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // 手動標記：帶有 @AuditLog 的方法
+    // ---------------------------------------------------------------
+
     @Around("@annotation(auditLog)")
     public Object around(ProceedingJoinPoint joinPoint, AuditLog auditLog) throws Throwable {
         long start = System.currentTimeMillis();
@@ -361,6 +420,63 @@ public class AuditLogAspect {
             }
         }
         return null;
+    }
+
+    // ---------------------------------------------------------------
+    // 自動推斷 targetType / action 的輔助方法
+    // ---------------------------------------------------------------
+
+    /**
+     * 從 Controller 類別名稱推斷 targetType。
+     * 去除 "Admin" 前綴與 "Controller" 後綴，再轉 UPPER_SNAKE_CASE。
+     * 例如：AdminFrontendUserController → FRONTEND_USER
+     */
+    private String inferTargetTypeFromController(ProceedingJoinPoint joinPoint) {
+        String className = joinPoint.getTarget().getClass().getSimpleName();
+        String name = className
+                .replaceFirst("^Admin", "")
+                .replaceFirst("Controller$", "");
+        return name.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
+    }
+
+    /**
+     * 從 HTTP Method + Java method 名稱推斷語意動作。
+     * method 名稱中的動詞關鍵字優先；最後回退到 HTTP Method 對應。
+     */
+    private String inferActionFromRequest(String httpMethod, ProceedingJoinPoint joinPoint) {
+        String methodName = joinPoint.getSignature().getName().toLowerCase();
+        if (methodName.contains("unpublish"))                          return "UNPUBLISH";
+        if (methodName.contains("publish"))                            return "PUBLISH";
+        if (methodName.contains("activate") || methodName.contains("enable"))  return "ENABLE";
+        if (methodName.contains("deactivate") || methodName.contains("disable")) return "DISABLE";
+        if (methodName.contains("suspend"))                            return "SUSPEND";
+        if (methodName.contains("unlock"))                             return "UNLOCK";
+        if (methodName.contains("cancel"))                             return "CANCEL";
+        if (methodName.contains("complete"))                           return "COMPLETE";
+        if (methodName.contains("prepare"))                            return "PREPARE";
+        if (methodName.contains("ship"))                               return "SHIP";
+        if (methodName.contains("reset"))                              return "RESET";
+        if (methodName.contains("broadcast"))                          return "BROADCAST";
+        if (methodName.contains("adjust"))                             return "ADJUST";
+        if (methodName.contains("upload"))                             return "UPLOAD";
+        if (methodName.contains("delete"))                             return "DELETE";
+        return switch (httpMethod) {
+            case "POST"  -> "CREATE";
+            case "PUT"   -> "UPDATE";
+            case "PATCH" -> "UPDATE";
+            case "DELETE" -> "DELETE";
+            default -> httpMethod;
+        };
+    }
+
+    private HttpServletRequest getCurrentRequest() {
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            return attrs != null ? attrs.getRequest() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Object sanitizeForAudit(Object source) {

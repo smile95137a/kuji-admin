@@ -33,6 +33,10 @@ public interface OrderMapper {
 
     List<Order> selectByCondition(@Param("condition") OrderCondition condition);
 
+    List<Order> selectByConditionPaged(@Param("condition") OrderCondition condition,
+                                       @Param("offset") int offset,
+                                       @Param("limit") int limit);
+
     long countByCondition(@Param("condition") OrderCondition condition);
 
     Order selectByOrderNumber(@Param("orderNumber") String orderNumber);

@@ -5,6 +5,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.order.CreateOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.ShipInfoReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.order.OrderRes;
@@ -45,7 +46,7 @@ public class OrderController {
      * US2 - 查詢我的訂單列表
      */
     @PostMapping("/list")
-    public ResponseEntity<List<OrderRes>> getMyOrders(
+    public ResponseEntity<PageResult<OrderRes>> getMyOrders(
             @RequestBody(required = false) QueryReq<OrderCondition> req) {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("🔍 [API] 查詢我的訂單：userId={}", userId);

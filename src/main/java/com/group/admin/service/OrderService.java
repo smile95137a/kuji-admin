@@ -7,6 +7,7 @@ import com.group.admin.req.order.CreateOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.UpdateOrderStatusReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.order.OrderRes;
@@ -25,15 +26,15 @@ public interface OrderService {
 
     List<OrderPaymentInitRes> createOrdersFromPrizeBoxWithPayment(String userId, CreateOrderReq req);
 
-    List<OrderRes> getOrders(QueryReq<OrderCondition> req);
+    PageResult<OrderRes> getOrders(QueryReq<OrderCondition> req);
 
-    List<OrderRes> getOrderList(QueryReq<OrderCondition> req, String callerUserId, String callerRole);
+    PageResult<OrderRes> getOrderList(QueryReq<OrderCondition> req, String callerUserId, String callerRole);
 
     OrderDetailRes getOrderDetail(String orderId);
 
     OrderDetailRes getOrderById(String id, String callerUserId, String callerRole);
 
-    List<OrderRes> getPlayerOrderList(QueryReq<OrderCondition> req, String playerId);
+    PageResult<OrderRes> getPlayerOrderList(QueryReq<OrderCondition> req, String playerId);
 
     OrderDetailRes getPlayerOrderById(String orderId, String playerId);
 

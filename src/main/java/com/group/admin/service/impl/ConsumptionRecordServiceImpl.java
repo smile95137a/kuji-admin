@@ -5,6 +5,7 @@ import com.group.admin.mapper.ConsumptionRecordMapper;
 import com.group.admin.repository.ConsumptionRecordRepository;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.consumption.ConsumptionRecordCondition;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.consumption.ConsumptionRecordRes;
 import com.group.admin.service.ConsumptionRecordService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -54,94 +54,70 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
     }
 
     @Override
-    public List<ConsumptionRecordRes> getMyConsumptions(String userId, QueryReq<ConsumptionRecordCondition> req) {
+    public PageResult<ConsumptionRecordRes> getMyConsumptions(String userId, QueryReq<ConsumptionRecordCondition> req) {
         log.info("📋 查詢用戶消費紀錄: userId={}", userId);
-        
-        // 查該用戶的所有紀錄
-        List<ConsumptionRecord> records = consumptionRecordRepository.selectByUserId(userId);
-        
-        ConsumptionRecordCondition condition = req != null ? req.getCondition() : null;
-        
-        // 動態篩選
-        List<ConsumptionRecord> filtered = filterRecords(records, condition);
-        
-        log.info("✅ 查詢到 {} 筆用戶消費紀錄", filtered.size());
-        return filtered.stream().map(this::convertToRes).collect(Collectors.toList());
+
+        QueryReq<ConsumptionRecordCondition> safeReq = normalizeReq(req);
+        ConsumptionRecordCondition condition = safeReq.getCondition();
+        condition.setUserId(userId);
+
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
+        int offset = (page - 1) * size;
+
+        long total = consumptionRecordRepository.countByCondition(condition);
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        var records = consumptionRecordRepository.selectByConditionPaged(condition, offset, size);
+        var items = records.stream().map(this::convertToRes).collect(Collectors.toList());
+
+        log.info("✅ 查詢到 {} 筆用戶消費紀錄（本頁 {} 筆）", total, items.size());
+        return PageResult.of(page, size, total, items);
     }
 
     @Override
-    public List<ConsumptionRecordRes> queryConsumptions(QueryReq<ConsumptionRecordCondition> req) {
+    public PageResult<ConsumptionRecordRes> queryConsumptions(QueryReq<ConsumptionRecordCondition> req) {
         log.info("📋 後台查詢所有消費紀錄");
         
-        // 查全部紀錄
-        List<ConsumptionRecord> records = consumptionRecordRepository.selectAll();
-        
-        ConsumptionRecordCondition condition = req != null ? req.getCondition() : null;
-        
-        // 動態篩選
-        List<ConsumptionRecord> filtered = filterRecords(records, condition);
-        
-        log.info("✅ 查詢到 {} 筆消費紀錄", filtered.size());
-        return filtered.stream().map(this::convertToRes).collect(Collectors.toList());
+        QueryReq<ConsumptionRecordCondition> safeReq = normalizeReq(req);
+        ConsumptionRecordCondition condition = safeReq.getCondition();
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
+        int offset = (page - 1) * size;
+
+        long total = consumptionRecordRepository.countByCondition(condition);
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        var records = consumptionRecordRepository.selectByConditionPaged(condition, offset, size);
+        var items = records.stream().map(this::convertToRes).collect(Collectors.toList());
+
+        log.info("✅ 查詢到 {} 筆消費紀錄（本頁 {} 筆）", total, items.size());
+        return PageResult.of(page, size, total, items);
     }
 
-    /**
-     * 通用篩選邏輯
-     */
-    private List<ConsumptionRecord> filterRecords(List<ConsumptionRecord> records, ConsumptionRecordCondition condition) {
-        return records.stream()
-            .filter(record -> {
-                if (condition == null) return true;
-                
-                // 用戶 ID
-                if (isNotBlank(condition.getUserId()) 
-                    && !condition.getUserId().equals(record.getUserId())) {
-                    return false;
-                }
-                
-                // 消費類型
-                if (isNotBlank(condition.getType()) 
-                    && !condition.getType().equals(record.getType())) {
-                    return false;
-                }
-                
-                // 賞品 ID
-                if (isNotBlank(condition.getLotteryId()) 
-                    && !condition.getLotteryId().equals(record.getLotteryId())) {
-                    return false;
-                }
-                
-                // 訂單編號
-                if (isNotBlank(condition.getOrderNumber()) 
-                    && record.getOrderNumber() != null
-                    && !record.getOrderNumber().contains(condition.getOrderNumber())) {
-                    return false;
-                }
-                
-                // 關鍵字搜尋
-                if (isNotBlank(condition.getKeyword())) {
-                    String kw = condition.getKeyword().toLowerCase();
-                    boolean match = (record.getLotteryTitle() != null && record.getLotteryTitle().toLowerCase().contains(kw))
-                            || (record.getOrderNumber() != null && record.getOrderNumber().toLowerCase().contains(kw))
-                            || (record.getDescription() != null && record.getDescription().toLowerCase().contains(kw));
-                    if (!match) return false;
-                }
-                
-                // 時間範圍篩選（BaseCondition 使用 LocalDate）
-                if (condition.getCreatedAtStart() != null
-                    && record.getCreatedAt() != null
-                    && record.getCreatedAt().toLocalDate().isBefore(condition.getCreatedAtStart())) {
-                    return false;
-                }
-                if (condition.getCreatedAtEnd() != null
-                    && record.getCreatedAt() != null
-                    && record.getCreatedAt().toLocalDate().isAfter(condition.getCreatedAtEnd())) {
-                    return false;
-                }
-                
-                return true;
-            })
-            .collect(Collectors.toList());
+    private QueryReq<ConsumptionRecordCondition> normalizeReq(QueryReq<ConsumptionRecordCondition> req) {
+        if (req == null) {
+            req = new QueryReq<>();
+        }
+        if (req.getCondition() == null) {
+            req.setCondition(new ConsumptionRecordCondition());
+        }
+        return req;
+    }
+
+    private int resolvePage(Integer page) {
+        return page != null && page > 0 ? page : 1;
+    }
+
+    private int resolveSize(Integer size) {
+        if (size == null || size < 1) {
+            return 20;
+        }
+        return Math.min(size, 100);
     }
 
     private ConsumptionRecordRes convertToRes(ConsumptionRecord record) {
@@ -171,7 +147,4 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
         }
     }
 
-    private boolean isNotBlank(String str) {
-        return str != null && !str.trim().isEmpty();
-    }
 }

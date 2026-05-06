@@ -1,6 +1,7 @@
 package com.group.admin.service;
 
 import com.group.admin.req.recharge.RechargeReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.recharge.RechargeRes;
 import com.group.admin.gateway.GatewayCallbackResult;
 import com.group.admin.res.wallet.RechargeOrderRes;
@@ -36,7 +37,7 @@ public interface RechargeService {
      * @param size 每頁筆數
      * @return 儲值記錄列表
      */
-    java.util.List<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size);
+    PageResult<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size);
     
     /**
      * 確認支付（模擬支付網關回調）

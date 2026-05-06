@@ -46,6 +46,7 @@ import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryListRes;
 import com.group.admin.res.lottery.LotteryRes;
+import com.group.admin.service.CategoryService;
 import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
 
@@ -73,6 +74,7 @@ public class LotteryServiceImpl implements LotteryService {
     private final StoreMapper storeMapper;
     private final LotteryTicketService lotteryTicketService;
     private final LotteryTicketMapper lotteryTicketMapper;
+    private final CategoryService categoryService;
     
     private final Random random = new Random();
 
@@ -82,6 +84,9 @@ public class LotteryServiceImpl implements LotteryService {
     @Transactional
     public LotteryRes createLottery(LotteryCreateReq req, String operatorId) {
         log.info("創建抽獎商品: title={}, operatorId={}", req.getTitle(), operatorId);
+
+        String normalizedTheme = upsertThemeIfPresent(req.getTheme());
+        categoryService.validateTagNames(req.getTags());
         
         Lottery lottery = new Lottery();
         lottery.setId(UUID.randomUUID().toString());
@@ -138,7 +143,7 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
         lottery.setHotCount(req.getHotCount());
-        lottery.setTheme(req.getTheme());
+        lottery.setTheme(normalizedTheme);
         lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
         lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
         // ✅ 不再設定 weight
@@ -168,6 +173,10 @@ public class LotteryServiceImpl implements LotteryService {
         Lottery lottery = lotteryMapper.selectByPrimaryKey(req.getId());
         if (lottery == null) {
             throw new BusinessException("商品不存在");
+        }
+
+        if (req.getTags() != null) {
+            categoryService.validateTagNames(req.getTags());
         }
         
         // 狀態變更（上/下架）永遠允許
@@ -318,15 +327,15 @@ public class LotteryServiceImpl implements LotteryService {
             criteria.andCategoryEqualTo(req.getCategory());
         }
         if (isNotBlank(req.getTheme())) {
-            criteria.andThemeEqualTo(req.getTheme());
+            criteria.andThemeEqualTo(categoryService.resolveCanonicalThemeName(req.getTheme()));
         }
         if (isNotBlank(req.getStatus())) {
             criteria.andStatusEqualTo(req.getStatus());
         }
         
         // 設置排序
-        String sortBy = isNotBlank(req.getSortBy()) ? req.getSortBy() : "created_at";
-        String sortDirection = isNotBlank(req.getSortDirection()) ? req.getSortDirection() : "DESC";
+        String sortBy = normalizeLotterySortColumn(req.getSortBy());
+        String sortDirection = normalizeSortOrder(req.getSortDirection(), "DESC");
         example.setOrderByClause(sortBy + " " + sortDirection);
         
         // 獲取總數
@@ -353,7 +362,11 @@ public class LotteryServiceImpl implements LotteryService {
     @Override
     public PageResult<LotteryListRes> queryLotteriesByStore(String storeId, LotteryQueryReq req) {
         req.setStoreId(storeId);
-        return queryLotteries(req);
+        PageResult<LotteryRes> pageResult = queryLotteries(toQueryReq(req));
+        List<LotteryListRes> items = pageResult.getData().stream()
+                .map(this::convertToListRes)
+                .collect(Collectors.toList());
+        return PageResult.of(pageResult.getPage(), pageResult.getSize(), pageResult.getTotal(), items);
     }
 
     // ==================== 狀態管理 ====================
@@ -813,6 +826,31 @@ public class LotteryServiceImpl implements LotteryService {
     }
 
     /**
+     * 轉換為列表響應（新架構查詢結果）
+     */
+    private LotteryListRes convertToListRes(LotteryRes lottery) {
+        LotteryListRes res = new LotteryListRes();
+        res.setId(lottery.getId());
+        res.setStoreId(lottery.getStoreId());
+        res.setStoreName(lottery.getStoreName());
+        res.setTitle(lottery.getTitle());
+        res.setImageUrl(lottery.getImageUrl());
+        res.setCategory(lottery.getCategory());
+        res.setCategoryName(lottery.getCategoryName());
+        res.setPricePerDraw(lottery.getPricePerDraw());
+        res.setCurrentPrice(lottery.getCurrentPrice());
+        res.setStatus(lottery.getStatus());
+        res.setStatusName(lottery.getStatusName());
+        res.setTotalDraws(lottery.getTotalDraws());
+        res.setRemainingDraws(lottery.getRemainingDraws());
+        res.setTotalPrizes(lottery.getTotalPrizes());
+        res.setRemainingPrizes(lottery.getRemainingPrizes());
+        res.setOrderNum(lottery.getOrderNum());
+        res.setCreatedAt(lottery.getCreatedAt());
+        return res;
+    }
+
+    /**
      * 解析多連抽選項
      */
     private List<Integer> parseMultiDrawOptions(String json) {
@@ -833,10 +871,13 @@ public class LotteryServiceImpl implements LotteryService {
      * 查詢商品列表（新架構）
      */
     @Override
-    public List<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req) {
+    public PageResult<LotteryRes> queryLotteries(QueryReq<LotteryCondition> req) {
         log.info("🔍 [新架構] 查詢商品列表: {}", req);
-        
-        LotteryCondition condition = req != null ? req.getCondition() : null;
+
+        QueryReq<LotteryCondition> safeReq = normalizeReq(req);
+        LotteryCondition condition = safeReq.getCondition();
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
         
         // 使用 MyBatis Example 動態 SQL
         LotteryExample example = new LotteryExample();
@@ -869,7 +910,7 @@ public class LotteryServiceImpl implements LotteryService {
             
             // theme：精確匹配
             if (isNotBlank(condition.getTheme())) {
-                criteria.andThemeEqualTo(condition.getTheme());
+                criteria.andThemeEqualTo(categoryService.resolveCanonicalThemeName(condition.getTheme()));
             }
             
             // 價格範圍
@@ -899,9 +940,9 @@ public class LotteryServiceImpl implements LotteryService {
         }
         
         // 排序
-        if (req != null && isNotBlank(req.getSortBy())) {
-            String order = isNotBlank(req.getSortOrder()) ? req.getSortOrder() : "ASC";
-            example.setOrderByClause(req.getSortBy() + " " + order);
+        if (isNotBlank(safeReq.getSortBy())) {
+            String order = normalizeSortOrder(safeReq.getSortOrder(), "ASC");
+            example.setOrderByClause(normalizeLotterySortColumn(safeReq.getSortBy()) + " " + order);
         } else {
             // ✅ Admin 查詢時預設按 store_id ASC, created_at DESC 排序
             // 這樣同一店家的商品會排在一起，最新的在前面
@@ -912,12 +953,23 @@ public class LotteryServiceImpl implements LotteryService {
             }
         }
         
-        // ✅ 查詢全部資料（前端做分頁）
+        long total = lotteryMapper.countByExample(example);
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        // ✅ 查詢全部資料後在 service 層做分頁（維持既有 SQL 結構）
         List<Lottery> lotteries = lotteryMapper.selectByExample(example);
-        
-        log.info("✅ 查詢成功: 共 {} 筆", lotteries.size());
-        
-        List<LotteryRes> results = lotteries.stream()
+
+        int offset = (page - 1) * size;
+        int endIndex = Math.min(offset + size, lotteries.size());
+        List<Lottery> pageLotteries = offset < lotteries.size()
+                ? lotteries.subList(offset, endIndex)
+                : new ArrayList<>();
+
+        log.info("✅ 查詢成功: 共 {} 筆，本頁 {} 筆", total, pageLotteries.size());
+
+        List<LotteryRes> results = pageLotteries.stream()
                 .map(this::convertToResNew)
                 .collect(Collectors.toList());
 
@@ -925,7 +977,7 @@ public class LotteryServiceImpl implements LotteryService {
             sortFrontendVisibleLotteries(results);
         }
 
-        return results;
+        return PageResult.of(page, size, total, results);
     }
     
     /**
@@ -939,6 +991,9 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getStoreId() == null) {
             throw new BusinessException("店家 ID 不能為空");
         }
+
+        String normalizedTheme = upsertThemeIfPresent(req.getTheme());
+        categoryService.validateTagNames(req.getTags());
         
         Lottery lottery = new Lottery();
         lottery.setId(UUID.randomUUID().toString());
@@ -976,7 +1031,7 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setOrderNum(req.getOrderNum());
         lottery.setRemark(req.getRemark());
         lottery.setHotCount(req.getHotCount() != null ? req.getHotCount() : 0);
-        lottery.setTheme(req.getTheme());
+        lottery.setTheme(normalizedTheme);
         lottery.setContent(req.getContent());
         lottery.setScheduledAt(req.getScheduledAt());
         lottery.setStartTime(req.getStartTime());
@@ -1018,6 +1073,10 @@ public class LotteryServiceImpl implements LotteryService {
         Lottery lottery = lotteryMapper.selectByPrimaryKey(id);
         if (lottery == null) {
             throw new BusinessException("商品不存在");
+        }
+
+        if (req.getTags() != null) {
+            categoryService.validateTagNames(req.getTags());
         }
         
         String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
@@ -1091,7 +1150,7 @@ public class LotteryServiceImpl implements LotteryService {
             lottery.setRemark(req.getRemark());
         }
         if (req.getTheme() != null) {
-            lottery.setTheme(req.getTheme());
+            lottery.setTheme(upsertThemeIfPresent(req.getTheme()));
         }
         if (req.getContent() != null) {
             lottery.setContent(req.getContent());
@@ -1152,11 +1211,16 @@ public class LotteryServiceImpl implements LotteryService {
         
         lottery.setUpdatedAt(LocalDateTime.now());
         
-        lotteryMapper.updateByPrimaryKey(lottery);
+        lotteryMapper.updateByPrimaryKeyWithBLOBs(lottery);
         
         log.info("✅ 更新成功");
         
-        return convertToResNew(lottery);
+        Lottery refreshedLottery = lotteryMapper.selectByPrimaryKey(id);
+        if (refreshedLottery == null) {
+            throw new BusinessException("商品更新後查詢失敗");
+        }
+
+        return convertToResNew(refreshedLottery);
     }
     
     /**
@@ -1482,8 +1546,8 @@ public class LotteryServiceImpl implements LotteryService {
                 if (!isNotBlank(requestGameMode)) {
                     throw new BusinessException("刮刮樂商品必須設定 gameMode");
                 }
-                if (!List.of("SCRATCH_STORE", "SCRATCH_PLAYER", "RANDOM").contains(requestGameMode)) {
-                    throw new BusinessException("刮刮樂 gameMode 僅允許 SCRATCH_STORE/SCRATCH_PLAYER/RANDOM");
+                if (!List.of("SCRATCH_STORE", "SCRATCH_PLAYER").contains(requestGameMode)) {
+                    throw new BusinessException("刮刮樂 gameMode 僅允許 SCRATCH_STORE/SCRATCH_PLAYER");
                 }
                 return requestGameMode;
             }
@@ -2109,8 +2173,8 @@ public class LotteryServiceImpl implements LotteryService {
         
         // 排序
         if (req != null && req.getSortBy() != null) {
-            String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
-            example.setOrderByClause(req.getSortBy() + " " + order);
+            String order = normalizeSortOrder(req.getSortOrder(), "ASC");
+            example.setOrderByClause(normalizeLotterySortColumn(req.getSortBy()) + " " + order);
         } else {
             example.setOrderByClause("created_at DESC");
         }
@@ -2302,6 +2366,17 @@ public class LotteryServiceImpl implements LotteryService {
     }
 
     /**
+     * 商品主題採用共享字典：有值時自動建立或回收既有主題名稱。
+     */
+    private String upsertThemeIfPresent(String theme) {
+        if (!isNotBlank(theme)) {
+            return null;
+        }
+
+        return categoryService.upsertTheme(theme, null, null).getName();
+    }
+
+    /**
      * 判斷字串是否非空白
      * 空字串 "" 視為空白
      * 
@@ -2310,6 +2385,72 @@ public class LotteryServiceImpl implements LotteryService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    private QueryReq<LotteryCondition> normalizeReq(QueryReq<LotteryCondition> req) {
+        if (req == null) {
+            req = new QueryReq<>();
+        }
+        if (req.getCondition() == null) {
+            req.setCondition(new LotteryCondition());
+        }
+        return req;
+    }
+
+    private QueryReq<LotteryCondition> toQueryReq(LotteryQueryReq req) {
+        QueryReq<LotteryCondition> queryReq = new QueryReq<>();
+        LotteryCondition condition = new LotteryCondition();
+        condition.setStoreId(req.getStoreId());
+        condition.setTitle(req.getKeyword());
+        condition.setCategory(req.getCategory());
+        condition.setTheme(req.getTheme());
+        condition.setStatus(req.getStatus());
+        queryReq.setCondition(condition);
+        queryReq.setPage(req.getPage());
+        queryReq.setSize(req.getSize());
+        queryReq.setSortBy(req.getSortBy());
+        queryReq.setSortOrder(req.getSortDirection());
+        return queryReq;
+    }
+
+    private String normalizeLotterySortColumn(String rawSortBy) {
+        if (!isNotBlank(rawSortBy)) {
+            return "created_at";
+        }
+        return switch (rawSortBy) {
+            case "createdAt", "created_at" -> "created_at";
+            case "orderNum", "order_num" -> "order_num";
+            case "weight" -> "weight";
+            case "hotCount", "hot_count" -> "hot_count";
+            case "pricePerDraw", "price_per_draw" -> "price_per_draw";
+            case "discountedPrice", "discounted_price" -> "discounted_price";
+            case "totalDraws", "total_draws" -> "total_draws";
+            case "maxDraws", "max_draws" -> "max_draws";
+            case "updatedAt", "updated_at" -> "updated_at";
+            case "title" -> "title";
+            case "status" -> "status";
+            case "category" -> "category";
+            case "storeId", "store_id" -> "store_id";
+            default -> "created_at";
+        };
+    }
+
+    private String normalizeSortOrder(String rawSortOrder, String defaultOrder) {
+        if (!isNotBlank(rawSortOrder)) {
+            return defaultOrder;
+        }
+        return "ASC".equalsIgnoreCase(rawSortOrder) ? "ASC" : "DESC";
+    }
+
+    private int resolvePage(Integer page) {
+        return page != null && page > 0 ? page : 1;
+    }
+
+    private int resolveSize(Integer size) {
+        if (size == null || size < 1) {
+            return 20;
+        }
+        return Math.min(size, 100);
     }
 
     // ==================== T010: 自動下架（checkAndDelist）====================

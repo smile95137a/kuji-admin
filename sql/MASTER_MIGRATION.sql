@@ -181,6 +181,48 @@ CREATE TABLE IF NOT EXISTS `contact_inquiry` (
   INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合作諮詢表';
 
+-- lottery_theme（商品主題字典）
+CREATE TABLE IF NOT EXISTS `lottery_theme` (
+  `id`            VARCHAR(36)  NOT NULL,
+  `name`          VARCHAR(100) NOT NULL,
+  `image_url`     VARCHAR(500) DEFAULT NULL,
+  `status`        VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/INACTIVE',
+  `display_order` INT          NOT NULL DEFAULT 0,
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_lottery_theme_name` (`name`),
+  INDEX `idx_lottery_theme_status_order` (`status`, `display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品主題字典（跨店家共享）';
+
+-- lottery_tag（商品標籤字典）
+CREATE TABLE IF NOT EXISTS `lottery_tag` (
+  `id`            VARCHAR(36)  NOT NULL,
+  `name`          VARCHAR(100) NOT NULL,
+  `status`        VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/INACTIVE',
+  `display_order` INT          NOT NULL DEFAULT 0,
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_lottery_tag_name` (`name`),
+  INDEX `idx_lottery_tag_status_order` (`status`, `display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品標籤字典（全域）';
+
+-- lottery_theme_alias（主題同義詞）
+CREATE TABLE IF NOT EXISTS `lottery_theme_alias` (
+  `id`              VARCHAR(36)  NOT NULL,
+  `theme_id`        VARCHAR(36)  NOT NULL,
+  `alias_name`      VARCHAR(100) NOT NULL,
+  `normalized_name` VARCHAR(100) NOT NULL,
+  `status`          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/INACTIVE',
+  `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_theme_alias_normalized_name` (`normalized_name`),
+  INDEX `idx_theme_alias_theme_id` (`theme_id`),
+  INDEX `idx_theme_alias_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主題同義詞對照表';
+
 -- ============================================================
 -- PHASE 1：金流相關表（依賴 user 表）
 -- ============================================================
@@ -572,6 +614,78 @@ INSERT IGNORE INTO `shipping_method` (`id`, `name`, `code`, `provider`, `fee`, `
 INSERT IGNORE INTO `marquee` (`id`, `title`, `content`, `start_time`, `end_time`, `is_enabled`, `display_order`) VALUES
   (UUID(), '歡迎來到 KUJI 一番賞', '全台最大的一番賞線上抽獎平台！', NOW(), DATE_ADD(NOW(), INTERVAL 365 DAY), 1, 1);
 
+-- lottery_theme / lottery_tag 舊資料回填
+-- 說明：將既有 lottery.theme / lottery.tags 內容同步灌入字典表，避免上線後前台分類為空
+INSERT IGNORE INTO `lottery_theme` (`id`, `name`, `image_url`, `status`, `display_order`, `created_at`, `updated_at`)
+SELECT
+  UUID(),
+  TRIM(l.`theme`) AS `name`,
+  NULL,
+  'ACTIVE',
+  0,
+  NOW(),
+  NOW()
+FROM `lottery` l
+WHERE l.`theme` IS NOT NULL
+  AND TRIM(l.`theme`) <> '';
+
+-- tags = JSON array（例：["火影","動漫"]）
+INSERT IGNORE INTO `lottery_tag` (`id`, `name`, `status`, `display_order`, `created_at`, `updated_at`)
+SELECT
+  UUID(),
+  TRIM(jt.`tag`) AS `name`,
+  'ACTIVE',
+  0,
+  NOW(),
+  NOW()
+FROM `lottery` l
+JOIN JSON_TABLE(
+  l.`tags`,
+  '$[*]' COLUMNS (
+    `tag` VARCHAR(100) PATH '$'
+  )
+) jt
+WHERE l.`tags` IS NOT NULL
+  AND TRIM(l.`tags`) <> ''
+  AND JSON_VALID(l.`tags`)
+  AND JSON_TYPE(CAST(l.`tags` AS JSON)) = 'ARRAY'
+  AND TRIM(jt.`tag`) <> '';
+
+-- tags = 逗號字串（例：火影,動漫）
+INSERT IGNORE INTO `lottery_tag` (`id`, `name`, `status`, `display_order`, `created_at`, `updated_at`)
+SELECT
+  UUID(),
+  TRIM(jt.`tag`) AS `name`,
+  'ACTIVE',
+  0,
+  NOW(),
+  NOW()
+FROM `lottery` l
+JOIN JSON_TABLE(
+  CONCAT(
+    '["',
+    REPLACE(
+      REPLACE(
+        REPLACE(TRIM(l.`tags`), '\\', '\\\\'),
+        '"', '\\"'
+      ),
+      ',',
+      '","'
+    ),
+    '"]'
+  ),
+  '$[*]' COLUMNS (
+    `tag` VARCHAR(100) PATH '$'
+  )
+) jt
+WHERE l.`tags` IS NOT NULL
+  AND TRIM(l.`tags`) <> ''
+  AND (
+    NOT JSON_VALID(l.`tags`)
+    OR JSON_TYPE(CAST(l.`tags` AS JSON)) <> 'ARRAY'
+  )
+  AND TRIM(jt.`tag`) <> '';
+
 -- district 初始資料（台北市）
 INSERT IGNORE INTO `district` (`id`, `city`, `district_name`, `postal_code`, `display_order`, `is_active`) VALUES
   (UUID(), '台北市', '中正區', '100', 1, 1), (UUID(), '台北市', '大同區', '103', 2, 1),
@@ -596,6 +710,57 @@ UPDATE `point_log`           SET `point_type`  = UPPER(`point_type`)  WHERE `poi
 -- referral_record：每個 user 只能被推薦一次
 -- ⚠️ 若 user_id 有重複資料，此指令會失敗，請先清理
 -- ALTER TABLE `referral_record` ADD UNIQUE INDEX `idx_referral_record_user_id` (`user_id`);
+
+-- ============================================================
+-- PHASE 9：資料品質檢查（健康檢查 / 重複主題候選）
+-- ============================================================
+
+-- 1) 字典資料量
+-- SELECT COUNT(*) AS active_theme_count FROM lottery_theme WHERE status = 'ACTIVE';
+-- SELECT COUNT(*) AS active_tag_count   FROM lottery_tag   WHERE status = 'ACTIVE';
+
+-- 2) 疑似重複主題（忽略大小寫 + 空白正規化）
+-- SELECT
+--   LOWER(REGEXP_REPLACE(TRIM(name), '\\s+', ' ')) AS normalized_name,
+--   COUNT(*) AS cnt,
+--   GROUP_CONCAT(name ORDER BY name SEPARATOR ' | ') AS duplicated_names
+-- FROM lottery_theme
+-- WHERE status = 'ACTIVE'
+-- GROUP BY LOWER(REGEXP_REPLACE(TRIM(name), '\\s+', ' '))
+-- HAVING COUNT(*) > 1;
+
+-- 3) 商品 theme 未收錄字典
+-- SELECT DISTINCT l.theme
+-- FROM lottery l
+-- LEFT JOIN lottery_theme t ON t.name = l.theme AND t.status = 'ACTIVE'
+-- WHERE l.theme IS NOT NULL
+--   AND TRIM(l.theme) <> ''
+--   AND t.id IS NULL;
+
+-- 4) 商品 tags 含非法值（不在 ACTIVE 字典）
+-- SELECT l.id AS lottery_id, l.title, l.tags
+-- FROM lottery l
+-- WHERE l.tags IS NOT NULL
+--   AND TRIM(l.tags) <> ''
+--   AND EXISTS (
+--     SELECT 1
+--     FROM JSON_TABLE(
+--       CASE
+--         WHEN JSON_VALID(l.tags) AND JSON_TYPE(CAST(l.tags AS JSON)) = 'ARRAY' THEN l.tags
+--         ELSE CONCAT(
+--           '["',
+--           REPLACE(REPLACE(REPLACE(TRIM(l.tags), '\\\\', '\\\\\\\\'), '"', '\\\\"'), ',', '","'),
+--           '"]'
+--         )
+--       END,
+--       '$[*]' COLUMNS (tag VARCHAR(100) PATH '$')
+--     ) jt
+--     LEFT JOIN lottery_tag tg
+--       ON LOWER(tg.name) = LOWER(TRIM(jt.tag))
+--      AND tg.status = 'ACTIVE'
+--     WHERE TRIM(jt.tag) <> ''
+--       AND tg.id IS NULL
+--   );
 
 -- ============================================================
 -- 完成！

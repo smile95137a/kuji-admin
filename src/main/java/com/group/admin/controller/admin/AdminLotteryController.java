@@ -1,5 +1,7 @@
 package com.group.admin.controller.admin;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.annotation.AuditLog;
 import com.group.admin.entity.StoreUser;
 import com.group.admin.enums.AuditLogType;
@@ -14,6 +16,7 @@ import com.group.admin.req.lottery.LotteryStatusChangeReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
 import com.group.admin.req.lottery.LotteryWithPrizesCreateReq;
 import com.group.admin.req.lottery.LotteryWithPrizesUpdateReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.res.lottery.LotteryWithPrizesRes;
 import com.group.admin.service.LotteryService;
@@ -27,8 +30,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.web.bind.annotation.*;
 
+import java.beans.PropertyDescriptor;
 import java.util.List;
 
 /**
@@ -55,6 +61,7 @@ public class AdminLotteryController {
     private final LotteryService lotteryService;
     private final LotteryTicketService lotteryTicketService;
     private final StoreUserMapper storeUserMapper;
+    private final ObjectMapper objectMapper;
 
     /**
      * 查詢商品列表（後台）
@@ -69,7 +76,7 @@ public class AdminLotteryController {
     @PostMapping("/list")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "查詢商品列表", description = "後台查詢商品，自動過濾當前店家")
-    public ResponseEntity<List<LotteryRes>> queryLotteries(
+    public ResponseEntity<PageResult<LotteryRes>> queryLotteries(
             @RequestBody(required = false) QueryReq<LotteryCondition> req) {
         
         String userId = SecurityUtils.getCurrentUserId();
@@ -108,9 +115,9 @@ public class AdminLotteryController {
             log.info("👑 Admin 可查看所有店家的商品");
         }
         
-        List<LotteryRes> result = lotteryService.queryLotteries(req);
+        PageResult<LotteryRes> result = lotteryService.queryLotteries(req);
         
-        log.info("✅ 查詢成功: 共 {} 筆", result.size());
+        log.info("✅ 查詢成功: 共 {} 筆", result.getTotal());
         return ResponseEntity.ok(result);
     }
 
@@ -399,16 +406,67 @@ public class AdminLotteryController {
     @Operation(summary = "更新商品與獎品", description = "一支 API 同時更新商品和獎品")
     public ResponseEntity<LotteryWithPrizesRes> updateLotteryWithPrizes(
             @PathVariable String lotteryId,
-            @Valid @RequestBody LotteryWithPrizesUpdateReq req) {
+            @RequestBody JsonNode body) {
         
         String userId = SecurityUtils.getCurrentUserId();
         log.info("📝 更新商品與獎品: userId={}, lotteryId={}", userId, lotteryId);
-        
+
+        LotteryWithPrizesUpdateReq req = parseLotteryWithPrizesUpdateReq(body);
         req.setLotteryId(lotteryId);
         LotteryWithPrizesRes result = lotteryService.updateLotteryWithPrizes(req, userId);
         
         log.info("✅ 更新成功: lotteryId={}", result.getId());
         return ResponseEntity.ok(result);
+    }
+
+    private LotteryWithPrizesUpdateReq parseLotteryWithPrizesUpdateReq(JsonNode body) {
+        LotteryWithPrizesUpdateReq req = objectMapper.convertValue(body, LotteryWithPrizesUpdateReq.class);
+
+        // 相容兩種格式：
+        // 1. 標準格式：{ lottery: { ... }, prizes: [...] }
+        // 2. 舊格式：{ title: ..., description: ..., prizes: [...] }
+        // 若兩者同時存在，優先保留 lottery 內的值，外層扁平欄位只補缺漏。
+        if (body != null && body.isObject()) {
+            LotteryUpdateReq flatReq = objectMapper.convertValue(body, LotteryUpdateReq.class);
+            if (req.getLottery() == null) {
+                req.setLottery(flatReq);
+            } else {
+                req.setLottery(mergeLotteryUpdateReq(req.getLottery(), flatReq));
+            }
+        }
+
+        return req;
+    }
+
+    private LotteryUpdateReq mergeLotteryUpdateReq(LotteryUpdateReq primary, LotteryUpdateReq fallback) {
+        if (primary == null) {
+            return fallback;
+        }
+        if (fallback == null) {
+            return primary;
+        }
+
+        LotteryUpdateReq merged = new LotteryUpdateReq();
+        copyNonNullProperties(fallback, merged);
+        copyNonNullProperties(primary, merged);
+        return merged;
+    }
+
+    private void copyNonNullProperties(Object source, Object target) {
+        BeanWrapper sourceWrapper = new BeanWrapperImpl(source);
+        BeanWrapper targetWrapper = new BeanWrapperImpl(target);
+
+        for (PropertyDescriptor propertyDescriptor : sourceWrapper.getPropertyDescriptors()) {
+            String propertyName = propertyDescriptor.getName();
+            if ("class".equals(propertyName) || !sourceWrapper.isReadableProperty(propertyName)) {
+                continue;
+            }
+
+            Object value = sourceWrapper.getPropertyValue(propertyName);
+            if (value != null && targetWrapper.isWritableProperty(propertyName)) {
+                targetWrapper.setPropertyValue(propertyName, value);
+            }
+        }
     }
 
     @GetMapping("/with-prizes/{lotteryId}")

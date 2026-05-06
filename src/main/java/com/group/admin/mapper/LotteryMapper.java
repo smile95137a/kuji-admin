@@ -20,6 +20,11 @@ public interface LotteryMapper {
 
     List<Lottery> selectByExample(LotteryExample example);
 
+    List<Lottery> selectByExampleWithPage(
+            @Param("example") LotteryExample example,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
+
     Lottery selectByPrimaryKey(String id);
 
     int updateByExampleSelective(@Param("row") Lottery row, @Param("example") LotteryExample example);

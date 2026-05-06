@@ -11,6 +11,7 @@ import com.group.admin.mapper.UserMapper;
 import com.group.admin.mapper.WalletTransactionMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.wallet.CoinAdjustReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.wallet.UserCoinRes;
 import com.group.admin.res.wallet.CoinTransactionRes;
 import com.group.admin.service.CoinService;
@@ -261,8 +262,9 @@ public class CoinServiceImpl implements CoinService {
     }
     
     @Override
-    public List<CoinTransactionRes> getTransactions(QueryReq<CoinTransactionCondition> req) {
-        CoinTransactionCondition condition = req != null ? req.getCondition() : null;
+    public PageResult<CoinTransactionRes> getTransactions(QueryReq<CoinTransactionCondition> req) {
+        QueryReq<CoinTransactionCondition> safeReq = normalizeReq(req);
+        CoinTransactionCondition condition = safeReq.getCondition();
         
         WalletTransactionExample example = new WalletTransactionExample();
         WalletTransactionExample.Criteria criteria = example.createCriteria();
@@ -293,9 +295,18 @@ public class CoinServiceImpl implements CoinService {
         }
         
         example.setOrderByClause("created_at DESC");
-        
-        List<WalletTransaction> transactions = walletTransactionMapper.selectByExample(example);
-        return transactions.stream().map(this::convertTransactionToRes).collect(Collectors.toList());
+
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
+        int offset = (page - 1) * size;
+
+        long total = walletTransactionMapper.countByExample(example);
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        List<WalletTransaction> transactions = walletTransactionMapper.selectByExamplePaged(example, offset, size);
+        return PageResult.of(page, size, total, transactions.stream().map(this::convertTransactionToRes).collect(Collectors.toList()));
     }
     
     @Override
@@ -374,5 +385,26 @@ public class CoinServiceImpl implements CoinService {
      */
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    private QueryReq<CoinTransactionCondition> normalizeReq(QueryReq<CoinTransactionCondition> req) {
+        if (req == null) {
+            req = new QueryReq<>();
+        }
+        if (req.getCondition() == null) {
+            req.setCondition(new CoinTransactionCondition());
+        }
+        return req;
+    }
+
+    private int resolvePage(Integer page) {
+        return page != null && page > 0 ? page : 1;
+    }
+
+    private int resolveSize(Integer size) {
+        if (size == null || size < 1) {
+            return 20;
+        }
+        return Math.min(size, 100);
     }
 }

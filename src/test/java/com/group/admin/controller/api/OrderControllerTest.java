@@ -5,6 +5,7 @@ import com.group.admin.condition.OrderCondition;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.order.ShipInfoReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.service.OrderService;
@@ -233,13 +234,14 @@ class OrderControllerTest extends BaseControllerTest {
                 .shippingStatus("PENDING")
                 .build();
 
-        when(orderService.getOrders(any(QueryReq.class))).thenReturn(List.of(userOrder));
+        PageResult<OrderRes> orders = PageResult.of(1, 10, 1L, List.of(userOrder));
+        when(orderService.getOrders(any(QueryReq.class))).thenReturn(orders);
 
         mockMvc.perform(post("/order/list")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].userId").value(USER_ID));
+                .andExpect(jsonPath("$.data[0].userId").value(USER_ID));
     }
 
     // ===== T025: POST /order/list 依狀態篩選 =====
@@ -255,7 +257,8 @@ class OrderControllerTest extends BaseControllerTest {
                 .shippingStatus("SHIPPED")
                 .build();
 
-        when(orderService.getOrders(any(QueryReq.class))).thenReturn(List.of(shippedOrder));
+        PageResult<OrderRes> orders = PageResult.of(1, 10, 1L, List.of(shippedOrder));
+        when(orderService.getOrders(any(QueryReq.class))).thenReturn(orders);
 
         QueryReq<OrderCondition> req = new QueryReq<>();
         OrderCondition cond = new OrderCondition();
@@ -266,6 +269,6 @@ class OrderControllerTest extends BaseControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].shippingStatus").value("SHIPPED"));
+                .andExpect(jsonPath("$.data[0].shippingStatus").value("SHIPPED"));
     }
 }

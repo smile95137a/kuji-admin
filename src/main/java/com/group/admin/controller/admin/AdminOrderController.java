@@ -6,6 +6,7 @@ import com.group.admin.req.order.CancelOrderReq;
 import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.UpdateOrderStatusReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.res.order.StatusLogRes;
@@ -39,13 +40,13 @@ public class AdminOrderController {
      * 查詢訂單列表（支援多條件查詢，角色自動限定店家範圍）
      */
     @PostMapping("/list")
-    public ResponseEntity<List<OrderRes>> getOrders(
+    public ResponseEntity<PageResult<OrderRes>> getOrders(
             @RequestBody(required = false) QueryReq<OrderCondition> req) {
         String currentUserId = SecurityUtils.getCurrentAdminUserId();
         String callerRole = resolveCallerRole();
         log.info("🔍 [Admin] 查詢訂單列表：userId={}, role={}", currentUserId, callerRole);
         
-        List<OrderRes> orders = orderService.getOrderList(req, currentUserId, callerRole);
+        PageResult<OrderRes> orders = orderService.getOrderList(req, currentUserId, callerRole);
         
         return ResponseEntity.ok(orders);
     }

@@ -6,6 +6,7 @@ import com.group.admin.req.store.CreateStoreReq;
 import com.group.admin.req.store.UpdateStoreReq;
 import com.group.admin.req.store.UpdateStoreStatusReq;
 import com.group.admin.res.PageResult;
+import com.group.admin.res.lottery.LotteryListItemRes;
 import com.group.admin.res.store.StoreDetailRes;
 import com.group.admin.res.store.StoreListItemRes;
 import com.group.admin.res.store.StoreRes;
@@ -34,6 +35,8 @@ public interface StoreService {
     PageResult<StoreListItemRes> listEnabledStores(int page, int size);
 
     StoreDetailRes getPublicStoreDetail(String storeId);
+
+    PageResult<LotteryListItemRes> getStoreProducts(String storeId, int page, int size);
 
     // ========== 店家選項相關 ==========
 

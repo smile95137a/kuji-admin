@@ -2,6 +2,7 @@ package com.group.admin.service;
 
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.wallet.CoinAdjustReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.wallet.UserCoinRes;
 import com.group.admin.res.wallet.CoinTransactionRes;
 import com.group.admin.condition.CoinTransactionCondition;
@@ -92,7 +93,7 @@ public interface CoinService {
      * @param req 查詢請求
      * @return 交易記錄列表
      */
-    List<CoinTransactionRes> getTransactions(QueryReq<CoinTransactionCondition> req);
+    PageResult<CoinTransactionRes> getTransactions(QueryReq<CoinTransactionCondition> req);
     
     /**
      * 檢查金幣餘額是否足夠

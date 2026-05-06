@@ -93,9 +93,11 @@ public class CategoryController {
             @Parameter(description = "主題名稱") @PathVariable String themeName) {
         
         log.info("🔢 查詢主題 {} 的商品數量", themeName);
+
+        String canonicalTheme = categoryService.resolveCanonicalThemeName(themeName);
         
         CategoryCondition condition = new CategoryCondition();
-        condition.setTheme(themeName);
+        condition.setTheme(canonicalTheme);
         condition.setStatus("ON_SHELF");
         
         QueryReq<CategoryCondition> req = new QueryReq<>();

@@ -8,6 +8,7 @@ import com.group.admin.mapper.RechargeRecordMapper;
 import com.group.admin.mapper.RechargePlanMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.recharge.RechargeReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.recharge.RechargeRes;
 import com.group.admin.service.CoinService;
 import com.group.admin.service.RechargeService;
@@ -19,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * 前台使用者儲值服務實現
@@ -138,7 +138,7 @@ public class RechargeServiceImpl implements RechargeService {
     
     @Override
     @Transactional(readOnly = true)
-    public List<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size) {
+    public PageResult<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size) {
         log.info("🔍 [Recharge] 查詢儲值記錄：userId={}, page={}, size={}", userId, page, size);
         
         // Step 1: 驗證使用者存在
@@ -147,23 +147,19 @@ public class RechargeServiceImpl implements RechargeService {
             throw new BusinessException("使用者不存在");
         }
         
-        // Step 2: 使用 Example 查詢儲值記錄（按建立時間降序）
-        com.group.admin.example.RechargeRecordExample example = new com.group.admin.example.RechargeRecordExample();
-        example.createCriteria().andUserIdEqualTo(userId);
-        example.setOrderByClause("created_at DESC");
-        
-        List<RechargeRecord> records = rechargeRecordMapper.selectByExample(example);
-        
-        // Step 3: 簡單分頁（前端也可以做分頁）
-        int start = (page - 1) * size;
-        int end = Math.min(start + size, records.size());
-        if (start >= records.size()) {
-            return List.of();
+        int currentPage = resolvePage(page);
+        int pageSize = resolveSize(size);
+        int offset = (currentPage - 1) * pageSize;
+
+        long total = rechargeRecordMapper.countByUserId(userId);
+        if (total == 0) {
+            return PageResult.empty(currentPage, pageSize);
         }
-        
-        return records.subList(start, end).stream()
+
+        List<RechargeRecord> records = rechargeRecordMapper.selectByUserIdPaged(userId, offset, pageSize);
+        return PageResult.of(currentPage, pageSize, total, records.stream()
                 .map(RechargeRes::from)
-                .collect(Collectors.toList());
+                .toList());
     }
     
     @Override
@@ -254,5 +250,16 @@ public class RechargeServiceImpl implements RechargeService {
         } else {
             log.warn("⚠️ 支付閘道回報失敗：merchantOrderId={}", result.merchantOrderId());
         }
+    }
+
+    private int resolvePage(Integer page) {
+        return page != null && page > 0 ? page : 1;
+    }
+
+    private int resolveSize(Integer size) {
+        if (size == null || size < 1) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 }

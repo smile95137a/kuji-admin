@@ -24,6 +24,7 @@ import com.group.admin.req.order.OrderCancelReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.req.order.UpdateOrderStatusReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderItemRes;
 import com.group.admin.res.order.OrderPaymentInitRes;
@@ -190,38 +191,51 @@ public class OrderServiceImpl implements OrderService {
     // ==================== 訂單查詢 ====================
 
     @Override
-    public List<OrderRes> getOrders(QueryReq<OrderCondition> req) {
-        OrderCondition condition = req != null ? req.getCondition() : null;
-        List<Order> orders = orderMapper.selectByCondition(condition);
-        return orders.stream().map(this::convertToRes).collect(Collectors.toList());
+    public PageResult<OrderRes> getOrders(QueryReq<OrderCondition> req) {
+        QueryReq<OrderCondition> safeReq = normalizeReq(req);
+        OrderCondition condition = safeReq.getCondition();
+
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
+        int offset = (page - 1) * size;
+
+        long total = orderMapper.countByCondition(condition);
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        List<Order> orders = orderMapper.selectByConditionPaged(condition, offset, size);
+        List<OrderRes> items = orders.stream().map(this::convertToRes).collect(Collectors.toList());
+        return PageResult.of(page, size, total, items);
     }
 
     @Override
-    public List<OrderRes> getOrderList(QueryReq<OrderCondition> req, String callerUserId, String callerRole) {
-        if (req == null) {
-            req = new QueryReq<>();
-        }
-        if (req.getCondition() == null) {
-            req.setCondition(new OrderCondition());
-        }
-
-        OrderCondition condition = req.getCondition();
+    public PageResult<OrderRes> getOrderList(QueryReq<OrderCondition> req, String callerUserId, String callerRole) {
+        QueryReq<OrderCondition> safeReq = normalizeReq(req);
+        OrderCondition condition = safeReq.getCondition();
 
         // STORE_OWNER / STORE_EDITOR → 限定自己管理的店家
         if ("ROLE_STORE_OWNER".equals(callerRole) || "ROLE_STORE_EDITOR".equals(callerRole)) {
             String storeId = resolveStoreIdForUser(callerUserId);
             if (storeId == null) {
                 log.warn("⚠️ 店家人員無關聯店家：userId={}", callerUserId);
-                return Collections.emptyList();
+                return PageResult.empty(resolvePage(safeReq.getPage()), resolveSize(safeReq.getSize()));
             }
             condition.setStoreId(storeId);
         }
 
-        List<Order> orders = orderMapper.selectByCondition(condition);
-        long total = orderMapper.countByCondition(condition);
-        log.info("🔍 查詢訂單列表：total={}", total);
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
+        int offset = (page - 1) * size;
 
-        return orders.stream().map(this::convertToRes).collect(Collectors.toList());
+        long total = orderMapper.countByCondition(condition);
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        List<Order> orders = orderMapper.selectByConditionPaged(condition, offset, size);
+        List<OrderRes> items = orders.stream().map(this::convertToRes).collect(Collectors.toList());
+        return PageResult.of(page, size, total, items);
     }
 
     @Override
@@ -251,17 +265,22 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderRes> getPlayerOrderList(QueryReq<OrderCondition> req, String playerId) {
-        if (req == null) {
-            req = new QueryReq<>();
-        }
-        if (req.getCondition() == null) {
-            req.setCondition(new OrderCondition());
-        }
-        req.getCondition().setUserId(playerId);
+    public PageResult<OrderRes> getPlayerOrderList(QueryReq<OrderCondition> req, String playerId) {
+        QueryReq<OrderCondition> safeReq = normalizeReq(req);
+        safeReq.getCondition().setUserId(playerId);
 
-        List<Order> orders = orderMapper.selectByCondition(req.getCondition());
-        return orders.stream().map(this::convertToRes).collect(Collectors.toList());
+        int page = resolvePage(safeReq.getPage());
+        int size = resolveSize(safeReq.getSize());
+        int offset = (page - 1) * size;
+
+        long total = orderMapper.countByCondition(safeReq.getCondition());
+        if (total == 0) {
+            return PageResult.empty(page, size);
+        }
+
+        List<Order> orders = orderMapper.selectByConditionPaged(safeReq.getCondition(), offset, size);
+        List<OrderRes> items = orders.stream().map(this::convertToRes).collect(Collectors.toList());
+        return PageResult.of(page, size, total, items);
     }
 
     @Override
@@ -707,6 +726,27 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    private QueryReq<OrderCondition> normalizeReq(QueryReq<OrderCondition> req) {
+        if (req == null) {
+            req = new QueryReq<>();
+        }
+        if (req.getCondition() == null) {
+            req.setCondition(new OrderCondition());
+        }
+        return req;
+    }
+
+    private int resolvePage(Integer page) {
+        return page != null && page > 0 ? page : 1;
+    }
+
+    private int resolveSize(Integer size) {
+        if (size == null || size < 1) {
+            return 20;
+        }
+        return Math.min(size, 100);
     }
 
     private String generateOrderNumber() {

@@ -20,6 +20,7 @@ import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.AuthGoogleReq;
 import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
+import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.res.AuthRes;
 import com.group.admin.res.referral.ReferralCodeRes;
 import com.group.admin.service.EmailService;
@@ -427,6 +428,35 @@ public class UserServiceImpl implements UserService {
         userMapper.updateByPrimaryKey(user);
         
         log.info("✅ 密碼重設成功: userId={}, email={}", user.getId(), user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String userId, ChangePasswordReq req) {
+        log.info("🔐 前台使用者修改密碼: userId={}", userId);
+
+        User user = normalizeLegacyProvider(findById(userId));
+        if (user == null) {
+            throw new IllegalArgumentException("使用者不存在");
+        }
+
+        if (!"EMAIL".equals(user.getProvider())) {
+            throw new IllegalArgumentException("此帳號使用第三方登入，無法修改密碼");
+        }
+
+        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+            throw new IllegalArgumentException("兩次輸入的密碼不一致");
+        }
+
+        if (!passwordEncoder.matches(req.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("原密碼錯誤");
+        }
+
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKey(user);
+
+        log.info("✅ 前台使用者修改密碼成功: userId={}", userId);
     }
 
     @Override

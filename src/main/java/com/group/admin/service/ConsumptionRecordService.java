@@ -2,9 +2,8 @@ package com.group.admin.service;
 
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.consumption.ConsumptionRecordCondition;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.consumption.ConsumptionRecordRes;
-
-import java.util.List;
 
 /**
  * 消費紀錄 Service 介面
@@ -27,10 +26,10 @@ public interface ConsumptionRecordService {
     /**
      * 查詢消費紀錄（前台 - 查自己的）
      */
-    List<ConsumptionRecordRes> getMyConsumptions(String userId, QueryReq<ConsumptionRecordCondition> req);
+    PageResult<ConsumptionRecordRes> getMyConsumptions(String userId, QueryReq<ConsumptionRecordCondition> req);
     
     /**
      * 查詢消費紀錄（後台 - 查所有人的）
      */
-    List<ConsumptionRecordRes> queryConsumptions(QueryReq<ConsumptionRecordCondition> req);
+    PageResult<ConsumptionRecordRes> queryConsumptions(QueryReq<ConsumptionRecordCondition> req);
 }

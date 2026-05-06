@@ -4,6 +4,7 @@ import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryListReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryDetailRes;
 import com.group.admin.res.lottery.LotteryListItemRes;
 import com.group.admin.res.lottery.LotteryPrizeRes;
@@ -88,7 +89,7 @@ public class LotteryController {
      */
     @PostMapping("/list")
     @Operation(summary = "查詢商品列表（公開）", description = "查詢所有上架中的商品")
-    public ResponseEntity<List<LotteryRes>> listLotteries(
+    public ResponseEntity<PageResult<LotteryRes>> listLotteries(
             @RequestBody(required = false) QueryReq<LotteryCondition> req) {
         
         log.info("🔍 [前台] 查詢商品列表: condition={}", req);
@@ -101,15 +102,15 @@ public class LotteryController {
         }
         req.getCondition().setStatus("ON_SHELF");
         
-        List<LotteryRes> result = lotteryService.queryLotteries(req);
+        PageResult<LotteryRes> result = lotteryService.queryLotteries(req);
         
-        log.info("✅ 查詢成功: 共 {} 筆", result.size());
+        log.info("✅ 查詢成功: 共 {} 筆", result.getTotal());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/browse/list")
     @Operation(summary = "查詢商品列表（完整結構）", description = "前台查詢上架中的商品，返回與詳情頁相同結構（不含 tickets）")
-    public ResponseEntity<List<LotteryDetailRes>> browseLotteries(
+    public ResponseEntity<PageResult<LotteryDetailRes>> browseLotteries(
             @RequestBody(required = false) QueryReq<LotteryCondition> req) {
 
         log.info("🔍 [前台] 查詢商品瀏覽列表: condition={}", req);
@@ -122,7 +123,8 @@ public class LotteryController {
         }
         req.getCondition().setStatus("ON_SHELF");
 
-        List<LotteryDetailRes> result = lotteryService.queryLotteries(req).stream()
+        PageResult<LotteryRes> pageResult = lotteryService.queryLotteries(req);
+        List<LotteryDetailRes> items = pageResult.getData().stream()
                 .map(lotteryRes -> LotteryDetailRes.builder()
                         .lottery(lotteryRes)
                         .prizes(lotteryService.getPrizesByLotteryId(lotteryRes.getId()))
@@ -131,7 +133,10 @@ public class LotteryController {
                         .build())
                 .collect(Collectors.toList());
 
-        log.info("✅ 商品瀏覽列表查詢成功: 共 {} 筆", result.size());
+        PageResult<LotteryDetailRes> result = PageResult.of(pageResult.getPage(), pageResult.getSize(),
+                pageResult.getTotal(), items);
+
+        log.info("✅ 商品瀏覽列表查詢成功: 共 {} 筆", result.getTotal());
         return ResponseEntity.ok(result);
     }
 
@@ -244,7 +249,7 @@ public class LotteryController {
 
     @GetMapping("/browse/store/{storeId}")
     @Operation(summary = "查詢店家商品列表（簡化版）", description = "根據店家 ID 查詢該店家所有上架中的商品")
-    public ResponseEntity<List<LotteryListItemRes>> getLotteriesByStore(@PathVariable String storeId) {
+    public ResponseEntity<PageResult<LotteryListItemRes>> getLotteriesByStore(@PathVariable String storeId) {
 
         log.info("🔍 [前台] 查詢店家商品: storeId={}", storeId);
 
@@ -256,11 +261,15 @@ public class LotteryController {
         req.setSortBy("created_at");
         req.setSortOrder("DESC");
 
-        List<LotteryListItemRes> result = lotteryService.queryLotteries(req).stream()
+        PageResult<LotteryRes> pageResult = lotteryService.queryLotteries(req);
+        List<LotteryListItemRes> items = pageResult.getData().stream()
                 .map(LotteryListItemRes::from)
                 .collect(Collectors.toList());
 
-        log.info("✅ 店家商品查詢成功: storeId={}, count={}", storeId, result.size());
+        PageResult<LotteryListItemRes> result = PageResult.of(pageResult.getPage(), pageResult.getSize(),
+                pageResult.getTotal(), items);
+
+        log.info("✅ 店家商品查詢成功: storeId={}, count={}", storeId, result.getTotal());
         return ResponseEntity.ok(result);
     }
 

@@ -3,6 +3,7 @@ package com.group.admin.service;
 import com.group.admin.req.AuthGoogleReq;
 import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
+import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.entity.User;
 import com.group.admin.res.AuthRes;
 
@@ -54,6 +55,11 @@ public interface UserService {
      */
 
     void resetPassword(String token, String newPassword);
+
+    /**
+     * 已登入前台使用者修改密碼
+     */
+    void changePassword(String userId, ChangePasswordReq req);
 
     /**
      * 更新使用者資料

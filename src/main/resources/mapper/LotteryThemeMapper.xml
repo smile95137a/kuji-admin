@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LotteryThemeMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.LotteryTheme">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="image_url" jdbcType="VARCHAR" property="imageUrl" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="display_order" jdbcType="INTEGER" property="displayOrder" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, name, image_url, status, display_order, created_at, updated_at
+  </sql>
+
+  <select id="selectById" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme
+    WHERE id = #{id}
+  </select>
+
+  <select id="selectByName" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme
+    WHERE name = #{name}
+    LIMIT 1
+  </select>
+
+  <select id="selectByNameIgnoreCase" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme
+    WHERE LOWER(name) = LOWER(#{name})
+    LIMIT 1
+  </select>
+
+  <select id="selectByNormalizedName" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme
+    WHERE LOWER(REPLACE(REPLACE(TRIM(name), '　', ' '), '  ', ' ')) = #{normalizedName}
+    LIMIT 1
+  </select>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme
+    <where>
+      <if test="status != null and status != ''">
+        status = #{status}
+      </if>
+    </where>
+    ORDER BY display_order ASC, created_at DESC
+  </select>
+
+  <select id="suggestByKeyword" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme
+    WHERE status = 'ACTIVE'
+      AND name LIKE CONCAT('%', #{keyword}, '%')
+    ORDER BY display_order ASC, created_at DESC
+    LIMIT #{limit}
+  </select>
+
+  <insert id="insert" parameterType="com.group.admin.entity.LotteryTheme">
+    INSERT INTO lottery_theme (
+      id, name, image_url, status, display_order, created_at, updated_at
+    ) VALUES (
+      #{id}, #{name}, #{imageUrl}, #{status}, #{displayOrder}, #{createdAt}, #{updatedAt}
+    )
+  </insert>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryTheme">
+    UPDATE lottery_theme
+    <set>
+      <if test="name != null">name = #{name},</if>
+      <if test="imageUrl != null">image_url = #{imageUrl},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="displayOrder != null">display_order = #{displayOrder},</if>
+      updated_at = NOW()
+    </set>
+    WHERE id = #{id}
+  </update>
+
+  <delete id="deleteById">
+    DELETE FROM lottery_theme
+    WHERE id = #{id}
+  </delete>
+
+  <update id="softDeleteById">
+    UPDATE lottery_theme
+    SET status = 'INACTIVE',
+        updated_at = NOW()
+    WHERE id = #{id}
+  </update>
+</mapper>

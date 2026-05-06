@@ -1,6 +1,7 @@
 package com.group.admin.controller.api;
 
 import com.group.admin.req.recharge.RechargeReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.recharge.RechargeRes;
 import com.group.admin.service.RechargeService;
 import com.group.admin.util.SecurityUtils;
@@ -55,13 +56,13 @@ public class RechargeController {
      * 查詢我的儲值記錄
      */
     @GetMapping("/history")
-    public ResponseEntity<List<RechargeRes>> getMyRechargeHistory(
+    public ResponseEntity<PageResult<RechargeRes>> getMyRechargeHistory(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("🔍 [API] 查詢儲值記錄：userId={}, page={}, size={}", userId, page, size);
         
-        List<RechargeRes> history = rechargeService.getUserRechargeHistory(userId, page, size);
+        PageResult<RechargeRes> history = rechargeService.getUserRechargeHistory(userId, page, size);
         return ResponseEntity.ok(history);
     }
     

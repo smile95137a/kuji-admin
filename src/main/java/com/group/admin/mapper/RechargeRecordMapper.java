@@ -20,6 +20,12 @@ public interface RechargeRecordMapper {
 
     List<RechargeRecord> selectByExample(RechargeRecordExample example);
 
+    long countByUserId(@Param("userId") String userId);
+
+    List<RechargeRecord> selectByUserIdPaged(@Param("userId") String userId,
+                                             @Param("offset") int offset,
+                                             @Param("limit") int limit);
+
     RechargeRecord selectByPrimaryKey(String id);
 
     int updateByExampleSelective(@Param("row") RechargeRecord row, @Param("example") RechargeRecordExample example);

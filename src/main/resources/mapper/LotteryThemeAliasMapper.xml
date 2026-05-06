@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.group.admin.mapper.LotteryThemeAliasMapper">
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.LotteryThemeAlias">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="theme_id" jdbcType="VARCHAR" property="themeId" />
+    <result column="alias_name" jdbcType="VARCHAR" property="aliasName" />
+    <result column="normalized_name" jdbcType="VARCHAR" property="normalizedName" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, theme_id, alias_name, normalized_name, status, created_at, updated_at
+  </sql>
+
+  <select id="selectById" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme_alias
+    WHERE id = #{id}
+  </select>
+
+  <select id="selectByThemeIdAndAliasName" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme_alias
+    WHERE theme_id = #{themeId}
+      AND LOWER(alias_name) = LOWER(#{aliasName})
+      AND status = 'ACTIVE'
+    LIMIT 1
+  </select>
+
+  <select id="selectByNormalizedName" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme_alias
+    WHERE normalized_name = #{normalizedName}
+      AND status = 'ACTIVE'
+    LIMIT 1
+  </select>
+
+  <select id="selectByThemeId" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM lottery_theme_alias
+    WHERE theme_id = #{themeId}
+    <if test="status != null and status != ''">
+      AND status = #{status}
+    </if>
+    ORDER BY created_at ASC
+  </select>
+
+  <insert id="insert" parameterType="com.group.admin.entity.LotteryThemeAlias">
+    INSERT INTO lottery_theme_alias (
+      id, theme_id, alias_name, normalized_name, status, created_at, updated_at
+    ) VALUES (
+      #{id}, #{themeId}, #{aliasName}, #{normalizedName}, #{status}, #{createdAt}, #{updatedAt}
+    )
+  </insert>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.LotteryThemeAlias">
+    UPDATE lottery_theme_alias
+    <set>
+      <if test="themeId != null">theme_id = #{themeId},</if>
+      <if test="aliasName != null">alias_name = #{aliasName},</if>
+      <if test="normalizedName != null">normalized_name = #{normalizedName},</if>
+      <if test="status != null">status = #{status},</if>
+      updated_at = NOW()
+    </set>
+    WHERE id = #{id}
+  </update>
+
+  <update id="softDeleteById">
+    UPDATE lottery_theme_alias
+    SET status = 'INACTIVE',
+        updated_at = NOW()
+    WHERE id = #{id}
+  </update>
+</mapper>

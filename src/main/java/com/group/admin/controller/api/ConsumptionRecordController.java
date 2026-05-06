@@ -2,6 +2,7 @@ package com.group.admin.controller.api;
 
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.consumption.ConsumptionRecordCondition;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.consumption.ConsumptionRecordRes;
 import com.group.admin.service.ConsumptionRecordService;
 import com.group.admin.util.SecurityUtils;
@@ -12,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 前台消費紀錄 Controller
@@ -42,7 +41,7 @@ public class ConsumptionRecordController {
      */
     @PostMapping("/list")
     @Operation(summary = "查詢我的消費紀錄", description = "查詢當前用戶的消費紀錄，支援動態條件查詢")
-    public ResponseEntity<List<ConsumptionRecordRes>> getMyConsumptionRecords(
+    public ResponseEntity<PageResult<ConsumptionRecordRes>> getMyConsumptionRecords(
             @RequestBody(required = false)
             @Parameter(description = "查詢條件（可選）")
             QueryReq<ConsumptionRecordCondition> req) {
@@ -50,7 +49,7 @@ public class ConsumptionRecordController {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("📋 [前台] 查詢我的消費紀錄: userId={}", userId);
         
-        List<ConsumptionRecordRes> results = consumptionRecordService.getMyConsumptions(userId, req);
+        PageResult<ConsumptionRecordRes> results = consumptionRecordService.getMyConsumptions(userId, req);
         return ResponseEntity.ok(results);
     }
 }

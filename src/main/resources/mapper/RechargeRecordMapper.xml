@@ -243,6 +243,21 @@
       <include refid="Example_Where_Clause" />
     </if>
   </select>
+
+  <select id="countByUserId" resultType="java.lang.Long">
+    select count(*)
+    from recharge_record
+    where user_id = #{userId}
+  </select>
+
+  <select id="selectByUserIdPaged" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from recharge_record
+    where user_id = #{userId}
+    order by created_at desc
+    limit #{limit} offset #{offset}
+  </select>
   <update id="updateByExampleSelective" parameterType="map">
     update recharge_record
     <set>

@@ -459,6 +459,49 @@ public class StoreServiceImpl implements StoreService {
                 .build();
     }
 
+    @Override
+    public PageResult<LotteryListItemRes> getStoreProducts(String storeId, int page, int size) {
+        Store store = storeMapper.selectByPrimaryKey(storeId);
+        if (store == null || !"ACTIVE".equals(store.getStatus())) {
+            throw new BusinessException("NOT_FOUND", "店家不存在");
+        }
+
+        int currentPage = page > 0 ? page : 1;
+        int pageSize = size > 0 ? Math.min(size, 100) : 20;
+        int offset = (currentPage - 1) * pageSize;
+
+        LotteryExample lotteryExample = new LotteryExample();
+        lotteryExample.createCriteria()
+                .andStoreIdEqualTo(storeId)
+                .andStatusEqualTo("ON_SHELF");
+        lotteryExample.setOrderByClause("created_at DESC");
+        long total = lotteryMapper.countByExample(lotteryExample);
+        if (total == 0) {
+            return PageResult.empty(currentPage, pageSize);
+        }
+
+        List<Lottery> lotteries = lotteryMapper.selectByExample(lotteryExample);
+        int endIndex = Math.min(offset + pageSize, lotteries.size());
+        List<Lottery> pageLotteries = offset < lotteries.size()
+                ? lotteries.subList(offset, endIndex)
+                : List.of();
+
+        List<LotteryListItemRes> items = pageLotteries.stream()
+                .map(l -> LotteryListItemRes.builder()
+                        .id(l.getId())
+                        .storeId(l.getStoreId())
+                        .title(l.getTitle())
+                        .imageUrl(l.getImageUrl())
+                        .category(l.getCategory())
+                        .pricePerDraw(l.getPricePerDraw())
+                        .maxDraws(l.getMaxDraws())
+                        .status(l.getStatus())
+                        .build())
+                .collect(Collectors.toList());
+
+        return PageResult.of(currentPage, pageSize, total, items);
+    }
+
     // ========== Helper methods ==========
 
     private void updateStoreStatusInternal(String storeId, String status) {

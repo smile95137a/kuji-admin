@@ -18,6 +18,10 @@ public interface WalletTransactionMapper {
 
     List<WalletTransaction> selectByExample(WalletTransactionExample example);
 
+    List<WalletTransaction> selectByExamplePaged(@Param("example") WalletTransactionExample example,
+                                                 @Param("offset") int offset,
+                                                 @Param("limit") int limit);
+
     WalletTransaction selectByPrimaryKey(String id);
 
     int updateByExampleSelective(@Param("row") WalletTransaction row, @Param("example") WalletTransactionExample example);

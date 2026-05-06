@@ -3,6 +3,7 @@ package com.group.admin.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
+import com.group.admin.example.LotteryExample;
 import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.example.LotteryTicketExample;
 import com.group.admin.exception.BusinessException;
@@ -17,6 +18,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.lottery.LotteryCondition;
 import com.group.admin.req.lottery.LotteryCreateReq;
 import com.group.admin.req.lottery.LotteryUpdateReq;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryRes;
 import com.group.admin.service.impl.LotteryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +54,7 @@ class LotteryServiceImplTest {
     @Mock private StoreMapper storeMapper;
     @Mock private LotteryTicketService lotteryTicketService;
     @Mock private LotteryTicketMapper lotteryTicketMapper;
+    @Mock private CategoryService categoryService;
 
     private LotteryServiceImpl lotteryService;
     private Lottery insertedLottery;
@@ -67,7 +70,8 @@ class LotteryServiceImplTest {
                 new ObjectMapper(),
                 storeMapper,
                 lotteryTicketService,
-                lotteryTicketMapper
+                lotteryTicketMapper,
+                categoryService
         );
         insertedLottery = null;
         lenient().doAnswer(invocation -> {
@@ -87,6 +91,7 @@ class LotteryServiceImplTest {
         Lottery active = lottery("active", 10, 2, 9, LocalDateTime.of(2026, 4, 3, 0, 0));
 
         when(lotteryMapper.selectByExample(any())).thenReturn(List.of(soldOut, grandSoldOut, active));
+        when(lotteryMapper.countByExample(any())).thenReturn(3L);
         when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class)))
                 .thenAnswer(invocation -> filterPrizes(invocation.getArgument(0)));
         when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class)))
@@ -97,10 +102,40 @@ class LotteryServiceImplTest {
         condition.setStatus("ON_SHELF");
         req.setCondition(condition);
 
-        List<LotteryRes> result = lotteryService.queryLotteries(req);
+        PageResult<LotteryRes> result = lotteryService.queryLotteries(req);
 
-        assertThat(result).extracting(LotteryRes::getId)
+        assertThat(result.getData()).extracting(LotteryRes::getId)
                 .containsExactly("active", "grand-sold-out", "sold-out");
+
+        ArgumentCaptor<LotteryExample> exampleCaptor = ArgumentCaptor.forClass(LotteryExample.class);
+        verify(lotteryMapper).selectByExample(exampleCaptor.capture());
+        assertThat(exampleCaptor.getValue().getOrderByClause()).isEqualTo("store_id ASC, created_at DESC");
+    }
+
+    @Test
+    @DisplayName("前台查詢傳入 sortBy=createdAt 時應轉成 created_at")
+    void queryLotteries_SortByCreatedAt_ShouldMapToDatabaseColumn() {
+        Lottery active = lottery("active", 10, 2, 9, LocalDateTime.of(2026, 4, 3, 0, 0));
+
+        when(lotteryMapper.selectByExample(any())).thenReturn(List.of(active));
+        when(lotteryMapper.countByExample(any())).thenReturn(1L);
+        lenient().when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class)))
+                .thenAnswer(invocation -> filterPrizes(invocation.getArgument(0)));
+        lenient().when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class)))
+                .thenAnswer(invocation -> (long) filterPrizes(invocation.getArgument(0)).size());
+
+        QueryReq<LotteryCondition> req = new QueryReq<>();
+        LotteryCondition condition = new LotteryCondition();
+        condition.setStatus("ON_SHELF");
+        req.setCondition(condition);
+        req.setSortBy("createdAt");
+        req.setSortOrder("DESC");
+
+        lotteryService.queryLotteries(req);
+
+        ArgumentCaptor<LotteryExample> exampleCaptor = ArgumentCaptor.forClass(LotteryExample.class);
+        verify(lotteryMapper).selectByExample(exampleCaptor.capture());
+        assertThat(exampleCaptor.getValue().getOrderByClause()).isEqualTo("created_at DESC");
     }
 
     private Lottery lottery(String id, int maxDraws, int totalDraws, int orderNum, LocalDateTime createdAt) {
@@ -180,7 +215,7 @@ class LotteryServiceImplTest {
         req.setTitle("scratch");
         req.setCategory("CUSTOM_GACHA");
         req.setSubCategory("SCRATCH_MODE");
-        req.setGameMode("RANDOM");
+        req.setGameMode("SCRATCH_STORE");
         req.setPricePerDraw(100L);
 
         LotteryRes res = lotteryService.createLottery(req);
@@ -253,7 +288,7 @@ class LotteryServiceImplTest {
         req.setTitle("free-draw");
         req.setCategory("CUSTOM_GACHA");
         req.setSubCategory("SCRATCH_MODE");
-        req.setGameMode("RANDOM");
+        req.setGameMode("SCRATCH_STORE");
         req.setPricePerDraw(100L);
         req.setFreeDrawEnabled(true);
         req.setProtectionDraws(5);
@@ -296,7 +331,7 @@ class LotteryServiceImplTest {
         existing.setTitle("before-update");
         existing.setCategory("CUSTOM_GACHA");
         existing.setSubCategory("SCRATCH_MODE");
-        existing.setGameMode("RANDOM");
+        existing.setGameMode("SCRATCH_STORE");
         existing.setPlayMode("SCRATCH_MODE");
         existing.setStatus("DRAFT");
         existing.setPricePerDraw(100L);

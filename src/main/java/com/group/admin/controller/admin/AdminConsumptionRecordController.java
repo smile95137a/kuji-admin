@@ -2,6 +2,7 @@ package com.group.admin.controller.admin;
 
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.consumption.ConsumptionRecordCondition;
+import com.group.admin.res.PageResult;
 import com.group.admin.res.consumption.ConsumptionRecordRes;
 import com.group.admin.service.ConsumptionRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,8 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 後台消費紀錄管理 Controller
@@ -43,13 +42,13 @@ public class AdminConsumptionRecordController {
      */
     @PostMapping("/list")
     @Operation(summary = "查詢所有消費紀錄", description = "後台查詢所有用戶的消費紀錄，支援動態條件查詢")
-    public ResponseEntity<List<ConsumptionRecordRes>> queryConsumptionRecords(
+    public ResponseEntity<PageResult<ConsumptionRecordRes>> queryConsumptionRecords(
             @RequestBody(required = false)
             @Parameter(description = "查詢條件（可選）")
             QueryReq<ConsumptionRecordCondition> req) {
         
         log.info("📋 [後台] 查詢所有消費紀錄");
-        List<ConsumptionRecordRes> results = consumptionRecordService.queryConsumptions(req);
+        PageResult<ConsumptionRecordRes> results = consumptionRecordService.queryConsumptions(req);
         return ResponseEntity.ok(results);
     }
 }
