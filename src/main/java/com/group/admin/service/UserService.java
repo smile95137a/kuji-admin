@@ -41,7 +41,7 @@ public interface UserService {
     User findById(String id);
     
     /**
-     * 請求重設密碼（發送郵件）
+     * 忘記密碼：重設為臨時密碼並寄送郵件
      */
     void requestPasswordReset(String email);
     
@@ -51,9 +51,8 @@ public interface UserService {
     void applyReferral(String userId, String code);
 
     /**
-     * 驗證重設 token 並重設密碼
+     * 舊版 token 重設密碼流程（相容保留）
      */
-
     void resetPassword(String token, String newPassword);
 
     /**

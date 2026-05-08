@@ -1,6 +1,7 @@
 package com.group.admin.controller.api;
 
 import com.group.admin.BaseControllerTest;
+import com.group.admin.constants.ErrorCodes;
 import com.group.admin.entity.User;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -71,4 +73,83 @@ class ApiAuthControllerTest extends BaseControllerTest {
 
         verify(userService).register(any());
     }
+
+        @Test
+        @DisplayName("忘記密碼 - 成功回傳通用訊息")
+        void forgotPassword_ShouldReturn200_WhenValidEmail() throws Exception {
+        String body = """
+            {
+              "email": "user@test.com"
+            }
+            """;
+
+        mockMvc.perform(post("/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.message").value("如果此 Email 已註冊，將會收到臨時密碼郵件"));
+
+        verify(userService).requestPasswordReset("user@test.com");
+        }
+
+        @Test
+        @DisplayName("重設密碼舊流程 - 已停用")
+        void resetPassword_ShouldReturn400_WhenLegacyEndpointCalled() throws Exception {
+        String body = """
+            {
+              "token": "legacy-token",
+              "newPassword": "NewPass123",
+              "confirmPassword": "NewPass123"
+            }
+            """;
+
+        mockMvc.perform(post("/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value(ErrorCodes.COMMON_VALIDATION_ERROR))
+            .andExpect(jsonPath("$.error.message").value("重設連結流程已停用，請使用忘記密碼取得臨時密碼後登入修改"));
+
+        verify(userService, never()).resetPassword(anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("刷新 Token - 無效 token")
+        void refresh_ShouldReturn401_WhenTokenInvalid() throws Exception {
+        when(jwtUtil.validateToken("invalid-token")).thenReturn(false);
+
+        mockMvc.perform(post("/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      \"refreshToken\": \"invalid-token\"
+                    }
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value(ErrorCodes.AUTH_TOKEN_INVALID));
+
+        verify(userService, never()).findByEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("註冊 - 密碼與確認密碼不一致")
+        void register_ShouldReturn400_WhenPasswordMismatch() throws Exception {
+        String body = """
+            {
+              "email": "legacy@test.com",
+              "password": "secret123",
+              "confirmPassword": "another123",
+              "username": "legacyUser",
+              "phone": "0912345678"
+            }
+            """;
+
+        mockMvc.perform(post("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value(ErrorCodes.COMMON_VALIDATION_ERROR));
+
+        verify(userService, never()).register(any());
+        }
 }

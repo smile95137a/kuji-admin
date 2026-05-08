@@ -1,6 +1,7 @@
 package com.group.admin.controller.admin;
 
 import com.group.admin.BaseControllerTest;
+import com.group.admin.constants.ErrorCodes;
 import com.group.admin.req.auth.AdminLoginReq;
 import com.group.admin.req.auth.ChangePasswordReq;
 import com.group.admin.req.auth.RefreshTokenReq;
@@ -32,7 +33,7 @@ class AdminAuthControllerTest extends BaseControllerTest {
 
     @BeforeEach
     void setUp() {
-        setupMockMvc(adminAuthController);
+        setupMockMvcWithExceptionHandler(adminAuthController);
     }
 
     @Test
@@ -90,6 +91,40 @@ class AdminAuthControllerTest extends BaseControllerTest {
                         .content(toJson(req)))
                 .andExpect(status().isOk());
     }
+
+        @Test
+        @DisplayName("忘記密碼 - 成功")
+        void forgotPassword_ShouldReturn200_WhenEmailProvided() throws Exception {
+                doNothing().when(adminAuthService).forgotPassword("owner@kuji.com");
+
+                mockMvc.perform(post("/admin/auth/forgot-password")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content("""
+                                                                {
+                                                                    \"email\": \"owner@kuji.com\"
+                                                                }
+                                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("若帳號存在，系統已發送臨時密碼至註冊 Email"));
+
+                verify(adminAuthService).forgotPassword("owner@kuji.com");
+        }
+
+        @Test
+        @DisplayName("忘記密碼 - Email 格式錯誤")
+        void forgotPassword_ShouldReturn400_WhenEmailInvalid() throws Exception {
+                mockMvc.perform(post("/admin/auth/forgot-password")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content("""
+                                                                {
+                                                                    \"email\": \"invalid-email\"
+                                                                }
+                                                                """))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error.code").value(ErrorCodes.COMMON_VALIDATION_ERROR));
+
+                verify(adminAuthService, never()).forgotPassword(any());
+        }
 
     @Test
     @DisplayName("登出 - 成功")

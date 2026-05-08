@@ -2,7 +2,7 @@
 
 > **文件目的**：列出本次後端全數修改項目，說明每個 API 的參數意義、哪些欄位前端必須配合調整，以及各功能的實際行為變化。  
 > **適用對象**：後台前端開發人員。  
-> **最後更新**：2026-05-04
+> **最後更新**：2026-05-09
 
 ---
 
@@ -21,6 +21,123 @@
 11. [選單管理 — 角色選單權限補救初始化](#11-選單管理--角色選單權限補救初始化)
 12. [選單異動 — 移除兩個廢棄選單](#12-選單異動--移除兩個廢棄選單)
 13. [訂單取消 — 賞品盒回收邏輯確認](#13-訂單取消--賞品盒回收邏輯確認)
+14. [2026-05-09 帳號治理與 SMTP 補完](#14-2026-05-09-帳號治理與-smtp-補完)
+
+---
+
+## 14. 2026-05-09 帳號治理與 SMTP 補完
+
+### A. 前後台忘記密碼流程統一（臨時密碼模式）
+
+#### 前台 API
+
+```
+POST /api/auth/forgot-password
+```
+
+行為：
+
+1. 後端直接產生「臨時密碼」並覆蓋舊密碼。
+2. 寄送臨時密碼郵件（模板：`temporary-password-email`）。
+3. 登入後會回傳 `forceChangePassword=true`，且在改密碼前禁止操作受保護 API。
+
+回應：
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "如果此 Email 已註冊，將會收到臨時密碼郵件"
+  }
+}
+```
+
+> 舊版 `POST /api/auth/reset-password` 已保留，但只回覆「流程已停用，請改用忘記密碼」的錯誤訊息。
+
+#### 後台 API
+
+```
+POST /admin/auth/forgot-password
+```
+
+行為：
+
+1. 後端重設為臨時密碼。
+2. 寄送臨時密碼郵件。
+3. 下次登入必須先改密碼（`forceChangePassword=true`）。
+
+---
+
+### B. 後台本人 API（避免前端再用任意 userId 更新）
+
+新增：
+
+```
+GET  /admin/users/me
+PUT  /admin/users/me
+POST /admin/users/me/change-password
+```
+
+`PUT /admin/users/me` 目前僅允許更新：
+
+- `displayName`
+- `phone`
+
+---
+
+### C. 店家負責人可管理自己店內小編
+
+已實作卡控：
+
+1. `POST /admin/users/list`：StoreOwner 查詢時會自動帶入自己的 `storeId`，且只查 `ROLE_STORE_EDITOR`。
+2. `PUT /admin/users/{id}`：StoreOwner 可更新同店小編資料。
+3. `POST /admin/users/{id}/reset-password`：StoreOwner 可為同店小編重發臨時密碼。
+
+禁止行為：
+
+- 跨店操作小編
+- 操作其他 StoreOwner
+- 操作 Admin
+
+---
+
+### D. 錯誤格式統一（重點）
+
+本次把以下路徑改成統一錯誤格式：
+
+1. `GlobalExceptionHandler` 統一依 `errorCode` 映射 HTTP Status。
+2. `ApiAuthController` 移除手動 `try/catch` 回 map 的做法。
+3. `AdminJwtAuthenticationFilter` / `ApiJwtAuthenticationFilter` 的拒絕回應改成 `ApiResponse.error(...)` 結構。
+
+前端建議改為依 `error.code` 判斷，而不是只看 HTTP 400。
+
+#### 本次流程常用錯誤碼對照
+
+| error.code | HTTP Status | 典型觸發點 | 前端建議處理 |
+|------|------|------|------|
+| `COMMON_VALIDATION_001` | 400 | 欄位格式錯誤、舊版 `/auth/reset-password` 被呼叫 | 顯示表單錯誤或流程停用提示 |
+| `AUTH_TOKEN_001` | 401 | Refresh Token 無效或過期 | 清除登入狀態並導回登入頁 |
+| `AUTH_TOKEN_002` | 401 | Token 已撤銷（logout 後或黑名單） | 清除登入狀態並導回登入頁 |
+| `AUTH_PASSWORD_001` | 403 | 使用者尚未完成強制改密碼，存取受保護 API | 強制跳轉「修改密碼」頁 |
+| `COMMON_ACCESS_001` | 403 | 權限不足（例如越權操作） | 顯示無權限提示，不重試 |
+| `COMMON_INTERNAL_001` | 500 | 非預期系統錯誤 | 顯示通用錯誤並提供重試 |
+
+#### 錯誤回應結構（統一）
+
+```json
+{
+  "success": false,
+  "message": "Refresh Token 無效或已過期",
+  "error": {
+    "code": "AUTH_TOKEN_001",
+    "message": "Refresh Token 無效或已過期"
+  },
+  "meta": {
+    "timestamp": "2026-05-09T10:00:00",
+    "requestId": "uuid"
+  }
+}
+```
 
 ---
 

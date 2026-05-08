@@ -1,5 +1,6 @@
 package com.group.admin.handler;
 
+import com.group.admin.constants.ErrorCodes;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.exception.UnprocessableEntityException;
 import com.group.admin.result.ApiResponse;
@@ -52,18 +53,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException ex) {
         log.warn("⚠️ 業務邏輯例外: [{}] {}", ex.getErrorCode(), ex.getMessage());
 
-        HttpStatus status = switch (ex.getErrorCode()) {
-            case "USERNAME_CONFLICT", "CONFLICT", "ORDER_STATUS_CONFLICT" -> HttpStatus.CONFLICT;
-            case "ACTIVE_LOTTERIES" -> HttpStatus.CONFLICT;
-            case "EMAIL_PROVIDER_CONFLICT" -> HttpStatus.CONFLICT;  // OAuth 帳號衝突 → 409
-            case "NOT_FOUND" -> HttpStatus.NOT_FOUND;
-            case "ORDER_ACCESS_DENIED", "FORBIDDEN" -> HttpStatus.FORBIDDEN;
-            default -> HttpStatus.BAD_REQUEST;
-        };
+        HttpStatus status = resolveStatus(ex.getErrorCode());
 
         return ResponseEntity
                 .status(status)
                 .body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<?>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("❗ 參數或流程驗證錯誤: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCodes.COMMON_VALIDATION_ERROR, ex.getMessage()));
     }
 
     /**
@@ -135,11 +137,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<?>> handleRuntimeException(RuntimeException ex) {
-        log.warn("⚠️ 業務邏輯例外: {}", ex.getMessage(), ex);
+        log.error("💥 未預期執行期錯誤: {}", ex.getMessage(), ex);
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("BUSINESS_ERROR", ex.getMessage()));
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiResponse.error(ErrorCodes.COMMON_INTERNAL_ERROR, "系統發生未知錯誤，請稍後再試"));
     }
 
     /**
@@ -155,5 +157,43 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("COMMON_INTERNAL_001", "系統發生未知錯誤，請稍後再試"));
+    }
+
+    private HttpStatus resolveStatus(String errorCode) {
+        if (errorCode == null || errorCode.isBlank()) {
+            return HttpStatus.BAD_REQUEST;
+        }
+
+        if ("USERNAME_CONFLICT".equals(errorCode)
+                || "CONFLICT".equals(errorCode)
+                || "ORDER_STATUS_CONFLICT".equals(errorCode)
+                || "ACTIVE_LOTTERIES".equals(errorCode)
+                || "EMAIL_PROVIDER_CONFLICT".equals(errorCode)) {
+            return HttpStatus.CONFLICT;
+        }
+
+        if (ErrorCodes.AUTH_ACCOUNT_LOCKED.equals(errorCode)) {
+            return HttpStatus.LOCKED;
+        }
+
+        if (errorCode.startsWith("AUTH_INVALID_") || errorCode.startsWith("AUTH_TOKEN_")) {
+            return HttpStatus.UNAUTHORIZED;
+        }
+
+        if (errorCode.startsWith("AUTH_ACCOUNT_")) {
+            return HttpStatus.FORBIDDEN;
+        }
+
+        if (errorCode.contains("_ACCESS_")
+                || "ORDER_ACCESS_DENIED".equals(errorCode)
+                || "FORBIDDEN".equals(errorCode)) {
+            return HttpStatus.FORBIDDEN;
+        }
+
+        if (errorCode.contains("_NOT_FOUND_") || "NOT_FOUND".equals(errorCode)) {
+            return HttpStatus.NOT_FOUND;
+        }
+
+        return HttpStatus.BAD_REQUEST;
     }
 }

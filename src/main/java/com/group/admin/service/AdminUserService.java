@@ -5,6 +5,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
+import com.group.admin.req.admin.UpdateMyProfileReq;
 import com.group.admin.req.admin.UpdateAdminUserReq;
 import com.group.admin.res.admin.AdminUserRes;
 
@@ -26,7 +27,7 @@ public interface AdminUserService {
 
     void deactivateAdminUser(String userId);
 
-    String resetPassword(String userId);
+    String resetPassword(String userId, String operatorId);
 
     void deleteAdminUser(String userId);
 
@@ -38,9 +39,19 @@ public interface AdminUserService {
     AdminUserRes updateAdminUser(String userId, UpdateAdminUserReq req, String operatorId);
 
     /**
+     * 取得本人資料
+     */
+    AdminUserRes getMyProfile(String operatorId);
+
+    /**
+     * 更新本人資料
+     */
+    AdminUserRes updateMyProfile(String operatorId, UpdateMyProfileReq req);
+
+    /**
      * 修改密碼（驗證舊密碼）
      */
-    void changePassword(String userId, ChangePasswordReq req);
+    void changePassword(String userId, ChangePasswordReq req, String operatorId);
 
     /**
      * 列出後台使用者（Admin 看全部；STORE_OWNER 只看自己店家的人）

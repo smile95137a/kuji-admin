@@ -1,11 +1,11 @@
 package com.group.admin.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.group.admin.constants.ErrorCodes;
+import com.group.admin.result.ApiResponse;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -105,7 +105,8 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
             Long tokenGen = jwtUtil.getGen(token);
             if (tokenGen != null && tokenBlacklistService.isBlacklisted(adminUser.getId(), tokenGen)) {
                 log.warn("🚫 [AdminJwtFilter] Token 已失效 (blacklisted): userId={}", adminUser.getId());
-                writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token has been invalidated");
+                writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                        ErrorCodes.AUTH_TOKEN_REVOKED, "Token 已失效，請重新登入");
                 return;
             }
 
@@ -153,7 +154,8 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
             if (!isAuthPath && Boolean.TRUE.equals(adminUser.getForceChangePassword())) {
                 log.warn("⚠️  [AdminJwtFilter] 強制修改密碼 (forceChangePassword=true): userId={}", adminUser.getId());
                 writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
-                        "Password change required before accessing this resource");
+                        ErrorCodes.AUTH_FORCE_CHANGE_PASSWORD,
+                        "需先修改密碼後才能繼續操作");
                 return;
             }
 
@@ -164,14 +166,11 @@ public class AdminJwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void writeJsonError(HttpServletResponse response, int status, String message) throws IOException {
+    private void writeJsonError(HttpServletResponse response, int status, String code, String message)
+            throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
-        Map<String, Object> body = new HashMap<>();
-        body.put("success", false);
-        body.put("code", status);
-        body.put("message", message);
-        new ObjectMapper().writeValue(response.getWriter(), body);
+        new ObjectMapper().writeValue(response.getWriter(), ApiResponse.error(code, message));
     }
 
     private String extractToken(HttpServletRequest request) {

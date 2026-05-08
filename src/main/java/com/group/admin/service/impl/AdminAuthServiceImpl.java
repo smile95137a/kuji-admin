@@ -30,8 +30,10 @@ import com.group.admin.req.auth.RefreshTokenReq;
 import com.group.admin.res.auth.LoginRes;
 import com.group.admin.security.UserPrincipal;
 import com.group.admin.service.AdminAuthService;
+import com.group.admin.service.EmailService;
 import com.group.admin.util.AuditContext;
 import com.group.admin.util.JwtUtil;
+import com.group.admin.util.PasswordUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +59,11 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final com.group.admin.service.TokenBlacklistService tokenBlacklistService;
+    private final PasswordUtil passwordUtil;
+    private final EmailService emailService;
+
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
 
     /**
      * {@inheritDoc}
@@ -126,6 +133,44 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         log.info("後台登入成功：username={}, userId={}, storeIds={}", user.getUsername(), user.getId(), storeIds);
         
         return buildLoginRes(user, accessToken, refreshToken, roles);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        log.info("📧 後台忘記密碼請求: email={}", email);
+
+        AdminUserExample example = new AdminUserExample();
+        example.createCriteria().andEmailEqualTo(email);
+        List<AdminUser> users = adminUserMapper.selectByExample(example);
+
+        // 不暴露帳號是否存在。
+        if (users.isEmpty()) {
+            log.warn("⚠️ 後台忘記密碼：帳號不存在但不回錯: email={}", email);
+            return;
+        }
+
+        AdminUser user = users.get(0);
+        String temporaryPassword = passwordUtil.generateRandomPassword();
+
+        AdminUser update = new AdminUser();
+        update.setId(user.getId());
+        update.setPassword(passwordEncoder.encode(temporaryPassword));
+        update.setForceChangePassword(true);
+        update.setUpdatedAt(LocalDateTime.now());
+        adminUserMapper.updateByPrimaryKeySelective(update);
+
+        String displayName = user.getDisplayName() != null && !user.getDisplayName().isBlank()
+                ? user.getDisplayName()
+                : user.getUsername();
+        emailService.sendTemporaryPasswordEmail(
+            user.getEmail(),
+            displayName,
+            temporaryPassword,
+            frontendUrl + "/admin/login",
+            "後台忘記密碼");
+
+        log.info("✅ 後台忘記密碼完成，已寄送臨時密碼: userId={}", user.getId());
     }
 
     /**

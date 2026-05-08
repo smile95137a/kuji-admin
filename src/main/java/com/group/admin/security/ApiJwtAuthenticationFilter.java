@@ -16,6 +16,7 @@ import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
 import com.group.admin.entity.Role;
 import com.group.admin.entity.User;
+import com.group.admin.constants.ErrorCodes;
 import com.group.admin.example.AdminUserExample;
 import com.group.admin.example.AdminUserRoleExample;
 import com.group.admin.example.UserExample;
@@ -23,6 +24,7 @@ import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.UserMapper;
+import com.group.admin.result.ApiResponse;
 import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.util.JwtUtil;
 
@@ -47,6 +49,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String FORCE_CHANGE_PASSWORD_MARKER = "FORCE_CHANGE_PASSWORD";
 
     private final JwtUtil jwtUtil;
     private final UserMapper userMapper;
@@ -108,7 +112,10 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
             authenticateAdmin(request, email);
         } else {
             log.info("🔑 [ApiJwtAuthenticationFilter] 執行前台使用者認證: {}", email);
-            authenticateUser(request, email, token);
+            boolean shouldContinue = authenticateUser(request, response, path, email, token);
+            if (!shouldContinue) {
+                return;
+            }
         }
 
         filterChain.doFilter(request, response);
@@ -183,7 +190,8 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
     /**
      * 認證前台使用者
      */
-    private void authenticateUser(HttpServletRequest request, String email, String token) {
+    private boolean authenticateUser(HttpServletRequest request, HttpServletResponse response,
+            String path, String email, String token) throws IOException {
         try {
             String userId = jwtUtil.getUserId(token);
             Integer tokenGen = getTokenGen(token);
@@ -191,7 +199,7 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
                 int currentGen = userTokenBlacklistService.getBlacklistGen(userId);
                 if (tokenGen < currentGen) {
                     log.warn("🚫 用戶 token 已失效 (gen mismatch): email={}", email);
-                    return;
+                    return true;
                 }
             }
             UserExample example = new UserExample();
@@ -200,10 +208,19 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (users.isEmpty()) {
                 log.warn("❌ 前台使用者不存在: {}", email);
-                return;
+                return true;
             }
 
             User user = users.get(0);
+
+            // 臨時密碼登入後，除了改密碼 API 以外全部禁止操作。
+            if (requiresForceChangePassword(user) && !path.equals("/user/me/change-password")) {
+                log.warn("⚠️ [API] 使用者必須先修改密碼: userId={}, path={}", user.getId(), path);
+                writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
+                        ErrorCodes.AUTH_FORCE_CHANGE_PASSWORD,
+                        "需先修改密碼後才能繼續操作");
+                return false;
+            }
 
             // 建立 UserPrincipal（前台使用者固定為 USER 角色）
             UserPrincipal principal = UserPrincipal.builder()
@@ -221,10 +238,23 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             log.debug("✅ [API] 前台使用者認證成功: {}", email);
-            
+            return true;
         } catch (Exception e) {
             log.error("❌ [API] 前台使用者認證失敗: {}", e.getMessage(), e);
+            return true;
         }
+    }
+
+    private boolean requiresForceChangePassword(User user) {
+        return user != null && FORCE_CHANGE_PASSWORD_MARKER.equals(user.getPasswordResetToken());
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String code, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(new com.fasterxml.jackson.databind.ObjectMapper()
+                .writeValueAsString(ApiResponse.error(code, message)));
     }
 
     private Integer getTokenGen(String token) {

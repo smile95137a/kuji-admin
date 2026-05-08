@@ -26,6 +26,11 @@ public interface AdminAuthService {
     LoginRes login(AdminLoginReq req);
 
     /**
+     * 忘記密碼：重設為臨時密碼並發送郵件。
+     */
+    void forgotPassword(String email);
+
+    /**
      * 首次登入修改密碼
      * 
      * <p>依據 store-account-management.prompt.md：
