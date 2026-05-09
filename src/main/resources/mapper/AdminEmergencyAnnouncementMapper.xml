@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.group.admin.mapper.AdminEmergencyAnnouncementMapper">
+
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.AdminEmergencyAnnouncement">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="announcement_type" jdbcType="VARCHAR" property="announcementType" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="display_start_time" jdbcType="TIMESTAMP" property="displayStartTime" />
+    <result column="display_end_time" jdbcType="TIMESTAMP" property="displayEndTime" />
+    <result column="maintenance_start_time" jdbcType="TIMESTAMP" property="maintenanceStartTime" />
+    <result column="maintenance_end_time" jdbcType="TIMESTAMP" property="maintenanceEndTime" />
+    <result column="force_show" jdbcType="BIT" property="forceShow" />
+    <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <resultMap id="ResultMapWithBLOBs" type="com.group.admin.entity.AdminEmergencyAnnouncement" extends="BaseResultMap">
+    <result column="content" jdbcType="LONGVARCHAR" property="content" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, title, announcement_type, status,
+    display_start_time, display_end_time,
+    maintenance_start_time, maintenance_end_time,
+    force_show, sort_order,
+    created_by, created_at, updated_by, updated_at
+  </sql>
+
+  <sql id="Blob_Column_List">
+    content
+  </sql>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    from admin_emergency_announcement
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectAll" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    from admin_emergency_announcement
+    order by updated_at desc
+  </select>
+
+  <select id="selectActive" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    from admin_emergency_announcement
+    where status = 'ACTIVE'
+      and display_start_time &lt;= #{now,jdbcType=TIMESTAMP}
+      and display_end_time &gt;= #{now,jdbcType=TIMESTAMP}
+    order by force_show desc, sort_order asc, display_start_time desc
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from admin_emergency_announcement
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <insert id="insert" parameterType="com.group.admin.entity.AdminEmergencyAnnouncement">
+    insert into admin_emergency_announcement (
+      id, title, content,
+      announcement_type, status,
+      display_start_time, display_end_time,
+      maintenance_start_time, maintenance_end_time,
+      force_show, sort_order,
+      created_by, created_at,
+      updated_by, updated_at
+    )
+    values (
+      #{id,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, #{content,jdbcType=LONGVARCHAR},
+      #{announcementType,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+      #{displayStartTime,jdbcType=TIMESTAMP}, #{displayEndTime,jdbcType=TIMESTAMP},
+      #{maintenanceStartTime,jdbcType=TIMESTAMP}, #{maintenanceEndTime,jdbcType=TIMESTAMP},
+      #{forceShow,jdbcType=BIT}, #{sortOrder,jdbcType=INTEGER},
+      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedBy,jdbcType=VARCHAR}, #{updatedAt,jdbcType=TIMESTAMP}
+    )
+  </insert>
+
+  <insert id="insertSelective" parameterType="com.group.admin.entity.AdminEmergencyAnnouncement">
+    insert into admin_emergency_announcement
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="title != null">title,</if>
+      <if test="content != null">content,</if>
+      <if test="announcementType != null">announcement_type,</if>
+      <if test="status != null">status,</if>
+      <if test="displayStartTime != null">display_start_time,</if>
+      <if test="displayEndTime != null">display_end_time,</if>
+      <if test="maintenanceStartTime != null">maintenance_start_time,</if>
+      <if test="maintenanceEndTime != null">maintenance_end_time,</if>
+      <if test="forceShow != null">force_show,</if>
+      <if test="sortOrder != null">sort_order,</if>
+      <if test="createdBy != null">created_by,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedBy != null">updated_by,</if>
+      <if test="updatedAt != null">updated_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+      <if test="title != null">#{title,jdbcType=VARCHAR},</if>
+      <if test="content != null">#{content,jdbcType=LONGVARCHAR},</if>
+      <if test="announcementType != null">#{announcementType,jdbcType=VARCHAR},</if>
+      <if test="status != null">#{status,jdbcType=VARCHAR},</if>
+      <if test="displayStartTime != null">#{displayStartTime,jdbcType=TIMESTAMP},</if>
+      <if test="displayEndTime != null">#{displayEndTime,jdbcType=TIMESTAMP},</if>
+      <if test="maintenanceStartTime != null">#{maintenanceStartTime,jdbcType=TIMESTAMP},</if>
+      <if test="maintenanceEndTime != null">#{maintenanceEndTime,jdbcType=TIMESTAMP},</if>
+      <if test="forceShow != null">#{forceShow,jdbcType=BIT},</if>
+      <if test="sortOrder != null">#{sortOrder,jdbcType=INTEGER},</if>
+      <if test="createdBy != null">#{createdBy,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedBy != null">#{updatedBy,jdbcType=VARCHAR},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.AdminEmergencyAnnouncement">
+    update admin_emergency_announcement
+    <set>
+      <if test="title != null">title = #{title,jdbcType=VARCHAR},</if>
+      <if test="content != null">content = #{content,jdbcType=LONGVARCHAR},</if>
+      <if test="announcementType != null">announcement_type = #{announcementType,jdbcType=VARCHAR},</if>
+      <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+      <if test="displayStartTime != null">display_start_time = #{displayStartTime,jdbcType=TIMESTAMP},</if>
+      <if test="displayEndTime != null">display_end_time = #{displayEndTime,jdbcType=TIMESTAMP},</if>
+      <if test="maintenanceStartTime != null">maintenance_start_time = #{maintenanceStartTime,jdbcType=TIMESTAMP},</if>
+      <if test="maintenanceEndTime != null">maintenance_end_time = #{maintenanceEndTime,jdbcType=TIMESTAMP},</if>
+      <if test="forceShow != null">force_show = #{forceShow,jdbcType=BIT},</if>
+      <if test="sortOrder != null">sort_order = #{sortOrder,jdbcType=INTEGER},</if>
+      <if test="updatedBy != null">updated_by = #{updatedBy,jdbcType=VARCHAR},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.AdminEmergencyAnnouncement">
+    update admin_emergency_announcement
+    set title = #{title,jdbcType=VARCHAR},
+      content = #{content,jdbcType=LONGVARCHAR},
+      announcement_type = #{announcementType,jdbcType=VARCHAR},
+      status = #{status,jdbcType=VARCHAR},
+      display_start_time = #{displayStartTime,jdbcType=TIMESTAMP},
+      display_end_time = #{displayEndTime,jdbcType=TIMESTAMP},
+      maintenance_start_time = #{maintenanceStartTime,jdbcType=TIMESTAMP},
+      maintenance_end_time = #{maintenanceEndTime,jdbcType=TIMESTAMP},
+      force_show = #{forceShow,jdbcType=BIT},
+      sort_order = #{sortOrder,jdbcType=INTEGER},
+      updated_by = #{updatedBy,jdbcType=VARCHAR},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+
+</mapper>
