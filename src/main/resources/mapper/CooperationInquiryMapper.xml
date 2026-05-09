@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.group.admin.mapper.CooperationInquiryMapper">
+
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.CooperationInquiry">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="company" jdbcType="VARCHAR" property="company" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="email" jdbcType="VARCHAR" property="email" />
+    <result column="phone" jdbcType="VARCHAR" property="phone" />
+    <result column="type" jdbcType="VARCHAR" property="type" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+
+  <resultMap id="ResultMapWithBLOBs" type="com.group.admin.entity.CooperationInquiry" extends="BaseResultMap">
+    <result column="message" jdbcType="LONGVARCHAR" property="message" />
+    <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, company, name, email, phone, type, status, created_at, updated_at
+  </sql>
+
+  <sql id="Blob_Column_List">
+    message, remark
+  </sql>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    from cooperation_inquiry
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectAll" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    from cooperation_inquiry
+    order by created_at desc
+  </select>
+
+  <insert id="insertSelective" parameterType="com.group.admin.entity.CooperationInquiry">
+    insert into cooperation_inquiry
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="company != null">company,</if>
+      <if test="name != null">name,</if>
+      <if test="email != null">email,</if>
+      <if test="phone != null">phone,</if>
+      <if test="type != null">type,</if>
+      <if test="message != null">message,</if>
+      <if test="status != null">status,</if>
+      <if test="remark != null">remark,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedAt != null">updated_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+      <if test="company != null">#{company,jdbcType=VARCHAR},</if>
+      <if test="name != null">#{name,jdbcType=VARCHAR},</if>
+      <if test="email != null">#{email,jdbcType=VARCHAR},</if>
+      <if test="phone != null">#{phone,jdbcType=VARCHAR},</if>
+      <if test="type != null">#{type,jdbcType=VARCHAR},</if>
+      <if test="message != null">#{message,jdbcType=LONGVARCHAR},</if>
+      <if test="status != null">#{status,jdbcType=VARCHAR},</if>
+      <if test="remark != null">#{remark,jdbcType=LONGVARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.CooperationInquiry">
+    update cooperation_inquiry
+    <set>
+      <if test="company != null">company = #{company,jdbcType=VARCHAR},</if>
+      <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
+      <if test="email != null">email = #{email,jdbcType=VARCHAR},</if>
+      <if test="phone != null">phone = #{phone,jdbcType=VARCHAR},</if>
+      <if test="type != null">type = #{type,jdbcType=VARCHAR},</if>
+      <if test="message != null">message = #{message,jdbcType=LONGVARCHAR},</if>
+      <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+      <if test="remark != null">remark = #{remark,jdbcType=LONGVARCHAR},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from cooperation_inquiry
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+</mapper>
