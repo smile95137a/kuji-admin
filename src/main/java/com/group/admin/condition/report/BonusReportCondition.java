@@ -14,13 +14,7 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "贈送點數報表查詢條件")
 public class BonusReportCondition extends BaseCondition {
-    
-    /**
-     * 店家 ID（後端自動帶入）
-     */
-    @Schema(description = "店家 ID（後端自動帶入）", example = "uuid-string")
-    private String storeId;
-    
+
     /**
      * 開始日期
      */

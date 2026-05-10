@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 贈送點數報表回應
+ * 贈送點數報表回應（平台視角）
  */
 @Data
 @Builder
@@ -50,7 +50,7 @@ public class BonusReportRes {
     private List<DailyBonus> dailyDetails;
     
     /**
-     * 贈送類型統計
+    * 贈點類型分布
      */
     private List<BonusTypeStats> typeStats;
     

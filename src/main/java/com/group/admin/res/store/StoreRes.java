@@ -125,6 +125,21 @@ public class StoreRes {
     @Schema(description = "狀態", example = "ACTIVE")
     private String status;
 
+    @Schema(description = "招商推薦來源店家 ID")
+    private String referrerStoreId;
+
+    @Schema(description = "招商推薦來源店家名稱")
+    private String referrerStoreName;
+
+    @Schema(description = "招商使用的推薦碼 ID")
+    private String referralCodeId;
+
+    @Schema(description = "招商使用的推薦碼")
+    private String referralCode;
+
+    @Schema(description = "啟用成功時間")
+    private LocalDateTime activatedAt;
+
     /**
      * 狀態顯示名稱
      */

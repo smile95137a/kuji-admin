@@ -16,9 +16,9 @@ import java.time.LocalDate;
 public class ReferralReportCondition extends BaseCondition {
     
     /**
-     * 店家 ID（後端自動帶入）
+     * 推薦店家 ID（Admin 篩選用）
      */
-    @Schema(description = "店家 ID（後端自動帶入）", example = "uuid-string")
+    @Schema(description = "推薦店家 ID（Admin 篩選用）", example = "uuid-string")
     private String storeId;
     
     /**

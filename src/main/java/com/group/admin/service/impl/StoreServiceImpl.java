@@ -4,6 +4,7 @@ import com.group.admin.condition.StoreCondition;
 import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
 import com.group.admin.entity.Lottery;
+import com.group.admin.entity.ReferralCode;
 import com.group.admin.entity.Role;
 import com.group.admin.entity.Store;
 import com.group.admin.entity.StoreUser;
@@ -12,6 +13,7 @@ import com.group.admin.enums.RoleCode;
 import com.group.admin.enums.StoreUserRoleType;
 import com.group.admin.example.AdminUserExample;
 import com.group.admin.example.LotteryExample;
+import com.group.admin.example.ReferralCodeExample;
 import com.group.admin.example.RoleExample;
 import com.group.admin.example.StoreExample;
 import com.group.admin.example.StoreUserExample;
@@ -22,6 +24,7 @@ import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.BannerMapper;
 import com.group.admin.mapper.LotteryMapper;
+import com.group.admin.mapper.ReferralCodeMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
@@ -51,6 +54,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -65,6 +69,7 @@ public class StoreServiceImpl implements StoreService {
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
     private final LotteryMapper lotteryMapper;
+    private final ReferralCodeMapper referralCodeMapper;
     private final BannerMapper bannerMapper;
     private final PasswordEncoder passwordEncoder;
     private final PasswordUtil passwordUtil;
@@ -175,6 +180,15 @@ public class StoreServiceImpl implements StoreService {
             }
             // STORE_OWNER cannot update remark
             req.setRemark(null);
+            req.setReferralCode(null);
+        }
+
+        if (req.getReferralCode() != null) {
+            String normalizedReferralCode = normalizeReferralCode(req.getReferralCode());
+            if (store.getActivatedAt() != null && !Objects.equals(normalizedReferralCode, getCurrentReferralCode(store))) {
+                throw new BusinessException("店家啟用成功後不可修改推薦來源");
+            }
+            applyReferralCode(store, normalizedReferralCode);
         }
 
         if (req.getStoreName() != null) store.setStoreName(req.getStoreName());
@@ -278,9 +292,12 @@ public class StoreServiceImpl implements StoreService {
         store.setLineId(req.getLineId());
         store.setRemark(req.getRemark());
         store.setStatus("ACTIVE");
+        store.setActivatedAt(LocalDateTime.now());
         store.setCreatedBy(operatorId);
         store.setCreatedAt(LocalDateTime.now());
         store.setUpdatedAt(LocalDateTime.now());
+
+        applyReferralCode(store, normalizeReferralCode(req.getReferralCode()));
 
         try {
             storeMapper.insertSelective(store);
@@ -378,10 +395,14 @@ public class StoreServiceImpl implements StoreService {
             store.setStatus("ACTIVE");
             store.setUpdatedBy(operatorId);
             store.setUpdatedAt(LocalDateTime.now());
+            if (store.getActivatedAt() == null) {
+                store.setActivatedAt(LocalDateTime.now());
+            }
             storeMapper.updateByPrimaryKeySelective(store);
 
             result.put("id", storeId);
             result.put("status", "ACTIVE");
+            result.put("activatedAt", store.getActivatedAt());
             result.put("updatedAt", store.getUpdatedAt());
             result.put("cascadeResult", null);
             result.put("note", "商品與橫幅狀態未自動恢復，需手動重新啟用");
@@ -517,6 +538,9 @@ public class StoreServiceImpl implements StoreService {
 
         store.setStatus(status);
         store.setUpdatedAt(LocalDateTime.now());
+        if ("ACTIVE".equals(status) && store.getActivatedAt() == null) {
+            store.setActivatedAt(LocalDateTime.now());
+        }
         storeMapper.updateByPrimaryKeySelective(store);
 
         log.info("✅ 店家狀態更新：storeId={}，status={}", storeId, status);
@@ -538,11 +562,22 @@ public class StoreServiceImpl implements StoreService {
                 .instagramUrl(store.getInstagramUrl())
                 .lineId(store.getLineId())
                 .status(store.getStatus())
+                .referrerStoreId(store.getReferrerStoreId())
+                .referralCodeId(store.getReferralCodeId())
+                .referralCode(getCurrentReferralCode(store))
+                .activatedAt(store.getActivatedAt())
                 .remark(store.getRemark())
                 .createdAt(store.getCreatedAt())
                 .createdBy(store.getCreatedBy())
                 .updatedAt(store.getUpdatedAt())
                 .build();
+
+        if (store.getReferrerStoreId() != null) {
+            Store referrerStore = storeMapper.selectByPrimaryKey(store.getReferrerStoreId());
+            if (referrerStore != null) {
+                res.setReferrerStoreName(referrerStore.getStoreName());
+            }
+        }
 
         // Owner info
         if (store.getOwnerId() != null) {
@@ -600,6 +635,50 @@ public class StoreServiceImpl implements StoreService {
 
     private String toSnakeCase(String camelCase) {
         return camelCase.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+    }
+
+    private void applyReferralCode(Store store, String referralCodeValue) {
+        if (referralCodeValue == null) {
+            store.setReferralCodeId(null);
+            store.setReferrerStoreId(null);
+            return;
+        }
+
+        ReferralCode referralCode = findReferralCodeByCode(referralCodeValue);
+        if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
+            throw new BusinessException("推薦碼不存在或已停用");
+        }
+
+        if (store.getId() != null && Objects.equals(referralCode.getStoreId(), store.getId())) {
+            throw new BusinessException("不可使用自己店家的推薦碼");
+        }
+
+        store.setReferralCodeId(referralCode.getId());
+        store.setReferrerStoreId(referralCode.getStoreId());
+    }
+
+    private ReferralCode findReferralCodeByCode(String referralCodeValue) {
+        ReferralCodeExample example = new ReferralCodeExample();
+        example.createCriteria().andCodeEqualTo(referralCodeValue);
+        List<ReferralCode> codes = referralCodeMapper.selectByExample(example);
+        return codes.isEmpty() ? null : codes.get(0);
+    }
+
+    private String getCurrentReferralCode(Store store) {
+        if (store.getReferralCodeId() == null) {
+            return null;
+        }
+        ReferralCode referralCode = referralCodeMapper.selectByPrimaryKey(store.getReferralCodeId());
+        return referralCode != null ? referralCode.getCode() : null;
+    }
+
+    private String normalizeReferralCode(String referralCodeValue) {
+        if (referralCodeValue == null) {
+            return null;
+        }
+
+        String trimmed = referralCodeValue.trim();
+        return trimmed.isEmpty() ? null : trimmed.toUpperCase();
     }
 
     // ========== 店家選項相關 ==========

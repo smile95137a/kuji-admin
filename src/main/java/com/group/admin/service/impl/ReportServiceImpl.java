@@ -157,88 +157,137 @@ public class ReportServiceImpl implements ReportService {
     
     @Override
     public ReferralReportRes getReferralReport(QueryReq<ReferralReportCondition> req) {
-        ReferralReportCondition condition = req != null && req.getCondition() != null ? 
-            req.getCondition():new ReferralReportCondition();
-        
+        ReferralReportCondition condition = req != null && req.getCondition() != null
+                ? req.getCondition() : new ReferralReportCondition();
+
         String storeId = condition.getStoreId();
-        LocalDate startDate = condition.getStartDate();
-        LocalDate endDate = condition.getEndDate();
-        
-        log.info("📊 產生推薦碼報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
-        
-        // 基本統計
-        String baseSql = """
-            SELECT 
-                COUNT(DISTINCT u.id) as total_referrals,
-                COALESCE(SUM(wt.amount), 0) as total_bonus
-            FROM user u
-            LEFT JOIN wallet_transaction wt ON %s
-                AND wt.transaction_type = 'REFERRAL_BONUS'
-            WHERE u.referred_store_id IS NOT NULL
-            AND u.created_at BETWEEN ? AND ?
-            """.formatted(utf8mb4Eq("wt.user_id", "u.id"));
-        
-        List<Object> params = new ArrayList<>();
-        params.add(startDate.atStartOfDay());
-        params.add(endDate.plusDays(1).atStartOfDay());
-        
-        if (storeId != null) {
-            baseSql += " AND u.referred_store_id = ?";
-            params.add(storeId);
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate 不可晚於 endDate");
         }
-        
-        Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
-        
-        // 計算成長率
-        LocalDate prevStartDate = startDate.minusDays(startDate.until(endDate).getDays() + 1);
-        BigDecimal growthRate = BigDecimal.ZERO;
-        
-        // 每日明細
-        List<ReferralReportRes.DailyReferral> dailyDetails = new ArrayList<>();
-        
-        // 排行榜
-        String rankingSql = """
-            SELECT 
-                u.referral_code,
-                u.nickname as user_name,
-                s.name as store_name,
-                COUNT(DISTINCT ref.id) as referral_count,
-                COALESCE(SUM(wt.amount), 0) as total_bonus
-            FROM user u
-            LEFT JOIN store s ON %s
-            LEFT JOIN user ref ON %s
-            LEFT JOIN wallet_transaction wt ON %s
-                AND wt.transaction_type = 'REFERRAL_BONUS'
-            WHERE u.referral_code IS NOT NULL
-            GROUP BY u.id, u.referral_code, u.nickname, s.name
-            HAVING referral_count > 0
-            ORDER BY referral_count DESC
-            LIMIT 20
-            """.formatted(
-                utf8mb4Eq("u.referred_store_id", "s.id"),
-                utf8mb4Eq("ref.referral_code", "u.referral_code"),
-                utf8mb4Eq("wt.user_id", "u.id"));
-        
-        List<ReferralReportRes.ReferralRanking> rankings = jdbcTemplate.query(rankingSql,
-            (rs, rowNum) -> ReferralReportRes.ReferralRanking.builder()
-                .referralCode(rs.getString("referral_code"))
-                .userName(rs.getString("user_name"))
-                .storeName(rs.getString("store_name"))
-                .referralCount(rs.getInt("referral_count"))
-                .totalBonus(rs.getBigDecimal("total_bonus"))
-                .rank(rowNum + 1)
-                .build()
-        );
-        
+
+        log.info("📊 產生店薦店招商報表: referrerStoreId={}, {} ~ {}", storeId, startDate, endDate);
+
+        String codeSummarySql = """
+            SELECT
+                COUNT(*) AS total_code_count,
+                COALESCE(SUM(CASE WHEN rc.is_active = 1 THEN 1 ELSE 0 END), 0) AS active_code_count
+            FROM referral_code rc
+            WHERE 1 = 1
+            """;
+        List<Object> codeSummaryParams = new ArrayList<>();
+        if (storeId != null && !storeId.isBlank()) {
+            codeSummarySql += " AND rc.store_id = ?";
+            codeSummaryParams.add(storeId);
+        }
+        Map<String, Object> codeSummary = jdbcTemplate.queryForMap(codeSummarySql, codeSummaryParams.toArray());
+
+        String successAllSql = """
+            SELECT COUNT(*)
+            FROM store s
+            WHERE s.referrer_store_id IS NOT NULL
+              AND s.activated_at IS NOT NULL
+            """;
+        List<Object> successAllParams = new ArrayList<>();
+        if (storeId != null && !storeId.isBlank()) {
+            successAllSql += " AND s.referrer_store_id = ?";
+            successAllParams.add(storeId);
+        }
+        Integer successfulReferralStoreCount = jdbcTemplate.queryForObject(
+                successAllSql,
+                Integer.class,
+                successAllParams.toArray());
+
+        LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
+        Integer currentPeriodActivatedStoreCount = queryActivatedReferralStoreCount(startDate, endDate, storeId);
+        Integer previousPeriodActivatedStoreCount = queryActivatedReferralStoreCount(previousRange[0], previousRange[1], storeId);
+        BigDecimal growthRate = calculateNullableGrowthRate(
+                BigDecimal.valueOf(currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0),
+                BigDecimal.valueOf(previousPeriodActivatedStoreCount != null ? previousPeriodActivatedStoreCount : 0));
+
+        String dailySql = """
+            SELECT
+                DATE(s.activated_at) AS activated_date,
+                COUNT(*) AS activated_store_count
+            FROM store s
+            WHERE s.referrer_store_id IS NOT NULL
+              AND s.activated_at >= ?
+              AND s.activated_at < ?
+            """;
+        List<Object> dailyParams = new ArrayList<>();
+        dailyParams.add(startDate.atStartOfDay());
+        dailyParams.add(endDate.plusDays(1).atStartOfDay());
+        if (storeId != null && !storeId.isBlank()) {
+            dailySql += " AND s.referrer_store_id = ?";
+            dailyParams.add(storeId);
+        }
+        dailySql += " GROUP BY DATE(s.activated_at) ORDER BY activated_date ASC";
+
+        Map<LocalDate, Integer> dailyMap = new LinkedHashMap<>();
+        jdbcTemplate.query(dailySql, dailyParams.toArray(), rs ->
+                dailyMap.put(rs.getDate("activated_date").toLocalDate(), rs.getInt("activated_store_count")));
+
+        List<ReferralReportRes.DailyActivation> dailyActivations = new ArrayList<>();
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            dailyActivations.add(ReferralReportRes.DailyActivation.builder()
+                    .date(date)
+                    .activatedStoreCount(dailyMap.getOrDefault(date, 0))
+                    .build());
+        }
+
+        String performanceSql = """
+            SELECT
+                s.referrer_store_id,
+                ref.store_name AS referrer_store_name,
+                COUNT(*) AS activated_store_count,
+                MAX(DATE(s.activated_at)) AS last_activated_date,
+                (
+                    SELECT COUNT(*)
+                    FROM referral_code rc
+                    WHERE rc.store_id = s.referrer_store_id
+                ) AS referral_code_count
+            FROM store s
+            JOIN store ref ON ref.id = s.referrer_store_id
+            WHERE s.referrer_store_id IS NOT NULL
+              AND s.activated_at >= ?
+              AND s.activated_at < ?
+            """;
+        List<Object> performanceParams = new ArrayList<>();
+        performanceParams.add(startDate.atStartOfDay());
+        performanceParams.add(endDate.plusDays(1).atStartOfDay());
+        if (storeId != null && !storeId.isBlank()) {
+            performanceSql += " AND s.referrer_store_id = ?";
+            performanceParams.add(storeId);
+        }
+        performanceSql += " GROUP BY s.referrer_store_id, ref.store_name ORDER BY activated_store_count DESC, ref.store_name ASC LIMIT 20";
+
+        List<ReferralReportRes.StoreReferralPerformance> storePerformances = jdbcTemplate.query(
+                performanceSql,
+                performanceParams.toArray(),
+                (rs, rowNum) -> ReferralReportRes.StoreReferralPerformance.builder()
+                        .referrerStoreId(rs.getString("referrer_store_id"))
+                        .referrerStoreName(rs.getString("referrer_store_name"))
+                        .referralCodeCount(rs.getInt("referral_code_count"))
+                        .activatedStoreCount(rs.getInt("activated_store_count"))
+                        .lastActivatedDate(rs.getDate("last_activated_date") != null
+                                ? rs.getDate("last_activated_date").toLocalDate()
+                                : null)
+                        .rank(rowNum + 1)
+                        .build());
+
         return ReferralReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
-                .totalReferrals(toInteger(stats.get("total_referrals")))
-                .totalBonusAmount(toBigDecimal(stats.get("total_bonus")))
-                .conversionRate(BigDecimal.ZERO)
+                .totalReferralCodeCount(toInteger(codeSummary.get("total_code_count")))
+                .activeReferralCodeCount(toInteger(codeSummary.get("active_code_count")))
+                .successfulReferralStoreCount(successfulReferralStoreCount != null ? successfulReferralStoreCount : 0)
+                .currentPeriodActivatedStoreCount(currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0)
+                .previousPeriodActivatedStoreCount(previousPeriodActivatedStoreCount != null ? previousPeriodActivatedStoreCount : 0)
                 .growthRate(growthRate)
-                .dailyDetails(dailyDetails)
-                .rankings(rankings)
+                .dailyActivations(dailyActivations)
+                .storePerformances(storePerformances)
                 .build();
     }
     
@@ -246,138 +295,128 @@ public class ReportServiceImpl implements ReportService {
     public LotteryResultReportRes getLotteryResultReport(QueryReq<LotteryResultReportCondition> req) {
         LotteryResultReportCondition condition = req != null && req.getCondition() != null ? 
             req.getCondition() : new LotteryResultReportCondition();
-        
+
         String storeId = condition.getStoreId();
         String lotteryId = condition.getLotteryId();
-        LocalDate startDate = condition.getStartDate();
-        LocalDate endDate = condition.getEndDate();
-        
-        // 基本統計
-        String baseSql = """
-            SELECT 
-                COALESCE(SUM(draw_count), 0) as total_draws,
-                COALESCE(SUM(total_amount), 0) as total_amount
-            FROM `order`
-            WHERE status IN ('PAID', 'COMPLETED')
-            AND created_at BETWEEN ? AND ?
-            """;
-        
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate 不可晚於 endDate");
+        }
+
+        log.info("📊 產生抽獎結果報表: storeId={}, lotteryId={}, {} ~ {}", storeId, lotteryId, startDate, endDate);
+
+        StringBuilder where = new StringBuilder(" WHERE lt.status = 'DRAWN' AND lt.drawn_at BETWEEN ? AND ? ");
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
         params.add(endDate.plusDays(1).atStartOfDay());
-        
-        if (storeId != null) {
-            baseSql += " AND store_id = ?";
+        if (storeId != null && !storeId.isBlank()) {
+            where.append(" AND l.store_id = ? ");
             params.add(storeId);
         }
-        if (lotteryId != null) {
-            baseSql += " AND lottery_id = ?";
+        if (lotteryId != null && !lotteryId.isBlank()) {
+            where.append(" AND l.id = ? ");
             params.add(lotteryId);
         }
-        
-        Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
-        
-        // 獎品統計
-        String prizeSql = """
-            SELECT 
-                p.level as prize_level,
-                COUNT(*) as total_count,
-                SUM(CASE WHEN p.status = 'WON' THEN 1 ELSE 0 END) as won_count,
-                SUM(CASE WHEN p.status != 'WON' THEN 1 ELSE 0 END) as remain_count
-            FROM prize p
-            JOIN lottery l ON %s
-            WHERE l.created_at BETWEEN ? AND ?
-            """ + (storeId != null ? " AND l.store_id = ?" : "") +
-            (lotteryId != null ? " AND p.lottery_id = ?" : "") + """
-            GROUP BY p.level
-            ORDER BY p.level
-            """.formatted(utf8mb4Eq("p.lottery_id", "l.id"));
-        
-        List<Object> prizeParams = new ArrayList<>();
-        prizeParams.add(startDate.atStartOfDay());
-        prizeParams.add(endDate.plusDays(1).atStartOfDay());
-        if (storeId != null) prizeParams.add(storeId);
-        if (lotteryId != null) prizeParams.add(lotteryId);
-        
-        List<LotteryResultReportRes.PrizeStats> prizeStats = jdbcTemplate.query(prizeSql, prizeParams.toArray(),
-            (rs, rowNum) -> {
-                int totalCount = rs.getInt("total_count");
-                int wonCount = rs.getInt("won_count");
-                return LotteryResultReportRes.PrizeStats.builder()
-                    .prizeLevel(rs.getString("prize_level"))
-                    .totalCount(totalCount)
-                    .wonCount(wonCount)
-                    .remainCount(rs.getInt("remain_count"))
-                    .wonPercentage(totalCount > 0 ? 
-                        new BigDecimal(wonCount * 100).divide(new BigDecimal(totalCount), 2, RoundingMode.HALF_UP) 
-                        : BigDecimal.ZERO)
-                    .build();
-            }
-        );
-        
-        // 一番賞統計
-        String lotterySql = """
-                SELECT 
-                l.id as lottery_id,
-                l.title as lottery_title,
-                s.name as store_name,
-                l.total_slots,
-                l.sold_slots,
-                (l.total_slots - l.sold_slots) as remain_slots,
-                l.price_per_draw * l.sold_slots as revenue
-            FROM lottery l
-            LEFT JOIN store s ON %s
-            WHERE l.created_at BETWEEN ? AND ?
-            """ + (storeId != null ? " AND l.store_id = ?" : "") + """
-            ORDER BY l.sold_slots DESC
-            LIMIT 50
-            """.formatted(utf8mb4Eq("l.store_id", "s.id"));
-        
-        List<Object> lotteryParams = new ArrayList<>();
-        lotteryParams.add(startDate.atStartOfDay());
-        lotteryParams.add(endDate.plusDays(1).atStartOfDay());
-        if (storeId != null) lotteryParams.add(storeId);
-        
-        List<LotteryResultReportRes.LotteryStats> lotteryStats = jdbcTemplate.query(lotterySql, lotteryParams.toArray(),
-            (rs, rowNum) -> {
-                int totalSlots = rs.getInt("total_slots");
-                int soldSlots = rs.getInt("sold_slots");
-                return LotteryResultReportRes.LotteryStats.builder()
-                    .lotteryId(rs.getString("lottery_id"))
-                    .lotteryTitle(rs.getString("lottery_title"))
-                    .storeName(rs.getString("store_name"))
-                    .totalSlots(totalSlots)
-                    .soldSlots(soldSlots)
-                    .remainSlots(rs.getInt("remain_slots"))
-                    .soldPercentage(totalSlots > 0 ?
-                        new BigDecimal(soldSlots * 100).divide(new BigDecimal(totalSlots), 2, RoundingMode.HALF_UP)
-                        : BigDecimal.ZERO)
-                    .revenue(rs.getBigDecimal("revenue"))
-                    .build();
-            }
-        );
-        
-        // 計算大獎數量
-        int bigPrizes = prizeStats.stream()
-            .filter(p -> "A".equals(p.getPrizeLevel()) || 
-                        "B".equals(p.getPrizeLevel()) || 
-                        "LAST".equals(p.getPrizeLevel()))
-            .mapToInt(LotteryResultReportRes.PrizeStats::getWonCount)
-            .sum();
-        
-        int totalPrizes = prizeStats.stream()
-            .mapToInt(LotteryResultReportRes.PrizeStats::getWonCount)
-            .sum();
-        
+
+        String summarySql = """
+                SELECT
+                    COUNT(*) AS total_draws,
+                    COALESCE(SUM(CASE WHEN lt.prize_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS total_winning_count
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id")) + where;
+
+        Map<String, Object> summary = jdbcTemplate.queryForMap(summarySql, params.toArray());
+
+        String hotSql = """
+                SELECT
+                    l.id AS lottery_id,
+                    l.title AS lottery_title,
+                    COUNT(*) AS draw_count,
+                    COALESCE(SUM(CASE WHEN lt.prize_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS winning_count
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id")) + where + """
+                GROUP BY l.id, l.title
+                ORDER BY winning_count DESC, draw_count DESC, l.title ASC
+                LIMIT 10
+                """;
+
+        List<LotteryResultReportRes.HotLottery> hotLotteries = jdbcTemplate.query(
+                hotSql,
+                params.toArray(),
+                (rs, rowNum) -> LotteryResultReportRes.HotLottery.builder()
+                        .lotteryId(rs.getString("lottery_id"))
+                        .lotteryTitle(rs.getString("lottery_title"))
+                        .drawCount(rs.getInt("draw_count"))
+                        .winningCount(rs.getInt("winning_count"))
+                        .build());
+
+        String detailSql = """
+                SELECT
+                    lt.id AS ticket_id,
+                    DATE(lt.drawn_at) AS draw_date,
+                    DATE_FORMAT(lt.drawn_at, '%Y-%m-%d %H:%i:%s') AS draw_time,
+                    lt.drawn_by AS user_id,
+                    COALESCE(u.nickname, u.email, lt.drawn_by) AS user_display_name,
+                    l.id AS lottery_id,
+                    l.title AS lottery_title,
+                    l.image_url AS lottery_image_url,
+                    lp.id AS prize_id,
+                    COALESCE(lp.name, '謝謝惠顧') AS prize_name,
+                    COALESCE(lp.level, lt.prize_level) AS prize_level,
+                    lp.image_url AS prize_image_url,
+                    lt.ticket_number,
+                    lt.revealed_number,
+                    s.id AS store_id,
+                    s.store_name
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                LEFT JOIN lottery_prize lp ON %s AND %s
+                LEFT JOIN user u ON %s
+                LEFT JOIN store s ON %s
+                """.formatted(
+                utf8mb4Eq("lt.lottery_id", "l.id"),
+                utf8mb4Eq("lt.prize_id", "lp.id"),
+                utf8mb4Eq("lp.lottery_id", "l.id"),
+                utf8mb4Eq("lt.drawn_by", "u.id"),
+                utf8mb4Eq("l.store_id", "s.id")) + where + """
+                AND lt.prize_id IS NOT NULL
+                ORDER BY lt.drawn_at DESC
+                LIMIT 1000
+                """;
+
+        List<LotteryResultReportRes.WinningDetail> winningDetails = jdbcTemplate.query(
+                detailSql,
+                params.toArray(),
+                (rs, rowNum) -> LotteryResultReportRes.WinningDetail.builder()
+                        .ticketId(rs.getString("ticket_id"))
+                        .drawDate(rs.getDate("draw_date") != null ? rs.getDate("draw_date").toLocalDate() : null)
+                        .drawTime(rs.getString("draw_time"))
+                        .userId(rs.getString("user_id"))
+                        .userDisplayName(rs.getString("user_display_name"))
+                        .lotteryId(rs.getString("lottery_id"))
+                        .lotteryTitle(rs.getString("lottery_title"))
+                        .lotteryImageUrl(rs.getString("lottery_image_url"))
+                        .prizeId(rs.getString("prize_id"))
+                        .prizeName(rs.getString("prize_name"))
+                        .prizeLevel(rs.getString("prize_level"))
+                        .prizeImageUrl(rs.getString("prize_image_url"))
+                        .drawCount(1)
+                        .ticketNumber(rs.getInt("ticket_number"))
+                        .revealedNumber(rs.getObject("revealed_number") != null ? rs.getInt("revealed_number") : null)
+                        .storeId(rs.getString("store_id"))
+                        .storeName(rs.getString("store_name"))
+                        .build());
+
         return LotteryResultReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
-                .totalDraws(toInteger(stats.get("total_draws")))
-                .totalPrizes(totalPrizes)
-                .bigPrizes(bigPrizes)
-                .totalAmount(toBigDecimal(stats.get("total_amount")))
-                .prizeStats(prizeStats)
-                .lotteryStats(lotteryStats)
+                .totalDraws(toInteger(summary.get("total_draws")))
+                .totalWinningCount(toInteger(summary.get("total_winning_count")))
+                .hotLotteries(hotLotteries)
+                .winningDetails(winningDetails)
                 .build();
     }
     
@@ -385,12 +424,14 @@ public class ReportServiceImpl implements ReportService {
     public RechargeReportRes getRechargeReport(QueryReq<RechargeReportCondition> req) {
         RechargeReportCondition condition = req != null && req.getCondition() != null ? 
             req.getCondition() : new RechargeReportCondition();
-        
-        String storeId = condition.getStoreId();
-        LocalDate startDate = condition.getStartDate();
-        LocalDate endDate = condition.getEndDate();
-        
-        log.info("📊 產生儲值報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
+
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate 不可晚於 endDate");
+        }
+
+        log.info("📊 產生儲值報表（平台）: {} ~ {}", startDate, endDate);
         
         // 基本統計
         String baseSql = """
@@ -411,12 +452,11 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
         
         // 計算成長率
-        LocalDate prevStartDate = startDate.minusDays(startDate.until(endDate).getDays() + 1);
-        LocalDate prevEndDate = startDate.minusDays(1);
+        LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
         
         List<Object> prevParams = new ArrayList<>();
-        prevParams.add(prevStartDate.atStartOfDay());
-        prevParams.add(prevEndDate.plusDays(1).atStartOfDay());
+        prevParams.add(previousRange[0].atStartOfDay());
+        prevParams.add(previousRange[1].plusDays(1).atStartOfDay());
         
         Map<String, Object> prevStats = jdbcTemplate.queryForMap(baseSql, prevParams.toArray());
         
@@ -492,12 +532,14 @@ public class ReportServiceImpl implements ReportService {
     public BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req) {
         BonusReportCondition condition = req != null && req.getCondition() != null ? 
             req.getCondition() : new BonusReportCondition();
-        
-        String storeId = condition.getStoreId();
-        LocalDate startDate = condition.getStartDate();
-        LocalDate endDate = condition.getEndDate();
-        
-        log.info("📊 產生贈送點數報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
+
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate 不可晚於 endDate");
+        }
+
+        log.info("📊 產生贈送點數報表（平台）: {} ~ {}", startDate, endDate);
         
         // 基本統計（贈送類型交易）
         String baseSql = """
@@ -519,12 +561,11 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
         
         // 計算成長率
-        LocalDate prevStartDate = startDate.minusDays(startDate.until(endDate).getDays() + 1);
-        LocalDate prevEndDate = startDate.minusDays(1);
+        LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
         
         List<Object> prevParams = new ArrayList<>();
-        prevParams.add(prevStartDate.atStartOfDay());
-        prevParams.add(prevEndDate.plusDays(1).atStartOfDay());
+        prevParams.add(previousRange[0].atStartOfDay());
+        prevParams.add(previousRange[1].plusDays(1).atStartOfDay());
         
         Map<String, Object> prevStats = jdbcTemplate.queryForMap(baseSql, prevParams.toArray());
         
@@ -837,6 +878,174 @@ public class ReportServiceImpl implements ReportService {
                     .divide(baseBD, 1, RoundingMode.HALF_UP);
         }
 
+            // ── Q9: 會員消費模式分布（以本期新增會員為母體）────────────────────────
+            String patternSql = """
+                SELECT pattern_code, COUNT(*) AS user_count
+                FROM (
+                    SELECT
+                    u.id,
+                    CASE
+                        WHEN r.user_id IS NOT NULL AND d.user_id IS NOT NULL THEN 'RECHARGE_AND_DRAW'
+                        WHEN r.user_id IS NOT NULL AND d.user_id IS NULL THEN 'RECHARGE_ONLY'
+                        WHEN r.user_id IS NULL AND d.user_id IS NOT NULL THEN 'DRAW_ONLY'
+                        ELSE 'REGISTER_ONLY'
+                    END AS pattern_code
+                    FROM user u
+                    LEFT JOIN (
+                    SELECT DISTINCT user_id
+                    FROM wallet_transaction
+                    WHERE transaction_type = 'RECHARGE'
+                      AND created_at BETWEEN ? AND ?
+                    ) r ON %s
+                    LEFT JOIN (
+                    SELECT DISTINCT drawn_by AS user_id
+                    FROM lottery_ticket
+                    WHERE status = 'DRAWN'
+                      AND drawn_at BETWEEN ? AND ?
+                      AND drawn_by IS NOT NULL
+                    ) d ON %s
+                    WHERE u.created_at BETWEEN ? AND ?
+                ) t
+                GROUP BY pattern_code
+                """.formatted(utf8mb4Eq("r.user_id", "u.id"), utf8mb4Eq("d.user_id", "u.id"));
+
+            Map<String, Integer> patternMap = new LinkedHashMap<>();
+            jdbcTemplate.query(patternSql,
+                new Object[]{startDt, endDt, startDt, endDt, startDt, endDt},
+                (RowCallbackHandler) rs -> patternMap.put(rs.getString("pattern_code"), rs.getInt("user_count")));
+
+            String[] patternCodes = {"RECHARGE_AND_DRAW", "RECHARGE_ONLY", "DRAW_ONLY", "REGISTER_ONLY"};
+            List<MemberGrowthReportRes.ConsumptionPattern> consumptionPatterns = new ArrayList<>();
+            for (String patternCode : patternCodes) {
+                int userCount = patternMap.getOrDefault(patternCode, 0);
+                BigDecimal percentage = totalNewMembers > 0
+                    ? BigDecimal.valueOf(userCount).multiply(new BigDecimal("100"))
+                    .divide(BigDecimal.valueOf(totalNewMembers), 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+                consumptionPatterns.add(MemberGrowthReportRes.ConsumptionPattern.builder()
+                    .patternCode(patternCode)
+                    .patternName(switch (patternCode) {
+                    case "RECHARGE_AND_DRAW" -> "有儲值且有抽獎";
+                    case "RECHARGE_ONLY" -> "僅儲值";
+                    case "DRAW_ONLY" -> "僅抽獎";
+                    default -> "僅註冊未消費";
+                    })
+                    .userCount(userCount)
+                    .percentage(percentage)
+                    .build());
+            }
+
+            // ── Q10: 商品集中度（Top 10）───────────────────────────────────────
+            Long totalDrawVolume = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lottery_ticket WHERE status = 'DRAWN' AND drawn_at BETWEEN ? AND ?",
+                Long.class,
+                startDt,
+                endDt);
+            if (totalDrawVolume == null) {
+                totalDrawVolume = 0L;
+            }
+
+            String concentrationSql = """
+                SELECT
+                    l.id AS lottery_id,
+                    l.title AS lottery_title,
+                    l.category,
+                    COUNT(*) AS draw_count
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                WHERE lt.status = 'DRAWN'
+                  AND lt.drawn_at BETWEEN ? AND ?
+                GROUP BY l.id, l.title, l.category
+                ORDER BY draw_count DESC, l.title ASC
+                LIMIT 10
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
+
+            final long drawBase = totalDrawVolume;
+            List<MemberGrowthReportRes.ProductConcentration> productConcentrations = jdbcTemplate.query(
+                concentrationSql,
+                new Object[]{startDt, endDt},
+                (rs, rowNum) -> {
+                    int drawCount = rs.getInt("draw_count");
+                    BigDecimal percentage = drawBase > 0
+                        ? BigDecimal.valueOf(drawCount).multiply(new BigDecimal("100"))
+                        .divide(BigDecimal.valueOf(drawBase), 1, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+                    return MemberGrowthReportRes.ProductConcentration.builder()
+                        .lotteryId(rs.getString("lottery_id"))
+                        .lotteryTitle(rs.getString("lottery_title"))
+                        .category(rs.getString("category"))
+                        .drawCount(drawCount)
+                        .drawPercentage(percentage)
+                        .build();
+                });
+
+            // ── Q11: 金幣 / 紅利消耗分布 ───────────────────────────────────────
+            String coinSql = """
+                SELECT coin_type, COALESCE(ABS(SUM(amount)), 0) AS total
+                FROM wallet_transaction
+                WHERE transaction_type = 'DRAW'
+                  AND created_at BETWEEN ? AND ?
+                GROUP BY coin_type
+                """;
+            long goldSpend = 0L;
+            long bonusSpend = 0L;
+            List<Map<String, Object>> coinRows = jdbcTemplate.queryForList(coinSql, startDt, endDt);
+            for (Map<String, Object> row : coinRows) {
+                String coinType = row.get("coin_type") != null ? row.get("coin_type").toString() : "";
+                long total = toLong(row.get("total"));
+                if ("GOLD".equalsIgnoreCase(coinType)) {
+                goldSpend = total;
+                } else if ("BONUS".equalsIgnoreCase(coinType)) {
+                bonusSpend = total;
+                }
+            }
+            long totalSpend = goldSpend + bonusSpend;
+            MemberGrowthReportRes.CoinUsageDistribution coinUsageDistribution = MemberGrowthReportRes.CoinUsageDistribution.builder()
+                .goldSpend(goldSpend)
+                .bonusSpend(bonusSpend)
+                .goldPercentage(totalSpend > 0
+                    ? BigDecimal.valueOf(goldSpend).multiply(new BigDecimal("100"))
+                    .divide(BigDecimal.valueOf(totalSpend), 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO)
+                .bonusPercentage(totalSpend > 0
+                    ? BigDecimal.valueOf(bonusSpend).multiply(new BigDecimal("100"))
+                    .divide(BigDecimal.valueOf(totalSpend), 1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO)
+                .build();
+
+            // ── Q12: 支付型態分布（recharge_order）─────────────────────────────
+            String paymentSql = """
+                SELECT
+                    COALESCE(gateway_provider, 'UNKNOWN') AS payment_method,
+                    COUNT(*) AS txn_count,
+                    COALESCE(SUM(price_twd), 0) AS total_amount
+                FROM recharge_order
+                WHERE status = 'PAID'
+                  AND paid_at BETWEEN ? AND ?
+                GROUP BY COALESCE(gateway_provider, 'UNKNOWN')
+                ORDER BY total_amount DESC, txn_count DESC
+                """;
+
+            List<Map<String, Object>> paymentRows = jdbcTemplate.queryForList(paymentSql, startDt, endDt);
+            BigDecimal paymentTotalAmount = BigDecimal.ZERO;
+            for (Map<String, Object> row : paymentRows) {
+                paymentTotalAmount = paymentTotalAmount.add(toBigDecimal(row.get("total_amount")));
+            }
+            final BigDecimal paymentBase = paymentTotalAmount;
+            List<MemberGrowthReportRes.PaymentMethodDistribution> paymentMethodDistributions = paymentRows.stream()
+                .map(row -> {
+                    BigDecimal amount = toBigDecimal(row.get("total_amount"));
+                    return MemberGrowthReportRes.PaymentMethodDistribution.builder()
+                        .paymentMethod(row.get("payment_method") != null ? row.get("payment_method").toString() : "UNKNOWN")
+                        .transactionCount(toInteger(row.get("txn_count")))
+                        .totalAmount(amount)
+                        .percentage(paymentBase.compareTo(BigDecimal.ZERO) > 0
+                            ? amount.multiply(new BigDecimal("100")).divide(paymentBase, 1, RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO)
+                        .build();
+                })
+                .collect(Collectors.toList());
+
         return MemberGrowthReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
@@ -849,6 +1058,10 @@ public class ReportServiceImpl implements ReportService {
                 .arpuBonus(arpuBonus)
                 .retention7Days(retention7Days)
                 .retention30Days(retention30Days)
+                .consumptionPatterns(consumptionPatterns)
+                .productConcentrations(productConcentrations)
+                .coinUsageDistribution(coinUsageDistribution)
+                .paymentMethodDistributions(paymentMethodDistributions)
                 .build();
     }
 
@@ -1290,6 +1503,25 @@ public class ReportServiceImpl implements ReportService {
                   AND drawn_at BETWEEN ? AND ?
                 """, Long.class, start, end);
         return value != null ? value : 0L;
+    }
+
+    private Integer queryActivatedReferralStoreCount(LocalDate startDate, LocalDate endDate, String referrerStoreId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM store s
+                WHERE s.referrer_store_id IS NOT NULL
+                  AND s.activated_at >= ?
+                  AND s.activated_at < ?
+                """;
+        List<Object> params = new ArrayList<>();
+        params.add(startDate.atStartOfDay());
+        params.add(endDate.plusDays(1).atStartOfDay());
+        if (referrerStoreId != null && !referrerStoreId.isBlank()) {
+            sql += " AND s.referrer_store_id = ?";
+            params.add(referrerStoreId);
+        }
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, params.toArray());
+        return count != null ? count : 0;
     }
 
     private LocalDate[] calculatePreviousRange(LocalDate startDate, LocalDate endDate) {

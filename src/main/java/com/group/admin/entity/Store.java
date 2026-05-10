@@ -7,6 +7,10 @@ public class Store {
 
     private String ownerId;
 
+    private String referrerStoreId;
+
+    private String referralCodeId;
+
     private String storeName;
 
     private String shortDescription;
@@ -30,6 +34,8 @@ public class Store {
     private String businessHours;
 
     private String status;
+
+    private LocalDateTime activatedAt;
 
     private LocalDateTime createdAt;
 
@@ -57,6 +63,22 @@ public class Store {
 
     public void setOwnerId(String ownerId) {
         this.ownerId = ownerId == null ? null : ownerId.trim();
+    }
+
+    public String getReferrerStoreId() {
+        return referrerStoreId;
+    }
+
+    public void setReferrerStoreId(String referrerStoreId) {
+        this.referrerStoreId = referrerStoreId == null ? null : referrerStoreId.trim();
+    }
+
+    public String getReferralCodeId() {
+        return referralCodeId;
+    }
+
+    public void setReferralCodeId(String referralCodeId) {
+        this.referralCodeId = referralCodeId == null ? null : referralCodeId.trim();
     }
 
     public String getStoreName() {
@@ -153,6 +175,14 @@ public class Store {
 
     public void setStatus(String status) {
         this.status = status == null ? null : status.trim();
+    }
+
+    public LocalDateTime getActivatedAt() {
+        return activatedAt;
+    }
+
+    public void setActivatedAt(LocalDateTime activatedAt) {
+        this.activatedAt = activatedAt;
     }
 
     public LocalDateTime getCreatedAt() {

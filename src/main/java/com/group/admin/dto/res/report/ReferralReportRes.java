@@ -25,19 +25,29 @@ public class ReferralReportRes {
     private LocalDate endDate;
     
     /**
-     * 總推薦人數
+     * 推薦碼總數
      */
-    private Integer totalReferrals;
-    
+    private Integer totalReferralCodeCount;
+
     /**
-     * 總推薦獎勵金額
+     * 啟用中的推薦碼總數
      */
-    private BigDecimal totalBonusAmount;
-    
+    private Integer activeReferralCodeCount;
+
     /**
-     * 推薦轉換率（%）
+     * 歷史累計成功招商店數
      */
-    private BigDecimal conversionRate;
+    private Integer successfulReferralStoreCount;
+
+    /**
+     * 本期成功招商店數
+     */
+    private Integer currentPeriodActivatedStoreCount;
+
+    /**
+     * 上期成功招商店數
+     */
+    private Integer previousPeriodActivatedStoreCount;
     
     /**
      * 與上期比較（%）
@@ -45,31 +55,30 @@ public class ReferralReportRes {
     private BigDecimal growthRate;
     
     /**
-     * 每日推薦明細
+     * 每日招商啟用明細
      */
-    private List<DailyReferral> dailyDetails;
+    private List<DailyActivation> dailyActivations;
     
     /**
-     * 推薦碼排行榜
+     * 各推薦店家招商成效
      */
-    private List<ReferralRanking> rankings;
+    private List<StoreReferralPerformance> storePerformances;
     
     @Data
     @Builder
-    public static class DailyReferral {
+    public static class DailyActivation {
         private LocalDate date;
-        private Integer referrals;
-        private BigDecimal bonusAmount;
+        private Integer activatedStoreCount;
     }
     
     @Data
     @Builder
-    public static class ReferralRanking {
-        private String referralCode;
-        private String userName;
-        private String storeName;
-        private Integer referralCount;
-        private BigDecimal totalBonus;
+    public static class StoreReferralPerformance {
+        private String referrerStoreId;
+        private String referrerStoreName;
+        private Integer referralCodeCount;
+        private Integer activatedStoreCount;
+        private LocalDate lastActivatedDate;
         private Integer rank;
     }
 }
