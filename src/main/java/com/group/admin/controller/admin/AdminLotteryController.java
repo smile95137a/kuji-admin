@@ -136,41 +136,7 @@ public class AdminLotteryController {
     @Operation(summary = "新增商品", description = "自動帶入店家 ID")
     public ResponseEntity<LotteryRes> createLottery(
             @Valid @RequestBody LotteryCreateReq req) {
-        
-        String userId = SecurityUtils.getCurrentUserId();
-        boolean isAdmin = SecurityUtils.isAdmin();
-        
-        log.info("➕ 新增商品: userId={}, isAdmin={}, title={}, 前端傳入 storeId={}", 
-                 userId, isAdmin, req.getTitle(), req.getStoreId());
-        
-        // 處理 storeId
-        if (req.getStoreId() == null || req.getStoreId().isBlank()) {
-            // 前端沒有傳 storeId，後端自動帶入
-            if (isAdmin) {
-                // Admin 必須明確指定店家
-                throw new BusinessException("Admin 新增商品時必須指定店家 ID");
-            }
-            
-            // StoreOwner/Editor：自動查詢並使用第一個店家
-            StoreUserExample example = new StoreUserExample();
-            example.createCriteria().andAdminUserIdEqualTo(userId);
-            List<StoreUser> storeUsers = storeUserMapper.selectByExample(example);
-            
-            if (storeUsers.isEmpty()) {
-                throw new BusinessException("無法取得店家資訊，請聯繫管理員");
-            }
-            
-            String storeId = storeUsers.get(0).getStoreId();
-            req.setStoreId(storeId);
-            log.info("🔧 [自動帶入] storeId={}", storeId);
-        } else {
-            log.info("✅ [前端提供] storeId={}", req.getStoreId());
-        }
-        
-        LotteryRes result = lotteryService.createLottery(req);
-        
-        log.info("✅ 新增成功: id={}, storeId={}", result.getId(), result.getStoreId());
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(result);
+        throw new BusinessException("商品建立請改用 /admin/lottery/with-prizes，一次建立商品與獎品");
     }
 
     /**

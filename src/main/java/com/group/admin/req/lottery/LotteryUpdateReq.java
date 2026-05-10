@@ -51,7 +51,7 @@ public class LotteryUpdateReq {
     /**
      * 自製賞子類型
      */
-    @Schema(description = "自製賞子類型：LOTTERY_MODE/SCRATCH_MODE", example = "LOTTERY_MODE")
+    @Schema(description = "自製賞子類型：LOTTERY_MODE/SCRATCH_MODE（僅 CUSTOM_GACHA 可傳）", example = "LOTTERY_MODE")
     private String subCategory;
 
     /**
@@ -108,20 +108,20 @@ public class LotteryUpdateReq {
     /**
      * 遊戲模式
      */
-    @Schema(description = "遊戲模式：LOTTERY_MODE/SCRATCH_MODE", example = "LOTTERY_MODE")
+    @Schema(description = "遊玩模式：由後端依 category + subCategory 自動推算，前端不需傳", example = "LOTTERY_MODE")
     private String playMode;
 
     /**
      * 遊戲子模式（刮刮樂用）
-     * SCRATCH_STORE/SCRATCH_PLAYER/RANDOM
+     * SCRATCH_STORE/SCRATCH_PLAYER
      */
-    @Schema(description = "遊戲子模式：SCRATCH_STORE/SCRATCH_PLAYER/RANDOM", example = "RANDOM")
+    @Schema(description = "遊戲子模式：SCRATCH_STORE/SCRATCH_PLAYER（僅 CUSTOM_GACHA + SCRATCH_MODE 可傳）", example = "SCRATCH_STORE")
     private String gameMode;
 
     /**
      * 商品狀態
      */
-    @Schema(description = "商品狀態：DRAFT/ON_SHELF/OFF_SHELF/IN_PROGRESS/ENDED", example = "ON_SHELF")
+    @Schema(description = "商品狀態：DRAFT/ON_SHELF/OFF_SHELF；若有未來 scheduledAt 會自動收斂為 WAITING_ON_SHELF", example = "ON_SHELF")
     private String status;
 
     /**
@@ -219,13 +219,13 @@ public class LotteryUpdateReq {
     /**
      * 免費抽門檻（刮刮樂專用）
      */
-    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA+SCRATCH_MODE；NULL=未啟用；若有值必須>=1）", example = "10")
+    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA + SCRATCH_MODE 可傳；NULL=未啟用；若有值必須>=1）", example = "10")
     private Integer freeDrawThreshold;
 
     /**
-     * 下架策略：GRAND_PRIZE_DRAWN / ALL_DRAWN / MANUAL
+     * 下架策略：僅 OFFICIAL_ICHIBAN 需由前端指定；SCRATCH_MODE 固定 GRAND_PRIZE_DRAWN；其餘固定 ALL_DRAWN
      */
-    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL", example = "ALL_DRAWN")
+    @Schema(description = "下架策略：僅 OFFICIAL_ICHIBAN 需由前端指定 GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL；CUSTOM_GACHA + SCRATCH_MODE 固定 GRAND_PRIZE_DRAWN；其餘商品固定 ALL_DRAWN", example = "ALL_DRAWN")
     private String delistStrategy;
 
     /**
@@ -233,7 +233,7 @@ public class LotteryUpdateReq {
      * 更新此欄位時，現有籤位會被刪除並重新生成
      * 格式：逗號分隔或 JSON 陣列，例如 "5,12,30" 或 "[5,12,30]"
      */
-    @Schema(description = "店家指定大獎 revealed_number（僅 SCRATCH_STORE；更新時籤位會重新生成；格式：'5,12,30' 或 '[5,12,30]'）",
+    @Schema(description = "店家指定大獎 revealed_number（僅 CUSTOM_GACHA + SCRATCH_MODE + SCRATCH_STORE；更新時籤位會重新生成；格式：'5,12,30' 或 '[5,12,30]'）",
             example = "[5]")
     private String designatedPrizeNumbers;
 }

@@ -174,10 +174,13 @@ interface StoreRes {
 - 依 `category` 顯示分類 Tab（全部/一番賞/扭蛋/卡牌/自製賞）
 - 卡片顯示：封面圖、名稱、每抽金幣、剩餘籤數進度條
 - `remainingDraws / totalDraws` 的比例顯示進度條
-- `status === 'COMPLETED'` 顯示「已完售」Badge
+- 前台列表 API 目前應只理解公開可瀏覽商品為 `ON_SHELF`
+- 前台列表不應再以 `COMPLETED` / `SOLD_OUT` 作為 Badge 來源
+- 若未來需要「售完」視覺，必須先確認是否只看 `status`，或允許用剩餘數量做視覺推導
 
 ### 商品詳情頁
 - 進入時呼叫 `GET /lottery/browse/{id}/detail`
+- 前台 detail 可讀狀態以 `ON_SHELF`、`GRAND_PRIZE_DRAWN`、`ALL_DRAWN` 為準
 - 顯示獎品等級列表（圖片、名稱、剩餘數量）
 - **一番賞/自製賞抽籤型**：顯示籤位格子（`AVAILABLE` 格子可選）
 - **刮刮樂**：顯示號碼格子

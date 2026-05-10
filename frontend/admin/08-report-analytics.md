@@ -1,7 +1,7 @@
 # 08 - 報表與統計分析
 
 > **路由前綴**：`/admin/report`  
-> **允許角色**：ADMIN / STORE_OWNER（StoreEditor 無法查看報表）
+> **允許角色**：依報表而定；推薦碼報表與平台金流相關報表為 ADMIN Only
 
 ---
 
@@ -105,13 +105,13 @@ interface LotteryResultReportRes {
 
 ```
 POST /api/admin/report/referral
-Authorization: Bearer {token}
+Authorization: Bearer {token}（需 ADMIN）
 ```
 
 ### 請求
 ```typescript
 interface ReferralReportCondition {
-  storeId?: string;
+  storeId?: string;     // 推薦店家 ID，Admin 篩選用
   startDate?: string;
   endDate?: string;
 }
@@ -120,24 +120,37 @@ interface ReferralReportCondition {
 ### 回應
 ```typescript
 interface ReferralReportRes {
-  summary: {
-    totalReferrals: number;       // 推薦總次數
-    activeReferralCodes: number;  // 啟用中推薦碼數
-    totalRewardGiven: number;     // 累計發放紅利點數
-  };
-  daily: {
+  startDate: string;
+  endDate: string;
+  totalReferralCodeCount: number;         // 推薦碼總數
+  activeReferralCodeCount: number;        // 啟用中的推薦碼總數
+  successfulReferralStoreCount: number;   // 歷史累計成功招商店數
+  currentPeriodActivatedStoreCount: number;
+  previousPeriodActivatedStoreCount: number;
+  growthRate?: number;                    // 上期無資料時可能為 null
+  dailyActivations: {
     date: string;
-    referralCount: number;
-    rewardGiven: number;
+    activatedStoreCount: number;
   }[];
-  ranking: {                      // 推薦碼排行（前 10）
-    referralCode: string;
-    ownerName: string;
-    referralCount: number;
-    rewardGiven: number;
+  storePerformances: {
+    referrerStoreId: string;
+    referrerStoreName: string;
+    referralCodeCount: number;
+    activatedStoreCount: number;
+    lastActivatedDate?: string;
+    rank: number;
   }[];
 }
 ```
+
+### 前端實作重點
+
+- 此報表已改為 **店薦店招商報表**，不是會員推薦獎勵報表
+- 此報表為 **ADMIN only**，StoreOwner / StoreEditor 不應顯示入口
+- 若有店家篩選器，語意應顯示為「推薦店家」而不是「被推薦店家」
+- 首屏摘要建議顯示：推薦碼總數、啟用中推薦碼數、累計成功招商店數、本期對比上期成長率
+- 主表格建議使用 `storePerformances`
+- 趨勢圖建議使用 `dailyActivations`
 
 ---
 

@@ -10,4 +10,8 @@ public class AuthRes {
     private Object user;
     /** OAuth 新用戶首次登入時為 true，前端用於顯示補碼引導 */
     private Boolean isNewUser;
+    /**
+     * true 表示此帳號需先修改密碼，否則不可操作受保護 API。
+     */
+    private Boolean forceChangePassword;
 }

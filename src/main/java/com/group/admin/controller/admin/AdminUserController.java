@@ -6,6 +6,7 @@ import com.group.admin.enums.AuditLogType;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
 import com.group.admin.req.admin.UpdateAdminUserReq;
+import com.group.admin.req.admin.UpdateMyProfileReq;
 import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.res.common.EnumOption;
@@ -137,10 +138,26 @@ public class AdminUserController {
      * 條件查詢後台帳號列表
      */
     @PostMapping("/list")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "條件查詢後台帳號列表", description = "支援 keyword / status / storeId / roleCode 過濾")
     public ResponseEntity<List<AdminUserRes>> queryAdminUsers(
             @RequestBody(required = false) com.group.admin.req.common.QueryReq<com.group.admin.req.admin.AdminUserCondition> req) {
+        if (SecurityUtils.isStoreOwner()) {
+            String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
+            if (storeId == null || storeId.isBlank()) {
+                log.warn("⚠️ 店家主帳號未綁定店家，返回空列表");
+                return ResponseEntity.ok(List.of());
+            }
+            if (req == null) {
+                req = new com.group.admin.req.common.QueryReq<>();
+            }
+            if (req.getCondition() == null) {
+                req.setCondition(new com.group.admin.req.admin.AdminUserCondition());
+            }
+            req.getCondition().setStoreId(storeId);
+            req.getCondition().setRoleCode("ROLE_STORE_EDITOR");
+        }
+
         log.info("條件查詢後台帳號列表");
         List<AdminUserRes> res = adminUserService.queryAdminUsers(req);
         return ResponseEntity.ok(res);
@@ -220,6 +237,42 @@ public class AdminUserController {
     }
 
     /**
+     * 取得本人資料
+     */
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "取得本人資料", description = "取得目前登入後台帳號資訊")
+    public ResponseEntity<AdminUserRes> getMyProfile() {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        AdminUserRes res = adminUserService.getMyProfile(operatorId);
+        return ResponseEntity.ok(res);
+    }
+
+    /**
+     * 更新本人資料
+     */
+    @PutMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "更新本人資料", description = "僅允許更新自己的顯示名稱與電話")
+    public ResponseEntity<AdminUserRes> updateMyProfile(@RequestBody UpdateMyProfileReq req) {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        AdminUserRes res = adminUserService.updateMyProfile(operatorId, req);
+        return ResponseEntity.ok(res);
+    }
+
+    /**
+     * 本人修改密碼
+     */
+    @PostMapping("/me/change-password")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @Operation(summary = "本人修改密碼", description = "驗證舊密碼後修改自己的密碼")
+    public ResponseEntity<Void> changeMyPassword(@Valid @RequestBody ChangePasswordReq req) {
+        String operatorId = SecurityUtils.getCurrentUserId();
+        adminUserService.changePassword(operatorId, req, operatorId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * 修改密碼
      */
     @PostMapping("/{id}/change-password")
@@ -228,8 +281,9 @@ public class AdminUserController {
     public ResponseEntity<Void> changePassword(
             @Parameter(description = "帳號 ID") @PathVariable String id,
             @Valid @RequestBody ChangePasswordReq req) {
-        log.info("修改密碼：userId={}", id);
-        adminUserService.changePassword(id, req);
+        String operatorId = SecurityUtils.getCurrentUserId();
+        log.info("修改密碼：userId={}, operatorId={}", id, operatorId);
+        adminUserService.changePassword(id, req, operatorId);
         return ResponseEntity.ok().build();
     }
 
@@ -256,7 +310,7 @@ public class AdminUserController {
      */
     @AuditLog(type = AuditLogType.ADMIN_ACTION, action = "RESET_PASSWORD", targetType = "ADMIN_USER")
     @PostMapping("/{id}/reset-password")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     @Operation(summary = "重設帳號密碼", description = "重設指定帳號的密碼，並設定首次登入需改密碼")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "重設成功，回傳新密碼"),
@@ -266,8 +320,9 @@ public class AdminUserController {
     })
     public ResponseEntity<Map<String, String>> resetPassword(
             @Parameter(description = "帳號 ID") @PathVariable String id) {
-        log.info("重設密碼：userId={}", id);
-        String newPassword = adminUserService.resetPassword(id);
+        String operatorId = SecurityUtils.getCurrentUserId();
+        log.info("重設密碼：userId={}, operatorId={}", id, operatorId);
+        String newPassword = adminUserService.resetPassword(id, operatorId);
         return ResponseEntity.ok(Map.of("newPassword", newPassword));
     }
 

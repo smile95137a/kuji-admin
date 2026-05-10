@@ -82,6 +82,11 @@ interface StoreRes {
   instagramUrl: string;
   lineId: string;
   status: 'ACTIVE' | 'INACTIVE';
+  referrerStoreId?: string;
+  referrerStoreName?: string;
+  referralCodeId?: string;
+  referralCode?: string;
+  activatedAt?: string;
   remark: string;
   createdAt: string;
   updatedAt: string;
@@ -115,6 +120,7 @@ interface CreateStoreReq {
   instagramUrl?: string;
   lineId?: string;
   remark?: string;
+  referralCode?: string;      // 選填，店家招商來源推薦碼
 
   // === 同時建立負責人帳號（選填，可後續手動建立） ===
   owner?: {
@@ -130,6 +136,8 @@ interface CreateStoreReq {
 - 店家與帳號在同一事務內建立（`@Transactional`）
 - 若 `owner.password` 未傳，系統自動生成初始密碼並設定 `mustChangePassword=true`
 - 若不傳 `owner`，僅建立店家，後續可透過「帳號管理」補建
+- 若有傳 `referralCode`，後端會反查出推薦來源店家，寫入招商追蹤欄位
+- 建立當下若店家狀態為 `ACTIVE`，後端會同步寫入 `activatedAt`
 
 ---
 
@@ -156,10 +164,16 @@ interface UpdateStoreReq {
   instagramUrl?: string;
   lineId?: string;
   remark?: string;
+  referralCode?: string;     // 僅 Admin 可在啟用前調整
 }
 ```
 
 **⚠️ 注意：`owner_id` 建立後不可修改**
+
+**⚠️ 推薦來源規則**
+- `referralCode` 僅 Admin 可編輯
+- 店家一旦有 `activatedAt`，推薦來源即鎖定，不可再修改
+- 前端若讀到 `activatedAt != null`，應將 `referralCode` 欄位設為唯讀
 
 ---
 
@@ -187,3 +201,8 @@ interface UpdateStoreStatusReq {
 4. 相關 Banner 一併停用
 
 **前端建議**：在確認彈窗中說明上述連動效果，請 Admin 確認後再送出。
+
+### 啟用補充
+
+- 當店家由 `INACTIVE` 切回 `ACTIVE`，若 `activatedAt` 尚未存在，後端會補寫首次啟用成功時間
+- 若店家已啟用成功過，後續再次啟用不應覆蓋既有 `activatedAt`

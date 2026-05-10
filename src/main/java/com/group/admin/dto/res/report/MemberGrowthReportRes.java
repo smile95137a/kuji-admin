@@ -57,11 +57,60 @@ public class MemberGrowthReportRes {
     /** 30 天留存率（%）；前月無新增會員時 null */
     private BigDecimal retention30Days;
 
+    /** 會員消費模式分布 */
+    private List<ConsumptionPattern> consumptionPatterns;
+
+    /** 商品消費集中度（Top N） */
+    private List<ProductConcentration> productConcentrations;
+
+    /** 金幣與紅利消耗分布 */
+    private CoinUsageDistribution coinUsageDistribution;
+
+    /** 支付型態分布（儲值渠道） */
+    private List<PaymentMethodDistribution> paymentMethodDistributions;
+
     @Data
     @Builder
     public static class DailyNewMember {
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate date;
         private Integer count;
+    }
+
+    @Data
+    @Builder
+    public static class ConsumptionPattern {
+        private String patternCode;
+        private String patternName;
+        private Integer userCount;
+        private BigDecimal percentage;
+    }
+
+    @Data
+    @Builder
+    public static class ProductConcentration {
+        private String lotteryId;
+        private String lotteryTitle;
+        private String category;
+        private Integer drawCount;
+        private BigDecimal drawPercentage;
+    }
+
+    @Data
+    @Builder
+    public static class CoinUsageDistribution {
+        private Long goldSpend;
+        private Long bonusSpend;
+        private BigDecimal goldPercentage;
+        private BigDecimal bonusPercentage;
+    }
+
+    @Data
+    @Builder
+    public static class PaymentMethodDistribution {
+        private String paymentMethod;
+        private Integer transactionCount;
+        private BigDecimal totalAmount;
+        private BigDecimal percentage;
     }
 }

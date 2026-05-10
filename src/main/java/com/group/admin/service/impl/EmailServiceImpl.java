@@ -130,6 +130,33 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    @Async
+    public void sendTemporaryPasswordEmail(String to, String displayName, String temporaryPassword,
+                                           String loginUrl, String scene) {
+        String safeScene = scene != null && !scene.isBlank() ? scene : "忘記密碼";
+        String safeDisplayName = displayName != null && !displayName.isBlank() ? displayName : "使用者";
+        String safeLoginUrl = loginUrl != null && !loginUrl.isBlank() ? loginUrl : frontendUrl + "/login";
+        String subject = String.format("[%s] 臨時密碼通知", appName);
+
+        Context context = new Context();
+        context.setVariable("displayName", safeDisplayName);
+        context.setVariable("temporaryPassword", temporaryPassword);
+        context.setVariable("loginUrl", safeLoginUrl);
+        context.setVariable("scene", safeScene);
+        String content = templateEngine.process("temporary-password-email", context);
+
+        Map<String, Object> params = Map.of(
+            "displayName", safeDisplayName,
+            "temporaryPassword", temporaryPassword,
+            "loginUrl", safeLoginUrl,
+            "scene", safeScene
+        );
+
+        sendEmail("TEMP_PASSWORD", to, safeDisplayName, subject, content,
+                "temporary-password-email", params, null, null);
+    }
+
+    @Override
     public void retryFailedEmails() {
         List<EmailLog> failedEmails = emailLogRepository.selectPendingForRetry("FAILED", 3, 10);
         

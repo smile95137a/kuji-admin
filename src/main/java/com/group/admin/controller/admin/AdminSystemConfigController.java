@@ -26,13 +26,16 @@ public class AdminSystemConfigController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "查詢系統參數", description = "可選擇依 group 篩選")
-    public ResponseEntity<List<SystemConfigRes>> list(@RequestParam(required = false) String group) {
-        log.info("⚙️ 查詢系統參數: group={}", group);
-        if (group == null || group.isBlank()) {
+    @Operation(summary = "查詢系統參數", description = "可選擇依 group 或 configGroup 篩選")
+    public ResponseEntity<List<SystemConfigRes>> list(
+            @RequestParam(required = false) String group,
+            @RequestParam(required = false) String configGroup) {
+        String targetGroup = (configGroup != null && !configGroup.isBlank()) ? configGroup : group;
+        log.info("⚙️ 查詢系統參數: group={}, configGroup={}, targetGroup={}", group, configGroup, targetGroup);
+        if (targetGroup == null || targetGroup.isBlank()) {
             return ResponseEntity.ok(systemConfigService.listAll());
         }
-        return ResponseEntity.ok(systemConfigService.listByGroup(group));
+        return ResponseEntity.ok(systemConfigService.listByGroup(targetGroup));
     }
 
     @PostMapping

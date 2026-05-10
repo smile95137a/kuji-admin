@@ -29,6 +29,12 @@ public interface EmailService {
      * 發送初始密碼郵件（後台帳號建立時）
      */
     void sendInitialPasswordEmail(String to, String displayName, String initialPassword);
+
+    /**
+     * 發送臨時密碼郵件（忘記密碼）
+     */
+    void sendTemporaryPasswordEmail(String to, String displayName, String temporaryPassword,
+                                    String loginUrl, String scene);
     
     /**
      * 重試發送失敗的郵件

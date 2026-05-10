@@ -2,7 +2,9 @@ package com.group.admin.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -35,6 +37,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.admin.ChangePasswordReq;
 import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.CreateStoreOwnerReq;
+import com.group.admin.req.admin.UpdateMyProfileReq;
 import com.group.admin.req.admin.UpdateAdminUserReq;
 import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.service.AdminAuthService;
@@ -302,21 +305,22 @@ public class AdminUserServiceImpl implements AdminUserService {
      */
     @Override
     @Transactional
-    public String resetPassword(String userId) {
-        log.info("重設密碼：userId={}", userId);
-        String currentUserId = adminAuthService.getCurrentUserId();
+    public String resetPassword(String userId, String operatorId) {
+        log.info("重設密碼：userId={}, operatorId={}", userId, operatorId);
 
         AdminUser user = adminUserMapper.selectByPrimaryKey(userId);
         if (user == null) {
             throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
         }
 
+        assertCanManageUser(operatorId, user, false);
+
         // 生成新密碼
         String newPassword = passwordUtil.generateRandomPassword();
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setForceChangePassword(true);
-        user.setUpdatedBy(currentUserId);
+        user.setUpdatedBy(operatorId);
         user.setUpdatedAt(LocalDateTime.now());
         adminUserMapper.updateByPrimaryKey(user);
 
@@ -349,6 +353,8 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
         }
 
+        assertCanManageUser(operatorId, user, true);
+
         if (req.getDisplayName() != null) {
             user.setDisplayName(req.getDisplayName());
         }
@@ -360,11 +366,15 @@ public class AdminUserServiceImpl implements AdminUserService {
                 throw new BusinessException(ErrorCodes.USER_EMAIL_EXISTS, "Email 已被使用");
             }
             user.setEmail(req.getEmail());
+            user.setUsername(req.getEmail());
         }
         if (req.getPhone() != null) {
             user.setPhone(req.getPhone());
         }
         if (req.getStatus() != null) {
+            if (operatorId.equals(userId)) {
+                throw new BusinessException(ErrorCodes.COMMON_ACCESS_DENIED, "不可自行修改帳號狀態");
+            }
             user.setStatus(req.getStatus());
         }
         user.setUpdatedBy(operatorId);
@@ -377,9 +387,43 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public AdminUserRes getMyProfile(String operatorId) {
+        AdminUser user = adminUserMapper.selectByPrimaryKey(operatorId);
+        if (user == null) {
+            throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
+        }
+        return toAdminUserRes(user);
+    }
+
+    @Override
     @Transactional
-    public void changePassword(String userId, ChangePasswordReq req) {
-        log.info("🔑 修改密碼：userId={}", userId);
+    public AdminUserRes updateMyProfile(String operatorId, UpdateMyProfileReq req) {
+        AdminUser user = adminUserMapper.selectByPrimaryKey(operatorId);
+        if (user == null) {
+            throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
+        }
+
+        if (req.getDisplayName() != null) {
+            user.setDisplayName(req.getDisplayName());
+        }
+        if (req.getPhone() != null) {
+            user.setPhone(req.getPhone());
+        }
+        user.setUpdatedBy(operatorId);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        adminUserMapper.updateByPrimaryKeySelective(user);
+        return toAdminUserRes(user);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String userId, ChangePasswordReq req, String operatorId) {
+        log.info("🔑 修改密碼：targetUserId={}, operatorId={}", userId, operatorId);
+
+        if (!operatorId.equals(userId)) {
+            throw new BusinessException(ErrorCodes.COMMON_ACCESS_DENIED, "僅可修改自己的密碼；管理他人請使用重設密碼");
+        }
 
         AdminUser user = adminUserMapper.selectByPrimaryKey(userId);
         if (user == null) {
@@ -392,6 +436,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
         user.setForceChangePassword(false);
+        user.setUpdatedBy(operatorId);
         user.setUpdatedAt(LocalDateTime.now());
         adminUserMapper.updateByPrimaryKeySelective(user);
 
@@ -632,6 +677,53 @@ public class AdminUserServiceImpl implements AdminUserService {
                             .description(String.format("ID: %s | 角色: %s", user.getId(), roleName))
                             .build();
                 })
+                .collect(Collectors.toList());
+    }
+
+    private void assertCanManageUser(String operatorId, AdminUser targetUser, boolean allowSelf) {
+        if (operatorId == null || operatorId.isBlank()) {
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "未登入或 Token 無效");
+        }
+
+        if (allowSelf && operatorId.equals(targetUser.getId())) {
+            return;
+        }
+
+        List<String> operatorRoles = getUserRoleCodes(operatorId);
+        if (operatorRoles.contains(RoleCode.ROLE_ADMIN.getCode())) {
+            return;
+        }
+
+        if (!operatorRoles.contains(RoleCode.ROLE_STORE_OWNER.getCode())) {
+            throw new BusinessException(ErrorCodes.COMMON_ACCESS_DENIED, "無權操作此帳號");
+        }
+
+        List<String> targetRoles = getUserRoleCodes(targetUser.getId());
+        boolean targetIsEditor = targetRoles.contains(RoleCode.ROLE_STORE_EDITOR.getCode());
+        boolean targetIsOwnerOrAdmin = targetRoles.contains(RoleCode.ROLE_STORE_OWNER.getCode())
+                || targetRoles.contains(RoleCode.ROLE_ADMIN.getCode());
+
+        if (!targetIsEditor || targetIsOwnerOrAdmin) {
+            throw new BusinessException(ErrorCodes.COMMON_ACCESS_DENIED, "店家負責人僅可管理自己店內的小編帳號");
+        }
+
+        Set<String> operatorStoreIds = new HashSet<>(getUserStoreIds(operatorId));
+        Set<String> targetStoreIds = new HashSet<>(getUserStoreIds(targetUser.getId()));
+        operatorStoreIds.retainAll(targetStoreIds);
+        if (operatorStoreIds.isEmpty()) {
+            throw new BusinessException(ErrorCodes.STORE_ACCESS_DENIED, "不可操作其他店家的小編帳號");
+        }
+    }
+
+    private List<String> getUserRoleCodes(String userId) {
+        return getUserRoleInfos(userId).stream()
+                .map(AdminUserRes.RoleInfo::getCode)
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getUserStoreIds(String userId) {
+        return getUserStoreInfos(userId).stream()
+                .map(AdminUserRes.StoreInfo::getId)
                 .collect(Collectors.toList());
     }
 }

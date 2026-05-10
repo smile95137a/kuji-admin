@@ -4,6 +4,8 @@
   <resultMap id="BaseResultMap" type="com.group.admin.entity.Store">
     <id column="id" jdbcType="VARCHAR" property="id" />
     <result column="owner_id" jdbcType="VARCHAR" property="ownerId" />
+    <result column="referrer_store_id" jdbcType="VARCHAR" property="referrerStoreId" />
+    <result column="referral_code_id" jdbcType="VARCHAR" property="referralCodeId" />
     <result column="store_name" jdbcType="VARCHAR" property="storeName" />
     <result column="short_description" jdbcType="VARCHAR" property="shortDescription" />
     <result column="logo_url" jdbcType="VARCHAR" property="logoUrl" />
@@ -16,6 +18,7 @@
     <result column="line_id" jdbcType="VARCHAR" property="lineId" />
     <result column="business_hours" jdbcType="VARCHAR" property="businessHours" />
     <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="activated_at" jdbcType="TIMESTAMP" property="activatedAt" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
     <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
@@ -83,9 +86,9 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, owner_id, store_name, short_description, logo_url, cover_image_url, email, phone, 
-    address, facebook_url, instagram_url, line_id, business_hours, status, created_at, 
-    updated_at, updated_by
+    id, owner_id, referrer_store_id, referral_code_id, store_name, short_description, logo_url,
+    cover_image_url, email, phone, address, facebook_url, instagram_url, line_id,
+    business_hours, status, activated_at, created_at, updated_at, updated_by
   </sql>
   <sql id="Blob_Column_List">
     long_description, remark
@@ -141,19 +144,21 @@
     </if>
   </delete>
   <insert id="insert" parameterType="com.group.admin.entity.Store">
-    insert into store (id, owner_id, store_name, 
-      short_description, logo_url, cover_image_url, 
-      email, phone, address, 
-      facebook_url, instagram_url, line_id, 
-      business_hours, status, created_at, 
-      updated_at, updated_by, long_description, 
+    insert into store (id, owner_id, referrer_store_id,
+      referral_code_id, store_name, short_description,
+      logo_url, cover_image_url, email,
+      phone, address, facebook_url,
+      instagram_url, line_id, business_hours,
+      status, activated_at, created_at,
+      updated_at, updated_by, long_description,
       remark)
-    values (#{id,jdbcType=VARCHAR}, #{ownerId,jdbcType=VARCHAR}, #{storeName,jdbcType=VARCHAR}, 
-      #{shortDescription,jdbcType=VARCHAR}, #{logoUrl,jdbcType=VARCHAR}, #{coverImageUrl,jdbcType=VARCHAR}, 
-      #{email,jdbcType=VARCHAR}, #{phone,jdbcType=VARCHAR}, #{address,jdbcType=VARCHAR}, 
-      #{facebookUrl,jdbcType=VARCHAR}, #{instagramUrl,jdbcType=VARCHAR}, #{lineId,jdbcType=VARCHAR}, 
-      #{businessHours,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{longDescription,jdbcType=LONGVARCHAR}, 
+    values (#{id,jdbcType=VARCHAR}, #{ownerId,jdbcType=VARCHAR}, #{referrerStoreId,jdbcType=VARCHAR},
+      #{referralCodeId,jdbcType=VARCHAR}, #{storeName,jdbcType=VARCHAR}, #{shortDescription,jdbcType=VARCHAR},
+      #{logoUrl,jdbcType=VARCHAR}, #{coverImageUrl,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR},
+      #{phone,jdbcType=VARCHAR}, #{address,jdbcType=VARCHAR}, #{facebookUrl,jdbcType=VARCHAR},
+      #{instagramUrl,jdbcType=VARCHAR}, #{lineId,jdbcType=VARCHAR}, #{businessHours,jdbcType=VARCHAR},
+      #{status,jdbcType=VARCHAR}, #{activatedAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{longDescription,jdbcType=LONGVARCHAR},
       #{remark,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="com.group.admin.entity.Store">
@@ -164,6 +169,12 @@
       </if>
       <if test="ownerId != null">
         owner_id,
+      </if>
+      <if test="referrerStoreId != null">
+        referrer_store_id,
+      </if>
+      <if test="referralCodeId != null">
+        referral_code_id,
       </if>
       <if test="storeName != null">
         store_name,
@@ -201,6 +212,9 @@
       <if test="status != null">
         status,
       </if>
+      <if test="activatedAt != null">
+        activated_at,
+      </if>
       <if test="createdAt != null">
         created_at,
       </if>
@@ -223,6 +237,12 @@
       </if>
       <if test="ownerId != null">
         #{ownerId,jdbcType=VARCHAR},
+      </if>
+      <if test="referrerStoreId != null">
+        #{referrerStoreId,jdbcType=VARCHAR},
+      </if>
+      <if test="referralCodeId != null">
+        #{referralCodeId,jdbcType=VARCHAR},
       </if>
       <if test="storeName != null">
         #{storeName,jdbcType=VARCHAR},
@@ -260,6 +280,9 @@
       <if test="status != null">
         #{status,jdbcType=VARCHAR},
       </if>
+      <if test="activatedAt != null">
+        #{activatedAt,jdbcType=TIMESTAMP},
+      </if>
       <if test="createdAt != null">
         #{createdAt,jdbcType=TIMESTAMP},
       </if>
@@ -291,6 +314,12 @@
       </if>
       <if test="row.ownerId != null">
         owner_id = #{row.ownerId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referrerStoreId != null">
+        referrer_store_id = #{row.referrerStoreId,jdbcType=VARCHAR},
+      </if>
+      <if test="row.referralCodeId != null">
+        referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
       </if>
       <if test="row.storeName != null">
         store_name = #{row.storeName,jdbcType=VARCHAR},
@@ -328,6 +357,9 @@
       <if test="row.status != null">
         status = #{row.status,jdbcType=VARCHAR},
       </if>
+      <if test="row.activatedAt != null">
+        activated_at = #{row.activatedAt,jdbcType=TIMESTAMP},
+      </if>
       <if test="row.createdAt != null">
         created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       </if>
@@ -352,6 +384,8 @@
     update store
     set id = #{row.id,jdbcType=VARCHAR},
       owner_id = #{row.ownerId,jdbcType=VARCHAR},
+      referrer_store_id = #{row.referrerStoreId,jdbcType=VARCHAR},
+      referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
       store_name = #{row.storeName,jdbcType=VARCHAR},
       short_description = #{row.shortDescription,jdbcType=VARCHAR},
       logo_url = #{row.logoUrl,jdbcType=VARCHAR},
@@ -364,6 +398,7 @@
       line_id = #{row.lineId,jdbcType=VARCHAR},
       business_hours = #{row.businessHours,jdbcType=VARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
+      activated_at = #{row.activatedAt,jdbcType=TIMESTAMP},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{row.updatedBy,jdbcType=VARCHAR},
@@ -377,6 +412,8 @@
     update store
     set id = #{row.id,jdbcType=VARCHAR},
       owner_id = #{row.ownerId,jdbcType=VARCHAR},
+      referrer_store_id = #{row.referrerStoreId,jdbcType=VARCHAR},
+      referral_code_id = #{row.referralCodeId,jdbcType=VARCHAR},
       store_name = #{row.storeName,jdbcType=VARCHAR},
       short_description = #{row.shortDescription,jdbcType=VARCHAR},
       logo_url = #{row.logoUrl,jdbcType=VARCHAR},
@@ -389,6 +426,7 @@
       line_id = #{row.lineId,jdbcType=VARCHAR},
       business_hours = #{row.businessHours,jdbcType=VARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
+      activated_at = #{row.activatedAt,jdbcType=TIMESTAMP},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
       updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{row.updatedBy,jdbcType=VARCHAR}
@@ -401,6 +439,12 @@
     <set>
       <if test="ownerId != null">
         owner_id = #{ownerId,jdbcType=VARCHAR},
+      </if>
+      <if test="referrerStoreId != null">
+        referrer_store_id = #{referrerStoreId,jdbcType=VARCHAR},
+      </if>
+      <if test="referralCodeId != null">
+        referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
       </if>
       <if test="storeName != null">
         store_name = #{storeName,jdbcType=VARCHAR},
@@ -438,6 +482,9 @@
       <if test="status != null">
         status = #{status,jdbcType=VARCHAR},
       </if>
+      <if test="activatedAt != null">
+        activated_at = #{activatedAt,jdbcType=TIMESTAMP},
+      </if>
       <if test="createdAt != null">
         created_at = #{createdAt,jdbcType=TIMESTAMP},
       </if>
@@ -459,6 +506,8 @@
   <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.Store">
     update store
     set owner_id = #{ownerId,jdbcType=VARCHAR},
+      referrer_store_id = #{referrerStoreId,jdbcType=VARCHAR},
+      referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
       store_name = #{storeName,jdbcType=VARCHAR},
       short_description = #{shortDescription,jdbcType=VARCHAR},
       logo_url = #{logoUrl,jdbcType=VARCHAR},
@@ -471,6 +520,7 @@
       line_id = #{lineId,jdbcType=VARCHAR},
       business_hours = #{businessHours,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},
+      activated_at = #{activatedAt,jdbcType=TIMESTAMP},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{updatedBy,jdbcType=VARCHAR},
@@ -481,6 +531,8 @@
   <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Store">
     update store
     set owner_id = #{ownerId,jdbcType=VARCHAR},
+      referrer_store_id = #{referrerStoreId,jdbcType=VARCHAR},
+      referral_code_id = #{referralCodeId,jdbcType=VARCHAR},
       store_name = #{storeName,jdbcType=VARCHAR},
       short_description = #{shortDescription,jdbcType=VARCHAR},
       logo_url = #{logoUrl,jdbcType=VARCHAR},
@@ -493,6 +545,7 @@
       line_id = #{lineId,jdbcType=VARCHAR},
       business_hours = #{businessHours,jdbcType=VARCHAR},
       status = #{status,jdbcType=VARCHAR},
+      activated_at = #{activatedAt,jdbcType=TIMESTAMP},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       updated_by = #{updatedBy,jdbcType=VARCHAR}

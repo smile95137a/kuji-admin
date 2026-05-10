@@ -23,10 +23,10 @@ interface SystemConfigRes {
   id: string;
   configKey: string;      // 唯一識別碼（如 "DRAW_PROTECTION_MINUTES"）
   configValue: string;    // 字串值（前端依 type 轉換）
-  configType: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON';
-  group: string;          // 分組（如 "GAME", "NOTIFY", "PAYMENT"）
+  configType: 'STRING' | 'INTEGER' | 'BOOLEAN';
+  configGroup: string;    // 分組（如 "GAME", "NOTIFY", "PAYMENT"）
   description: string;    // 參數說明
-  isEditable: boolean;    // 是否可在後台編輯（false 為唯讀/程式碼控制）
+  version: number;        // 樂觀鎖版本
   updatedAt: string;
 }
 ```
@@ -58,7 +58,7 @@ interface SystemConfigCreateReq {
   configKey: string;      // 必填，英文大寫+底線
   configValue: string;    // 必填
   configType: string;     // 必填
-  group: string;          // 必填
+  configGroup: string;    // 必填
   description?: string;
 }
 ```
@@ -76,6 +76,7 @@ Authorization: Bearer {token}（需 ADMIN）
 interface SystemConfigUpdateReq {
   configValue: string;    // 必填
   description?: string;
+  version: number;        // 必填，避免併發覆蓋
 }
 ```
 

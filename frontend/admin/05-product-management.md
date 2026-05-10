@@ -197,7 +197,7 @@ DELETE /api/admin/lottery/{id}
 Authorization: Bearer {token}（需 ADMIN 或 STORE_OWNER）
 ```
 
-⚠️ 只有狀態為 `DRAFT` 的商品可以刪除，其餘狀態後端拒絕（避免刪除有歷史記錄的商品）。
+⚠️ 刪除規則已收斂為：只有 `DRAFT` / `OFF_SHELF` 可送出 `DELETED`。`WAITING_ON_SHELF`、`FORCED_OFF`、`GRAND_PRIZE_DRAWN`、`ALL_DRAWN` 都必須先回到可操作狀態，不能直接刪除。
 
 ---
 
@@ -263,10 +263,14 @@ Authorization: Bearer {token}
 
 ### 商品狀態流轉（狀態機）
 ```
-DRAFT → ON_SHELF（上架）
-ON_SHELF → OFF_SHELF（下架）
-ON_SHELF → RUNNING（有玩家開始抽，狀態自動轉，前端不需操作）
-RUNNING → COMPLETED（全部抽完，狀態自動轉）
+DRAFT → ON_SHELF（立即上架）
+DRAFT → WAITING_ON_SHELF（有未來 `scheduledAt` 時由後端自動落成）
+WAITING_ON_SHELF → ON_SHELF（排程到點後由系統自動轉）
+WAITING_ON_SHELF → OFF_SHELF / FORCED_OFF（取消待上架或管理介入）
+ON_SHELF → OFF_SHELF（人工下架）
+ON_SHELF → FORCED_OFF（強制下架）
+FORCED_OFF → OFF_SHELF（先回一般下架，再決定是否重新上架）
 OFF_SHELF → ON_SHELF（重新上架）
-DRAFT → 刪除（只有草稿可以刪）
+ON_SHELF → GRAND_PRIZE_DRAWN / ALL_DRAWN（抽獎終態，系統自動轉）
+DRAFT / OFF_SHELF → DELETED（僅這兩種狀態可直接刪除）
 ```

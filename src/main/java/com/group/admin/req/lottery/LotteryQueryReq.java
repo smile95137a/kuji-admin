@@ -40,7 +40,7 @@ public class LotteryQueryReq {
     /**
      * 商品狀態
      */
-    @Schema(description = "商品狀態：ON_SHELF/OFF_SHELF", example = "ON_SHELF")
+    @Schema(description = "商品狀態：DRAFT/WAITING_ON_SHELF/ON_SHELF/OFF_SHELF/FORCED_OFF/GRAND_PRIZE_DRAWN/ALL_DRAWN/DELETED", example = "ON_SHELF")
     private String status;
 
     /**

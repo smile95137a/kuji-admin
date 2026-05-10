@@ -228,7 +228,7 @@ DELETE /api/admin/lottery/{id}
 ```
 
 **現在實際**：`DELETE` 動詞仍然正確，但後端接受更多狀態。  
-原本只有 `DRAFT` 可刪除，現在 `DRAFT`、`CONFIGURED`、`OFF_SHELF`、`FORCED_OFF` 都允許刪除（刪除後狀態變為 `DELETED`，資料不物理刪除）。
+刪除規則已收斂為：只有 `DRAFT`、`OFF_SHELF` 可直接刪除（刪除後狀態變為 `DELETED`，資料不物理刪除）。`WAITING_ON_SHELF`、`FORCED_OFF`、`GRAND_PRIZE_DRAWN`、`ALL_DRAWN` 都必須先回到可操作狀態。
 
 ```typescript
 // 前端刪除確認對話框文字建議

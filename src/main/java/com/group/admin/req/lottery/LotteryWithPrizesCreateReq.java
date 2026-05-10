@@ -70,9 +70,10 @@ public class LotteryWithPrizesCreateReq {
     private LotteryCreateReq lottery;
     
     /**
-     * 獎品列表（可選，但建議至少 1 個）
+     * 獎品列表（建立時至少 1 個）
      */
+    @NotEmpty(message = "整合建立商品時，獎品列表至少需要 1 筆")
     @Valid
-    @Schema(description = "獎品列表（可選，建議新增時就設定）")
+    @Schema(description = "獎品列表（建立時必填，至少 1 筆）")
     private List<LotteryPrizeCreateReq> prizes;
 }

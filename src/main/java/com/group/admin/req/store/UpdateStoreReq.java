@@ -102,4 +102,7 @@ public class UpdateStoreReq {
      */
     @Schema(description = "後台備註")
     private String remark;
+
+    @Schema(description = "推薦碼（選填，僅 Admin 可於啟用前調整）")
+    private String referralCode;
 }

@@ -30,50 +30,48 @@ public class LotteryResultReportRes {
     private Integer totalDraws;
     
     /**
-     * 總獎品數量
+     * 期間中獎件數
      */
-    private Integer totalPrizes;
+    private Integer totalWinningCount;
     
     /**
-     * 大獎數量（A、B、Last 獎）
+     * 熱門商品（按中獎件數）
      */
-    private Integer bigPrizes;
+    private List<HotLottery> hotLotteries;
     
     /**
-     * 總抽獎金額
+     * 逐筆中獎明細
      */
-    private BigDecimal totalAmount;
-    
-    /**
-     * 獎品發放統計
-     */
-    private List<PrizeStats> prizeStats;
-    
-    /**
-     * 一番賞統計
-     */
-    private List<LotteryStats> lotteryStats;
+    private List<WinningDetail> winningDetails;
     
     @Data
     @Builder
-    public static class PrizeStats {
-        private String prizeLevel;  // A獎、B獎、C獎...
-        private Integer totalCount;
-        private Integer wonCount;
-        private Integer remainCount;
-        private BigDecimal wonPercentage;
+    public static class HotLottery {
+        private String lotteryId;
+        private String lotteryTitle;
+        private Integer drawCount;
+        private Integer winningCount;
     }
     
     @Data
     @Builder
-    public static class LotteryStats {
+    public static class WinningDetail {
+        private String ticketId;
+        private LocalDate drawDate;
+        private String drawTime;
+        private String userId;
+        private String userDisplayName;
         private String lotteryId;
         private String lotteryTitle;
+        private String lotteryImageUrl;
+        private String prizeId;
+        private String prizeName;
+        private String prizeLevel;
+        private String prizeImageUrl;
+        private Integer drawCount;
+        private Integer ticketNumber;
+        private Integer revealedNumber;
+        private String storeId;
         private String storeName;
-        private Integer totalSlots;
-        private Integer soldSlots;
-        private Integer remainSlots;
-        private BigDecimal soldPercentage;
-        private BigDecimal revenue;
     }
 }

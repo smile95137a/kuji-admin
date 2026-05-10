@@ -91,7 +91,19 @@ public class OrderController {
     }
 
     /**
-     * US4 - 玩家取消訂單（僅限 PENDING 狀態）
+     * 運費重付款（僅限 PAYMENT_PENDING / PAYMENT_FAILED）
+     */
+    @PostMapping("/{orderId}/repay")
+    public ResponseEntity<OrderPaymentInitRes> repayShipping(@PathVariable String orderId) {
+        String userId = SecurityUtils.getCurrentUserId();
+        log.info("💳 [API] 訂單重付款：userId={}, orderId={}", userId, orderId);
+
+        OrderPaymentInitRes result = orderService.retryShippingPayment(orderId, userId);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+        * US4 - 玩家取消訂單（PAYMENT_PENDING / PAYMENT_FAILED / PENDING）
      */
     @DeleteMapping("/{orderId}/cancel")
     public ResponseEntity<OrderRes> cancelOrder(

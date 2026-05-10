@@ -124,7 +124,7 @@ public class LotteryWithPrizesRes {
     @Schema(description = "剩餘抽數", example = "85")
     private Integer remainingDraws;
     
-    @Schema(description = "狀態：ON_SHELF/OFF_SHELF/SOLD_OUT", example = "ON_SHELF")
+    @Schema(description = "狀態：DRAFT/WAITING_ON_SHELF/ON_SHELF/OFF_SHELF/FORCED_OFF/GRAND_PRIZE_DRAWN/ALL_DRAWN/DELETED", example = "ON_SHELF")
     private String status;
     
     @Schema(description = "預計上架時間")

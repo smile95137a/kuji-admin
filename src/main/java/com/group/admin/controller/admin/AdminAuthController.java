@@ -5,6 +5,7 @@ import com.group.admin.constants.ApiPaths;
 import com.group.admin.enums.AuditLogType;
 import com.group.admin.req.auth.AdminLoginReq;
 import com.group.admin.req.auth.ChangePasswordReq;
+import com.group.admin.req.auth.ForgotPasswordReq;
 import com.group.admin.req.auth.RefreshTokenReq;
 import com.group.admin.res.auth.LoginRes;
 import com.group.admin.service.AdminAuthService;
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 /**
  * 後台認證控制器
@@ -57,6 +60,17 @@ public class AdminAuthController {
         AuditContext.setAuthAttemptedUsername(req.getUsername());
         LoginRes res = adminAuthService.login(req);
         return ResponseEntity.ok(res);
+    }
+
+    /**
+     * 後台忘記密碼（發送臨時密碼）
+     */
+    @PostMapping("/forgot-password")
+    @Operation(summary = "後台忘記密碼", description = "重設為臨時密碼並發送到註冊 Email，登入後需先修改密碼")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordReq req) {
+        log.info("📧 後台忘記密碼請求: email={}", req.getEmail());
+        adminAuthService.forgotPassword(req.getEmail());
+        return ResponseEntity.ok(Map.of("message", "若帳號存在，系統已發送臨時密碼至註冊 Email"));
     }
 
     /**

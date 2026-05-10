@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 儲值報表回應
+ * 儲值報表回應（平台視角）
  */
 @Data
 @Builder
@@ -50,7 +50,7 @@ public class RechargeReportRes {
     private List<DailyRecharge> dailyDetails;
     
     /**
-     * 儲值方案統計
+    * 儲值方案分布
      */
     private List<PlanStats> planStats;
     

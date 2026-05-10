@@ -143,8 +143,8 @@ public class LotteryController {
     /**
      * 取得商品詳情（公開）
      * 
-     * GET /api/lottery/{id}
-     * 若狀態為 DRAFT / CONFIGURED / FORCED_OFF 則回傳 403
+    * GET /api/lottery/{id}
+    * 若狀態為 DRAFT / WAITING_ON_SHELF / OFF_SHELF / FORCED_OFF / DELETED 則回傳 403
      */
     @GetMapping("/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}")
     @Operation(summary = "取得商品詳情（公開）", description = "查詢商品詳情，草稿/強制下架商品不可存取")
@@ -158,9 +158,9 @@ public class LotteryController {
             return ResponseEntity.notFound().build();
         }
         
-        // DRAFT / FORCED_OFF 不對外公開
+        // 只有上架中與已完售狀態可公開詳情
         String status = result.getStatus();
-        if ("DRAFT".equals(status) || "FORCED_OFF".equals(status)) {
+        if (!isPublicDetailStatus(status)) {
             log.warn("⚠️ 商品不公開: id={}, status={}", id, status);
             return ResponseEntity.status(403).build();
         }
@@ -184,7 +184,7 @@ public class LotteryController {
             return ResponseEntity.notFound().build();
         }
         
-        if (!"ON_SHELF".equals(result.getStatus())) {
+        if (!isPublicDetailStatus(result.getStatus())) {
             log.warn("⚠️ 商品未上架: id={}, status={}", id, result.getStatus());
             return ResponseEntity.notFound().build();
         }
@@ -203,7 +203,7 @@ public class LotteryController {
             log.warn("⚠️ 商品不存在: id={}", id);
             return ResponseEntity.notFound().build();
         }
-        if (!"ON_SHELF".equals(lottery.getStatus())) {
+        if (!isPublicDetailStatus(lottery.getStatus())) {
             log.warn("⚠️ 商品未上架: id={}, status={}", id, lottery.getStatus());
             return ResponseEntity.notFound().build();
         }
@@ -245,6 +245,12 @@ public class LotteryController {
                 .build();
 
         return ResponseEntity.ok(result);
+    }
+
+    private boolean isPublicDetailStatus(String status) {
+        return "ON_SHELF".equals(status)
+                || "GRAND_PRIZE_DRAWN".equals(status)
+                || "ALL_DRAWN".equals(status);
     }
 
     @GetMapping("/browse/store/{storeId}")

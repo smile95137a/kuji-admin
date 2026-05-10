@@ -54,6 +54,9 @@ public class CreateStoreReq {
     @Schema(description = "後台備註")
     private String remark;
 
+    @Schema(description = "推薦碼（選填，若有填寫則視為店家招商來源）", example = "KUJI2026")
+    private String referralCode;
+
     // ==================== 負責人帳號 ====================
 
     @Valid

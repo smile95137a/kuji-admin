@@ -16,9 +16,9 @@ import java.time.LocalDate;
 public class LotteryResultReportCondition extends BaseCondition {
     
     /**
-     * 店家 ID（後端自動帶入）
+     * 店家 ID（僅資料隔離用途；StoreOwner 由後端自動帶入）
      */
-    @Schema(description = "店家 ID（後端自動帶入）", example = "uuid-string")
+    @Schema(description = "店家 ID（僅資料隔離用途）", example = "uuid-string")
     private String storeId;
     
     /**

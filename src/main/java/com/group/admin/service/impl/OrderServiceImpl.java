@@ -70,6 +70,9 @@ public class OrderServiceImpl implements OrderService {
     private final ShippingPaymentGatewayClient shippingPaymentGatewayClient;
 
     private static final Long SHIPPING_FEE = 60L;
+    private static final String PRIZE_BOX_STATUS_AVAILABLE = "AVAILABLE";
+    private static final String PRIZE_BOX_STATUS_IN_BOX = "IN_BOX";
+    private static final String PRIZE_BOX_STATUS_SHIPPING = "SHIPPING";
 
     // ==================== 訂單建立 ====================
 
@@ -160,7 +163,7 @@ public class OrderServiceImpl implements OrderService {
                 items.add(item);
 
                 prizeBox.setOrderId(order.getId());
-                prizeBox.setStatus("SHIPPING");
+                prizeBox.setStatus(PRIZE_BOX_STATUS_SHIPPING);
                 prizeBoxMapper.updateByPrimaryKey(prizeBox);
             }
 
@@ -171,6 +174,11 @@ public class OrderServiceImpl implements OrderService {
             ShippingPaymentResult paymentResult = initShippingPayment(order, shippingFee, shippingMethod, userId);
             recordStatusLog(order.getId(), null, OrderStatusEnum.PAYMENT_PENDING.getCode(),
                     userId, "USER", null);
+            if (!paymentResult.isSuccess()) {
+                recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_PENDING.getCode(),
+                        OrderStatusEnum.PAYMENT_FAILED.getCode(),
+                        userId, "SYSTEM", "建立付款單失敗");
+            }
 
             results.add(OrderPaymentInitRes.builder()
                     .orderId(order.getId())
@@ -186,6 +194,58 @@ public class OrderServiceImpl implements OrderService {
 
         log.info("✅ 訂單建立完成（含支付初始化）：orderCount={}", results.size());
         return results;
+    }
+
+    @Override
+    @Transactional
+    public OrderPaymentInitRes retryShippingPayment(String orderId, String userId) {
+        Order order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null) {
+            throw new BusinessException("訂單不存在");
+        }
+        if (!userId.equals(order.getUserId())) {
+            throw new BusinessException("無權限操作此訂單");
+        }
+
+        OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
+        if (currentStatus != OrderStatusEnum.PAYMENT_PENDING && currentStatus != OrderStatusEnum.PAYMENT_FAILED) {
+            throw new BusinessException("目前狀態無法重新付款");
+        }
+
+        ShippingMethod shippingMethod = null;
+        if (isNotBlank(order.getShippingMethodId())) {
+            shippingMethod = shippingMethodMapper.selectByPrimaryKey(order.getShippingMethodId());
+        }
+        if (shippingMethod == null && isNotBlank(order.getShippingMethod())) {
+            ShippingMethodExample example = new ShippingMethodExample();
+            example.createCriteria().andCodeEqualTo(order.getShippingMethod());
+            List<ShippingMethod> methods = shippingMethodMapper.selectByExample(example);
+            if (!methods.isEmpty()) {
+                shippingMethod = methods.get(0);
+            }
+        }
+        if (shippingMethod == null || !"ACTIVE".equals(shippingMethod.getStatus())) {
+            throw new BusinessException("運送方式不存在或已停用");
+        }
+
+        Long shippingFee = order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE;
+        ShippingPaymentResult paymentResult = initShippingPayment(order, shippingFee, shippingMethod, userId);
+
+        if (paymentResult.isSuccess() && currentStatus == OrderStatusEnum.PAYMENT_FAILED) {
+            recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_FAILED.getCode(),
+                    OrderStatusEnum.PAYMENT_PENDING.getCode(), userId, "USER", "重新建立付款單");
+        }
+
+        return OrderPaymentInitRes.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .shippingFee(shippingFee)
+                .paymentStatus(paymentResult.isSuccess()
+                        ? PaymentStatusEnum.PAYMENT_PENDING.getCode()
+                        : PaymentStatusEnum.FAILED.getCode())
+                .paymentUrl(paymentResult.getPayUrl())
+                .gatewayTradeNo(paymentResult.getGatewayTradeNo())
+                .build();
     }
 
     // ==================== 訂單查詢 ====================
@@ -383,33 +443,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void cancel(String orderId, OrderCancelReq req, String operatorId) {
-        log.info("🔍 取消訂單：orderId={}", orderId);
-
-        Order order = orderMapper.selectByPrimaryKey(orderId);
-        if (order == null) {
-            throw new BusinessException("訂單不存在");
-        }
-
-        OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (!currentStatus.isCancellable()) {
-            throw new BusinessException("訂單狀態不允許取消");
-        }
-
-        String fromStatus = order.getStatus();
-        order.setStatus(OrderStatusEnum.CANCELLED.getCode());
-        order.setCancelReason(req.getReason());
-        order.setCancelledBy(operatorId);
-        order.setCancelledAt(LocalDateTime.now());
-        order.setRemark(req.getReason());
-        order.setUpdatedAt(LocalDateTime.now());
-        orderMapper.updateByPrimaryKeySelective(order);
-
-        restorePrizeBoxes(orderId);
-
-        recordStatusLog(orderId, fromStatus, OrderStatusEnum.CANCELLED.getCode(),
-                operatorId, "ADMIN", "取消原因：" + req.getReason());
-
-        log.info("✅ 訂單已取消");
+        CancelOrderReq cancelReq = new CancelOrderReq();
+        cancelReq.setCancelReason(req != null ? req.getCancelReason() : null);
+        cancelOrder(orderId, cancelReq, operatorId, "ADMIN");
     }
 
     @Override
@@ -474,7 +510,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (!currentStatus.isCancellable()) {
+        if (!canCancelByOperator(currentStatus, operatorType)) {
             throw new BusinessException("訂單狀態不允許取消（目前狀態：" + currentStatus.getName() + "）");
         }
 
@@ -488,7 +524,7 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateByPrimaryKeySelective(order);
 
-        // 歸還賞品至賞品盒（IN_BOX 狀態，解除 orderId 綁定）
+        // 歸還賞品至賞品盒（AVAILABLE 狀態，解除 orderId 綁定）
         restorePrizeBoxes(id);
 
         // TODO:REFUND - 運費退款（待金流串接後實作）
@@ -521,8 +557,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         OrderStatusEnum currentStatus = OrderStatusEnum.fromCode(order.getStatus());
-        if (currentStatus != OrderStatusEnum.PENDING) {
-            throw new BusinessException("訂單已確認，無法修改出貨資訊");
+        if (currentStatus != OrderStatusEnum.PAYMENT_PENDING) {
+            throw new BusinessException("僅待付款訂單可修改出貨資訊");
         }
 
         String method = req.getShippingMethod();
@@ -576,8 +612,9 @@ public class OrderServiceImpl implements OrderService {
         if (callbackResult.isSuccess()) {
             orderMapper.markShippingPaymentSuccess(order.getId(), callbackResult.getGatewayTradeNo());
 
-            if (OrderStatusEnum.PAYMENT_PENDING.getCode().equals(order.getStatus())) {
-                recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_PENDING.getCode(), OrderStatusEnum.PENDING.getCode(),
+            if (OrderStatusEnum.PAYMENT_PENDING.getCode().equals(order.getStatus())
+                    || OrderStatusEnum.PAYMENT_FAILED.getCode().equals(order.getStatus())) {
+                recordStatusLog(order.getId(), order.getStatus(), OrderStatusEnum.PENDING.getCode(),
                         null, "SYSTEM", "GoMyPay 付款成功");
             }
             log.info("✅ 運費付款成功：orderId={}, orderNo={}", order.getId(), order.getOrderNumber());
@@ -585,7 +622,12 @@ public class OrderServiceImpl implements OrderService {
         }
 
         String errorMessage = callbackResult.getErrorMessage();
+        String fromStatus = order.getStatus();
         orderMapper.markShippingPaymentFailed(order.getId(), callbackResult.getGatewayTradeNo(), errorMessage);
+        if (!OrderStatusEnum.PAYMENT_FAILED.getCode().equals(fromStatus)) {
+            recordStatusLog(order.getId(), fromStatus, OrderStatusEnum.PAYMENT_FAILED.getCode(),
+                    null, "SYSTEM", "GoMyPay 付款失敗");
+        }
         log.warn("⚠️ 運費付款失敗：orderId={}, orderNo={}, reason={}",
                 order.getId(), order.getOrderNumber(), errorMessage);
     }
@@ -602,7 +644,7 @@ public class OrderServiceImpl implements OrderService {
             if (!userId.equals(box.getUserId())) {
                 throw new BusinessException("賞品盒不屬於當前玩家：" + boxId);
             }
-            if (!"IN_BOX".equals(box.getStatus())) {
+            if (!isPrizeBoxAvailable(box.getStatus())) {
                 throw new BusinessException("賞品盒狀態不允許出貨：" + boxId);
             }
             prizeBoxes.add(box);
@@ -658,7 +700,7 @@ public class OrderServiceImpl implements OrderService {
 
         String failedReason = paymentResult != null ? paymentResult.getErrorMessage() : "建立付款單失敗";
         orderMapper.updatePaymentInit(order.getId(), shippingFee, "GOMYPAY",
-                PaymentStatusEnum.FAILED.getCode(), OrderStatusEnum.PAYMENT_PENDING.getCode(), null);
+                PaymentStatusEnum.FAILED.getCode(), OrderStatusEnum.PAYMENT_FAILED.getCode(), null);
         orderMapper.markShippingPaymentFailed(order.getId(), null, failedReason);
 
         return ShippingPaymentResult.builder()
@@ -700,7 +742,7 @@ public class OrderServiceImpl implements OrderService {
             if (item.getPrizeBoxId() != null) {
                 PrizeBox prizeBox = prizeBoxMapper.selectByPrimaryKey(item.getPrizeBoxId());
                 if (prizeBox != null) {
-                    prizeBox.setStatus("IN_BOX");
+                    prizeBox.setStatus(PRIZE_BOX_STATUS_AVAILABLE);
                     prizeBox.setOrderId(null);
                     prizeBox.setShippedAt(null);
                     prizeBoxMapper.updateByPrimaryKey(prizeBox);
@@ -708,6 +750,23 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
         }
+    }
+
+    private boolean canCancelByOperator(OrderStatusEnum currentStatus, String operatorType) {
+        if ("PLAYER".equalsIgnoreCase(operatorType)) {
+            return currentStatus == OrderStatusEnum.PAYMENT_PENDING
+                    || currentStatus == OrderStatusEnum.PAYMENT_FAILED
+                    || currentStatus == OrderStatusEnum.PENDING;
+        }
+
+        return currentStatus == OrderStatusEnum.PAYMENT_PENDING
+                || currentStatus == OrderStatusEnum.PAYMENT_FAILED
+                || currentStatus == OrderStatusEnum.PENDING
+                || currentStatus == OrderStatusEnum.PREPARING;
+    }
+
+    private boolean isPrizeBoxAvailable(String status) {
+        return PRIZE_BOX_STATUS_AVAILABLE.equals(status) || PRIZE_BOX_STATUS_IN_BOX.equals(status);
     }
 
     private String resolveStoreIdForUser(String adminUserId) {

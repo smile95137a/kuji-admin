@@ -35,7 +35,13 @@ public class LotteryCondition extends BaseCondition {
     private String title;
     
     /**
-     * 狀態：ON_SHELF（上架）/ OFF_SHELF（下架）
+     * 商品狀態過濾。
+     *
+     * 後台可依新狀態模型過濾：
+     * DRAFT / WAITING_ON_SHELF / ON_SHELF / OFF_SHELF /
+     * FORCED_OFF / GRAND_PRIZE_DRAWN / ALL_DRAWN / DELETED
+     *
+     * 前台公開列表仍應只查 ON_SHELF。
      */
     private String status;
     

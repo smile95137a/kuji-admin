@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import com.group.admin.constants.ErrorCodes;
 import com.group.admin.entity.User;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.example.UserExample;
@@ -28,6 +29,7 @@ import com.group.admin.service.ReferralCodeService;
 import com.group.admin.service.UserService;
 import com.group.admin.service.LoginHistoryService;
 import com.group.admin.service.UserTokenBlacklistService;
+import com.group.admin.util.PasswordUtil;
 import com.group.admin.util.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+    private static final String FORCE_CHANGE_PASSWORD_MARKER = "FORCE_CHANGE_PASSWORD";
+
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -52,10 +56,14 @@ public class UserServiceImpl implements UserService {
     private final EmailService emailService;
     private final LoginHistoryService loginHistoryService;
     private final UserTokenBlacklistService userTokenBlacklistService;
+    private final PasswordUtil passwordUtil;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${google.client-id:}")
     private String googleClientId;
+
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Override
     @Transactional
@@ -155,34 +163,36 @@ public class UserServiceImpl implements UserService {
     public AuthRes login(AuthLoginReq req) {
         User user = normalizeLegacyProvider(findByEmail(req.getEmail()));
         if (user == null) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
         }
 
         // ✅ 檢查會員狀態（停用或刪除的會員不能登入）
         if ("INACTIVE".equals(user.getStatus())) {
-            throw new IllegalArgumentException("帳號已被停用，請聯繫客服");
+            throw new BusinessException(ErrorCodes.AUTH_ACCOUNT_DISABLED, "帳號已被停用，請聯繫客服");
         }
         if ("DELETED".equals(user.getStatus())) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
         }
         if ("SUSPENDED".equals(user.getStatus())) {
-            throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
+            throw new BusinessException(ErrorCodes.AUTH_ACCOUNT_DISABLED, "帳號已被暫停使用，請聯繫客服");
         }
 
         // 帳號鎖定檢查
         if (user.getLockedUntil() != null && LocalDateTime.now().isBefore(user.getLockedUntil())) {
             loginHistoryService.record(user.getId(), "user", "EMAIL", "LOCKED", "帳號已鎖定", null, null);
-            throw new IllegalArgumentException("帳號已鎖定，請於 " + user.getLockedUntil().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " 後再試");
+            throw new BusinessException(ErrorCodes.AUTH_ACCOUNT_LOCKED,
+                    "帳號已鎖定，請於 " + user.getLockedUntil().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " 後再試");
         }
 
         // 檢查是否為 OAuth 用戶（沒有密碼或 provider 不是 EMAIL）
         if (!"EMAIL".equals(user.getProvider())) {
-            throw new IllegalArgumentException("此帳號使用 " + user.getProvider() + " 登入，請使用對應登入方式");
+            throw new BusinessException(ErrorCodes.USER_PASSWORD_INVALID,
+                    "此帳號使用 " + user.getProvider() + " 登入，請使用對應登入方式");
         }
 
         // Email 驗證檢查（EMAIL provider 才需要）
         if (user.getEmailVerified() == null || user.getEmailVerified() == 0) {
-            throw new IllegalArgumentException("請先完成 Email 驗證");
+            throw new BusinessException(ErrorCodes.COMMON_VALIDATION_ERROR, "請先完成 Email 驗證");
         }
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
@@ -196,7 +206,7 @@ public class UserServiceImpl implements UserService {
             }
             userMapper.updateByPrimaryKeySelective(lockUpdate);
             loginHistoryService.record(user.getId(), "user", "EMAIL", "FAILED", "密碼錯誤", null, null);
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
         }
 
         // 重設失敗次數並更新最後登入時間
@@ -215,6 +225,7 @@ public class UserServiceImpl implements UserService {
         res.setRefreshToken(refreshToken);
         res.setExpiresIn(jwtUtil.getExpirationSeconds());
         res.setUser(user);
+        res.setForceChangePassword(requiresForceChangePassword(user));
         return res;
     }
 
@@ -305,6 +316,7 @@ public class UserServiceImpl implements UserService {
             res.setExpiresIn(jwtUtil.getExpirationSeconds());
             res.setUser(user);
             res.setIsNewUser(isNewUser); // ⭐ 前端用於判斷是否要顯示補推薦碼引導
+            res.setForceChangePassword(false);
             return res;
             
         } catch (IllegalArgumentException e) {
@@ -383,22 +395,26 @@ public class UserServiceImpl implements UserService {
         // 只有 EMAIL provider 的帳號才能重設密碼
         if (!"EMAIL".equals(user.getProvider())) {
             log.warn("⚠️ 非 EMAIL 帳號無法重設密碼: email={}, provider={}", email, user.getProvider());
-            throw new IllegalArgumentException("此帳號使用第三方登入，無法重設密碼");
+            throw new BusinessException(ErrorCodes.USER_PASSWORD_INVALID, "此帳號使用第三方登入，無法重設密碼");
         }
-        
-        // 生成重設 token（UUID）
-        String resetToken = UUID.randomUUID().toString();
-        
-        // 更新使用者的 password_reset_token 和過期時間（1小時後）
-        user.setPasswordResetToken(resetToken);
-        user.setPasswordResetExpires(LocalDateTime.now().plusHours(1));
+
+        // 產生臨時密碼，並標記必須先改密碼。
+        String temporaryPassword = passwordUtil.generateRandomPassword();
+
+        user.setPassword(passwordEncoder.encode(temporaryPassword));
+        user.setPasswordResetToken(FORCE_CHANGE_PASSWORD_MARKER);
+        user.setPasswordResetExpires(LocalDateTime.now().plusDays(7));
         user.setUpdatedAt(LocalDateTime.now());
-        userMapper.updateByPrimaryKey(user);
-        
-        // 發送密碼重設郵件
-        emailService.sendPasswordResetEmail(email, user.getNickname(), resetToken);
-        
-        log.info("✅ 密碼重設郵件已發送: email={}, token={}", email, resetToken);
+        userMapper.updateByPrimaryKeySelective(user);
+
+        emailService.sendTemporaryPasswordEmail(
+            email,
+            user.getNickname(),
+            temporaryPassword,
+            frontendUrl + "/login",
+            "前台忘記密碼");
+
+        log.info("✅ 忘記密碼處理完成（已寄送臨時密碼）: email={}", email);
     }
 
     @Override
@@ -437,22 +453,24 @@ public class UserServiceImpl implements UserService {
 
         User user = normalizeLegacyProvider(findById(userId));
         if (user == null) {
-            throw new IllegalArgumentException("使用者不存在");
+            throw new BusinessException(ErrorCodes.USER_NOT_FOUND, "使用者不存在");
         }
 
         if (!"EMAIL".equals(user.getProvider())) {
-            throw new IllegalArgumentException("此帳號使用第三方登入，無法修改密碼");
+            throw new BusinessException(ErrorCodes.USER_PASSWORD_INVALID, "此帳號使用第三方登入，無法修改密碼");
         }
 
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
-            throw new IllegalArgumentException("兩次輸入的密碼不一致");
+            throw new BusinessException(ErrorCodes.COMMON_VALIDATION_ERROR, "兩次輸入的密碼不一致");
         }
 
         if (!passwordEncoder.matches(req.getOldPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("原密碼錯誤");
+            throw new BusinessException(ErrorCodes.USER_OLD_PASSWORD_WRONG, "原密碼錯誤");
         }
 
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetExpires(null);
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateByPrimaryKey(user);
 
@@ -504,6 +522,10 @@ public class UserServiceImpl implements UserService {
         userMapper.updateByPrimaryKeySelective(update);
         emailService.sendVerificationEmail(user.getEmail(), user.getNickname(), verificationToken);
         log.info("✅ 重新發送驗證郵件: userId={}", userId);
+    }
+
+    private boolean requiresForceChangePassword(User user) {
+        return user != null && FORCE_CHANGE_PASSWORD_MARKER.equals(user.getPasswordResetToken());
     }
 
     private String resolveNickname(AuthRegisterReq req) {

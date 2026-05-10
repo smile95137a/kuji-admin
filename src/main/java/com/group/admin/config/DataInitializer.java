@@ -57,6 +57,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
+    private static final String REPORT_PARENT_CODE = "REPORT_CENTER";
+    private static final String[][] REPORT_MENU_DEFINITIONS = {
+            {"營收報表", "REVENUE_REPORT", "/home/report/revenue", "1"},
+            {"推薦碼報表", "REFERRAL_REPORT", "/home/report/referral", "2"},
+            {"抽獎結果報表", "LOTTERY_RESULT_REPORT", "/home/report/lottery-result", "3", "DRAW_STATISTICS"},
+            {"儲值報表", "RECHARGE_REPORT", "/home/report/recharge", "4"},
+            {"贈點報表", "BONUS_REPORT", "/home/report/bonus", "5"},
+            {"會員成長報表", "MEMBER_GROWTH_REPORT", "/home/report/member-growth", "6"},
+            {"平台營收總覽", "PLATFORM_REVENUE_REPORT", "/home/report/platform-revenue", "7"},
+            {"抽獎銷售報表", "LOTTERY_SALES_REPORT", "/home/report/lottery-sales", "8"},
+            {"店家績效報表", "STORE_PERFORMANCE_REPORT", "/home/report/store-performance", "9", "STORE_PERF_REPORT"},
+            {"獎品出貨報表", "PRIZE_SHIPMENT_REPORT", "/home/report/prize-shipment", "10"}
+    };
+
     private final RoleMapper roleMapper;
     private final MenuMapper menuMapper;
     private final RoleMenuMapper roleMenuMapper;
@@ -123,6 +137,8 @@ public class DataInitializer implements CommandLineRunner {
             initializeLotteries();
             initializeShippingMethods();
             initializeSystemConfigs();
+            rescueMissingReportMenus();
+            rescueMissingSystemMenus();
             
             log.info("========================================");
             log.info("系統資料初始化完成！");
@@ -366,6 +382,115 @@ public class DataInitializer implements CommandLineRunner {
         menuMapper.insert(menu);
     }
 
+    private Menu ensureReportCenterMenu() {
+        Menu reportCenter = findMenuByCodes(REPORT_PARENT_CODE, "report_management");
+        if (reportCenter != null) {
+            reportCenter.setName("報表管理");
+            reportCenter.setCode(REPORT_PARENT_CODE);
+            reportCenter.setPath("/home/report");
+            reportCenter.setIcon("chart");
+            reportCenter.setOrderNum(80);
+            reportCenter.setIsVisible(true);
+            reportCenter.setUpdatedAt(LocalDateTime.now());
+            menuMapper.updateByPrimaryKeySelective(reportCenter);
+            return reportCenter;
+        }
+
+        Menu menu = new Menu();
+        menu.setId(UUID.randomUUID().toString());
+        menu.setName("報表管理");
+        menu.setCode(REPORT_PARENT_CODE);
+        menu.setPath("/home/report");
+        menu.setParentId(null);
+        menu.setIcon("chart");
+        menu.setOrderNum(80);
+        menu.setIsVisible(true);
+        menu.setCreatedAt(LocalDateTime.now());
+        menu.setUpdatedAt(LocalDateTime.now());
+        menuMapper.insert(menu);
+        return menu;
+    }
+
+    private Menu upsertSubMenu(String parentId, String name, String code, String path, int orderNum, String... legacyCodes) {
+        Menu menu = findMenuByCodes(code, legacyCodes);
+        if (menu == null) {
+            insertSubMenu(parentId, name, code, path, orderNum);
+            return findMenuByCodes(code);
+        }
+
+        menu.setParentId(parentId);
+        menu.setName(name);
+        menu.setCode(code);
+        menu.setPath(path);
+        menu.setOrderNum(orderNum);
+        menu.setIsVisible(true);
+        menu.setUpdatedAt(LocalDateTime.now());
+        menuMapper.updateByPrimaryKeySelective(menu);
+        return menu;
+    }
+
+    private Menu findMenuByCodes(String primaryCode, String... extraCodes) {
+        Menu menu = findMenuByCode(primaryCode);
+        if (menu != null) {
+            return menu;
+        }
+        for (String extraCode : extraCodes) {
+            menu = findMenuByCode(extraCode);
+            if (menu != null) {
+                return menu;
+            }
+        }
+        return null;
+    }
+
+    private Menu findMenuByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+
+        MenuExample example = new MenuExample();
+        example.createCriteria().andCodeEqualTo(code);
+        return menuMapper.selectByExample(example).stream().findFirst().orElse(null);
+    }
+
+    private void ensureRoleMenuPermission(String roleId, String menuId, boolean canView, boolean canEdit, boolean canDelete) {
+        if (roleId == null || menuId == null) {
+            return;
+        }
+
+        RoleMenuExample example = new RoleMenuExample();
+        example.createCriteria().andRoleIdEqualTo(roleId).andMenuIdEqualTo(menuId);
+        RoleMenu roleMenu = roleMenuMapper.selectByExample(example).stream().findFirst().orElse(null);
+
+        if (roleMenu == null) {
+            roleMenu = new RoleMenu();
+            roleMenu.setId(UUID.randomUUID().toString());
+            roleMenu.setRoleId(roleId);
+            roleMenu.setMenuId(menuId);
+            roleMenu.setCreatedAt(LocalDateTime.now());
+            roleMenu.setCanView(canView);
+            roleMenu.setCanEdit(canEdit);
+            roleMenu.setCanDelete(canDelete);
+            roleMenuMapper.insert(roleMenu);
+            return;
+        }
+
+        roleMenu.setCanView(canView);
+        roleMenu.setCanEdit(canEdit);
+        roleMenu.setCanDelete(canDelete);
+        roleMenuMapper.updateByPrimaryKeySelective(roleMenu);
+    }
+
+    private void removeRoleMenuPermission(String roleId, String menuId) {
+        if (roleId == null || menuId == null) {
+            return;
+        }
+
+        RoleMenuExample example = new RoleMenuExample();
+        example.createCriteria().andRoleIdEqualTo(roleId).andMenuIdEqualTo(menuId);
+        roleMenuMapper.deleteByExample(example);
+    }
+
     /**
      * 初始化角色選單權限
      */
@@ -437,6 +562,44 @@ public class DataInitializer implements CommandLineRunner {
      * 僅在既有 DB 上執行（避免全新安裝重複初始化）。
      */
     private void rescueMissingReportMenus() {
+        if (System.currentTimeMillis() >= 0) {
+            if (ROLE_ADMIN_ID == null || ROLE_STORE_OWNER_ID == null || ROLE_STORE_EDITOR_ID == null) {
+                loadRoleIdsFromDb();
+            }
+
+            Menu reportCenter = ensureReportCenterMenu();
+            ensureRoleMenuPermission(ROLE_ADMIN_ID, reportCenter.getId(), true, true, true);
+            ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, reportCenter.getId(), true, false, false);
+            removeRoleMenuPermission(ROLE_STORE_EDITOR_ID, reportCenter.getId());
+
+            for (String[] definition : REPORT_MENU_DEFINITIONS) {
+                String[] legacyCodes = definition.length > 4
+                        ? new String[] {definition[4]}
+                        : new String[0];
+
+                Menu menu = upsertSubMenu(
+                        reportCenter.getId(),
+                        definition[0],
+                        definition[1],
+                        definition[2],
+                        Integer.parseInt(definition[3]),
+                        legacyCodes);
+
+                ensureRoleMenuPermission(ROLE_ADMIN_ID, menu.getId(), true, true, true);
+
+                boolean ownerCanView = !"MEMBER_GROWTH_REPORT".equals(definition[1])
+                        && !"PLATFORM_REVENUE_REPORT".equals(definition[1]);
+                if (ownerCanView) {
+                    ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, menu.getId(), true, false, false);
+                } else {
+                    removeRoleMenuPermission(ROLE_STORE_OWNER_ID, menu.getId());
+                }
+                removeRoleMenuPermission(ROLE_STORE_EDITOR_ID, menu.getId());
+            }
+
+            log.info("??報表選單與角色權限已同步為正式報表設定");
+            return;
+        }
         // 找父選單「報表中心」
         MenuExample parentEx = new MenuExample();
         parentEx.createCriteria().andCodeEqualTo("REPORT_CENTER");

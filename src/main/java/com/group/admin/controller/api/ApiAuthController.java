@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.group.admin.constants.ErrorCodes;
+import com.group.admin.exception.BusinessException;
 import com.group.admin.util.SecurityUtils;
 
 import com.group.admin.entity.User;
@@ -63,7 +65,7 @@ public class ApiAuthController {
         // 驗證密碼一致性（Controller 層額外檢查）
         if (!req.getPassword().equals(req.getConfirmedPassword())) {
             log.warn("密碼確認不一致: {}", req.getEmail());
-            throw new IllegalArgumentException("密碼與確認密碼不一致");
+            throw new BusinessException(ErrorCodes.COMMON_VALIDATION_ERROR, "密碼與確認密碼不一致");
         }
         
         User user = userService.register(req);
@@ -116,7 +118,7 @@ public class ApiAuthController {
         // 驗證 Refresh Token
         if (!jwtUtil.validateToken(req.getRefreshToken())) {
             log.warn("無效的 Refresh Token");
-            return ResponseEntity.status(401).body(null);
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
         }
         
         String email = jwtUtil.getUsername(req.getRefreshToken());
@@ -124,7 +126,7 @@ public class ApiAuthController {
         
         if (user == null) {
             log.warn("用戶不存在: {}", email);
-            return ResponseEntity.status(401).body(null);
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
         }
 
         // 生成新的 Access Token
@@ -147,48 +149,24 @@ public class ApiAuthController {
      * POST /api/auth/forgot-password
      */
     @PostMapping("/forgot-password")
-    @Operation(summary = "忘記密碼", description = "發送密碼重設郵件到註冊的 Email")
+    @Operation(summary = "忘記密碼", description = "重設為臨時密碼並發送至註冊 Email")
     public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordReq req) {
         log.info("📧 忘記密碼請求: email={}", req.getEmail());
-        
-        try {
-            userService.requestPasswordReset(req.getEmail());
-            return ResponseEntity.ok(Map.of(
-                "message", "如果此 Email 已註冊，將會收到密碼重設郵件"
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", e.getMessage()
-            ));
-        }
+
+        userService.requestPasswordReset(req.getEmail());
+        return ResponseEntity.ok(Map.of(
+                "message", "如果此 Email 已註冊，將會收到臨時密碼郵件"
+        ));
     }
-    
+
     /**
-     * 重設密碼（使用 token）
-     * POST /api/auth/reset-password
+     * 舊版 token 重設密碼入口（保留相容）
      */
     @PostMapping("/reset-password")
-    @Operation(summary = "重設密碼", description = "使用郵件中的 token 重設密碼")
+    @Operation(summary = "重設密碼（舊版）", description = "此流程已停用，請改用忘記密碼取得臨時密碼")
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordReq req) {
-        log.info("🔑 重設密碼請求");
-        
-        // 驗證密碼確認
-        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "兩次輸入的密碼不一致"
-            ));
-        }
-        
-        try {
-            userService.resetPassword(req.getToken(), req.getNewPassword());
-            return ResponseEntity.ok(Map.of(
-                "message", "密碼重設成功，請使用新密碼登入"
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", e.getMessage()
-            ));
-        }
+        throw new BusinessException(ErrorCodes.COMMON_VALIDATION_ERROR,
+                "重設連結流程已停用，請使用忘記密碼取得臨時密碼後登入修改");
     }
 
     @PostMapping("/logout")

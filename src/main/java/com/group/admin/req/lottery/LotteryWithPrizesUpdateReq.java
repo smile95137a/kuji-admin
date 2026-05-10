@@ -2,7 +2,6 @@ package com.group.admin.req.lottery;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.util.List;
@@ -20,6 +19,7 @@ import java.util.List;
  *       <li>有 ID 的獎品 → 更新</li>
  *       <li>沒有 ID 的獎品 → 新增</li>
  *       <li>資料庫有但前端沒傳的 → 保留（不刪除）</li>
+ *       <li>若有調整獎品，商品需先處於 DRAFT 或 OFF_SHELF</li>
  *     </ul>
  *   </li>
  * </ul>
@@ -80,6 +80,6 @@ public class LotteryWithPrizesUpdateReq {
      * - 沒傳的獎品會保留（不刪除）
      */
     @Valid
-    @Schema(description = "獎品列表（有 ID=更新，無 ID=新增，沒傳=保留）")
+    @Schema(description = "獎品列表（有 ID=更新，無 ID=新增，沒傳=保留；調整獎品需先下架）")
     private List<LotteryPrizeUpdateReq> prizes;
 }
