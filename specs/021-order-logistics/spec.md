@@ -1,83 +1,61 @@
-# 功能規格書：訂單物流基礎
+# 功能規格書：訂單物流與運費付款
 
-**功能分支**：`021-order-logistics`
-**建立日期**：2026-04-13
-**狀態**：草稿
-**輸入**：shipping_method DB 表管理、訂單同店驗證、金流 stub、物流 stub、超商門市預留
+功能分支：021-order-logistics  
+建立日期：2026-04-13  
+最後更新：2026-05-11  
+狀態：已對齊目前後端實作
 
-## 使用者情境與測試
+## 目標
 
-### 使用者故事 1 — 管理員管理運送方式（優先級：P1）
+1. 運送方式改由 shipping_method 表管理，不使用 hardcode。
+2. 玩家建單後需先處理運費付款（GoMyPay），再進入履約流程。
+3. 付款失敗要有明確狀態（PAYMENT_FAILED）並可重付款。
 
-身為系統管理員，我希望在後台管理可用的運送方式（如宅配、7-11、全家、黑貓），不需要修改程式碼即可新增或停用運送方式。
+## 使用者情境
 
-**此優先級的原因**：取代 hardcode 的 ShippingMethodEnum，讓營運團隊能動態調整。
+### 使用者故事 1 — 管理員管理運送方式（P1）
 
-**驗收情境**：
+1. 管理員可新增/停用運送方式。
+2. 前台只顯示 ACTIVE 的運送方式。
 
-1. **在** 管理員新增「萊爾富」運送方式的情況下，**當** 儲存，**則** 前台使用者可在出貨時看到此選項。
-2. **在** 管理員停用「7-11」的情況下，**當** 停用，**則** 前台不再顯示此選項，但歷史訂單不受影響。
+### 使用者故事 2 — 玩家建立訂單與付款（P1）
 
----
+1. 玩家從賞品盒申請出貨後，系統建立訂單並返回 paymentUrl。
+2. 訂單初始為 PAYMENT_PENDING。
+3. GoMyPay callback 成功後，訂單進入 PENDING。
 
-### 使用者故事 2 — 前台會員建立出貨訂單（優先級：P1）
+### 使用者故事 3 — 付款失敗重試（P1）
 
-身為會員，我希望從賞品盒選擇獎品出貨，填寫收件資訊並選擇運送方式，建立出貨訂單。
+1. callback 失敗時，訂單進入 PAYMENT_FAILED。
+2. 玩家可在 PAYMENT_FAILED 狀態重付款（/order/{id}/repay）。
+3. 玩家也可在 PAYMENT_FAILED 直接取消訂單。
 
-**此優先級的原因**：出貨是整個抽獎→獲獎→收貨流程的最後一環。
+## 邊界條件
 
-**驗收情境**：
+1. 付款 callback 重複通知時，不可破壞既有狀態。
+2. 不可把已 SHIPPED 或 COMPLETED 的訂單改回未出貨狀態。
+3. shipping-info 只允許 PAYMENT_PENDING 編輯。
 
-1. **在** 會員有多個同店家的賞品盒的情況下，**當** 選擇出貨，**則** 建立一筆訂單，所有獎品屬於同一店家。
-2. **在** 會員嘗試跨店家建單的情況下，**當** 送出請求，**則** 系統拒絕並提示「不同店家請分開建立訂單」。
-3. **在** 選擇宅配的情況下，**當** 填寫地址，**則** 必填：收件人、電話、城市、區域、詳細地址。
-4. **在** 選擇超商取貨的情況下，**當** 選擇門市，**則** 必填：收件人、電話、超商類型、門市名稱、門市代碼。
+## 功能需求
 
----
-
-### 使用者故事 3 — 出貨運費走金流（優先級：P3）
-
-身為系統，我希望出貨的運費透過第三方金流（萬事達）支付，預留金流介面但先做 stub。
-
-**驗收情境**：
-
-1. **在** 金流 stub 模式的情況下，**當** 建立訂單，**則** 系統自動標記支付成功（不真正扣款），並在日誌記錄「[STUB] 金流支付 XXX 元」。
-2. **在** 串接真實金流後，**當** 建立訂單，**則** 呼叫萬事達 API 完成支付，支付失敗則訂單進入 PAYMENT_FAILED 狀態。
-
----
-
-### 邊界情況
-
-- 會員地址為空？必填欄位驗證，不允許空地址出貨。
-- 門市代碼格式錯誤？物流 API 串接前僅做基本格式校驗。
-- 訂單建立後修改地址？只在 PENDING 狀態可修改。
-
-## 需求規格
-
-### 功能需求
-
-- **FR-001**：新建 `shipping_method` 資料表，後台 CRUD 管理。
-- **FR-002**：前台 API 提供可用運送方式列表。
-- **FR-003**：訂單建立驗證同店家（所有 prize_box 的 store_id 必須相同）。
-- **FR-004**：跨店家訂單拒絕並回傳明確錯誤訊息。
-- **FR-005**：Order 表新增 `shipping_method_id`（FK → shipping_method）。
-- **FR-006**：金流介面預留：`PaymentGatewayService` + `StubPaymentServiceImpl`。
-- **FR-007**：物流介面預留：`LogisticsService` + `StubLogisticsServiceImpl`。
-- **FR-008**：Order 表新增 `payment_method`（VARCHAR，如 MASTERCARD / GOLD_COIN / STUB）。
-
-### 核心實體
-
-- **ShippingMethod**：運送方式。屬性：id、name、code、provider（物流商名稱）、fee（運費）、status（ACTIVE/INACTIVE）、created_at、updated_at。
+1. FR-001：shipping_method 由 DB 管理，前台讀取 ACTIVE 列表。
+2. FR-002：建單時按店家拆單，每筆訂單獨立建立支付單。
+3. FR-003：建單成功回傳 paymentUrl、gatewayTradeNo。
+4. FR-004：callback success 將訂單轉為 PENDING，paymentStatus 轉為 PAID。
+5. FR-005：callback failed 將訂單轉為 PAYMENT_FAILED，paymentStatus 轉為 FAILED。
+6. FR-006：新增重付款 API，僅 PAYMENT_PENDING / PAYMENT_FAILED 可呼叫。
+7. FR-007：重付款成功回傳新的 paymentUrl，供前端再次導轉。
+8. FR-008：PAYMENT_FAILED 不解除 PrizeBox 綁定；只有取消時才回收 PrizeBox。
+9. FR-009：取消後 PrizeBox 回 AVAILABLE（IN_BOX 僅舊資料相容）。
 
 ## 成功標準
 
-- **SC-001**：運送方式從 DB 讀取，非 Enum hardcode。
-- **SC-002**：跨店家訂單 100% 被拒絕。
-- **SC-003**：金流 stub 模式下訂單可正常建立。
-- **SC-004**：`mvn clean package -DskipTests` 編譯通過。
+1. SC-001：前台可正確顯示運送方式與對應運費。
+2. SC-002：付款失敗案例可由玩家重付款完成，不需重建訂單。
+3. SC-003：付款失敗與成功都可在狀態日誌追蹤。
+4. SC-004：狀態語意與 008-order-management 規格一致。
 
-## 假設前提
+## 實作假設
 
-- 金流串接（萬事達）暫時用 stub，真正串接留待下一階段。
-- 物流 API（綠界 ECLogistics）暫時用 stub，超商門市選擇暫由使用者手動填寫。
-- 運費暫由 shipping_method 表的 fee 欄位決定，不做複雜的重量/距離計算。
+1. 金流 provider 可切換 stub 或 gomypay。
+2. 真實退款流程待支付規格文件完成後再實作。

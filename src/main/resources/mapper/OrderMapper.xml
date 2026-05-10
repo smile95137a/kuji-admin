@@ -615,6 +615,7 @@
   <update id="markShippingPaymentFailed">
     UPDATE `order`
     SET payment_status = 'FAILED',
+        status = 'PAYMENT_FAILED',
         gomypay_trade_no = CASE WHEN #{gomypayTradeNo} IS NULL OR #{gomypayTradeNo} = '' THEN gomypay_trade_no ELSE #{gomypayTradeNo} END,
         remark = CASE WHEN #{remark} IS NULL OR #{remark} = '' THEN remark ELSE #{remark} END,
         updated_at = NOW()

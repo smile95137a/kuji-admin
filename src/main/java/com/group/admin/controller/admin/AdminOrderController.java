@@ -113,6 +113,7 @@ public class AdminOrderController {
      * 完成訂單
      */
     @PutMapping("/{orderId}/complete")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<Void> complete(@PathVariable String orderId) {
         String operatorId = SecurityUtils.getCurrentAdminUserId();
         log.info("🔍 [Admin] 完成訂單：orderId={}, operator={}", orderId, operatorId);
@@ -126,6 +127,7 @@ public class AdminOrderController {
      * 取消訂單
      */
     @DeleteMapping("/{orderId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<Void> cancelOrder(
             @PathVariable String orderId,
             @RequestBody(required = false) CancelOrderReq req) {

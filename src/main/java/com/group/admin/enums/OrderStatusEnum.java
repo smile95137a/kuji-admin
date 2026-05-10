@@ -12,6 +12,7 @@ import lombok.Getter;
 public enum OrderStatusEnum implements DisplayableEnum {
 
     PAYMENT_PENDING("PAYMENT_PENDING", "待付款"),
+    PAYMENT_FAILED("PAYMENT_FAILED", "付款失敗"),
     PENDING("PENDING", "待處理"),
     PREPARING("PREPARING", "備貨中"),
     SHIPPED("SHIPPED", "已出貨"),
@@ -63,7 +64,7 @@ public enum OrderStatusEnum implements DisplayableEnum {
     }
 
     public boolean isCancellable() {
-        return this == PAYMENT_PENDING || this == PENDING || this == PREPARING;
+        return this == PAYMENT_PENDING || this == PAYMENT_FAILED || this == PENDING || this == PREPARING;
     }
 
     public boolean isFinished() {
@@ -71,6 +72,6 @@ public enum OrderStatusEnum implements DisplayableEnum {
     }
 
     public boolean isPaid() {
-        return this != PAYMENT_PENDING && this != CANCELLED;
+        return this != PAYMENT_PENDING && this != PAYMENT_FAILED && this != CANCELLED;
     }
 }
