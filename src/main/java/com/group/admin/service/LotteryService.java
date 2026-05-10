@@ -24,12 +24,12 @@ public interface LotteryService {
     // ==================== 排程觸發 ====================
 
     /**
-     * 自動將排程到期商品從 CONFIGURED 推進到 ON_SHELF
+     * 自動將排程到期商品從 WAITING_ON_SHELF（含舊資料 CONFIGURED）推進到 ON_SHELF
      */
     void promoteScheduledLotteries();
 
     /**
-     * 自動將 ON_SHELF 商品推進到 DRAWABLE（開放抽獎）
+     * DRAWABLE 狀態已移除，保留介面相容性
      */
     void promoteDrawableLotteries();
 
@@ -332,10 +332,12 @@ public interface LotteryService {
     /**
      * 變更商品狀態（含 FSM 轉換驗證）
      * 
-     * 合法轉換：
-     * DRAFT → ON_SHELF, ON_SHELF → OFF_SHELF, OFF_SHELF → ON_SHELF,
-     * DRAFT → CONFIGURED, CONFIGURED → ON_SHELF, ANY → FORCED_OFF,
-     * FORCED_OFF → DRAFT
+     * 合法轉換以 Service 內建 FSM 為準。
+     * 目前主要語意：
+     * DRAFT / OFF_SHELF / WAITING_ON_SHELF → ON_SHELF
+     * ON_SHELF → OFF_SHELF / FORCED_OFF
+     * 系統自動流轉：ON_SHELF → GRAND_PRIZE_DRAWN / ALL_DRAWN
+     * OFF_SHELF / FORCED_OFF / 終態 → DELETED
      * 
      * @param lotteryId    商品 ID
      * @param targetStatus 目標狀態

@@ -16,7 +16,7 @@ public class LotteryStatusChangeReq {
 
     @NotBlank(message = "目標狀態不可為空")
     @Schema(description = "目標狀態", example = "ON_SHELF",
-            allowableValues = {"DRAFT", "ON_SHELF", "OFF_SHELF", "SOLD_OUT", "FORCED_OFF"},
+            allowableValues = {"ON_SHELF", "OFF_SHELF", "FORCED_OFF", "DELETED"},
             requiredMode = Schema.RequiredMode.REQUIRED)
     private String targetStatus;
 

@@ -15,10 +15,9 @@ import lombok.Data;
 public class LotteryPrizeUpdateReq {
 
     /**
-     * 獎項ID（必填）
+     * 獎項ID（有值=更新，無值=新增）
      */
-    @NotBlank(message = "獎項ID不可為空")
-    @Schema(description = "獎項ID", example = "550e8400-e29b-41d4-a716-446655440000", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "獎項ID（有值=更新，無值=新增）", example = "550e8400-e29b-41d4-a716-446655440000", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String id;
 
     /**

@@ -30,6 +30,6 @@ public class LotteryCopyReq {
 
     @Schema(description = "新商品狀態（選填，若為空則預設為 OFF_SHELF）", 
             example = "OFF_SHELF",
-            allowableValues = {"ON_SHELF", "OFF_SHELF", "SOLD_OUT"})
+            allowableValues = {"DRAFT", "ON_SHELF", "OFF_SHELF"})
     private String newStatus;
 }

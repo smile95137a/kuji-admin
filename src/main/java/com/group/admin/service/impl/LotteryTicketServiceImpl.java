@@ -132,8 +132,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
         
         if (prizes.isEmpty()) {
-            log.warn("⚠️ 商品 {} 沒有設定獎品，無法生成籤位", lotteryId);
-            return;
+            throw new BusinessException("商品尚未設定獎品，無法生成籤位");
         }
         
         // 建立獎品池（最後賞不加入籤位池，在最後一抽自動發放）

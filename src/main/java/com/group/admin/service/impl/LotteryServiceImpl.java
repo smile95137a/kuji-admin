@@ -78,6 +78,8 @@ public class LotteryServiceImpl implements LotteryService {
     
     private final Random random = new Random();
 
+    private static final String SYSTEM_OPERATOR = "SYSTEM";
+
     // ==================== 商品管理 CRUD ====================
 
     @Override
@@ -85,6 +87,14 @@ public class LotteryServiceImpl implements LotteryService {
     public LotteryRes createLottery(LotteryCreateReq req, String operatorId) {
         log.info("創建抽獎商品: title={}, operatorId={}", req.getTitle(), operatorId);
 
+        String normalizedSubCategory = normalizeSubCategory(req.getCategory(), req.getSubCategory());
+        validateLotteryFieldUsage(
+            req.getCategory(),
+            normalizedSubCategory,
+            req.getGameMode(),
+            req.getFreeDrawThreshold(),
+            req.getDesignatedPrizeNumbers()
+        );
         String normalizedTheme = upsertThemeIfPresent(req.getTheme());
         categoryService.validateTagNames(req.getTags());
         
@@ -95,17 +105,17 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setDescription(req.getDescription());
         lottery.setImageUrl(req.getImageUrl());
         lottery.setCategory(req.getCategory());
-        lottery.setSubCategory(req.getSubCategory());
-        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
-        String resolvedGameMode = resolveGameMode(req.getCategory(), req.getSubCategory(), req.getGameMode());
+        lottery.setSubCategory(normalizedSubCategory);
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), normalizedSubCategory);
+        String resolvedGameMode = resolveGameMode(req.getCategory(), normalizedSubCategory, req.getGameMode());
         String resolvedDelistStrategy = resolveDelistStrategy(
                 req.getCategory(),
-                req.getSubCategory(),
+            normalizedSubCategory,
                 req.getDelistStrategy()
         );
         Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
                 req.getCategory(),
-                req.getSubCategory(),
+            normalizedSubCategory,
                 req.getFreeDrawThreshold()
         );
         String normalizedPaymentType = normalizePaymentType(req.getPaymentType());
@@ -140,7 +150,7 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setTotalDraws(0);
         lottery.setPlayMode(resolvedPlayMode);
         lottery.setGameMode(resolvedGameMode);
-        lottery.setStatus(req.getStatus() != null ? req.getStatus() : LotteryStatusEnum.DRAFT.getCode());
+        lottery.setStatus(resolveLifecycleStatus(req.getStatus(), req.getScheduledAt(), LotteryStatusEnum.OFF_SHELF.getCode()));
         lottery.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
         lottery.setHotCount(req.getHotCount());
         lottery.setTheme(normalizedTheme);
@@ -157,7 +167,7 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setPaymentType(normalizedPaymentType);
         lottery.setDelistStrategy(resolvedDelistStrategy);
         lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
-        lottery.setDesignatedPrizeNumbers(req.getDesignatedPrizeNumbers());
+        lottery.setDesignatedPrizeNumbers(sanitizeDesignatedPrizeNumbers(resolvedGameMode, req.getDesignatedPrizeNumbers()));
         
         lotteryMapper.insert(lottery);
         log.info("抽獎商品創建成功: id={}", lottery.getId());
@@ -195,25 +205,37 @@ public class LotteryServiceImpl implements LotteryService {
         
         String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
         String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
+        String normalizedSubCategory = normalizeSubCategory(currentCategory, currentSubCategory);
         String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory);
         String requestGameMode = req.getGameMode() != null ? req.getGameMode() : lottery.getGameMode();
-        String resolvedGameMode = resolveGameMode(currentCategory, currentSubCategory, requestGameMode);
+        String resolvedGameMode = resolveGameMode(currentCategory, normalizedSubCategory, requestGameMode);
         String requestDelistStrategy = req.getDelistStrategy() != null ? req.getDelistStrategy() : lottery.getDelistStrategy();
-        String resolvedDelistStrategy = resolveDelistStrategy(currentCategory, currentSubCategory, requestDelistStrategy);
+        String resolvedDelistStrategy = resolveDelistStrategy(currentCategory, normalizedSubCategory, requestDelistStrategy);
         Integer requestFreeDrawThreshold = req.getFreeDrawThreshold() != null
                 ? req.getFreeDrawThreshold()
                 : lottery.getFreeDrawThreshold();
         Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
                 currentCategory,
-                currentSubCategory,
+            normalizedSubCategory,
                 requestFreeDrawThreshold
+        );
+        String requestDesignatedPrizeNumbers = req.getDesignatedPrizeNumbers() != null
+            ? req.getDesignatedPrizeNumbers()
+            : lottery.getDesignatedPrizeNumbers();
+
+        validateLotteryFieldUsage(
+            currentCategory,
+            normalizedSubCategory,
+            req.getGameMode(),
+            req.getFreeDrawThreshold(),
+            req.getDesignatedPrizeNumbers()
         );
 
         if (req.getTitle() != null) lottery.setTitle(req.getTitle());
         if (req.getDescription() != null) lottery.setDescription(req.getDescription());
         if (req.getImageUrl() != null) lottery.setImageUrl(req.getImageUrl());
         if (req.getCategory() != null) lottery.setCategory(req.getCategory());
-        if (req.getSubCategory() != null) lottery.setSubCategory(req.getSubCategory());
+        lottery.setSubCategory(normalizedSubCategory);
         if (req.getPricePerDraw() != null) lottery.setPricePerDraw(req.getPricePerDraw());
         if (req.getDiscountedPrice() != null) lottery.setDiscountedPrice(req.getDiscountedPrice());
         if (req.getAutoDiscountEnabled() != null) lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
@@ -237,16 +259,20 @@ public class LotteryServiceImpl implements LotteryService {
             }
         }
         
+        LocalDateTime targetScheduledAt = req.getScheduledAt() != null ? req.getScheduledAt() : lottery.getScheduledAt();
         if (req.getScheduledAt() != null) lottery.setScheduledAt(req.getScheduledAt());
         if (req.getStartTime() != null) lottery.setStartTime(req.getStartTime());
         if (req.getEndTime() != null) lottery.setEndTime(req.getEndTime());
         if (req.getMaxDraws() != null) lottery.setMaxDraws(req.getMaxDraws());
         if (req.getOrderNum() != null) lottery.setOrderNum(req.getOrderNum());
+        if (req.getStatus() != null || req.getScheduledAt() != null) {
+            lottery.setStatus(resolveLifecycleStatus(req.getStatus(), targetScheduledAt, lottery.getStatus()));
+        }
         lottery.setPlayMode(resolvedPlayMode);
         lottery.setGameMode(resolvedGameMode);
         lottery.setDelistStrategy(resolvedDelistStrategy);
         lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
-        if (req.getStatus() != null) lottery.setStatus(req.getStatus());
+        lottery.setDesignatedPrizeNumbers(sanitizeDesignatedPrizeNumbers(resolvedGameMode, requestDesignatedPrizeNumbers));
         // T008: new fields update
         if (req.getPaymentType() != null) {
             String normalizedPaymentType = normalizePaymentType(req.getPaymentType());
@@ -469,7 +495,7 @@ public class LotteryServiceImpl implements LotteryService {
         List<LotteryPrize> prizes = selectPrizesByLotteryId(lotteryId);
         if (prizes == null || prizes.stream().noneMatch(p -> p.getRemaining() != null && p.getRemaining() > 0)) {
             // 結束抽獎
-            lottery.setStatus(LotteryStatusEnum.ENDED.getCode());
+            lottery.setStatus(LotteryStatusEnum.ALL_DRAWN.getCode());
             lottery.setUpdatedAt(LocalDateTime.now());
             lotteryMapper.updateByPrimaryKey(lottery);
             throw new BusinessException("獎品已抽完，活動結束");
@@ -992,6 +1018,15 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException("店家 ID 不能為空");
         }
 
+        String normalizedSubCategory = normalizeSubCategory(req.getCategory(), req.getSubCategory());
+        validateLotteryFieldUsage(
+                req.getCategory(),
+                normalizedSubCategory,
+                req.getGameMode(),
+                req.getFreeDrawThreshold(),
+                req.getDesignatedPrizeNumbers()
+        );
+
         String normalizedTheme = upsertThemeIfPresent(req.getTheme());
         categoryService.validateTagNames(req.getTags());
         
@@ -1001,25 +1036,25 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setTitle(req.getTitle());
         lottery.setDescription(req.getDescription());
         lottery.setCategory(req.getCategory());
-        lottery.setSubCategory(req.getSubCategory());
+        lottery.setSubCategory(normalizedSubCategory);
 
         // 自動推算 playMode：前端不需要傳，後端根據 category + subCategory 決定
-        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), req.getSubCategory());
-        String resolvedGameMode = resolveGameMode(req.getCategory(), req.getSubCategory(), req.getGameMode());
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), req.getCategory(), normalizedSubCategory);
+        String resolvedGameMode = resolveGameMode(req.getCategory(), normalizedSubCategory, req.getGameMode());
         String resolvedDelistStrategy = resolveDelistStrategy(
                 req.getCategory(),
-                req.getSubCategory(),
+            normalizedSubCategory,
                 req.getDelistStrategy()
         );
         Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
                 req.getCategory(),
-                req.getSubCategory(),
+            normalizedSubCategory,
                 req.getFreeDrawThreshold()
         );
         lottery.setPlayMode(resolvedPlayMode);
         lottery.setGameMode(resolvedGameMode);
 
-        lottery.setStatus(req.getStatus() != null ? req.getStatus() : "OFF_SHELF");
+        lottery.setStatus(resolveLifecycleStatus(req.getStatus(), req.getScheduledAt(), LotteryStatusEnum.OFF_SHELF.getCode()));
         lottery.setPricePerDraw(req.getPricePerDraw());
         lottery.setDiscountedPrice(req.getDiscountedPrice());
         lottery.setAutoDiscountEnabled(req.getAutoDiscountEnabled() != null && req.getAutoDiscountEnabled() ? (byte) 1 : (byte) 0);
@@ -1045,7 +1080,7 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
         lottery.setDelistStrategy(resolvedDelistStrategy);
         lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
-        lottery.setDesignatedPrizeNumbers(req.getDesignatedPrizeNumbers());
+        lottery.setDesignatedPrizeNumbers(sanitizeDesignatedPrizeNumbers(resolvedGameMode, req.getDesignatedPrizeNumbers()));
         if (req.getTags() != null && !req.getTags().isEmpty()) {
             lottery.setTags(String.join(",", req.getTags()));
         }
@@ -1081,18 +1116,30 @@ public class LotteryServiceImpl implements LotteryService {
         
         String currentCategory = req.getCategory() != null ? req.getCategory() : lottery.getCategory();
         String currentSubCategory = req.getSubCategory() != null ? req.getSubCategory() : lottery.getSubCategory();
-        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), currentCategory, currentSubCategory);
+        String normalizedSubCategory = normalizeSubCategory(currentCategory, currentSubCategory);
+        String resolvedPlayMode = resolvePlayMode(req.getPlayMode(), currentCategory, normalizedSubCategory);
         String requestGameMode = req.getGameMode() != null ? req.getGameMode() : lottery.getGameMode();
-        String resolvedGameMode = resolveGameMode(currentCategory, currentSubCategory, requestGameMode);
+        String resolvedGameMode = resolveGameMode(currentCategory, normalizedSubCategory, requestGameMode);
         String requestDelistStrategy = req.getDelistStrategy() != null ? req.getDelistStrategy() : lottery.getDelistStrategy();
-        String resolvedDelistStrategy = resolveDelistStrategy(currentCategory, currentSubCategory, requestDelistStrategy);
+        String resolvedDelistStrategy = resolveDelistStrategy(currentCategory, normalizedSubCategory, requestDelistStrategy);
         Integer requestFreeDrawThreshold = req.getFreeDrawThreshold() != null
                 ? req.getFreeDrawThreshold()
                 : lottery.getFreeDrawThreshold();
         Integer normalizedFreeDrawThreshold = normalizeFreeDrawThreshold(
                 currentCategory,
-                currentSubCategory,
+            normalizedSubCategory,
                 requestFreeDrawThreshold
+        );
+        String requestDesignatedPrizeNumbers = req.getDesignatedPrizeNumbers() != null
+            ? req.getDesignatedPrizeNumbers()
+            : lottery.getDesignatedPrizeNumbers();
+
+        validateLotteryFieldUsage(
+            currentCategory,
+            normalizedSubCategory,
+            req.getGameMode(),
+            req.getFreeDrawThreshold(),
+            req.getDesignatedPrizeNumbers()
         );
 
         // 更新欄位（所有欄位都是可選的）
@@ -1108,9 +1155,7 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getCategory() != null) {
             lottery.setCategory(req.getCategory());
         }
-        if (req.getSubCategory() != null) {
-            lottery.setSubCategory(req.getSubCategory());
-        }
+        lottery.setSubCategory(normalizedSubCategory);
         lottery.setPlayMode(resolvedPlayMode);
         lottery.setGameMode(resolvedGameMode);
         if (req.getPricePerDraw() != null) {
@@ -1158,8 +1203,9 @@ public class LotteryServiceImpl implements LotteryService {
         if (req.getHotCount() != null) {
             lottery.setHotCount(req.getHotCount());
         }
-        if (req.getStatus() != null) {
-            lottery.setStatus(req.getStatus());
+        if (req.getStatus() != null || req.getScheduledAt() != null) {
+            LocalDateTime targetScheduledAt = req.getScheduledAt() != null ? req.getScheduledAt() : lottery.getScheduledAt();
+            lottery.setStatus(resolveLifecycleStatus(req.getStatus(), targetScheduledAt, lottery.getStatus()));
         }
         if (req.getScheduledAt() != null) {
             lottery.setScheduledAt(req.getScheduledAt());
@@ -1286,22 +1332,7 @@ public class LotteryServiceImpl implements LotteryService {
 
         // 🆕 上架時自動生成籤位（若尚未生成）
         if ("ON_SHELF".equals(status)) {
-            Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
-            if (!generated) {
-                log.info("🎫 籤位尚未生成，自動執行 generateTickets: lotteryId={}", id);
-                try {
-                    lotteryTicketService.generateTickets(id);
-                    // 標記已生成
-                    lottery.setTicketsGenerated((byte) 1);
-                    lottery.setUpdatedAt(java.time.LocalDateTime.now());
-                    lotteryMapper.updateByPrimaryKey(lottery);
-                    log.info("✅ 籤位自動生成完成: lotteryId={}", id);
-                } catch (Exception e) {
-                    log.warn("⚠️ 籤位生成失敗（可能獎品未設定或總數不符）: {}", e.getMessage());
-                }
-            } else {
-                log.info("ℹ️ 籤位已存在，略過生成: lotteryId={}", id);
-            }
+            ensureTicketsGeneratedForOnShelf(lottery);
         }
 
         log.info("✅ 狀態更新成功");
@@ -1534,6 +1565,66 @@ public class LotteryServiceImpl implements LotteryService {
         };
     }
 
+    private String normalizeSubCategory(String category, String subCategory) {
+        if (!"CUSTOM_GACHA".equals(category)) {
+            if (isNotBlank(subCategory)) {
+                throw new BusinessException("只有 CUSTOM_GACHA 可設定 subCategory");
+            }
+            return null;
+        }
+
+        if (!isNotBlank(subCategory)) {
+            throw new BusinessException("CUSTOM_GACHA 必須設定 subCategory");
+        }
+
+        LotterySubCategoryEnum subCategoryEnum = LotterySubCategoryEnum.fromCode(subCategory);
+        if (subCategoryEnum == null) {
+            throw new BusinessException("CUSTOM_GACHA 的 subCategory 僅允許 LOTTERY_MODE/SCRATCH_MODE");
+        }
+
+        return switch (subCategoryEnum) {
+            case LOTTERY_MODE, SCRATCH_MODE -> subCategoryEnum.getCode();
+            default -> throw new BusinessException("目前僅支援 CUSTOM_GACHA 的 LOTTERY_MODE/SCRATCH_MODE");
+        };
+    }
+
+    private void validateLotteryFieldUsage(
+            String category,
+            String subCategory,
+            String requestGameMode,
+            Integer requestFreeDrawThreshold,
+            String requestDesignatedPrizeNumbers) {
+        boolean isScratchMode = isScratchMode(category, subCategory);
+
+        if (!isScratchMode && isNotBlank(requestGameMode)) {
+            throw new BusinessException("只有 CUSTOM_GACHA 的 SCRATCH_MODE 可手動設定 gameMode");
+        }
+
+        if (!isScratchMode && requestFreeDrawThreshold != null) {
+            throw new BusinessException("freeDrawThreshold 僅限 CUSTOM_GACHA 的 SCRATCH_MODE 使用");
+        }
+
+        if (isNotBlank(requestDesignatedPrizeNumbers)) {
+            if (!isScratchMode) {
+                throw new BusinessException("designatedPrizeNumbers 僅限刮刮樂商品使用");
+            }
+            if (!GameModeEnum.SCRATCH_STORE.getCode().equals(requestGameMode)) {
+                throw new BusinessException("designatedPrizeNumbers 僅限 SCRATCH_STORE 模式設定");
+            }
+        }
+    }
+
+    private boolean isScratchMode(String category, String subCategory) {
+        return "CUSTOM_GACHA".equals(category) && LotterySubCategoryEnum.SCRATCH_MODE.getCode().equals(subCategory);
+    }
+
+    private String sanitizeDesignatedPrizeNumbers(String resolvedGameMode, String designatedPrizeNumbers) {
+        if (!GameModeEnum.SCRATCH_STORE.getCode().equals(resolvedGameMode)) {
+            return null;
+        }
+        return isNotBlank(designatedPrizeNumbers) ? designatedPrizeNumbers : null;
+    }
+
     private String resolveGameMode(String category, String subCategory, String requestGameMode) {
         if ("OFFICIAL_ICHIBAN".equals(category) || "TRADING_CARD".equals(category)) {
             return "TICKET";
@@ -1744,6 +1835,10 @@ public class LotteryServiceImpl implements LotteryService {
     public com.group.admin.res.lottery.LotteryWithPrizesRes createLotteryWithPrizes(
             com.group.admin.req.lottery.LotteryWithPrizesCreateReq req, 
             String operatorId) {
+
+        if (req.getPrizes() == null || req.getPrizes().isEmpty()) {
+            throw new BusinessException("整合建立商品時，必須至少帶 1 筆獎品資料");
+        }
         
         log.info("📦 建立商品與獎品: title={}, prizeCount={}, operatorId={}", 
                 req.getLottery().getTitle(), 
@@ -1756,50 +1851,48 @@ public class LotteryServiceImpl implements LotteryService {
         
         log.info("✅ 商品建立成功: lotteryId={}", lotteryId);
         
-        // Step 2: 批次建立獎品（如果有）
+        // Step 2: 批次建立獎品
         List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = new ArrayList<>();
+        log.info("🎁 開始批次新增獎品: count={}", req.getPrizes().size());
         
-        if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
-            log.info("🎁 開始批次新增獎品: count={}", req.getPrizes().size());
+        // 🆕 刮刮樂模式：強制驗證必須且只能有 1 個大獎，且 quantity=1
+        String reqGameMode = req.getLottery().getGameMode();
+        if (GameModeEnum.SCRATCH_STORE.getCode().equals(reqGameMode)
+                || GameModeEnum.SCRATCH_PLAYER.getCode().equals(reqGameMode)) {
+            validateScratchPrizes(reqGameMode, req.getPrizes());
+        }
+        
+        for (com.group.admin.req.lottery.LotteryPrizeCreateReq prizeReq : req.getPrizes()) {
+            // 設定 lotteryId
+            prizeReq.setLotteryId(lotteryId);
             
-            // 🆕 刮刮樂模式：強制驗證只允許 1 個大獎，不允許非大獎獎品
-            String reqGameMode = req.getLottery().getGameMode();
-            if (GameModeEnum.SCRATCH_STORE.getCode().equals(reqGameMode)
-                    || GameModeEnum.SCRATCH_PLAYER.getCode().equals(reqGameMode)) {
-                validateScratchPrizes(reqGameMode, req.getPrizes());
-            }
+            // 建立獎品
+            LotteryPrize prize = new LotteryPrize();
+            prize.setId(UUID.randomUUID().toString());
+            prize.setLotteryId(lotteryId);
+            prize.setName(prizeReq.getName());
+            prize.setDescription(prizeReq.getDescription());
+            prize.setContent(prizeReq.getContent());
+            prize.setImageUrl(prizeReq.getImageUrl());
+            prize.setLevel(prizeReq.getLevel());
+            prize.setPrizeNumber(prizeReq.getPrizeNumber());
+            prize.setQuantity(prizeReq.getQuantity());
+            prize.setRemaining(prizeReq.getQuantity()); // 初始剩餘 = 總數量
+            // ✅ 不再設定 weight，使用 1/剩餘數量 機率
+            prize.setPrizeType(prizeReq.getPrizeType());
+            prize.setPointValue(prizeReq.getPointValue());
+            prize.setIsLastPrize(prizeReq.getIsLastPrize() != null && prizeReq.getIsLastPrize() ? (byte) 1 : (byte) 0);
+            prize.setIsGrandPrize(prizeReq.getIsGrandPrize() != null && prizeReq.getIsGrandPrize() ? (byte) 1 : (byte) 0);
+            prize.setCreatedAt(LocalDateTime.now());
+            prize.setUpdatedAt(LocalDateTime.now());
             
-            for (com.group.admin.req.lottery.LotteryPrizeCreateReq prizeReq : req.getPrizes()) {
-                // 設定 lotteryId
-                prizeReq.setLotteryId(lotteryId);
-                
-                // 建立獎品
-                LotteryPrize prize = new LotteryPrize();
-                prize.setId(UUID.randomUUID().toString());
-                prize.setLotteryId(lotteryId);
-                prize.setName(prizeReq.getName());
-                prize.setDescription(prizeReq.getDescription());
-                prize.setContent(prizeReq.getContent());
-                prize.setImageUrl(prizeReq.getImageUrl());
-                prize.setLevel(prizeReq.getLevel());
-                prize.setPrizeNumber(prizeReq.getPrizeNumber());
-                prize.setQuantity(prizeReq.getQuantity());
-                prize.setRemaining(prizeReq.getQuantity()); // 初始剩餘 = 總數量
-                // ✅ 不再設定 weight，使用 1/剩餘數量 機率
-                prize.setPrizeType(prizeReq.getPrizeType());
-                prize.setPointValue(prizeReq.getPointValue());
-                prize.setIsLastPrize(prizeReq.getIsLastPrize() != null && prizeReq.getIsLastPrize() ? (byte) 1 : (byte) 0);
-                prize.setIsGrandPrize(prizeReq.getIsGrandPrize() != null && prizeReq.getIsGrandPrize() ? (byte) 1 : (byte) 0);
-                prize.setCreatedAt(LocalDateTime.now());
-                prize.setUpdatedAt(LocalDateTime.now());
-                
-                lotteryPrizeMapper.insert(prize);
-                
-                // 轉換為 Res
-                prizeResList.add(convertPrizeToRes(prize));
-            }
+            lotteryPrizeMapper.insert(prize);
             
-            log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
+            // 轉換為 Res
+            prizeResList.add(convertPrizeToRes(prize));
+        }
+        
+        log.info("✅ 獎品批次新增完成: count={}", prizeResList.size());
             
             // Step 2.5: 🆕 自動計算 maxDraws 並更新商品
             // 計算非最後賞獎品總數（最後賞不加入籤位池）
@@ -1927,10 +2020,20 @@ public class LotteryServiceImpl implements LotteryService {
             lotteryRes = convertToResNew(lottery);
         }
         
+        Lottery currentLottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (currentLottery == null) {
+            throw new BusinessException("商品不存在: " + lotteryId);
+        }
+
         // Step 2: 更新/新增獎品（如果有提供 prizes）
         List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = new ArrayList<>();
         
         if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
+            if (!LotteryStatusEnum.DRAFT.getCode().equals(currentLottery.getStatus())
+                    && !LotteryStatusEnum.OFF_SHELF.getCode().equals(currentLottery.getStatus())) {
+                throw new BusinessException("商品已上架或不可編輯時，不可直接調整獎品；請先下架後再修改");
+            }
+
             log.info("🎁 處理獎品更新: count={}", req.getPrizes().size());
             
             for (com.group.admin.req.lottery.LotteryPrizeUpdateReq prizeReq : req.getPrizes()) {
@@ -1989,13 +2092,24 @@ public class LotteryServiceImpl implements LotteryService {
                     log.info("✅ 獎品新增成功: prizeId={}", newPrize.getId());
                 }
             }
+
+            currentLottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+            if (currentLottery == null) {
+                throw new BusinessException("商品不存在: " + lotteryId);
+            }
+
+            List<LotteryPrize> allPrizes = getLotteryPrizes(lotteryId);
+            syncLotteryMaxDraws(currentLottery, req.getLottery(), allPrizes);
+            resetGeneratedTickets(currentLottery, "獎品設定已變更，需重新生成籤位");
+
+            prizeResList = allPrizes.stream()
+                    .map(this::convertPrizeToRes)
+                    .collect(Collectors.toList());
         }
         
         // 如果沒有提供 prizes，查詢現有所有獎品
         if (prizeResList.isEmpty()) {
-            LotteryPrizeExample prizeExample = new LotteryPrizeExample();
-            prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
-            List<LotteryPrize> existingPrizes = lotteryPrizeMapper.selectByExample(prizeExample);
+            List<LotteryPrize> existingPrizes = getLotteryPrizes(lotteryId);
             prizeResList = existingPrizes.stream()
                     .map(this::convertPrizeToRes)
                     .collect(Collectors.toList());
@@ -2244,13 +2358,41 @@ public class LotteryServiceImpl implements LotteryService {
     
     // ==================== 狀態變更（含 FSM 驗證）====================
     
-    private static final Map<String, List<String>> VALID_TRANSITIONS = Map.ofEntries(
-        Map.entry("DRAFT",      List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
-        Map.entry("ON_SHELF",   List.of("OFF_SHELF", "FORCED_OFF")),
-        Map.entry("OFF_SHELF",  List.of("ON_SHELF", "FORCED_OFF", "DELETED")),
-        Map.entry("SOLD_OUT",   List.of("FORCED_OFF")),
-        Map.entry("FORCED_OFF", List.of("DRAFT", "DELETED"))
-    );
+        private static final Map<String, List<String>> VALID_TRANSITIONS = Map.ofEntries(
+        Map.entry(LotteryStatusEnum.DRAFT.getCode(), List.of(
+            LotteryStatusEnum.ON_SHELF.getCode(),
+            LotteryStatusEnum.OFF_SHELF.getCode(),
+            LotteryStatusEnum.WAITING_ON_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode(),
+            LotteryStatusEnum.DELETED.getCode())),
+        Map.entry("CONFIGURED", List.of(
+            LotteryStatusEnum.ON_SHELF.getCode(),
+            LotteryStatusEnum.OFF_SHELF.getCode(),
+            LotteryStatusEnum.WAITING_ON_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode())),
+        Map.entry(LotteryStatusEnum.WAITING_ON_SHELF.getCode(), List.of(
+            LotteryStatusEnum.ON_SHELF.getCode(),
+            LotteryStatusEnum.OFF_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode())),
+        Map.entry(LotteryStatusEnum.ON_SHELF.getCode(), List.of(
+            LotteryStatusEnum.OFF_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode(),
+            LotteryStatusEnum.GRAND_PRIZE_DRAWN.getCode(),
+            LotteryStatusEnum.ALL_DRAWN.getCode())),
+        Map.entry(LotteryStatusEnum.OFF_SHELF.getCode(), List.of(
+            LotteryStatusEnum.ON_SHELF.getCode(),
+            LotteryStatusEnum.WAITING_ON_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode(),
+            LotteryStatusEnum.DELETED.getCode())),
+        Map.entry(LotteryStatusEnum.GRAND_PRIZE_DRAWN.getCode(), List.of(
+            LotteryStatusEnum.OFF_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode())),
+        Map.entry(LotteryStatusEnum.ALL_DRAWN.getCode(), List.of(
+            LotteryStatusEnum.OFF_SHELF.getCode(),
+            LotteryStatusEnum.FORCED_OFF.getCode())),
+        Map.entry(LotteryStatusEnum.FORCED_OFF.getCode(), List.of(
+            LotteryStatusEnum.OFF_SHELF.getCode()))
+        );
     
     @Override
     @Transactional
@@ -2264,7 +2406,7 @@ public class LotteryServiceImpl implements LotteryService {
         
         String currentStatus = lottery.getStatus();
         if (currentStatus == null) {
-            currentStatus = "DRAFT";
+            currentStatus = LotteryStatusEnum.DRAFT.getCode();
         }
         
         // FSM 轉換驗證
@@ -2275,21 +2417,16 @@ public class LotteryServiceImpl implements LotteryService {
         }
         
         // FORCED_OFF 需要 reason
-        if ("FORCED_OFF".equals(targetStatus) && (reason == null || reason.isBlank())) {
+        if (LotteryStatusEnum.FORCED_OFF.getCode().equals(targetStatus) && (reason == null || reason.isBlank())) {
             log.warn("⚠️ 強制下架未提供原因");
         }
         
         // 特殊轉換邏輯
-        if ("FORCED_OFF".equals(targetStatus) && reason != null) {
+        if (LotteryStatusEnum.FORCED_OFF.getCode().equals(targetStatus) && reason != null) {
             lottery.setRemark(reason);
         }
-        if ("DRAFT".equals(targetStatus) && "FORCED_OFF".equals(currentStatus)) {
-            // 重新啟用：重設相關欄位
-            lottery.setTicketsGenerated((byte) 0);
-        }
-        
         // 🆕 上架前置驗證（先驗證，再寫入 DB，避免無效的狀態變更）
-        if ("ON_SHELF".equals(targetStatus)) {
+        if (LotteryStatusEnum.ON_SHELF.getCode().equals(targetStatus)) {
             validateCanGoOnShelf(lottery);
         }
 
@@ -2298,19 +2435,8 @@ public class LotteryServiceImpl implements LotteryService {
         lotteryMapper.updateByPrimaryKey(lottery);
         
         // 上架時自動生成籤位
-        if ("ON_SHELF".equals(targetStatus)) {
-            Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
-            if (!generated) {
-                try {
-                    lotteryTicketService.generateTickets(lotteryId);
-                    lottery.setTicketsGenerated((byte) 1);
-                    lottery.setUpdatedAt(LocalDateTime.now());
-                    lotteryMapper.updateByPrimaryKey(lottery);
-                    log.info("✅ 籤位自動生成完成: lotteryId={}", lotteryId);
-                } catch (Exception e) {
-                    log.warn("⚠️ 籤位生成失敗: {}", e.getMessage());
-                }
-            }
+        if (LotteryStatusEnum.ON_SHELF.getCode().equals(targetStatus)) {
+            ensureTicketsGeneratedForOnShelf(lottery);
         }
         
         log.info("✅ 狀態變更成功: {} → {}", currentStatus, targetStatus);
@@ -2320,32 +2446,65 @@ public class LotteryServiceImpl implements LotteryService {
     // ==================== 輔助方法 ====================
     
     /**
-     * 🆕 刮刮樂獎品數量驗證：只允許 1 個大獎（quantity=1），不允許非大獎獎品
+     * 🆕 刮刮樂獎品數量驗證：必須且只能有 1 個大獎，且 quantity=1
      * 
      * @param gameMode 遊戲模式（SCRATCH_STORE 或 SCRATCH_PLAYER）
      * @param prizes   獎品列表
      */
     private void validateScratchPrizes(String gameMode, 
             List<com.group.admin.req.lottery.LotteryPrizeCreateReq> prizes) {
+        if (prizes == null || prizes.size() != 1) {
+            throw new BusinessException("刮刮樂模式只允許 1 筆大獎獎品，其餘格子由系統視為謝謝惠顧。");
+        }
+
+        com.group.admin.req.lottery.LotteryPrizeCreateReq grandPrize = prizes.get(0);
+        if (!Boolean.TRUE.equals(grandPrize.getIsGrandPrize())) {
+            throw new BusinessException("刮刮樂模式唯一的獎品必須標記為大獎。");
+        }
+        if (!"GRAND".equalsIgnoreCase(String.valueOf(grandPrize.getLevel()))) {
+            throw new BusinessException("刮刮樂模式唯一的大獎 level 必須固定為 GRAND。");
+        }
+
+        long grandPrizeItemCount = prizes.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsGrandPrize()))
+                .count();
         long grandPrizeTotal = prizes.stream()
                 .filter(p -> Boolean.TRUE.equals(p.getIsGrandPrize()))
                 .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 1)
                 .sum();
         
-        if (grandPrizeTotal != 1) {
+        if (grandPrizeItemCount != 1 || grandPrizeTotal != 1) {
             throw new BusinessException(
-                "刮刮樂模式：大獎數量必須剛好為 1（目前設定 " + grandPrizeTotal + " 個）。"
-                    + "其餘籤位系統會自動設為謝謝惠顧，不需額外設定。");
+                "刮刮樂模式：必須且只能設定 1 個大獎，且大獎 quantity 必須為 1。"
+                    + "目前大獎筆數=" + grandPrizeItemCount + "，大獎數量=" + grandPrizeTotal + "。");
         }
-        
-        long nonGrandCount = prizes.stream()
-                .filter(p -> !Boolean.TRUE.equals(p.getIsGrandPrize()))
+    }
+
+    private void validateScratchPrizeEntities(List<LotteryPrize> prizes) {
+        if (prizes == null || prizes.size() != 1) {
+            throw new BusinessException("刮刮樂模式只允許 1 筆大獎獎品，其餘格子由系統視為謝謝惠顧。");
+        }
+
+        LotteryPrize grandPrize = prizes.get(0);
+        if (grandPrize.getIsGrandPrize() == null || grandPrize.getIsGrandPrize() != 1) {
+            throw new BusinessException("刮刮樂模式唯一的獎品必須標記為大獎。");
+        }
+        if (!"GRAND".equalsIgnoreCase(String.valueOf(grandPrize.getLevel()))) {
+            throw new BusinessException("刮刮樂模式唯一的大獎 level 必須固定為 GRAND。");
+        }
+
+        long grandPrizeItemCount = prizes.stream()
+                .filter(p -> p.getIsGrandPrize() != null && p.getIsGrandPrize() == 1)
                 .count();
-        
-        if (nonGrandCount > 0) {
+        long grandPrizeTotal = prizes.stream()
+                .filter(p -> p.getIsGrandPrize() != null && p.getIsGrandPrize() == 1)
+                .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 1)
+                .sum();
+
+        if (grandPrizeItemCount != 1 || grandPrizeTotal != 1) {
             throw new BusinessException(
-                "刮刮樂模式：不允許設定非大獎獎品（目前設定了 " + nonGrandCount 
-                    + " 個），其餘籤位系統自動為謝謝惠顧。");
+                "刮刮樂模式：必須且只能設定 1 個大獎，且大獎 quantity 必須為 1。"
+                    + "目前大獎筆數=" + grandPrizeItemCount + "，大獎數量=" + grandPrizeTotal + "。");
         }
     }
     
@@ -2356,12 +2515,152 @@ public class LotteryServiceImpl implements LotteryService {
      * @param lottery 商品實體
      */
     private void validateCanGoOnShelf(Lottery lottery) {
+        List<LotteryPrize> prizes = getLotteryPrizes(lottery.getId());
+        if (prizes.isEmpty()) {
+            throw new BusinessException("商品至少需要 1 筆獎品資料，才能上架");
+        }
+
+        int nonLastPrizeQuantity = prizes.stream()
+                .filter(p -> p.getIsLastPrize() == null || p.getIsLastPrize() != 1)
+                .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                .sum();
+        if (nonLastPrizeQuantity <= 0) {
+            throw new BusinessException("商品至少需要 1 個非最後賞獎品，才能上架");
+        }
+
+        if ("LOTTERY_MODE".equals(lottery.getPlayMode())) {
+            if (lottery.getMaxDraws() == null || !lottery.getMaxDraws().equals(nonLastPrizeQuantity)) {
+                throw new BusinessException("抽籤型商品的 maxDraws 必須與非最後賞獎品總數一致，請先重新儲存商品與獎品");
+            }
+        }
+
+        if ("SCRATCH_MODE".equals(lottery.getPlayMode())) {
+            validateScratchPrizeEntities(prizes);
+            if (lottery.getMaxDraws() == null || lottery.getMaxDraws() < nonLastPrizeQuantity) {
+                throw new BusinessException("刮刮樂商品的 maxDraws 不能小於真實獎品總數，請先重新儲存商品與獎品");
+            }
+        }
+
         if (GameModeEnum.SCRATCH_STORE.getCode().equals(lottery.getGameMode())) {
             String d = lottery.getDesignatedPrizeNumbers();
             if (d == null || d.isBlank()) {
                 throw new BusinessException(
                     "SCRATCH_STORE 模式：請先在後台指定大獎號碼（designatedPrizeNumbers），才能上架。");
             }
+        }
+    }
+
+    private String resolveLifecycleStatus(String requestedStatus, LocalDateTime scheduledAt, String fallbackStatus) {
+        LocalDateTime now = LocalDateTime.now();
+        String resolvedStatus = isNotBlank(requestedStatus) ? requestedStatus : fallbackStatus;
+
+        if (!isNotBlank(resolvedStatus)) {
+            resolvedStatus = LotteryStatusEnum.OFF_SHELF.getCode();
+        }
+
+        if (List.of(
+                LotteryStatusEnum.GRAND_PRIZE_DRAWN.getCode(),
+                LotteryStatusEnum.ALL_DRAWN.getCode(),
+                LotteryStatusEnum.DELETED.getCode()).contains(resolvedStatus)) {
+            throw new BusinessException("GRAND_PRIZE_DRAWN / ALL_DRAWN / DELETED 為系統狀態，不可在建立或更新商品時手動指定");
+        }
+
+        boolean hasFutureSchedule = scheduledAt != null && scheduledAt.isAfter(now);
+        if (hasFutureSchedule && List.of(
+                LotteryStatusEnum.DRAFT.getCode(),
+                LotteryStatusEnum.OFF_SHELF.getCode(),
+                LotteryStatusEnum.ON_SHELF.getCode(),
+                LotteryStatusEnum.WAITING_ON_SHELF.getCode()).contains(resolvedStatus)) {
+            return LotteryStatusEnum.WAITING_ON_SHELF.getCode();
+        }
+
+        if (LotteryStatusEnum.WAITING_ON_SHELF.getCode().equals(resolvedStatus) && !hasFutureSchedule) {
+            return LotteryStatusEnum.OFF_SHELF.getCode();
+        }
+
+        return resolvedStatus;
+    }
+
+    private List<LotteryPrize> getLotteryPrizes(String lotteryId) {
+        LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+        prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
+        prizeExample.setOrderByClause("order_num ASC, level ASC");
+        return lotteryPrizeMapper.selectByExample(prizeExample);
+    }
+
+    private void syncLotteryMaxDraws(Lottery lottery, LotteryUpdateReq lotteryReq, List<LotteryPrize> prizes) {
+        int nonLastPrizeQuantity = prizes.stream()
+                .filter(p -> p.getIsLastPrize() == null || p.getIsLastPrize() != 1)
+                .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                .sum();
+
+        if (nonLastPrizeQuantity <= 0) {
+            throw new BusinessException("非最後賞獎品總數必須大於 0，請至少保留 1 個真實獎品");
+        }
+
+        Integer requestedMaxDraws = lotteryReq != null ? lotteryReq.getMaxDraws() : null;
+        int calculatedMaxDraws;
+
+        if ("LOTTERY_MODE".equals(lottery.getPlayMode())) {
+            calculatedMaxDraws = nonLastPrizeQuantity;
+        } else if ("SCRATCH_MODE".equals(lottery.getPlayMode())) {
+            validateScratchPrizeEntities(prizes);
+            if (requestedMaxDraws != null) {
+                if (requestedMaxDraws < nonLastPrizeQuantity) {
+                    throw new BusinessException(String.format(
+                        "刮刮樂模式錯誤：總抽數(%d)不能小於獎品總數(%d)",
+                        requestedMaxDraws,
+                        nonLastPrizeQuantity
+                    ));
+                }
+                calculatedMaxDraws = requestedMaxDraws;
+            } else if (lottery.getMaxDraws() != null && lottery.getMaxDraws() >= nonLastPrizeQuantity) {
+                calculatedMaxDraws = lottery.getMaxDraws();
+            } else {
+                calculatedMaxDraws = nonLastPrizeQuantity;
+            }
+        } else {
+            calculatedMaxDraws = nonLastPrizeQuantity;
+        }
+
+        lottery.setMaxDraws(calculatedMaxDraws);
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKeySelective(lottery);
+    }
+
+    private void resetGeneratedTickets(Lottery lottery, String reason) {
+        if (lottery.getTicketsGenerated() == null || lottery.getTicketsGenerated() != 1) {
+            return;
+        }
+
+        LotteryTicketExample ticketExample = new LotteryTicketExample();
+        ticketExample.createCriteria().andLotteryIdEqualTo(lottery.getId());
+        lotteryTicketMapper.deleteByExample(ticketExample);
+
+        lottery.setTicketsGenerated((byte) 0);
+        lottery.setUpdatedAt(LocalDateTime.now());
+        lotteryMapper.updateByPrimaryKeySelective(lottery);
+        log.info("🔄 {}: lotteryId={}", reason, lottery.getId());
+    }
+
+    private void ensureTicketsGeneratedForOnShelf(Lottery lottery) {
+        Boolean generated = lottery.getTicketsGenerated() != null && lottery.getTicketsGenerated() == 1;
+        if (generated) {
+            log.info("ℹ️ 籤位已存在，略過生成: lotteryId={}", lottery.getId());
+            return;
+        }
+
+        log.info("🎫 籤位尚未生成，自動執行 generateTickets: lotteryId={}", lottery.getId());
+        try {
+            lotteryTicketService.generateTickets(lottery.getId());
+            lottery.setTicketsGenerated((byte) 1);
+            lottery.setUpdatedAt(LocalDateTime.now());
+            lotteryMapper.updateByPrimaryKeySelective(lottery);
+            log.info("✅ 籤位自動生成完成: lotteryId={}", lottery.getId());
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("商品上架失敗：籤位生成失敗，請先確認獎品與抽數設定。原因: " + e.getMessage());
         }
     }
 
@@ -2459,16 +2758,14 @@ public class LotteryServiceImpl implements LotteryService {
     @Transactional
     public void checkAndDelist(String lotteryId) {
         Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
-        if (lottery == null || !"ON_SHELF".equals(lottery.getStatus())) return;
+        if (lottery == null || !LotteryStatusEnum.ON_SHELF.getCode().equals(lottery.getStatus())) return;
         String strategy = isNotBlank(lottery.getDelistStrategy()) ? lottery.getDelistStrategy() : "ALL_DRAWN";
         String targetStatus = null;
 
-        if ("GRAND_PRIZE_DRAWN".equals(strategy) && isGrandPrizeDrawnOut(lotteryId)) {
-            targetStatus = "ENDED";
-        } else if ("ALL_DRAWN".equals(strategy) && isDrawableContentExhausted(lottery)) {
-            targetStatus = "ENDED";
-        } else if ("MANUAL".equals(strategy) && isDrawableContentExhausted(lottery)) {
-            targetStatus = "SOLD_OUT";
+        if (isDrawableContentExhausted(lottery)) {
+            targetStatus = LotteryStatusEnum.ALL_DRAWN.getCode();
+        } else if ("GRAND_PRIZE_DRAWN".equals(strategy) && isGrandPrizeDrawnOut(lotteryId)) {
+            targetStatus = LotteryStatusEnum.GRAND_PRIZE_DRAWN.getCode();
         }
 
         if (targetStatus != null) {
@@ -2518,12 +2815,12 @@ public class LotteryServiceImpl implements LotteryService {
         log.info("⏰ [Scheduled] 檢查定時上架商品...");
         List<Lottery> list = lotteryMapper.selectScheduledForPromotion();
         for (Lottery l : list) {
-            Lottery upd = new Lottery();
-            upd.setId(l.getId());
-            upd.setStatus("ON_SHELF");
-            upd.setUpdatedAt(LocalDateTime.now());
-            lotteryMapper.updateByPrimaryKeySelective(upd);
-            log.info("✅ [Scheduled] 商品自動上架：id={}, title={}", l.getId(), l.getTitle());
+            try {
+                changeStatus(l.getId(), LotteryStatusEnum.ON_SHELF.getCode(), "scheduled promotion", SYSTEM_OPERATOR);
+                log.info("✅ [Scheduled] 商品自動上架：id={}, title={}", l.getId(), l.getTitle());
+            } catch (BusinessException e) {
+                log.warn("⚠️ [Scheduled] 商品自動上架失敗：id={}, title={}, reason={}", l.getId(), l.getTitle(), e.getMessage());
+            }
         }
     }
 

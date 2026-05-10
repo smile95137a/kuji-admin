@@ -12,11 +12,13 @@ import lombok.Getter;
 public enum LotteryStatusEnum implements DisplayableEnum {
 
     DRAFT("DRAFT", "草稿"),
+    WAITING_ON_SHELF("WAITING_ON_SHELF", "等待時間到上架"),
     ON_SHELF("ON_SHELF", "已上架"),
     OFF_SHELF("OFF_SHELF", "已下架"),
-    SOLD_OUT("SOLD_OUT", "售完"),
-    ENDED("ENDED", "已結束"),
-    FORCED_OFF("FORCED_OFF", "強制下架");
+    GRAND_PRIZE_DRAWN("GRAND_PRIZE_DRAWN", "大獎已抽完"),
+    ALL_DRAWN("ALL_DRAWN", "全數已抽完"),
+    FORCED_OFF("FORCED_OFF", "強制下架"),
+    DELETED("DELETED", "已刪除");
 
     private final String code;
     private final String name;

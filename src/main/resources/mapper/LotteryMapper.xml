@@ -1006,7 +1006,7 @@
   <select id="selectScheduledForPromotion" resultMap="BaseResultMap">
     SELECT <include refid="Base_Column_List" />
     FROM lottery
-    WHERE status IN ('DRAFT', 'CONFIGURED')
+    WHERE status IN ('WAITING_ON_SHELF', 'DRAFT', 'CONFIGURED')
       AND scheduled_at IS NOT NULL
       AND scheduled_at &lt;= NOW()
   </select>
@@ -1018,7 +1018,8 @@
       AND start_time IS NOT NULL
       AND start_time &lt;= NOW()
   </select>
-  <select id="selectByExampleWithPage" resultMap="BaseResultMap">
+
+  <select id="selectByExampleWithPage" resultMap="BaseResultMap">
     SELECT <include refid="Base_Column_List" />
     FROM lottery
     <if test="example != null">

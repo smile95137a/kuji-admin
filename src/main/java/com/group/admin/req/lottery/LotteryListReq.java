@@ -25,7 +25,7 @@ public class LotteryListReq {
     @Schema(description = "店家ID", example = "550e8400-e29b-41d4-a716-446655440000")
     private String storeId;
 
-    @Schema(description = "商品狀態過濾", example = "IN_PROGRESS")
+    @Schema(description = "商品狀態過濾", example = "ON_SHELF")
     private String status;
 
     @Schema(description = "關鍵字搜尋（商品名稱或標籤）", example = "鬼滅之刃")

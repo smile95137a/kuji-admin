@@ -66,7 +66,7 @@ public class LotteryCreateReq {
      * LOTTERY_MODE: 抽籤型
      * SCRATCH_MODE: 刮刮樂型
      */
-    @Schema(description = "自製賞子類型：LOTTERY_MODE/SCRATCH_MODE（僅 CUSTOM_GACHA 需要）", example = "LOTTERY_MODE")
+    @Schema(description = "自製賞子類型：LOTTERY_MODE/SCRATCH_MODE（僅 CUSTOM_GACHA 可傳，且必填）", example = "LOTTERY_MODE")
     private String subCategory;
 
     /**
@@ -162,22 +162,21 @@ public class LotteryCreateReq {
     /**
      * 遊玩模式
      */
-    @Schema(description = "遊玩模式：LOTTERY_MODE（抽籤型）/ SCRATCH_MODE（刮刮樂型）", example = "LOTTERY_MODE")
+    @Schema(description = "遊玩模式：由後端依 category + subCategory 自動推算，前端不需傳", example = "LOTTERY_MODE")
     private String playMode;
 
     /**
      * 遊戲模式（刮刮樂子模式）
      * SCRATCH_STORE: 店家預先指定大獎位置
      * SCRATCH_PLAYER: 玩家開套時指定大獎位置
-     * RANDOM: 完全隨機
      */
-    @Schema(description = "遊戲模式：SCRATCH_STORE/SCRATCH_PLAYER/RANDOM（僅 SCRATCH_MODE 需要）", example = "RANDOM")
+    @Schema(description = "遊戲模式：SCRATCH_STORE/SCRATCH_PLAYER（僅 CUSTOM_GACHA + SCRATCH_MODE 可傳）", example = "SCRATCH_STORE")
     private String gameMode;
 
     /**
      * 商品狀態
      */
-    @Schema(description = "商品狀態：DRAFT（草稿）/ ON_SHELF（上架）/ OFF_SHELF（下架）", example = "DRAFT")
+    @Schema(description = "商品狀態：DRAFT（草稿）/ ON_SHELF（上架）/ OFF_SHELF（下架）；若有未來 scheduledAt 會自動收斂為 WAITING_ON_SHELF", example = "DRAFT")
     private String status;
 
     /**
@@ -250,22 +249,22 @@ public class LotteryCreateReq {
     /**
      * 免費抽門檻（刮刮樂專用）
      */
-    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA+SCRATCH_MODE；NULL=未啟用；若有值必須>=1）", example = "10")
+    @Schema(description = "免費抽門檻（僅 CUSTOM_GACHA + SCRATCH_MODE 可傳；NULL=未啟用；若有值必須>=1）", example = "10")
     private Integer freeDrawThreshold;
 
     /**
-     * 下架策略：GRAND_PRIZE_DRAWN / ALL_DRAWN（預設） / MANUAL
+     * 下架策略：僅 OFFICIAL_ICHIBAN 需由前端指定；SCRATCH_MODE 固定 GRAND_PRIZE_DRAWN；其餘固定 ALL_DRAWN
      */
-    @Schema(description = "下架策略：GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL（預設 ALL_DRAWN）", example = "ALL_DRAWN")
+    @Schema(description = "下架策略：僅 OFFICIAL_ICHIBAN 需由前端指定 GRAND_PRIZE_DRAWN/ALL_DRAWN/MANUAL；CUSTOM_GACHA + SCRATCH_MODE 固定 GRAND_PRIZE_DRAWN；其餘商品固定 ALL_DRAWN", example = "ALL_DRAWN")
     private String delistStrategy;
 
     /**
      * 店家指定大獎號碼（SCRATCH_STORE 專用）
      * 格式：逗號分隔或 JSON 陣列，例如 "5,12,30" 或 "[5,12,30]"
      * 對應到 lottery_ticket.revealed_number
-     * 只有 gameMode=SCRATCH_STORE 時需要填寫
+     * 只有 CUSTOM_GACHA + SCRATCH_MODE + gameMode=SCRATCH_STORE 時可填寫
      */
-    @Schema(description = "店家指定大獎 revealed_number（僅 SCRATCH_STORE；格式：'5,12,30' 或 '[5,12,30]'）",
+    @Schema(description = "店家指定大獎 revealed_number（僅 CUSTOM_GACHA + SCRATCH_MODE + SCRATCH_STORE；格式：'5,12,30' 或 '[5,12,30]'）",
             example = "[5]")
     private String designatedPrizeNumbers;
 }
