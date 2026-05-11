@@ -2,7 +2,15 @@
 
 **Feature Branch**: `033-platform-revenue-report`
 **Created**: 2026-04-28
-**Status**: Draft
+**Status**: In Progress (Baseline Implemented, Contract Alignment Ongoing)
+
+---
+
+## 現況註記（2026-05-11）
+
+1. `POST /admin/report/platform-revenue` 已有後端實作與後台頁面。
+2. 當前工作重心為跨 repo 契約與顯示語意收斂，不是擴增報表範圍。
+3. 若與最新交接文件衝突，請優先參考 `docs/AI_HANDOFF_CURRENT.md` 與 `docs/frontend-integration-guide.md` 的最新節點。
 
 ---
 

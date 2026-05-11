@@ -2417,11 +2417,6 @@ public class LotteryServiceImpl implements LotteryService {
                     LotteryStatusEnum.WAITING_ON_SHELF.getCode(),
                     LotteryStatusEnum.FORCED_OFF.getCode(),
                     LotteryStatusEnum.DELETED.getCode())),
-            Map.entry("CONFIGURED", List.of(
-                    LotteryStatusEnum.ON_SHELF.getCode(),
-                    LotteryStatusEnum.OFF_SHELF.getCode(),
-                    LotteryStatusEnum.WAITING_ON_SHELF.getCode(),
-                    LotteryStatusEnum.FORCED_OFF.getCode())),
             Map.entry(LotteryStatusEnum.WAITING_ON_SHELF.getCode(), List.of(
                     LotteryStatusEnum.ON_SHELF.getCode(),
                     LotteryStatusEnum.OFF_SHELF.getCode(),
