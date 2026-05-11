@@ -22,6 +22,17 @@ public interface CategoryService {
      * @return 類別列表
      */
     List<CategoryRes> queryCategories(QueryReq<CategoryCondition> req);
+
+    /**
+     * 查詢前台顯示分類（聚合）
+     *
+     * 前台顯示分類規則：
+     * 官方一番賞 / 自製一番賞 / 刮刮樂 / 扭蛋 / 卡牌
+     *
+     * @param req 查詢請求（可選條件）
+     * @return 顯示分類列表
+     */
+    List<CategoryRes> queryDisplayCategories(QueryReq<CategoryCondition> req);
     
     /**
      * 查詢所有主題（按 theme 分組）

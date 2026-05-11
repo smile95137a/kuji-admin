@@ -1074,3 +1074,78 @@ PUT  /admin/lottery/{id}/with-prizes
 2. `StoreProductCard.vue` 移除 `SOLD_OUT` fallback。
 3. 前台終態語意保留 `GRAND_PRIZE_DRAWN` / `ALL_DRAWN`。
 
+---
+
+## 21. 2026-05-12 第二包收尾補丁（分類聚合 / 店家圖片 / 後台查詢）
+
+### A. 前台分類 API 改為顯示分類聚合
+
+API：
+
+```
+GET /api/category/categories
+```
+
+本次行為固定為回傳 5 個前台顯示分類，不再直接以 DB `category` 原值做前台主分類來源。
+
+固定 buckets：
+
+- 官方一番賞
+- 自製一番賞
+- 刮刮樂
+- 扭蛋
+- 卡牌
+
+補充規則：
+
+1. 刮刮樂判定以 `subCategory/playMode = SCRATCH_MODE` 為準，不只看 `category`。
+2. API 即使某分類目前商品數為 0，也仍會保留 bucket，避免前台分類語意漂移。
+
+### B. 店家頁圖片體驗補強
+
+本次已完成的前台行為：
+
+1. 店家列表卡片：封面補 skeleton、載入失敗 fallback、首圖優先策略統一。
+2. 店家詳頁封面輪播：補 skeleton、失敗 fallback、placeholder。
+3. 店家 logo：補 skeleton，失敗時退回首字 fallback badge。
+4. 店家商品卡：補 skeleton，圖片失敗時退回內建 SVG fallback。
+
+前端整合重點：
+
+1. 不要假設 `coverImageUrl` 一定可用。
+2. 店家封面圖請優先使用正規化後的第一張 cover image。
+3. UI 必須接受圖片失敗時退回 placeholder / fallback，而不是顯示破圖。
+
+### C. 後台商品與獎品列表查詢：`playMode` 篩選修正
+
+API：
+
+```
+POST /api/admin/lottery/with-prizes/list
+```
+
+Request Body 範例：
+
+```json
+{
+  "condition": {
+    "playMode": "SCRATCH_MODE"
+  }
+}
+```
+
+本次修正：
+
+1. `with-prizes/list` 原本漏套 `playMode` 條件，導致後台查詢結果混入其他玩法。
+2. 後端已補上 `criteria.andPlayModeEqualTo(condition.getPlayMode())`。
+
+驗證結果：
+
+1. `playMode=LOTTERY_MODE` 時，回傳唯一 `playMode` 為 `LOTTERY_MODE`。
+2. `playMode=SCRATCH_MODE` 時，回傳唯一 `playMode` 為 `SCRATCH_MODE`。
+
+注意：
+
+1. `subCategory` 與 `playMode` 不是同一維度。
+2. 前端若要做篩選 UI，必須分開理解，不要把 `subCategory` 當作 `playMode` 成功與否的驗證依據。
+

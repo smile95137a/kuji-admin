@@ -35,6 +35,19 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
+
+    private static final String CATEGORY_OFFICIAL_ICHIBAN = "OFFICIAL_ICHIBAN";
+    private static final String CATEGORY_CUSTOM_GACHA = "CUSTOM_GACHA";
+    private static final String CATEGORY_GACHA = "GACHA";
+    private static final String CATEGORY_TRADING_CARD = "TRADING_CARD";
+    private static final String MODE_SCRATCH = "SCRATCH_MODE";
+
+    private static final List<DisplayCategoryBucket> DISPLAY_CATEGORY_BUCKETS = List.of(
+            new DisplayCategoryBucket(CATEGORY_OFFICIAL_ICHIBAN, "官方一番賞", 10),
+            new DisplayCategoryBucket(CATEGORY_CUSTOM_GACHA, "自製一番賞", 20),
+            new DisplayCategoryBucket(MODE_SCRATCH, "刮刮樂", 30),
+            new DisplayCategoryBucket(CATEGORY_GACHA, "扭蛋", 40),
+            new DisplayCategoryBucket(CATEGORY_TRADING_CARD, "卡牌", 50));
     
     private final LotteryMapper lotteryMapper;
     private final LotteryThemeMapper lotteryThemeMapper;
@@ -64,6 +77,29 @@ public class CategoryServiceImpl implements CategoryService {
                 .collect(Collectors.toList());
         
         log.info("✅ 查詢完成，共 {} 個類別", result.size());
+        return result;
+    }
+
+    @Override
+    public List<CategoryRes> queryDisplayCategories(QueryReq<CategoryCondition> req) {
+        log.info("🔍 查詢前台顯示分類（聚合）");
+
+        CategoryCondition condition = req != null ? req.getCondition() : null;
+        LotteryExample example = buildExample(condition);
+        List<Lottery> lotteries = lotteryMapper.selectByExample(example);
+
+        Map<String, List<Lottery>> grouped = lotteries.stream()
+                .map(lottery -> Map.entry(resolveDisplayCategoryKey(lottery), lottery))
+                .filter(entry -> isNotBlank(entry.getKey()))
+                .collect(Collectors.groupingBy(Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+
+        List<CategoryRes> result = DISPLAY_CATEGORY_BUCKETS.stream()
+                .map(bucket -> toDisplayCategoryRes(bucket, grouped.getOrDefault(bucket.key(), List.of())))
+                .sorted(Comparator.comparing(CategoryRes::getDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+
+        log.info("✅ 前台顯示分類查詢完成，共 {} 個分類", result.size());
         return result;
     }
     
@@ -668,6 +704,56 @@ public class CategoryServiceImpl implements CategoryService {
         return normalized;
     }
 
+    private String resolveDisplayCategoryKey(Lottery lottery) {
+        if (lottery == null) {
+            return "";
+        }
+
+        String category = normalizeUpper(lottery.getCategory());
+        if (!isNotBlank(category)) {
+            return "";
+        }
+
+        if (MODE_SCRATCH.equals(normalizeUpper(lottery.getSubCategory()))
+                || MODE_SCRATCH.equals(normalizeUpper(lottery.getPlayMode()))) {
+            return MODE_SCRATCH;
+        }
+
+        if (CATEGORY_OFFICIAL_ICHIBAN.equals(category)
+                || CATEGORY_GACHA.equals(category)
+                || CATEGORY_TRADING_CARD.equals(category)
+                || CATEGORY_CUSTOM_GACHA.equals(category)) {
+            return category;
+        }
+
+        return "";
+    }
+
+    private CategoryRes toDisplayCategoryRes(DisplayCategoryBucket bucket, List<Lottery> lotteries) {
+        String imageUrl = lotteries.stream()
+                .map(Lottery::getImageUrl)
+                .filter(this::isNotBlank)
+                .findFirst()
+                .orElse(null);
+
+        long totalHotCount = lotteries.stream()
+                .mapToLong(lottery -> lottery.getHotCount() != null ? lottery.getHotCount() : 0)
+                .sum();
+
+        return CategoryRes.builder()
+                .name(bucket.name())
+                .type("display-category")
+                .productCount((long) lotteries.size())
+                .imageUrl(imageUrl)
+                .displayOrder(bucket.displayOrder())
+                .hotCount(totalHotCount)
+                .build();
+    }
+
+    private String normalizeUpper(String value) {
+        return isNotBlank(value) ? value.trim().toUpperCase(Locale.ROOT) : "";
+    }
+
     private List<String> parseLotteryTags(String rawTags) {
         if (!isNotBlank(rawTags)) {
             return List.of();
@@ -815,5 +901,8 @@ public class CategoryServiceImpl implements CategoryService {
                 .imageUrl(imageUrl)
                 .hotCount(totalHotCount)
                 .build();
+    }
+
+    private record DisplayCategoryBucket(String key, String name, Integer displayOrder) {
     }
 }

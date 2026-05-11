@@ -24,6 +24,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuditLogServiceImpl implements AuditLogService {
 
+    private static final int ERROR_MESSAGE_MAX_LENGTH = 500;
+
     private final LogAuthMapper        logAuthMapper;
     private final LogAdminActionMapper logAdminActionMapper;
     private final LogDrawMapper        logDrawMapper;
@@ -47,7 +49,7 @@ public class AuditLogServiceImpl implements AuditLogService {
             record.setEmail(email);
             record.setLoginMethod(loginMethod);
             record.setResult(result);
-            record.setErrorMessage(errorMessage);
+            record.setErrorMessage(limitLength(errorMessage, ERROR_MESSAGE_MAX_LENGTH));
             record.setIp(ip);
             record.setUserAgent(userAgent);
             record.setCreatedAt(LocalDateTime.now());
@@ -80,7 +82,7 @@ public class AuditLogServiceImpl implements AuditLogService {
             record.setBeforeSnapshot(beforeSnapshot);
             record.setAfterSnapshot(afterSnapshot);
             record.setResult(result);
-            record.setErrorMessage(errorMessage);
+            record.setErrorMessage(limitLength(errorMessage, ERROR_MESSAGE_MAX_LENGTH));
             record.setIp(ip);
             record.setCreatedAt(LocalDateTime.now());
             logAdminActionMapper.insertSelective(record);
@@ -118,7 +120,7 @@ public class AuditLogServiceImpl implements AuditLogService {
             record.setDeductedGold(deductedGold);
             record.setDeductedBonus(deductedBonus);
             record.setResult(result);
-            record.setErrorMessage(errorMessage);
+            record.setErrorMessage(limitLength(errorMessage, ERROR_MESSAGE_MAX_LENGTH));
             record.setDurationMs(durationMs);
             record.setCreatedAt(LocalDateTime.now());
             logDrawMapper.insertSelective(record);
@@ -150,7 +152,7 @@ public class AuditLogServiceImpl implements AuditLogService {
             record.setPaymentMethod(paymentMethod);
             record.setPaymentGatewayRef(paymentGatewayRef);
             record.setResult(result);
-            record.setErrorMessage(errorMessage);
+            record.setErrorMessage(limitLength(errorMessage, ERROR_MESSAGE_MAX_LENGTH));
             record.setIp(ip);
             record.setCreatedAt(LocalDateTime.now());
             logRechargeMapper.insertSelective(record);
@@ -179,12 +181,19 @@ public class AuditLogServiceImpl implements AuditLogService {
             record.setTotalAmount(totalAmount);
             record.setTrackingNumber(trackingNumber);
             record.setResult(result);
-            record.setErrorMessage(errorMessage);
+            record.setErrorMessage(limitLength(errorMessage, ERROR_MESSAGE_MAX_LENGTH));
             record.setCreatedAt(LocalDateTime.now());
             logOrderMapper.insertSelective(record);
         } catch (Exception e) {
             log.warn("⚠️ [AuditLog] 訂單操作日誌寫入失敗: {}", e.getMessage());
         }
+    }
+
+    private String limitLength(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }
 

@@ -50,6 +50,18 @@ public class LotteryCondition extends BaseCondition {
      * 例如：OFFICIAL_ICHIBAN（官方一番賞）、GACHA（扭蛋）等
      */
     private String category;
+
+    /**
+     * 子分類
+     * 例如：LOTTERY_MODE / SCRATCH_MODE
+     */
+    private String subCategory;
+
+    /**
+     * 玩法模式
+     * 例如：LOTTERY_MODE / SCRATCH_MODE
+     */
+    private String playMode;
     
     /**
      * 主題（模糊查詢）

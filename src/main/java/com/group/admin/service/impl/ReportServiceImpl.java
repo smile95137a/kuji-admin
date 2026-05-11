@@ -43,8 +43,12 @@ public class ReportServiceImpl implements ReportService {
                 : new RevenueReportCondition();
 
         String storeId = condition.getStoreId();
-        LocalDate startDate = condition.getStartDate();
-        LocalDate endDate = condition.getEndDate();
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
+        LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
+
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate 不可晚於 endDate");
+        }
 
         log.info("📊 產生營業額報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
 
@@ -72,8 +76,9 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
 
         // 計算成長率（與上期比較）
-        LocalDate prevStartDate = startDate.minusDays(startDate.until(endDate).getDays() + 1);
-        LocalDate prevEndDate = startDate.minusDays(1);
+        LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
+        LocalDate prevStartDate = previousRange[0];
+        LocalDate prevEndDate = previousRange[1];
 
         List<Object> prevParams = new ArrayList<>();
         prevParams.add(prevStartDate.atStartOfDay());
@@ -115,7 +120,7 @@ public class ReportServiceImpl implements ReportService {
         String storeSql = """
                 SELECT
                     o.store_id,
-                    s.name as store_name,
+                    s.store_name as store_name,
                     COALESCE(SUM(o.total_amount), 0) as revenue,
                     COUNT(*) as orders
                 FROM `order` o
@@ -129,6 +134,13 @@ public class ReportServiceImpl implements ReportService {
         List<Object> storeParams = new ArrayList<>();
         storeParams.add(startDate.atStartOfDay());
         storeParams.add(endDate.plusDays(1).atStartOfDay());
+
+        if (storeId != null && !storeId.isBlank()) {
+            storeSql = storeSql.replace("GROUP BY o.store_id, s.name", "AND o.store_id = ?\n                GROUP BY o.store_id, s.store_name");
+            storeParams.add(storeId);
+        } else {
+            storeSql = storeSql.replace("GROUP BY o.store_id, s.name", "GROUP BY o.store_id, s.store_name");
+        }
 
         List<RevenueReportRes.StoreRevenue> storeDetails = jdbcTemplate.query(storeSql, storeParams.toArray(),
                 (rs, rowNum) -> RevenueReportRes.StoreRevenue.builder()
@@ -171,6 +183,19 @@ public class ReportServiceImpl implements ReportService {
 
         log.info("📊 產生店薦店招商報表: referrerStoreId={}, {} ~ {}", storeId, startDate, endDate);
 
+        boolean hasReferrerStoreIdColumn = columnExists("store", "referrer_store_id");
+        boolean hasActivatedAtColumn = columnExists("store", "activated_at");
+
+        if (!hasReferrerStoreIdColumn) {
+            log.error("❌ store.referrer_store_id 欄位不存在，無法產生店薦店報表。請先執行遷移 sql/V_2026_05_11__add_store_referral_tracking.sql");
+        }
+        if (!hasActivatedAtColumn) {
+            log.warn("⚠️ store.activated_at 欄位不存在，店薦店報表將以 created_at + ACTIVE 狀態作為啟用判斷的相容模式");
+        }
+
+        String activationColumn = hasActivatedAtColumn ? "s.activated_at" : "s.created_at";
+        String activatedPredicate = hasActivatedAtColumn ? " AND s.activated_at IS NOT NULL" : " AND s.status = 'ACTIVE'";
+
         String codeSummarySql = """
                 SELECT
                     COUNT(*) AS total_code_count,
@@ -185,51 +210,56 @@ public class ReportServiceImpl implements ReportService {
         }
         Map<String, Object> codeSummary = jdbcTemplate.queryForMap(codeSummarySql, codeSummaryParams.toArray());
 
-        String successAllSql = """
-                SELECT COUNT(*)
-                FROM store s
-                WHERE s.referrer_store_id IS NOT NULL
-                  AND s.activated_at IS NOT NULL
-                """;
-        List<Object> successAllParams = new ArrayList<>();
-        if (storeId != null && !storeId.isBlank()) {
-            successAllSql += " AND s.referrer_store_id = ?";
-            successAllParams.add(storeId);
+        Integer successfulReferralStoreCount = 0;
+        if (hasReferrerStoreIdColumn) {
+            String successAllSql = """
+                    SELECT COUNT(*)
+                    FROM store s
+                    WHERE s.referrer_store_id IS NOT NULL
+                    """ + activatedPredicate;
+            List<Object> successAllParams = new ArrayList<>();
+            if (storeId != null && !storeId.isBlank()) {
+                successAllSql += " AND s.referrer_store_id = ?";
+                successAllParams.add(storeId);
+            }
+            successfulReferralStoreCount = jdbcTemplate.queryForObject(
+                    successAllSql,
+                    Integer.class,
+                    successAllParams.toArray());
         }
-        Integer successfulReferralStoreCount = jdbcTemplate.queryForObject(
-                successAllSql,
-                Integer.class,
-                successAllParams.toArray());
 
         LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
-        Integer currentPeriodActivatedStoreCount = queryActivatedReferralStoreCount(startDate, endDate, storeId);
+        Integer currentPeriodActivatedStoreCount = queryActivatedReferralStoreCount(startDate, endDate, storeId,
+                hasReferrerStoreIdColumn, activationColumn);
         Integer previousPeriodActivatedStoreCount = queryActivatedReferralStoreCount(previousRange[0], previousRange[1],
-                storeId);
+                storeId, hasReferrerStoreIdColumn, activationColumn);
         BigDecimal growthRate = calculateNullableGrowthRate(
                 BigDecimal.valueOf(currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0),
                 BigDecimal.valueOf(previousPeriodActivatedStoreCount != null ? previousPeriodActivatedStoreCount : 0));
 
-        String dailySql = """
-                SELECT
-                    DATE(s.activated_at) AS activated_date,
-                    COUNT(*) AS activated_store_count
-                FROM store s
-                WHERE s.referrer_store_id IS NOT NULL
-                  AND s.activated_at >= ?
-                  AND s.activated_at < ?
-                """;
-        List<Object> dailyParams = new ArrayList<>();
-        dailyParams.add(startDate.atStartOfDay());
-        dailyParams.add(endDate.plusDays(1).atStartOfDay());
-        if (storeId != null && !storeId.isBlank()) {
-            dailySql += " AND s.referrer_store_id = ?";
-            dailyParams.add(storeId);
-        }
-        dailySql += " GROUP BY DATE(s.activated_at) ORDER BY activated_date ASC";
-
         Map<LocalDate, Integer> dailyMap = new LinkedHashMap<>();
-        jdbcTemplate.query(dailySql, dailyParams.toArray(),
-                (RowCallbackHandler) rs -> dailyMap.put(rs.getDate("activated_date").toLocalDate(), rs.getInt("activated_store_count")));
+        if (hasReferrerStoreIdColumn) {
+            String dailySql = """
+                    SELECT
+                        DATE(%s) AS activated_date,
+                        COUNT(*) AS activated_store_count
+                    FROM store s
+                    WHERE s.referrer_store_id IS NOT NULL
+                      AND %s >= ?
+                      AND %s < ?
+                    """.formatted(activationColumn, activationColumn, activationColumn) + activatedPredicate;
+            List<Object> dailyParams = new ArrayList<>();
+            dailyParams.add(startDate.atStartOfDay());
+            dailyParams.add(endDate.plusDays(1).atStartOfDay());
+            if (storeId != null && !storeId.isBlank()) {
+                dailySql += " AND s.referrer_store_id = ?";
+                dailyParams.add(storeId);
+            }
+            dailySql += " GROUP BY DATE(" + activationColumn + ") ORDER BY activated_date ASC";
+
+            jdbcTemplate.query(dailySql, dailyParams.toArray(),
+                    (RowCallbackHandler) rs -> dailyMap.put(rs.getDate("activated_date").toLocalDate(), rs.getInt("activated_store_count")));
+        }
 
         List<ReferralReportRes.DailyActivation> dailyActivations = new ArrayList<>();
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
@@ -239,45 +269,53 @@ public class ReportServiceImpl implements ReportService {
                     .build());
         }
 
-        String performanceSql = """
-                SELECT
-                    s.referrer_store_id,
-                    ref.store_name AS referrer_store_name,
-                    COUNT(*) AS activated_store_count,
-                    MAX(DATE(s.activated_at)) AS last_activated_date,
-                    (
-                        SELECT COUNT(*)
-                        FROM referral_code rc
-                        WHERE rc.store_id = s.referrer_store_id
-                    ) AS referral_code_count
-                FROM store s
-                JOIN store ref ON ref.id = s.referrer_store_id
-                WHERE s.referrer_store_id IS NOT NULL
-                  AND s.activated_at >= ?
-                  AND s.activated_at < ?
-                """;
-        List<Object> performanceParams = new ArrayList<>();
-        performanceParams.add(startDate.atStartOfDay());
-        performanceParams.add(endDate.plusDays(1).atStartOfDay());
-        if (storeId != null && !storeId.isBlank()) {
-            performanceSql += " AND s.referrer_store_id = ?";
-            performanceParams.add(storeId);
-        }
-        performanceSql += " GROUP BY s.referrer_store_id, ref.store_name ORDER BY activated_store_count DESC, ref.store_name ASC LIMIT 20";
+        List<ReferralReportRes.StoreReferralPerformance> storePerformances = new ArrayList<>();
+        if (hasReferrerStoreIdColumn) {
+            String performanceSql = """
+                    SELECT
+                        s.referrer_store_id,
+                        ref.store_name AS referrer_store_name,
+                        COUNT(*) AS activated_store_count,
+                        MAX(DATE(%s)) AS last_activated_date,
+                        (
+                            SELECT COUNT(*)
+                            FROM referral_code rc
+                                                        WHERE %s
+                        ) AS referral_code_count
+                    FROM store s
+                                        JOIN store ref ON %s
+                    WHERE s.referrer_store_id IS NOT NULL
+                      AND %s >= ?
+                      AND %s < ?
+                                        """.formatted(
+                                        activationColumn,
+                                        utf8mb4Eq("rc.store_id", "s.referrer_store_id"),
+                                        utf8mb4Eq("ref.id", "s.referrer_store_id"),
+                                        activationColumn,
+                                        activationColumn) + activatedPredicate;
+            List<Object> performanceParams = new ArrayList<>();
+            performanceParams.add(startDate.atStartOfDay());
+            performanceParams.add(endDate.plusDays(1).atStartOfDay());
+            if (storeId != null && !storeId.isBlank()) {
+                performanceSql += " AND s.referrer_store_id = ?";
+                performanceParams.add(storeId);
+            }
+            performanceSql += " GROUP BY s.referrer_store_id, ref.store_name ORDER BY activated_store_count DESC, ref.store_name ASC LIMIT 20";
 
-        List<ReferralReportRes.StoreReferralPerformance> storePerformances = jdbcTemplate.query(
-                performanceSql,
-                performanceParams.toArray(),
-                (rs, rowNum) -> ReferralReportRes.StoreReferralPerformance.builder()
-                        .referrerStoreId(rs.getString("referrer_store_id"))
-                        .referrerStoreName(rs.getString("referrer_store_name"))
-                        .referralCodeCount(rs.getInt("referral_code_count"))
-                        .activatedStoreCount(rs.getInt("activated_store_count"))
-                        .lastActivatedDate(rs.getDate("last_activated_date") != null
-                                ? rs.getDate("last_activated_date").toLocalDate()
-                                : null)
-                        .rank(rowNum + 1)
-                        .build());
+            storePerformances = jdbcTemplate.query(
+                    performanceSql,
+                    performanceParams.toArray(),
+                    (rs, rowNum) -> ReferralReportRes.StoreReferralPerformance.builder()
+                            .referrerStoreId(rs.getString("referrer_store_id"))
+                            .referrerStoreName(rs.getString("referrer_store_name"))
+                            .referralCodeCount(rs.getInt("referral_code_count"))
+                            .activatedStoreCount(rs.getInt("activated_store_count"))
+                            .lastActivatedDate(rs.getDate("last_activated_date") != null
+                                    ? rs.getDate("last_activated_date").toLocalDate()
+                                    : null)
+                            .rank(rowNum + 1)
+                            .build());
+        }
 
         return ReferralReportRes.builder()
                 .startDate(startDate)
@@ -361,7 +399,7 @@ public class ReportServiceImpl implements ReportService {
                 SELECT
                     lt.id AS ticket_id,
                     DATE(lt.drawn_at) AS draw_date,
-                    DATE_FORMAT(lt.drawn_at, '%Y-%m-%d %H:%i:%s') AS draw_time,
+                                        DATE_FORMAT(lt.drawn_at, '%%Y-%%m-%%d %%H:%%i:%%s') AS draw_time,
                     lt.drawn_by AS user_id,
                     COALESCE(u.nickname, u.email, lt.drawn_by) AS user_display_name,
                     l.id AS lottery_id,
@@ -437,6 +475,9 @@ public class ReportServiceImpl implements ReportService {
 
         log.info("📊 產生儲值報表（平台）: {} ~ {}", startDate, endDate);
 
+        boolean hasWalletTransactionStatusColumn = columnExists("wallet_transaction", "status");
+        String statusSuccessPredicate = hasWalletTransactionStatusColumn ? "AND status = 'SUCCESS'" : "";
+
         // 基本統計
         String baseSql = """
                 SELECT
@@ -445,9 +486,9 @@ public class ReportServiceImpl implements ReportService {
                     COALESCE(AVG(amount), 0) as avg_amount
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
-                AND status = 'SUCCESS'
+                %s
                 AND created_at BETWEEN ? AND ?
-                """;
+                """.formatted(statusSuccessPredicate);
 
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
@@ -477,11 +518,11 @@ public class ReportServiceImpl implements ReportService {
                     COUNT(DISTINCT user_id) as new_users
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
-                AND status = 'SUCCESS'
+                                %s
                 AND created_at BETWEEN ? AND ?
                 GROUP BY DATE(created_at)
                 ORDER BY date
-                """;
+                                """.formatted(statusSuccessPredicate);
 
         List<RechargeReportRes.DailyRecharge> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
                 (rs, rowNum) -> RechargeReportRes.DailyRecharge.builder()
@@ -499,11 +540,11 @@ public class ReportServiceImpl implements ReportService {
                     SUM(amount) as total_amount
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
-                AND status = 'SUCCESS'
+                                %s
                 AND created_at BETWEEN ? AND ?
                 GROUP BY amount
                 ORDER BY total_amount DESC
-                """;
+                                """.formatted(statusSuccessPredicate);
 
         List<RechargeReportRes.PlanStats> planStats = jdbcTemplate.query(planSql, params.toArray(),
                 (rs, rowNum) -> RechargeReportRes.PlanStats.builder()
@@ -544,6 +585,9 @@ public class ReportServiceImpl implements ReportService {
 
         log.info("📊 產生贈送點數報表（平台）: {} ~ {}", startDate, endDate);
 
+        boolean hasWalletTransactionStatusColumn = columnExists("wallet_transaction", "status");
+        String statusSuccessPredicate = hasWalletTransactionStatusColumn ? "AND status = 'SUCCESS'" : "";
+
         // 基本統計（贈送類型交易）
         String baseSql = """
                 SELECT
@@ -553,9 +597,9 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
                 AND amount > 0
-                AND status = 'SUCCESS'
+                %s
                 AND created_at BETWEEN ? AND ?
-                """;
+                """.formatted(statusSuccessPredicate);
 
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
@@ -585,11 +629,11 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
                 AND amount > 0
-                AND status = 'SUCCESS'
+                                %s
                 AND created_at BETWEEN ? AND ?
                 GROUP BY DATE(created_at)
                 ORDER BY date
-                """;
+                                """.formatted(statusSuccessPredicate);
 
         List<BonusReportRes.DailyBonus> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
                 (rs, rowNum) -> BonusReportRes.DailyBonus.builder()
@@ -607,11 +651,11 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
                 AND amount > 0
-                AND status = 'SUCCESS'
+                                %s
                 AND created_at BETWEEN ? AND ?
                 GROUP BY transaction_type
                 ORDER BY total_points DESC
-                """;
+                                """.formatted(statusSuccessPredicate);
 
         List<BonusReportRes.BonusTypeStats> typeStats = jdbcTemplate.query(typeSql, params.toArray(),
                 (rs, rowNum) -> BonusReportRes.BonusTypeStats.builder()
@@ -1535,14 +1579,20 @@ public class ReportServiceImpl implements ReportService {
         return value != null ? value : 0L;
     }
 
-    private Integer queryActivatedReferralStoreCount(LocalDate startDate, LocalDate endDate, String referrerStoreId) {
+    private Integer queryActivatedReferralStoreCount(LocalDate startDate, LocalDate endDate, String referrerStoreId,
+            boolean hasReferrerStoreIdColumn, String activationColumn) {
+        if (!hasReferrerStoreIdColumn) {
+            return 0;
+        }
+
         String sql = """
                 SELECT COUNT(*)
                 FROM store s
                 WHERE s.referrer_store_id IS NOT NULL
-                  AND s.activated_at >= ?
-                  AND s.activated_at < ?
-                """;
+                  AND %s >= ?
+                  AND %s < ?
+                """.formatted(activationColumn, activationColumn)
+                + ("s.activated_at".equals(activationColumn) ? "" : " AND s.status = 'ACTIVE'");
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
         params.add(endDate.plusDays(1).atStartOfDay());
@@ -1552,6 +1602,20 @@ public class ReportServiceImpl implements ReportService {
         }
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, params.toArray());
         return count != null ? count : 0;
+    }
+
+    private boolean columnExists(String tableName, String columnName) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?",
+                    Integer.class,
+                    tableName,
+                    columnName);
+            return count != null && count > 0;
+        } catch (Exception ex) {
+            log.warn("⚠️ 無法檢查欄位是否存在: {}.{}", tableName, columnName, ex);
+            return false;
+        }
     }
 
     private LocalDate[] calculatePreviousRange(LocalDate startDate, LocalDate endDate) {

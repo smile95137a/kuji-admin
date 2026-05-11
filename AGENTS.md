@@ -24,6 +24,10 @@
 
 測試採用 JUnit 5、Spring Boot Test、Spring Security Test 與 H2。測試類命名為 `*Test.java` 以利 Surefire 掃描。Controller 測試放於 `controller/admin` 或 `controller/api`，Service 測試放於 `service`，端對端流程測試放於 `integration`。每次提交前請執行 `mvn test`，並針對業務規則、安全行為、Mapper 查詢、API 合約變更新增或更新測試。
 
+## 完成定義（新增）
+
+- 任務若涉及任一專案程式碼異動，必須在本機完成對應專案的 local 編譯（至少 build/compile 成功）後，才可視為完成。
+
 ## Commit 與 Pull Request 規範
 
 Git 歷史請採用 Conventional Commit 標題，如 `feat(reports): ...`、`fix: ...`、`chore: ...`。每次提交請聚焦單一主題。Pull Request 需附簡要說明、關聯 issue/spec（如有）、資料庫異動說明（如有 sql/ 變更）、測試證據、截圖或 API 回應範例。

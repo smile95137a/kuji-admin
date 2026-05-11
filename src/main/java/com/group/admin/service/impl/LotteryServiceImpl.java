@@ -956,6 +956,16 @@ public class LotteryServiceImpl implements LotteryService {
                 criteria.andCategoryEqualTo(condition.getCategory());
             }
 
+            // subCategory：精確匹配
+            if (isNotBlank(condition.getSubCategory())) {
+                criteria.andSubCategoryEqualTo(condition.getSubCategory());
+            }
+
+            // playMode：精確匹配
+            if (isNotBlank(condition.getPlayMode())) {
+                criteria.andPlayModeEqualTo(condition.getPlayMode());
+            }
+
             // theme：精確匹配
             if (isNotBlank(condition.getTheme())) {
                 criteria.andThemeEqualTo(categoryService.resolveCanonicalThemeName(condition.getTheme()));
@@ -2329,6 +2339,12 @@ public class LotteryServiceImpl implements LotteryService {
         }
         if (isNotBlank(condition.getCategory())) {
             criteria.andCategoryEqualTo(condition.getCategory());
+        }
+        if (isNotBlank(condition.getSubCategory())) {
+            criteria.andSubCategoryEqualTo(condition.getSubCategory());
+        }
+        if (isNotBlank(condition.getPlayMode())) {
+            criteria.andPlayModeEqualTo(condition.getPlayMode());
         }
         if (condition.getPriceMin() != null) {
             criteria.andPricePerDrawGreaterThanOrEqualTo(condition.getPriceMin());

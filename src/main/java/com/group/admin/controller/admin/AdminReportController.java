@@ -32,7 +32,7 @@ public class AdminReportController {
     @PostMapping("/revenue")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<RevenueReportRes> getRevenueReport(
-            @RequestBody QueryReq<RevenueReportCondition> req) {
+            @RequestBody(required = false) QueryReq<RevenueReportCondition> req) {
         
         // 非 Admin 只能查自己店家的報表
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
@@ -127,7 +127,7 @@ public class AdminReportController {
     @PostMapping("/lottery-sales")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<LotterySalesRankingRes> getLotterySalesRanking(
-            @RequestBody QueryReq<LotterySalesRankingCondition> req) {
+            @RequestBody(required = false) QueryReq<LotterySalesRankingCondition> req) {
 
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
         if (currentStoreId != null) {
@@ -148,7 +148,7 @@ public class AdminReportController {
     @PostMapping("/store-performance")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<StorePerformanceReportRes> getStorePerformanceReport(
-            @RequestBody QueryReq<StorePerformanceCondition> req) {
+            @RequestBody(required = false) QueryReq<StorePerformanceCondition> req) {
 
         if (req == null) req = new QueryReq<>();
         if (req.getCondition() == null) req.setCondition(new StorePerformanceCondition());

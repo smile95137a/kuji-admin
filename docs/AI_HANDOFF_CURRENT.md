@@ -23,6 +23,27 @@
    - 終態以 `GRAND_PRIZE_DRAWN` / `ALL_DRAWN` 為準
 6. 環境限制（本輪執行環境）：無法執行 `mvn` / `npm` 指令驗證，仍以靜態診斷與契約稽核為主。
 
+## 0.4 2026-05-12（第二包收尾補丁）
+
+1. 前台分類 API 已正式改為「顯示分類」聚合：
+   - `GET /api/category/categories` 固定輸出 5 個 display buckets
+   - 類別為：官方一番賞 / 自製一番賞 / 刮刮樂 / 扭蛋 / 卡牌
+2. 店家頁圖片體驗補強已完成並做本機手測：
+   - 店家列表卡片補 skeleton / fallback / 首圖優先策略
+   - 店家詳頁封面輪播補 skeleton / 失敗 fallback / placeholder
+   - 商品卡圖片補 skeleton / 失敗 fallback SVG
+3. 已完成本機端到端手測（以本機 backend + client dev server）：
+   - 首頁分類 API：200，固定回 5 類
+   - Banner 列表 API：200，Banner 點擊可導到店家頁
+   - 店家列表 / 店家詳頁：可正常載入，圖片失敗時不炸版
+4. 已修正後台 `/admin/lottery/with-prizes/list` 的 `playMode` 篩選異常：
+   - 根因是 `LotteryServiceImpl#getAllLotteriesWithPrizes(...)` 的查詢條件漏掉 `playMode`
+   - 已補 `criteria.andPlayModeEqualTo(condition.getPlayMode())`
+5. 修正後已回歸驗證：
+   - `playMode=LOTTERY_MODE` 時，回傳唯一 `playMode` 為 `LOTTERY_MODE`
+   - `playMode=SCRATCH_MODE` 時，回傳唯一 `playMode` 為 `SCRATCH_MODE`
+6. 補充：`subCategory` 仍是另一個維度，不能拿來當 `playMode` 是否過濾成功的判準。
+
 ## 0.2 2026-05-11（本次收尾）
 
 1. 已完成跨 repo 同步收尾節點：`kuji-admin`、`kuji-admin-web`、`kuji-client` 皆已完成 commit + push。
@@ -127,6 +148,7 @@
 5. 沒有明確批准前，不擴增新的商業語意。
 6. 修改前要先告知會碰哪些 repo / 哪些檔案。
 7. 若缺 UAT，先接受以 test、contract、code review、手動 code audit 作為過渡驗證方式。
+8. 任務完成前必須完成對應專案 local 編譯（至少 build/compile 成功），未編譯通過不得宣告完成。
 
 ## 3. 三個 Repo 與分支
 
