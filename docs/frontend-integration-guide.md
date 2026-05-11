@@ -2,7 +2,7 @@
 
 > **文件目的**：列出本次後端全數修改項目，說明每個 API 的參數意義、哪些欄位前端必須配合調整，以及各功能的實際行為變化。  
 > **適用對象**：後台前端開發人員。  
-> **最後更新**：2026-05-09
+> **最後更新**：2026-05-11
 
 ---
 
@@ -519,11 +519,11 @@ Request Body（**必填**）：
 ### 問題描述
 
 設定定時上架的商品在排程時間到達後，沒有自動上架。  
-**根本原因**：排程 SQL 查詢條件過舊，沒有正確對應新的待上架模型；目前待排程上架商品應以 `WAITING_ON_SHELF` 為主，並兼容舊資料 `DRAFT` / `CONFIGURED`。
+**根本原因**：排程 SQL 查詢條件過舊，沒有正確對應新的待上架模型；目前待排程上架商品應以 `WAITING_ON_SHELF` 為唯一來源。
 
 ### 修復內容
 
-純後端 SQL 修復，排程現在會正確找到 `WAITING_ON_SHELF` 狀態的待上架商品，並兼容舊資料 `DRAFT` / `CONFIGURED`。
+純後端 SQL 修復，排程現在只會從 `WAITING_ON_SHELF` 狀態挑選待上架商品。
 
 ### 前端是否需要調整
 
@@ -1037,4 +1037,40 @@ PUT  /admin/lottery/{id}/with-prizes
   - `ALL_DRAWN`：已售完 / 全數已抽完
 
 > 如有任何 API 行為疑問，可查閱 Swagger UI：`http://localhost:8080/api/swagger-ui.html`
+
+---
+
+## 20. 2026-05-11 第三輪契約收斂（商品 + 報表）
+
+### A. 後端商品狀態相容清理
+
+本輪已落地：
+
+1. `LotteryServiceImpl` 的 `VALID_TRANSITIONS` 移除 `CONFIGURED` 相容轉換。
+2. `LotteryMapper.xml` 的 `selectScheduledForPromotion` 改為只查 `WAITING_ON_SHELF`。
+3. `LotteryService` 與 `ScheduledTasks` 註解已同步為新語意，不再描述 `CONFIGURED` 相容。
+
+### B. 後端報表權限邏輯收斂
+
+本輪已落地：
+
+1. `AdminReportController` 移除 `recharge` / `bonus` / `member-growth` / `platform-revenue` 內重複 `isAdmin` 判斷。
+2. 以上端點統一由 `@PreAuthorize("hasRole('ADMIN')")` 控制。
+
+### C. 後台前端報表型別補齊
+
+本輪已落地：
+
+1. `adminReportService.ts` 補齊全部報表回應型別（Revenue / Referral / Recharge / Bonus / MemberGrowth / LotteryResult / PlatformRevenue / LotterySales / StorePerformance / PrizeShipment）。
+2. 報表 API 方法改為對應泛型回應，降低 `any` 契約盲區。
+3. 各報表頁 `reportData` 已改用對應 DTO 型別。
+4. `PlatformRevenueReport.vue` 已對齊每日欄位 `net`（舊 `netRevenue` 已修正）。
+
+### D. 前台前端終態 fallback 收斂
+
+本輪已落地：
+
+1. `IchibanKujiCard.vue` 移除 `SOLD_OUT` fallback。
+2. `StoreProductCard.vue` 移除 `SOLD_OUT` fallback。
+3. 前台終態語意保留 `GRAND_PRIZE_DRAWN` / `ALL_DRAWN`。
 

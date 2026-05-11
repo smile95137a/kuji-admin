@@ -1006,7 +1006,7 @@
   <select id="selectScheduledForPromotion" resultMap="BaseResultMap">
     SELECT <include refid="Base_Column_List" />
     FROM lottery
-    WHERE status IN ('WAITING_ON_SHELF', 'DRAFT', 'CONFIGURED')
+    WHERE status = 'WAITING_ON_SHELF'
       AND scheduled_at IS NOT NULL
       AND scheduled_at &lt;= NOW()
   </select>

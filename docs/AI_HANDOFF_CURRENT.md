@@ -2,6 +2,27 @@
 
 最後更新：2026-05-11
 
+## 0.3 2026-05-11（商品 + 報表第三輪收斂）
+
+> 本節為最新狀態，若與下方舊段落衝突，以本節為準。
+
+1. 三個 repo 已統一切到新分支：`feat/module-audit-product-report`。
+2. 後端已移除 `CONFIGURED` 相容：
+   - `LotteryServiceImpl` 狀態機刪除 `CONFIGURED` 轉換
+   - `LotteryMapper.xml` 排程上架查詢改為僅 `WAITING_ON_SHELF`
+   - `LotteryService` / `ScheduledTasks` 註解同步為新語意
+3. 後端報表權限已收斂：
+   - `AdminReportController` 移除 `recharge` / `bonus` / `member-growth` / `platform-revenue` 的重複 `isAdmin` 判斷
+   - 統一由 `@PreAuthorize("hasRole('ADMIN')")` 控制
+4. 後台前端報表契約已補強：
+   - `adminReportService.ts` 已補齊全部報表 DTO 型別
+   - 報表頁 `reportData` 已改為對應型別
+   - `PlatformRevenueReport.vue` 每日欄位由 `netRevenue` 對齊為 `net`
+5. 前台前端狀態顯示已收斂：
+   - `IchibanKujiCard.vue` / `StoreProductCard.vue` 移除 `SOLD_OUT` fallback
+   - 終態以 `GRAND_PRIZE_DRAWN` / `ALL_DRAWN` 為準
+6. 環境限制（本輪執行環境）：無法執行 `mvn` / `npm` 指令驗證，仍以靜態診斷與契約稽核為主。
+
 ## 0.2 2026-05-11（本次收尾）
 
 1. 已完成跨 repo 同步收尾節點：`kuji-admin`、`kuji-admin-web`、`kuji-client` 皆已完成 commit + push。

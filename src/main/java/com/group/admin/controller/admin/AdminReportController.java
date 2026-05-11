@@ -80,9 +80,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RechargeReportRes> getRechargeReport(
             @RequestBody(required = false) QueryReq<RechargeReportCondition> req) {
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
         return ResponseEntity.ok(reportService.getRechargeReport(req));
     }
     
@@ -93,10 +90,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BonusReportRes> getBonusReport(
             @RequestBody(required = false) QueryReq<BonusReportCondition> req) {
-
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
         return ResponseEntity.ok(reportService.getBonusReport(req));
     }
 
@@ -113,9 +106,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MemberGrowthReportRes> getMemberGrowthReport(
             @RequestBody(required = false) QueryReq<MemberGrowthReportCondition> req) {
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
         return ResponseEntity.ok(reportService.getMemberGrowthReport(req));
     }
 
@@ -127,11 +117,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PlatformRevenueReportRes> getPlatformRevenueReport(
             @RequestBody(required = false) QueryReq<PlatformRevenueReportCondition> req) {
-
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
-
         return ResponseEntity.ok(reportService.getPlatformRevenueReport(req));
     }
 

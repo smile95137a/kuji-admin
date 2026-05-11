@@ -41,7 +41,7 @@ public class ScheduledTasks {
     }
 
     /**
-     * 每 60 秒自動推進排程的商品（WAITING_ON_SHELF → ON_SHELF，兼容舊資料 CONFIGURED）
+     * 每 60 秒自動推進排程的商品（WAITING_ON_SHELF → ON_SHELF）
      */
     @Scheduled(fixedRate = 60000)
     public void autoPromoteLotteries() {
