@@ -3,6 +3,7 @@ package com.group.admin.controller.api;
 import com.group.admin.BaseControllerTest;
 import com.group.admin.constants.ErrorCodes;
 import com.group.admin.entity.User;
+import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import org.mockito.Mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +33,9 @@ class ApiAuthControllerTest extends BaseControllerTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private UserTokenBlacklistService userTokenBlacklistService;
 
     @InjectMocks
     private ApiAuthController apiAuthController;
@@ -50,9 +55,6 @@ class ApiAuthControllerTest extends BaseControllerTest {
         user.setProvider("EMAIL");
 
         when(userService.register(any())).thenReturn(user);
-        when(jwtUtil.generateToken(anyString(), anyString(), anyString(), anyList())).thenReturn("access-token");
-        when(jwtUtil.generateRefreshToken(anyString())).thenReturn("refresh-token");
-        when(jwtUtil.getExpirationSeconds()).thenReturn(86400L);
 
         String body = """
                 {
@@ -67,8 +69,7 @@ class ApiAuthControllerTest extends BaseControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access-token"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+          .andExpect(jsonPath("$.forceChangePassword").value(false))
                 .andExpect(jsonPath("$.user.email").value("legacy@test.com"));
 
         verify(userService).register(any());
@@ -129,6 +130,91 @@ class ApiAuthControllerTest extends BaseControllerTest {
             .andExpect(jsonPath("$.error.code").value(ErrorCodes.AUTH_TOKEN_INVALID));
 
         verify(userService, never()).findByEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("刷新 Token - 缺少必要欄位")
+        void refresh_ShouldReturn401_WhenTokenClaimsMissing() throws Exception {
+        when(jwtUtil.validateToken("missing-claims-token")).thenReturn(true);
+        when(jwtUtil.getUsername("missing-claims-token")).thenReturn("user@test.com");
+        when(jwtUtil.getUserId("missing-claims-token")).thenReturn(null);
+        when(jwtUtil.getUserType("missing-claims-token")).thenReturn("user");
+        when(jwtUtil.getGen("missing-claims-token")).thenReturn(3L);
+
+        mockMvc.perform(post("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content("""
+              {
+                \"refreshToken\": \"missing-claims-token\"
+              }
+              """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value(ErrorCodes.AUTH_TOKEN_INVALID));
+
+        verify(userService, never()).findByEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("刷新 Token - gen 不匹配應拒絕")
+        void refresh_ShouldReturn401_WhenTokenGenMismatch() throws Exception {
+        User user = new User();
+        user.setId("user-001");
+        user.setEmail("user@test.com");
+        user.setStatus("ACTIVE");
+        user.setEmailVerified((byte) 1);
+
+        when(jwtUtil.validateToken("gen-mismatch-token")).thenReturn(true);
+        when(jwtUtil.getUsername("gen-mismatch-token")).thenReturn("user@test.com");
+        when(jwtUtil.getUserId("gen-mismatch-token")).thenReturn("user-001");
+        when(jwtUtil.getUserType("gen-mismatch-token")).thenReturn("user");
+        when(jwtUtil.getGen("gen-mismatch-token")).thenReturn(2L);
+        when(userService.findByEmail("user@test.com")).thenReturn(user);
+        when(userTokenBlacklistService.getBlacklistGen("user-001")).thenReturn(3);
+
+        mockMvc.perform(post("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content("""
+              {
+                \"refreshToken\": \"gen-mismatch-token\"
+              }
+              """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value(ErrorCodes.AUTH_TOKEN_REVOKED));
+        }
+
+        @Test
+        @DisplayName("刷新 Token - 成功時應旋轉 access/refresh")
+        void refresh_ShouldReturn200_WhenTokenValid() throws Exception {
+        User user = new User();
+        user.setId("user-001");
+        user.setEmail("user@test.com");
+        user.setStatus("ACTIVE");
+        user.setEmailVerified((byte) 1);
+
+        when(jwtUtil.validateToken("valid-refresh-token")).thenReturn(true);
+        when(jwtUtil.getUsername("valid-refresh-token")).thenReturn("user@test.com");
+        when(jwtUtil.getUserId("valid-refresh-token")).thenReturn("user-001");
+        when(jwtUtil.getUserType("valid-refresh-token")).thenReturn("user");
+        when(jwtUtil.getGen("valid-refresh-token")).thenReturn(5L);
+        when(userService.findByEmail("user@test.com")).thenReturn(user);
+        when(userTokenBlacklistService.getBlacklistGen("user-001")).thenReturn(5);
+        when(jwtUtil.generateToken(eq("user@test.com"), eq("user-001"), eq("user"), anyList(), eq(null), eq(5L)))
+          .thenReturn("new-access-token");
+        when(jwtUtil.generateRefreshToken("user@test.com", "user-001", "user", 5L))
+          .thenReturn("new-refresh-token");
+        when(jwtUtil.getExpirationSeconds()).thenReturn(86400L);
+
+        mockMvc.perform(post("/auth/refresh")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content("""
+              {
+                \"refreshToken\": \"valid-refresh-token\"
+              }
+              """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+            .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"))
+            .andExpect(jsonPath("$.user.email").value("user@test.com"));
         }
 
         @Test

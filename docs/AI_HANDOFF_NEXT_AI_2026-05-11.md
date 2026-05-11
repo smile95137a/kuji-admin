@@ -1,91 +1,75 @@
-# AI 交接收尾（2026-05-11）
+# AI 接手執行指引（2026-05-11）
 
-最後更新：2026-05-11
+最後更新：2026-05-11（本次會話同步）
 
 ## 一句話總結
 
-本輪已完成「訂單生命週期收斂」與「系統參數管理契約修正」，三個 repo 目前工作樹皆乾淨，變更已 commit 並 push，可直接銜接下一個管理模組巡檢。
+會員主線第一包已完成，平台營收報表補測（第二包）已完成後端單元測試；下一棒優先做跨 repo 契約同步與 smoke 驗證。
 
-## Repo 現況
+## 使用者工作偏好（必須遵守）
 
-1. 後端 repo：C:/Users/KD/jimmy/kuji-admin
-- branch：feat/smtp-account-hardening
-- 最新提交：
-  - 2ea40b5 fix(system-config): support configGroup query alias and sync docs
-  - 644f5fb feat(report,store): align platform reports and store referral tracking
-  - df4de1d feat(order): align lifecycle with payment-failed and repay flow
-- 工作樹：乾淨
+1. 先一次討論完整範圍，再一次性改完，不接受斷續零碎修改。
+2. 每次實作前必須明確列出：影響檔案、行為變更點、驗證方式。
+3. 每包結束時要回報：已完成 / 待評估 / 下一包，讓接手者可無縫續做。
+4. 前後端同步需持續進行，不可只修單邊契約。
+5. 每包完成後需落實版本節點：`commit + push`。
 
-2. 後台前端 repo：C:/Users/KD/jimmy/kuji-admin-web
-- branch：main
-- 最新提交：
-  - 7241e92 fix(system-config): align configGroup and optimistic lock version
-  - b0a530c feat(report,store): sync platform report and store referral ui contracts
-- 工作樹：乾淨
+## Repo 現況（本工作區）
 
-3. 前台前端 repo：C:/Users/KD/jimmy/kuji-client
-- branch：main
-- 最新提交：
-  - e2144b1 feat(client): align lottery status display
-- 工作樹：乾淨（本輪無新改動）
+1. 後端 repo：`C:/Users/003707/Desktop/新增資料夾/kuji-admin`
+2. 本次重點改動檔案：
+  - `src/main/java/com/group/admin/service/impl/ReportServiceImpl.java`
+  - `src/main/java/com/group/admin/service/impl/LotteryServiceImpl.java`
+  - `docs/AI_HANDOFF_CURRENT.md`
+3. 目前觀察：終端 compile 輸出偶發空白，但未見新的阻斷編譯錯誤訊息。
 
-## 本輪已完成重點
+## 已完成（本輪可延續事實）
 
-1. 訂單生命週期（後端 + 文件）
-- 新增 PAYMENT_FAILED 為正式訂單狀態。
-- 付款失敗可重付款，並保留 PrizeBox 綁定直到重付或取消。
-- 玩家取消範圍：PAYMENT_PENDING / PAYMENT_FAILED / PENDING。
-- 後台取消範圍：PAYMENT_PENDING / PAYMENT_FAILED / PENDING / PREPARING。
-- STORE_EDITOR 移除「取消」與「完成」權限。
-- 規格、契約、前後台文件已同步更新。
+1. 平台營收關鍵修正（`ReportServiceImpl`）
+  - 店家映射路徑擴充為 direct lottery / ticket->lottery / order 三路。
+  - 多處時間篩選統一為半開區間（`>= start`, `< endExclusive`）。
+2. 商品服務資料相容（`LotteryServiceImpl`）
+  - `tags`、`galleryImages` 統一 JSON 儲存。
+  - 讀取支援 JSON + CSV fallback。
+  - 已修正會造成編譯失敗的語法斷裂區段。
+3. 會員管理前後端已做過一輪權限收斂與資料遮罩調整。
+4. 平台營收補測已落地：
+  - 新增 `src/test/java/com/group/admin/service/ReportServiceImplTest.java`
+  - 驗證三路店家映射與半開區間
+  - 測試結果：3 passed / 0 failed
+5. 會員認證 smoke 測試已落地：
+  - 更新 `src/test/java/com/group/admin/controller/api/ApiAuthControllerTest.java`
+  - 覆蓋 refresh invalid / missing claims / gen mismatch / success rotation
+  - 測試結果：8 passed / 0 failed
 
-2. 報表與店家招商（既有變更整理上線）
-- 推薦碼報表、會員成長、儲值、紅利、抽獎結果的契約/欄位調整已提交並推送。
-- 店家招商追蹤欄位（referrer/referral/activatedAt）與 migration 已提交並推送。
+## 下一輪（請先做這包）
 
-3. 系統參數管理（新修正）
-- 後端 Controller 查詢支援 group 與 configGroup 參數相容。
-- 後台前端 system-config 契約改為對齊後端：
-  - group -> configGroup
-  - NUMBER -> INTEGER
-  - update req 加入 version（樂觀鎖）
-  - isEditable 缺省視為可編輯，避免全部唯讀
-- 系統參數文件已同步更新。
+### 目標：跨 repo 契約同步與 smoke 驗證（一次性交付）
 
-## 重要檔案（本輪 system-config 修正）
+1. 後台前端契約同步（`kuji-admin-web`）
+  - 對齊會員 list/detail DTO 新契約。
+2. 補 login / logout / filter 串接驗證
+  - 目前已覆蓋 refresh 主路徑，建議補 login/logout/filter 的整段驗證。
+3. 驗證輸出
+  - compile 成功證據（含 exit code）
+  - 關鍵 API smoke 測試
+  - 變更檔案阻斷錯誤為零
 
-1. 後端
-- src/main/java/com/group/admin/controller/admin/AdminSystemConfigController.java
-- frontend/admin/10-system-config.md
+## 待評估清單（做完第一包再進）
 
-2. 後台前端
-- src/services/adminSystemConfigService.ts
-- src/composables/useSystemConfig.ts
-- src/components/systemConfig/SystemConfigEditor.vue
-- src/components/systemConfig/SystemConfigTable.vue
+1. 報表 period 定義與欄位命名是否仍有前後端語意落差。
+2. 既有 Sonar / 規則警告是否要分包清理（不影響本輪 correctness 可先不做）。
 
-## 環境限制
+## 接手流程（強制）
 
-1. 目前終端缺少 mvn 指令，無法本機跑後端 compile/test。
-2. 目前終端缺少 npm 指令，無法本機跑 admin-web build/type-check。
-3. 因此本輪以靜態檢查、程式契約對齊、git 版本封存為主。
+1. 先貼出「本包完整範圍 + 檔案清單 + 驗證方式」。
+2. 等使用者確認後，一次性改完本包。
+3. 結尾必須更新 `docs/AI_HANDOFF_CURRENT.md`（已完成 / 待評估 / 下一包）。
 
-## 下一個 AI 建議起手（可直接做）
+## 建議命令
 
-1. 下一個管理模組建議：會員管理（Member Management）。
-2. 先做三方一致性稽核：
-- kuji-admin：controller/service/req/res/mapper
-- kuji-admin-web：router/view/service
-- kuji-client：會員相關顯示與流程影響
-3. 先修「契約不一致」與「權限/狀態漏洞」，每一包修完即 commit + push（不開 PR）。
-
-## 建議操作命令
-
-1. 查看後端近期提交
-- git -C C:/Users/KD/jimmy/kuji-admin log --oneline -10
-
-2. 查看後台前端近期提交
-- git -C C:/Users/KD/jimmy/kuji-admin-web log --oneline -10
-
-3. 交接後第一步稽核（範例）
-- 先檢索 member/user/admin-user 相關 controller 與前端路由，再對照文件。
+1. compile 並輸出 exit code：
+  - `mvn -f pom.xml -DskipTests compile; Write-Output "__EXIT:$LASTEXITCODE"`
+2. 檢查變更：
+  - `git status`
+  - `git diff -- src/main/java/com/group/admin/service`

@@ -22,6 +22,7 @@ import com.group.admin.req.RefreshTokenReq;
 import com.group.admin.req.auth.ForgotPasswordReq;
 import com.group.admin.req.auth.ResetPasswordReq;
 import com.group.admin.res.AuthRes;
+import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.service.UserService;
 import com.group.admin.util.JwtUtil;
 
@@ -52,6 +53,7 @@ public class ApiAuthController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final UserTokenBlacklistService userTokenBlacklistService;
 
     /**
      * 使用者註冊
@@ -69,16 +71,11 @@ public class ApiAuthController {
         }
         
         User user = userService.register(req);
-        
-        // 註冊成功後直接返回 Token
-        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"));
-        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
-        
+
+        // 註冊成功後不直接發放 Token，需先完成 Email 驗證
         AuthRes res = new AuthRes();
-        res.setAccessToken(accessToken);
-        res.setRefreshToken(refreshToken);
-        res.setExpiresIn(jwtUtil.getExpirationSeconds());
         res.setUser(user);
+        res.setForceChangePassword(false);
         
         return ResponseEntity.ok(res);
     }
@@ -114,34 +111,75 @@ public class ApiAuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthRes> refresh(@Valid @RequestBody RefreshTokenReq req) {
         log.info("Token 刷新請求");
+        String refreshToken = req.getRefreshToken();
         
         // 驗證 Refresh Token
-        if (!jwtUtil.validateToken(req.getRefreshToken())) {
+        if (!jwtUtil.validateToken(refreshToken)) {
             log.warn("無效的 Refresh Token");
             throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
         }
-        
-        String email = jwtUtil.getUsername(req.getRefreshToken());
+
+        String email = jwtUtil.getUsername(refreshToken);
+        String userId = jwtUtil.getUserId(refreshToken);
+        String userType = jwtUtil.getUserType(refreshToken);
+        Long tokenGen = jwtUtil.getGen(refreshToken);
+
+        if (userId == null || tokenGen == null || userType == null || !"user".equalsIgnoreCase(userType)) {
+            log.warn("Refresh Token 缺少必要欄位: email={}", email);
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
+        }
+
         User user = userService.findByEmail(email);
-        
+
         if (user == null) {
             log.warn("用戶不存在: {}", email);
             throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
         }
 
-        // 生成新的 Access Token
-        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"));
-        
-        // Refresh Token 保持不變（或可以選擇一併刷新）
-        String refreshToken = req.getRefreshToken();
+        if (!user.getId().equals(userId)) {
+            log.warn("Refresh Token 使用者不匹配: tokenUserId={}, dbUserId={}", userId, user.getId());
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
+        }
+
+        int currentGen = userTokenBlacklistService.getBlacklistGen(userId);
+        if (tokenGen.intValue() != currentGen) {
+            log.warn("Refresh Token 已失效（gen 不匹配）: userId={}, tokenGen={}, currentGen={}", userId, tokenGen,
+                    currentGen);
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_REVOKED, "Token 已失效，請重新登入");
+        }
+
+        validateUserForTokenIssue(user);
+
+        // 生成新的 Access / Refresh Token（維持同一個 gen）
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"), null,
+                currentGen);
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getId(), "user", currentGen);
 
         AuthRes res = new AuthRes();
         res.setAccessToken(accessToken);
-        res.setRefreshToken(refreshToken);
+        res.setRefreshToken(newRefreshToken);
         res.setExpiresIn(jwtUtil.getExpirationSeconds());
         res.setUser(user);
         
         return ResponseEntity.ok(res);
+    }
+
+    private void validateUserForTokenIssue(User user) {
+        if (user == null) {
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "Refresh Token 無效或已過期");
+        }
+
+        String status = user.getStatus();
+        if ("INACTIVE".equals(status) || "SUSPENDED".equals(status)) {
+            throw new BusinessException(ErrorCodes.AUTH_ACCOUNT_DISABLED, "帳號已停用或暫停使用，請聯繫客服");
+        }
+        if ("DELETED".equals(status)) {
+            throw new BusinessException(ErrorCodes.AUTH_INVALID_CREDENTIALS, "帳號或密碼錯誤");
+        }
+
+        if (user.getEmailVerified() == null || user.getEmailVerified() == 0) {
+            throw new BusinessException(ErrorCodes.COMMON_VALIDATION_ERROR, "請先完成 Email 驗證");
+        }
     }
     
     /**

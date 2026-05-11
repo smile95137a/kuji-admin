@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
-    
+
     private static final String MYSQL_TEXT_COLLATION = "utf8mb4_unicode_ci";
     private static final int MYSQL_TEXT_LENGTH = 64;
 
@@ -36,112 +36,112 @@ public class ReportServiceImpl implements ReportService {
     private final ReportSnapshotMapper reportSnapshotMapper;
     private final ReportSnapshotRepository reportSnapshotRepository;
     private final ObjectMapper objectMapper;
-    
+
     @Override
     public RevenueReportRes getRevenueReport(QueryReq<RevenueReportCondition> req) {
-        RevenueReportCondition condition = req != null && req.getCondition() != null ? 
-            req.getCondition() : new RevenueReportCondition();
-        
+        RevenueReportCondition condition = req != null && req.getCondition() != null ? req.getCondition()
+                : new RevenueReportCondition();
+
         String storeId = condition.getStoreId();
         LocalDate startDate = condition.getStartDate();
         LocalDate endDate = condition.getEndDate();
-        
+
         log.info("📊 產生營業額報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
-        
+
         // 基本統計
         String baseSql = """
-            SELECT 
-                COALESCE(SUM(total_amount), 0) as total_revenue,
-                COUNT(*) as total_orders,
-                COALESCE(SUM(draw_count), 0) as total_draws,
-                COALESCE(AVG(total_amount), 0) as avg_amount
-            FROM `order`
-            WHERE status IN ('PAID', 'COMPLETED')
-            AND created_at BETWEEN ? AND ?
-            """;
-        
+                SELECT
+                    COALESCE(SUM(total_amount), 0) as total_revenue,
+                    COUNT(*) as total_orders,
+                    COALESCE(SUM(draw_count), 0) as total_draws,
+                    COALESCE(AVG(total_amount), 0) as avg_amount
+                FROM `order`
+                WHERE status IN ('PAID', 'COMPLETED')
+                AND created_at BETWEEN ? AND ?
+                """;
+
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
         params.add(endDate.plusDays(1).atStartOfDay());
-        
+
         if (storeId != null) {
             baseSql += " AND store_id = ?";
             params.add(storeId);
         }
-        
+
         Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
-        
+
         // 計算成長率（與上期比較）
         LocalDate prevStartDate = startDate.minusDays(startDate.until(endDate).getDays() + 1);
         LocalDate prevEndDate = startDate.minusDays(1);
-        
+
         List<Object> prevParams = new ArrayList<>();
         prevParams.add(prevStartDate.atStartOfDay());
         prevParams.add(prevEndDate.plusDays(1).atStartOfDay());
-        if (storeId != null) prevParams.add(storeId);
-        
+        if (storeId != null)
+            prevParams.add(storeId);
+
         Map<String, Object> prevStats = jdbcTemplate.queryForMap(
-            baseSql.replace("? AND ?", "? AND ?"), prevParams.toArray());
-        
+                baseSql.replace("? AND ?", "? AND ?"), prevParams.toArray());
+
         BigDecimal currentRevenue = toBigDecimal(stats.get("total_revenue"));
         BigDecimal prevRevenue = toBigDecimal(prevStats.get("total_revenue"));
         BigDecimal growthRate = calculateGrowthRate(currentRevenue, prevRevenue);
-        
+
         // 每日明細
         String dailySql = """
-            SELECT 
-                DATE(created_at) as date,
-                COALESCE(SUM(total_amount), 0) as revenue,
-                COUNT(*) as orders,
-                COALESCE(SUM(draw_count), 0) as draws
-            FROM `order`
-            WHERE status IN ('PAID', 'COMPLETED')
-            AND created_at BETWEEN ? AND ?
-            """ + (storeId != null ? " AND store_id = ?" : "") + """
-            GROUP BY DATE(created_at)
-            ORDER BY date
-            """;
-        
+                SELECT
+                    DATE(created_at) as date,
+                    COALESCE(SUM(total_amount), 0) as revenue,
+                    COUNT(*) as orders,
+                    COALESCE(SUM(draw_count), 0) as draws
+                FROM `order`
+                WHERE status IN ('PAID', 'COMPLETED')
+                AND created_at BETWEEN ? AND ?
+                """ + (storeId != null ? " AND store_id = ?" : "") + """
+                GROUP BY DATE(created_at)
+                ORDER BY date
+                """;
+
         List<RevenueReportRes.DailyRevenue> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
-            (rs, rowNum) -> RevenueReportRes.DailyRevenue.builder()
-                .date(rs.getDate("date").toLocalDate())
-                .revenue(rs.getBigDecimal("revenue"))
-                .orders(rs.getInt("orders"))
-                .draws(rs.getInt("draws"))
-                .build()
-        );
-        
+                (rs, rowNum) -> RevenueReportRes.DailyRevenue.builder()
+                        .date(rs.getDate("date").toLocalDate())
+                        .revenue(rs.getBigDecimal("revenue"))
+                        .orders(rs.getInt("orders"))
+                        .draws(rs.getInt("draws"))
+                        .build());
+
         // 各店家統計
         String storeSql = """
-            SELECT 
-                o.store_id,
-                s.name as store_name,
-                COALESCE(SUM(o.total_amount), 0) as revenue,
-                COUNT(*) as orders
-            FROM `order` o
-            LEFT JOIN store s ON %s
-            WHERE o.status IN ('PAID', 'COMPLETED')
-            AND o.created_at BETWEEN ? AND ?
-            GROUP BY o.store_id, s.name
-            ORDER BY revenue DESC
-            """.formatted(utf8mb4Eq("o.store_id", "s.id"));
-        
+                SELECT
+                    o.store_id,
+                    s.name as store_name,
+                    COALESCE(SUM(o.total_amount), 0) as revenue,
+                    COUNT(*) as orders
+                FROM `order` o
+                LEFT JOIN store s ON %s
+                WHERE o.status IN ('PAID', 'COMPLETED')
+                AND o.created_at BETWEEN ? AND ?
+                GROUP BY o.store_id, s.name
+                ORDER BY revenue DESC
+                """.formatted(utf8mb4Eq("o.store_id", "s.id"));
+
         List<Object> storeParams = new ArrayList<>();
         storeParams.add(startDate.atStartOfDay());
         storeParams.add(endDate.plusDays(1).atStartOfDay());
-        
+
         List<RevenueReportRes.StoreRevenue> storeDetails = jdbcTemplate.query(storeSql, storeParams.toArray(),
-            (rs, rowNum) -> RevenueReportRes.StoreRevenue.builder()
-                .storeId(rs.getString("store_id"))
-                .storeName(rs.getString("store_name"))
-                .revenue(rs.getBigDecimal("revenue"))
-                .orders(rs.getInt("orders"))
-                .percentage(currentRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                    rs.getBigDecimal("revenue").multiply(new BigDecimal("100"))
-                        .divide(currentRevenue, 2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                .build()
-        );
-        
+                (rs, rowNum) -> RevenueReportRes.StoreRevenue.builder()
+                        .storeId(rs.getString("store_id"))
+                        .storeName(rs.getString("store_name"))
+                        .revenue(rs.getBigDecimal("revenue"))
+                        .orders(rs.getInt("orders"))
+                        .percentage(currentRevenue.compareTo(BigDecimal.ZERO) > 0
+                                ? rs.getBigDecimal("revenue").multiply(new BigDecimal("100"))
+                                        .divide(currentRevenue, 2, RoundingMode.HALF_UP)
+                                : BigDecimal.ZERO)
+                        .build());
+
         return RevenueReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
@@ -154,11 +154,12 @@ public class ReportServiceImpl implements ReportService {
                 .storeDetails(storeDetails)
                 .build();
     }
-    
+
     @Override
     public ReferralReportRes getReferralReport(QueryReq<ReferralReportCondition> req) {
         ReferralReportCondition condition = req != null && req.getCondition() != null
-                ? req.getCondition() : new ReferralReportCondition();
+                ? req.getCondition()
+                : new ReferralReportCondition();
 
         String storeId = condition.getStoreId();
         LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
@@ -171,12 +172,12 @@ public class ReportServiceImpl implements ReportService {
         log.info("📊 產生店薦店招商報表: referrerStoreId={}, {} ~ {}", storeId, startDate, endDate);
 
         String codeSummarySql = """
-            SELECT
-                COUNT(*) AS total_code_count,
-                COALESCE(SUM(CASE WHEN rc.is_active = 1 THEN 1 ELSE 0 END), 0) AS active_code_count
-            FROM referral_code rc
-            WHERE 1 = 1
-            """;
+                SELECT
+                    COUNT(*) AS total_code_count,
+                    COALESCE(SUM(CASE WHEN rc.is_active = 1 THEN 1 ELSE 0 END), 0) AS active_code_count
+                FROM referral_code rc
+                WHERE 1 = 1
+                """;
         List<Object> codeSummaryParams = new ArrayList<>();
         if (storeId != null && !storeId.isBlank()) {
             codeSummarySql += " AND rc.store_id = ?";
@@ -185,11 +186,11 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> codeSummary = jdbcTemplate.queryForMap(codeSummarySql, codeSummaryParams.toArray());
 
         String successAllSql = """
-            SELECT COUNT(*)
-            FROM store s
-            WHERE s.referrer_store_id IS NOT NULL
-              AND s.activated_at IS NOT NULL
-            """;
+                SELECT COUNT(*)
+                FROM store s
+                WHERE s.referrer_store_id IS NOT NULL
+                  AND s.activated_at IS NOT NULL
+                """;
         List<Object> successAllParams = new ArrayList<>();
         if (storeId != null && !storeId.isBlank()) {
             successAllSql += " AND s.referrer_store_id = ?";
@@ -202,20 +203,21 @@ public class ReportServiceImpl implements ReportService {
 
         LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
         Integer currentPeriodActivatedStoreCount = queryActivatedReferralStoreCount(startDate, endDate, storeId);
-        Integer previousPeriodActivatedStoreCount = queryActivatedReferralStoreCount(previousRange[0], previousRange[1], storeId);
+        Integer previousPeriodActivatedStoreCount = queryActivatedReferralStoreCount(previousRange[0], previousRange[1],
+                storeId);
         BigDecimal growthRate = calculateNullableGrowthRate(
                 BigDecimal.valueOf(currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0),
                 BigDecimal.valueOf(previousPeriodActivatedStoreCount != null ? previousPeriodActivatedStoreCount : 0));
 
         String dailySql = """
-            SELECT
-                DATE(s.activated_at) AS activated_date,
-                COUNT(*) AS activated_store_count
-            FROM store s
-            WHERE s.referrer_store_id IS NOT NULL
-              AND s.activated_at >= ?
-              AND s.activated_at < ?
-            """;
+                SELECT
+                    DATE(s.activated_at) AS activated_date,
+                    COUNT(*) AS activated_store_count
+                FROM store s
+                WHERE s.referrer_store_id IS NOT NULL
+                  AND s.activated_at >= ?
+                  AND s.activated_at < ?
+                """;
         List<Object> dailyParams = new ArrayList<>();
         dailyParams.add(startDate.atStartOfDay());
         dailyParams.add(endDate.plusDays(1).atStartOfDay());
@@ -226,8 +228,8 @@ public class ReportServiceImpl implements ReportService {
         dailySql += " GROUP BY DATE(s.activated_at) ORDER BY activated_date ASC";
 
         Map<LocalDate, Integer> dailyMap = new LinkedHashMap<>();
-        jdbcTemplate.query(dailySql, dailyParams.toArray(), rs ->
-                dailyMap.put(rs.getDate("activated_date").toLocalDate(), rs.getInt("activated_store_count")));
+        jdbcTemplate.query(dailySql, dailyParams.toArray(),
+                (RowCallbackHandler) rs -> dailyMap.put(rs.getDate("activated_date").toLocalDate(), rs.getInt("activated_store_count")));
 
         List<ReferralReportRes.DailyActivation> dailyActivations = new ArrayList<>();
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
@@ -238,22 +240,22 @@ public class ReportServiceImpl implements ReportService {
         }
 
         String performanceSql = """
-            SELECT
-                s.referrer_store_id,
-                ref.store_name AS referrer_store_name,
-                COUNT(*) AS activated_store_count,
-                MAX(DATE(s.activated_at)) AS last_activated_date,
-                (
-                    SELECT COUNT(*)
-                    FROM referral_code rc
-                    WHERE rc.store_id = s.referrer_store_id
-                ) AS referral_code_count
-            FROM store s
-            JOIN store ref ON ref.id = s.referrer_store_id
-            WHERE s.referrer_store_id IS NOT NULL
-              AND s.activated_at >= ?
-              AND s.activated_at < ?
-            """;
+                SELECT
+                    s.referrer_store_id,
+                    ref.store_name AS referrer_store_name,
+                    COUNT(*) AS activated_store_count,
+                    MAX(DATE(s.activated_at)) AS last_activated_date,
+                    (
+                        SELECT COUNT(*)
+                        FROM referral_code rc
+                        WHERE rc.store_id = s.referrer_store_id
+                    ) AS referral_code_count
+                FROM store s
+                JOIN store ref ON ref.id = s.referrer_store_id
+                WHERE s.referrer_store_id IS NOT NULL
+                  AND s.activated_at >= ?
+                  AND s.activated_at < ?
+                """;
         List<Object> performanceParams = new ArrayList<>();
         performanceParams.add(startDate.atStartOfDay());
         performanceParams.add(endDate.plusDays(1).atStartOfDay());
@@ -283,18 +285,20 @@ public class ReportServiceImpl implements ReportService {
                 .totalReferralCodeCount(toInteger(codeSummary.get("total_code_count")))
                 .activeReferralCodeCount(toInteger(codeSummary.get("active_code_count")))
                 .successfulReferralStoreCount(successfulReferralStoreCount != null ? successfulReferralStoreCount : 0)
-                .currentPeriodActivatedStoreCount(currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0)
-                .previousPeriodActivatedStoreCount(previousPeriodActivatedStoreCount != null ? previousPeriodActivatedStoreCount : 0)
+                .currentPeriodActivatedStoreCount(
+                        currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0)
+                .previousPeriodActivatedStoreCount(
+                        previousPeriodActivatedStoreCount != null ? previousPeriodActivatedStoreCount : 0)
                 .growthRate(growthRate)
                 .dailyActivations(dailyActivations)
                 .storePerformances(storePerformances)
                 .build();
     }
-    
+
     @Override
     public LotteryResultReportRes getLotteryResultReport(QueryReq<LotteryResultReportCondition> req) {
-        LotteryResultReportCondition condition = req != null && req.getCondition() != null ? 
-            req.getCondition() : new LotteryResultReportCondition();
+        LotteryResultReportCondition condition = req != null && req.getCondition() != null ? req.getCondition()
+                : new LotteryResultReportCondition();
 
         String storeId = condition.getStoreId();
         String lotteryId = condition.getLotteryId();
@@ -382,10 +386,10 @@ public class ReportServiceImpl implements ReportService {
                 utf8mb4Eq("lp.lottery_id", "l.id"),
                 utf8mb4Eq("lt.drawn_by", "u.id"),
                 utf8mb4Eq("l.store_id", "s.id")) + where + """
-                AND lt.prize_id IS NOT NULL
-                ORDER BY lt.drawn_at DESC
-                LIMIT 1000
-                """;
+                        AND lt.prize_id IS NOT NULL
+                        ORDER BY lt.drawn_at DESC
+                        LIMIT 1000
+                        """;
 
         List<LotteryResultReportRes.WinningDetail> winningDetails = jdbcTemplate.query(
                 detailSql,
@@ -419,11 +423,11 @@ public class ReportServiceImpl implements ReportService {
                 .winningDetails(winningDetails)
                 .build();
     }
-    
+
     @Override
     public RechargeReportRes getRechargeReport(QueryReq<RechargeReportCondition> req) {
-        RechargeReportCondition condition = req != null && req.getCondition() != null ? 
-            req.getCondition() : new RechargeReportCondition();
+        RechargeReportCondition condition = req != null && req.getCondition() != null ? req.getCondition()
+                : new RechargeReportCondition();
 
         LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
         LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
@@ -432,90 +436,89 @@ public class ReportServiceImpl implements ReportService {
         }
 
         log.info("📊 產生儲值報表（平台）: {} ~ {}", startDate, endDate);
-        
+
         // 基本統計
         String baseSql = """
-            SELECT 
-                COALESCE(SUM(amount), 0) as total_amount,
-                COUNT(*) as total_count,
-                COALESCE(AVG(amount), 0) as avg_amount
-            FROM wallet_transaction
-            WHERE transaction_type = 'RECHARGE'
-            AND status = 'SUCCESS'
-            AND created_at BETWEEN ? AND ?
-            """;
-        
+                SELECT
+                    COALESCE(SUM(amount), 0) as total_amount,
+                    COUNT(*) as total_count,
+                    COALESCE(AVG(amount), 0) as avg_amount
+                FROM wallet_transaction
+                WHERE transaction_type = 'RECHARGE'
+                AND status = 'SUCCESS'
+                AND created_at BETWEEN ? AND ?
+                """;
+
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
         params.add(endDate.plusDays(1).atStartOfDay());
-        
+
         Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
-        
+
         // 計算成長率
         LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
-        
+
         List<Object> prevParams = new ArrayList<>();
         prevParams.add(previousRange[0].atStartOfDay());
         prevParams.add(previousRange[1].plusDays(1).atStartOfDay());
-        
+
         Map<String, Object> prevStats = jdbcTemplate.queryForMap(baseSql, prevParams.toArray());
-        
+
         BigDecimal currentAmount = toBigDecimal(stats.get("total_amount"));
         BigDecimal prevAmount = toBigDecimal(prevStats.get("total_amount"));
         BigDecimal growthRate = calculateGrowthRate(currentAmount, prevAmount);
-        
+
         // 每日明細
         String dailySql = """
-            SELECT 
-                DATE(created_at) as date,
-                COALESCE(SUM(amount), 0) as amount,
-                COUNT(*) as count,
-                COUNT(DISTINCT user_id) as new_users
-            FROM wallet_transaction
-            WHERE transaction_type = 'RECHARGE'
-            AND status = 'SUCCESS'
-            AND created_at BETWEEN ? AND ?
-            GROUP BY DATE(created_at)
-            ORDER BY date
-            """;
-        
+                SELECT
+                    DATE(created_at) as date,
+                    COALESCE(SUM(amount), 0) as amount,
+                    COUNT(*) as count,
+                    COUNT(DISTINCT user_id) as new_users
+                FROM wallet_transaction
+                WHERE transaction_type = 'RECHARGE'
+                AND status = 'SUCCESS'
+                AND created_at BETWEEN ? AND ?
+                GROUP BY DATE(created_at)
+                ORDER BY date
+                """;
+
         List<RechargeReportRes.DailyRecharge> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
-            (rs, rowNum) -> RechargeReportRes.DailyRecharge.builder()
-                .date(rs.getDate("date").toLocalDate())
-                .amount(rs.getBigDecimal("amount"))
-                .count(rs.getInt("count"))
-                .newUsers(rs.getInt("new_users"))
-                .build()
-        );
-        
+                (rs, rowNum) -> RechargeReportRes.DailyRecharge.builder()
+                        .date(rs.getDate("date").toLocalDate())
+                        .amount(rs.getBigDecimal("amount"))
+                        .count(rs.getInt("count"))
+                        .newUsers(rs.getInt("new_users"))
+                        .build());
+
         // 方案統計（根據金額分類）
         String planSql = """
-            SELECT 
-                amount as plan_price,
-                COUNT(*) as purchase_count,
-                SUM(amount) as total_amount
-            FROM wallet_transaction
-            WHERE transaction_type = 'RECHARGE'
-            AND status = 'SUCCESS'
-            AND created_at BETWEEN ? AND ?
-            GROUP BY amount
-            ORDER BY total_amount DESC
-            """;
-        
+                SELECT
+                    amount as plan_price,
+                    COUNT(*) as purchase_count,
+                    SUM(amount) as total_amount
+                FROM wallet_transaction
+                WHERE transaction_type = 'RECHARGE'
+                AND status = 'SUCCESS'
+                AND created_at BETWEEN ? AND ?
+                GROUP BY amount
+                ORDER BY total_amount DESC
+                """;
+
         List<RechargeReportRes.PlanStats> planStats = jdbcTemplate.query(planSql, params.toArray(),
-            (rs, rowNum) -> RechargeReportRes.PlanStats.builder()
-                .planId(rs.getBigDecimal("plan_price").toString())
-                .planName("儲值 $" + rs.getBigDecimal("plan_price"))
-                .planPrice(rs.getBigDecimal("plan_price"))
-                .bonusPoints(BigDecimal.ZERO)
-                .purchaseCount(rs.getInt("purchase_count"))
-                .totalAmount(rs.getBigDecimal("total_amount"))
-                .percentage(currentAmount.compareTo(BigDecimal.ZERO) > 0 ?
-                    rs.getBigDecimal("total_amount").multiply(new BigDecimal("100"))
-                        .divide(currentAmount, 2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                .build()
-        );
-        
+                (rs, rowNum) -> RechargeReportRes.PlanStats.builder()
+                        .planId(rs.getBigDecimal("plan_price").toString())
+                        .planName("儲值 $" + rs.getBigDecimal("plan_price"))
+                        .planPrice(rs.getBigDecimal("plan_price"))
+                        .bonusPoints(BigDecimal.ZERO)
+                        .purchaseCount(rs.getInt("purchase_count"))
+                        .totalAmount(rs.getBigDecimal("total_amount"))
+                        .percentage(currentAmount.compareTo(BigDecimal.ZERO) > 0
+                                ? rs.getBigDecimal("total_amount").multiply(new BigDecimal("100"))
+                                        .divide(currentAmount, 2, RoundingMode.HALF_UP)
+                                : BigDecimal.ZERO)
+                        .build());
+
         return RechargeReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
@@ -527,11 +530,11 @@ public class ReportServiceImpl implements ReportService {
                 .planStats(planStats)
                 .build();
     }
-    
+
     @Override
     public BonusReportRes getBonusReport(QueryReq<BonusReportCondition> req) {
-        BonusReportCondition condition = req != null && req.getCondition() != null ? 
-            req.getCondition() : new BonusReportCondition();
+        BonusReportCondition condition = req != null && req.getCondition() != null ? req.getCondition()
+                : new BonusReportCondition();
 
         LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
         LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
@@ -540,89 +543,88 @@ public class ReportServiceImpl implements ReportService {
         }
 
         log.info("📊 產生贈送點數報表（平台）: {} ~ {}", startDate, endDate);
-        
+
         // 基本統計（贈送類型交易）
         String baseSql = """
-            SELECT 
-                COALESCE(SUM(amount), 0) as total_bonus,
-                COUNT(*) as total_count,
-                COUNT(DISTINCT user_id) as benefit_users
-            FROM wallet_transaction
-            WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
-            AND amount > 0
-            AND status = 'SUCCESS'
-            AND created_at BETWEEN ? AND ?
-            """;
-        
+                SELECT
+                    COALESCE(SUM(amount), 0) as total_bonus,
+                    COUNT(*) as total_count,
+                    COUNT(DISTINCT user_id) as benefit_users
+                FROM wallet_transaction
+                WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
+                AND amount > 0
+                AND status = 'SUCCESS'
+                AND created_at BETWEEN ? AND ?
+                """;
+
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
         params.add(endDate.plusDays(1).atStartOfDay());
-        
+
         Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
-        
+
         // 計算成長率
         LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
-        
+
         List<Object> prevParams = new ArrayList<>();
         prevParams.add(previousRange[0].atStartOfDay());
         prevParams.add(previousRange[1].plusDays(1).atStartOfDay());
-        
+
         Map<String, Object> prevStats = jdbcTemplate.queryForMap(baseSql, prevParams.toArray());
-        
+
         BigDecimal currentBonus = toBigDecimal(stats.get("total_bonus"));
         BigDecimal prevBonus = toBigDecimal(prevStats.get("total_bonus"));
         BigDecimal growthRate = calculateGrowthRate(currentBonus, prevBonus);
-        
+
         // 每日明細
         String dailySql = """
-            SELECT 
-                DATE(created_at) as date,
-                COALESCE(SUM(amount), 0) as points,
-                COUNT(*) as count
-            FROM wallet_transaction
-            WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
-            AND amount > 0
-            AND status = 'SUCCESS'
-            AND created_at BETWEEN ? AND ?
-            GROUP BY DATE(created_at)
-            ORDER BY date
-            """;
-        
+                SELECT
+                    DATE(created_at) as date,
+                    COALESCE(SUM(amount), 0) as points,
+                    COUNT(*) as count
+                FROM wallet_transaction
+                WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
+                AND amount > 0
+                AND status = 'SUCCESS'
+                AND created_at BETWEEN ? AND ?
+                GROUP BY DATE(created_at)
+                ORDER BY date
+                """;
+
         List<BonusReportRes.DailyBonus> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
-            (rs, rowNum) -> BonusReportRes.DailyBonus.builder()
-                .date(rs.getDate("date").toLocalDate())
-                .points(rs.getBigDecimal("points"))
-                .count(rs.getInt("count"))
-                .build()
-        );
-        
+                (rs, rowNum) -> BonusReportRes.DailyBonus.builder()
+                        .date(rs.getDate("date").toLocalDate())
+                        .points(rs.getBigDecimal("points"))
+                        .count(rs.getInt("count"))
+                        .build());
+
         // 類型統計
         String typeSql = """
-            SELECT 
-                transaction_type as bonus_type,
-                COALESCE(SUM(amount), 0) as total_points,
-                COUNT(*) as count
-            FROM wallet_transaction
-            WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
-            AND amount > 0
-            AND status = 'SUCCESS'
-            AND created_at BETWEEN ? AND ?
-            GROUP BY transaction_type
-            ORDER BY total_points DESC
-            """;
-        
+                SELECT
+                    transaction_type as bonus_type,
+                    COALESCE(SUM(amount), 0) as total_points,
+                    COUNT(*) as count
+                FROM wallet_transaction
+                WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
+                AND amount > 0
+                AND status = 'SUCCESS'
+                AND created_at BETWEEN ? AND ?
+                GROUP BY transaction_type
+                ORDER BY total_points DESC
+                """;
+
         List<BonusReportRes.BonusTypeStats> typeStats = jdbcTemplate.query(typeSql, params.toArray(),
-            (rs, rowNum) -> BonusReportRes.BonusTypeStats.builder()
-                .bonusType(rs.getString("bonus_type"))
-                .typeName(getBonusTypeName(rs.getString("bonus_type")))
-                .totalPoints(rs.getBigDecimal("total_points"))
-                .count(rs.getInt("count"))
-                .percentage(currentBonus.compareTo(BigDecimal.ZERO) > 0 ?
-                    rs.getBigDecimal("total_points").multiply(new BigDecimal("100"))
-                        .divide(currentBonus, 2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                .build()
-        );
-        
+                (rs, rowNum) -> BonusReportRes.BonusTypeStats.builder()
+                        .bonusType(rs.getString("bonus_type"))
+                        .typeName(getBonusTypeName(rs.getString("bonus_type")))
+                        .totalPoints(rs.getBigDecimal("total_points"))
+                        .count(rs.getInt("count"))
+                        .percentage(currentBonus.compareTo(BigDecimal.ZERO) > 0
+                                ? rs.getBigDecimal("total_points").multiply(new BigDecimal("100"))
+                                        .divide(currentBonus, 2, RoundingMode.HALF_UP)
+                                : BigDecimal.ZERO)
+                        .build());
+
         return BonusReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
@@ -634,10 +636,10 @@ public class ReportServiceImpl implements ReportService {
                 .typeStats(typeStats)
                 .build();
     }
-    
+
     @Override
     public void saveReportSnapshot(String reportType, String periodType, String storeId,
-                                    Object data, String summary) {
+            Object data, String summary) {
         try {
             ReportSnapshot snapshot = new ReportSnapshot();
             snapshot.setId(UUID.randomUUID().toString());
@@ -649,25 +651,26 @@ public class ReportServiceImpl implements ReportService {
             snapshot.setData(objectMapper.writeValueAsString(data));
             snapshot.setSummary(summary);
             snapshot.setCreatedAt(LocalDateTime.now());
-            
+
             reportSnapshotMapper.insert(snapshot);
             log.info("✅ 報表快照已儲存: type={}, period={}", reportType, periodType);
         } catch (Exception e) {
             log.error("❌ 報表快照儲存失敗: {}", e.getMessage());
         }
     }
-    
+
     @Override
     public List<?> getReportSnapshots(String reportType, String periodType, String storeId) {
         return reportSnapshotRepository.selectByTypeAndPeriod(reportType, periodType, 100);
     }
-    
+
     // ========== 會員成長報表 ==========
 
     @Override
     public PlatformRevenueReportRes getPlatformRevenueReport(QueryReq<PlatformRevenueReportCondition> req) {
         PlatformRevenueReportCondition condition = req != null && req.getCondition() != null
-                ? req.getCondition() : new PlatformRevenueReportCondition();
+                ? req.getCondition()
+                : new PlatformRevenueReportCondition();
 
         LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
         LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
@@ -713,33 +716,36 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public MemberGrowthReportRes getMemberGrowthReport(QueryReq<MemberGrowthReportCondition> req) {
         MemberGrowthReportCondition condition = req != null && req.getCondition() != null
-                ? req.getCondition() : new MemberGrowthReportCondition();
+                ? req.getCondition()
+                : new MemberGrowthReportCondition();
 
         // 預設日期：最近 30 天
-        LocalDate endDate   = condition.getEndDate()   != null ? condition.getEndDate()   : LocalDate.now();
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
         LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
 
         log.info("📊 產生會員成長報表: {} ~ {}", startDate, endDate);
 
         LocalDateTime startDt = startDate.atStartOfDay();
-        LocalDateTime endDt   = endDate.plusDays(1).atStartOfDay();
+        LocalDateTime endDt = endDate.plusDays(1).atStartOfDay();
 
         // ── Q1: 新增會員總數 ──────────────────────────────────────────────────
         Integer totalNewMembers = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM user WHERE created_at BETWEEN ? AND ?",
                 Integer.class, startDt, endDt);
-        if (totalNewMembers == null) totalNewMembers = 0;
+        if (totalNewMembers == null)
+            totalNewMembers = 0;
 
         // 上期窗口（同等時長，緊接在 startDate 之前）
         long periodDays = startDate.until(endDate).getDays() + 1;
-        LocalDate prevEndDate   = startDate.minusDays(1);
+        LocalDate prevEndDate = startDate.minusDays(1);
         LocalDate prevStartDate = prevEndDate.minusDays(periodDays - 1);
 
         Integer prevPeriodCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM user WHERE created_at BETWEEN ? AND ?",
                 Integer.class,
                 prevStartDate.atStartOfDay(), prevEndDate.plusDays(1).atStartOfDay());
-        if (prevPeriodCount == null) prevPeriodCount = 0;
+        if (prevPeriodCount == null)
+            prevPeriodCount = 0;
 
         BigDecimal growthRate = null;
         if (prevPeriodCount > 0) {
@@ -751,8 +757,8 @@ public class ReportServiceImpl implements ReportService {
         // ── Q2: 每日明細（補零）──────────────────────────────────────────────
         List<Map<String, Object>> dailyRows = jdbcTemplate.queryForList(
                 "SELECT DATE(created_at) AS d, COUNT(*) AS cnt " +
-                "FROM user WHERE created_at BETWEEN ? AND ? " +
-                "GROUP BY DATE(created_at)",
+                        "FROM user WHERE created_at BETWEEN ? AND ? " +
+                        "GROUP BY DATE(created_at)",
                 startDt, endDt);
 
         Map<LocalDate, Integer> dailyMap = new java.util.LinkedHashMap<>();
@@ -775,8 +781,8 @@ public class ReportServiceImpl implements ReportService {
         // ── Q3: 按 provider 分類 ─────────────────────────────────────────────
         List<Map<String, Object>> providerRows = jdbcTemplate.queryForList(
                 "SELECT provider, COUNT(*) AS cnt " +
-                "FROM user WHERE created_at BETWEEN ? AND ? " +
-                "GROUP BY provider",
+                        "FROM user WHERE created_at BETWEEN ? AND ? " +
+                        "GROUP BY provider",
                 startDt, endDt);
 
         Map<String, Integer> registrationByProvider = new java.util.LinkedHashMap<>();
@@ -786,15 +792,18 @@ public class ReportServiceImpl implements ReportService {
         }
 
         // ── Q4: 活躍會員（4-table UNION）────────────────────────────────────
-        String activeSql =
-                "SELECT COUNT(DISTINCT user_id) FROM (" +
+        String activeSql = "SELECT COUNT(DISTINCT user_id) FROM (" +
                 "  SELECT " + utf8mb4Text("id") + " AS user_id FROM user WHERE last_login_at BETWEEN ? AND ? " +
                 "  UNION " +
-                "  SELECT " + utf8mb4Text("user_id") + " AS user_id FROM wallet_transaction WHERE transaction_type='RECHARGE' AND created_at BETWEEN ? AND ? " +
+                "  SELECT " + utf8mb4Text("user_id")
+                + " AS user_id FROM wallet_transaction WHERE transaction_type='RECHARGE' AND created_at BETWEEN ? AND ? "
+                +
                 "  UNION " +
-                "  SELECT " + utf8mb4Text("drawn_by") + " AS user_id FROM lottery_ticket WHERE status='DRAWN' AND drawn_at BETWEEN ? AND ? " +
+                "  SELECT " + utf8mb4Text("drawn_by")
+                + " AS user_id FROM lottery_ticket WHERE status='DRAWN' AND drawn_at BETWEEN ? AND ? " +
                 "  UNION " +
-                "  SELECT " + utf8mb4Text("user_id") + " AS user_id FROM `order` WHERE status != 'CANCELLED' AND created_at BETWEEN ? AND ?" +
+                "  SELECT " + utf8mb4Text("user_id")
+                + " AS user_id FROM `order` WHERE status != 'CANCELLED' AND created_at BETWEEN ? AND ?" +
                 ") t";
 
         Integer activeMembers = jdbcTemplate.queryForObject(
@@ -803,83 +812,88 @@ public class ReportServiceImpl implements ReportService {
                 startDt, endDt,
                 startDt, endDt,
                 startDt, endDt);
-        if (activeMembers == null) activeMembers = 0;
+        if (activeMembers == null)
+            activeMembers = 0;
 
         // ── Q5/Q6: ARPU (Gold / Bonus) ──────────────────────────────────────
         BigDecimal arpuGold;
         BigDecimal arpuBonus;
         if (activeMembers == 0) {
-            arpuGold  = new BigDecimal("0.0");
+            arpuGold = new BigDecimal("0.0");
             arpuBonus = new BigDecimal("0.0");
         } else {
             BigDecimal goldTotal = jdbcTemplate.queryForObject(
                     "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction " +
-                    "WHERE transaction_type='DRAW' AND coin_type='GOLD' AND created_at BETWEEN ? AND ?",
+                            "WHERE transaction_type='DRAW' AND coin_type='GOLD' AND created_at BETWEEN ? AND ?",
                     BigDecimal.class, startDt, endDt);
             BigDecimal bonusTotal = jdbcTemplate.queryForObject(
                     "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction " +
-                    "WHERE transaction_type='DRAW' AND coin_type='BONUS' AND created_at BETWEEN ? AND ?",
+                            "WHERE transaction_type='DRAW' AND coin_type='BONUS' AND created_at BETWEEN ? AND ?",
                     BigDecimal.class, startDt, endDt);
-            if (goldTotal  == null) goldTotal  = BigDecimal.ZERO;
-            if (bonusTotal == null) bonusTotal = BigDecimal.ZERO;
+            if (goldTotal == null)
+                goldTotal = BigDecimal.ZERO;
+            if (bonusTotal == null)
+                bonusTotal = BigDecimal.ZERO;
 
             BigDecimal activeBD = new BigDecimal(activeMembers);
-            arpuGold  = goldTotal .divide(activeBD, 1, RoundingMode.HALF_UP);
+            arpuGold = goldTotal.divide(activeBD, 1, RoundingMode.HALF_UP);
             arpuBonus = bonusTotal.divide(activeBD, 1, RoundingMode.HALF_UP);
         }
 
         // ── Q7/Q8: 留存率（前一個完整月份）─────────────────────────────────
-        BigDecimal retention7Days  = null;
+        BigDecimal retention7Days = null;
         BigDecimal retention30Days = null;
 
         LocalDate prevMonthStart = LocalDate.now().minusMonths(1).withDayOfMonth(1);
-        LocalDate prevMonthEnd   = prevMonthStart.plusMonths(1).minusDays(1);
+        LocalDate prevMonthEnd = prevMonthStart.plusMonths(1).minusDays(1);
 
         Integer prevMonthTotal = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM user WHERE created_at BETWEEN ? AND ?",
                 Integer.class,
                 prevMonthStart.atStartOfDay(), prevMonthEnd.plusDays(1).atStartOfDay());
-        if (prevMonthTotal == null) prevMonthTotal = 0;
+        if (prevMonthTotal == null)
+            prevMonthTotal = 0;
 
         if (prevMonthTotal > 0) {
-            String retentionSql =
-                "SELECT COUNT(DISTINCT u.id) FROM user u " +
-                "WHERE u.created_at BETWEEN ? AND ? " +
-                "AND EXISTS (" +
-                "  SELECT 1 FROM user u2 WHERE " + utf8mb4Eq("u2.id", "u.id") +
-                "    AND u2.last_login_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
-                "  UNION ALL " +
-                "  SELECT 1 FROM wallet_transaction wt WHERE " + utf8mb4Eq("wt.user_id", "u.id") +
-                "    AND wt.transaction_type = 'RECHARGE' " +
-                "    AND wt.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
-                "  UNION ALL " +
-                "  SELECT 1 FROM lottery_ticket lt WHERE " + utf8mb4Eq("lt.drawn_by", "u.id") +
-                "    AND lt.status = 'DRAWN' " +
-                "    AND lt.drawn_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
-                "  UNION ALL " +
-                "  SELECT 1 FROM `order` o WHERE " + utf8mb4Eq("o.user_id", "u.id") +
-                "    AND o.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY)" +
-                ")";
+            String retentionSql = "SELECT COUNT(DISTINCT u.id) FROM user u " +
+                    "WHERE u.created_at BETWEEN ? AND ? " +
+                    "AND EXISTS (" +
+                    "  SELECT 1 FROM user u2 WHERE " + utf8mb4Eq("u2.id", "u.id") +
+                    "    AND u2.last_login_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
+                    "  UNION ALL " +
+                    "  SELECT 1 FROM wallet_transaction wt WHERE " + utf8mb4Eq("wt.user_id", "u.id") +
+                    "    AND wt.transaction_type = 'RECHARGE' " +
+                    "    AND wt.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
+                    "  UNION ALL " +
+                    "  SELECT 1 FROM lottery_ticket lt WHERE " + utf8mb4Eq("lt.drawn_by", "u.id") +
+                    "    AND lt.status = 'DRAWN' " +
+                    "    AND lt.drawn_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY) " +
+                    "  UNION ALL " +
+                    "  SELECT 1 FROM `order` o WHERE " + utf8mb4Eq("o.user_id", "u.id") +
+                    "    AND o.created_at BETWEEN u.created_at AND DATE_ADD(u.created_at, INTERVAL ? DAY)" +
+                    ")";
 
             LocalDateTime pmStart = prevMonthStart.atStartOfDay();
-            LocalDateTime pmEnd   = prevMonthEnd.plusDays(1).atStartOfDay();
+            LocalDateTime pmEnd = prevMonthEnd.plusDays(1).atStartOfDay();
 
             Integer retained7 = jdbcTemplate.queryForObject(retentionSql, Integer.class,
                     pmStart, pmEnd, 7, 7, 7, 7);
             Integer retained30 = jdbcTemplate.queryForObject(retentionSql, Integer.class,
                     pmStart, pmEnd, 30, 30, 30, 30);
-            if (retained7  == null) retained7  = 0;
-            if (retained30 == null) retained30 = 0;
+            if (retained7 == null)
+                retained7 = 0;
+            if (retained30 == null)
+                retained30 = 0;
 
             BigDecimal baseBD = new BigDecimal(prevMonthTotal);
-            retention7Days  = new BigDecimal(retained7 ).multiply(new BigDecimal("100"))
+            retention7Days = new BigDecimal(retained7).multiply(new BigDecimal("100"))
                     .divide(baseBD, 1, RoundingMode.HALF_UP);
             retention30Days = new BigDecimal(retained30).multiply(new BigDecimal("100"))
                     .divide(baseBD, 1, RoundingMode.HALF_UP);
         }
 
-            // ── Q9: 會員消費模式分布（以本期新增會員為母體）────────────────────────
-            String patternSql = """
+        // ── Q9: 會員消費模式分布（以本期新增會員為母體）────────────────────────
+        String patternSql = """
                 SELECT pattern_code, COUNT(*) AS user_count
                 FROM (
                     SELECT
@@ -909,43 +923,43 @@ public class ReportServiceImpl implements ReportService {
                 GROUP BY pattern_code
                 """.formatted(utf8mb4Eq("r.user_id", "u.id"), utf8mb4Eq("d.user_id", "u.id"));
 
-            Map<String, Integer> patternMap = new LinkedHashMap<>();
-            jdbcTemplate.query(patternSql,
-                new Object[]{startDt, endDt, startDt, endDt, startDt, endDt},
+        Map<String, Integer> patternMap = new LinkedHashMap<>();
+        jdbcTemplate.query(patternSql,
+                new Object[] { startDt, endDt, startDt, endDt, startDt, endDt },
                 (RowCallbackHandler) rs -> patternMap.put(rs.getString("pattern_code"), rs.getInt("user_count")));
 
-            String[] patternCodes = {"RECHARGE_AND_DRAW", "RECHARGE_ONLY", "DRAW_ONLY", "REGISTER_ONLY"};
-            List<MemberGrowthReportRes.ConsumptionPattern> consumptionPatterns = new ArrayList<>();
-            for (String patternCode : patternCodes) {
-                int userCount = patternMap.getOrDefault(patternCode, 0);
-                BigDecimal percentage = totalNewMembers > 0
+        String[] patternCodes = { "RECHARGE_AND_DRAW", "RECHARGE_ONLY", "DRAW_ONLY", "REGISTER_ONLY" };
+        List<MemberGrowthReportRes.ConsumptionPattern> consumptionPatterns = new ArrayList<>();
+        for (String patternCode : patternCodes) {
+            int userCount = patternMap.getOrDefault(patternCode, 0);
+            BigDecimal percentage = totalNewMembers > 0
                     ? BigDecimal.valueOf(userCount).multiply(new BigDecimal("100"))
-                    .divide(BigDecimal.valueOf(totalNewMembers), 1, RoundingMode.HALF_UP)
+                            .divide(BigDecimal.valueOf(totalNewMembers), 1, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-                consumptionPatterns.add(MemberGrowthReportRes.ConsumptionPattern.builder()
+            consumptionPatterns.add(MemberGrowthReportRes.ConsumptionPattern.builder()
                     .patternCode(patternCode)
                     .patternName(switch (patternCode) {
-                    case "RECHARGE_AND_DRAW" -> "有儲值且有抽獎";
-                    case "RECHARGE_ONLY" -> "僅儲值";
-                    case "DRAW_ONLY" -> "僅抽獎";
-                    default -> "僅註冊未消費";
+                        case "RECHARGE_AND_DRAW" -> "有儲值且有抽獎";
+                        case "RECHARGE_ONLY" -> "僅儲值";
+                        case "DRAW_ONLY" -> "僅抽獎";
+                        default -> "僅註冊未消費";
                     })
                     .userCount(userCount)
                     .percentage(percentage)
                     .build());
-            }
+        }
 
-            // ── Q10: 商品集中度（Top 10）───────────────────────────────────────
-            Long totalDrawVolume = jdbcTemplate.queryForObject(
+        // ── Q10: 商品集中度（Top 10）───────────────────────────────────────
+        Long totalDrawVolume = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM lottery_ticket WHERE status = 'DRAWN' AND drawn_at BETWEEN ? AND ?",
                 Long.class,
                 startDt,
                 endDt);
-            if (totalDrawVolume == null) {
-                totalDrawVolume = 0L;
-            }
+        if (totalDrawVolume == null) {
+            totalDrawVolume = 0L;
+        }
 
-            String concentrationSql = """
+        String concentrationSql = """
                 SELECT
                     l.id AS lottery_id,
                     l.title AS lottery_title,
@@ -960,61 +974,62 @@ public class ReportServiceImpl implements ReportService {
                 LIMIT 10
                 """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
 
-            final long drawBase = totalDrawVolume;
-            List<MemberGrowthReportRes.ProductConcentration> productConcentrations = jdbcTemplate.query(
+        final long drawBase = totalDrawVolume;
+        List<MemberGrowthReportRes.ProductConcentration> productConcentrations = jdbcTemplate.query(
                 concentrationSql,
-                new Object[]{startDt, endDt},
+                new Object[] { startDt, endDt },
                 (rs, rowNum) -> {
                     int drawCount = rs.getInt("draw_count");
                     BigDecimal percentage = drawBase > 0
-                        ? BigDecimal.valueOf(drawCount).multiply(new BigDecimal("100"))
-                        .divide(BigDecimal.valueOf(drawBase), 1, RoundingMode.HALF_UP)
-                        : BigDecimal.ZERO;
+                            ? BigDecimal.valueOf(drawCount).multiply(new BigDecimal("100"))
+                                    .divide(BigDecimal.valueOf(drawBase), 1, RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO;
                     return MemberGrowthReportRes.ProductConcentration.builder()
-                        .lotteryId(rs.getString("lottery_id"))
-                        .lotteryTitle(rs.getString("lottery_title"))
-                        .category(rs.getString("category"))
-                        .drawCount(drawCount)
-                        .drawPercentage(percentage)
-                        .build();
+                            .lotteryId(rs.getString("lottery_id"))
+                            .lotteryTitle(rs.getString("lottery_title"))
+                            .category(rs.getString("category"))
+                            .drawCount(drawCount)
+                            .drawPercentage(percentage)
+                            .build();
                 });
 
-            // ── Q11: 金幣 / 紅利消耗分布 ───────────────────────────────────────
-            String coinSql = """
+        // ── Q11: 金幣 / 紅利消耗分布 ───────────────────────────────────────
+        String coinSql = """
                 SELECT coin_type, COALESCE(ABS(SUM(amount)), 0) AS total
                 FROM wallet_transaction
                 WHERE transaction_type = 'DRAW'
                   AND created_at BETWEEN ? AND ?
                 GROUP BY coin_type
                 """;
-            long goldSpend = 0L;
-            long bonusSpend = 0L;
-            List<Map<String, Object>> coinRows = jdbcTemplate.queryForList(coinSql, startDt, endDt);
-            for (Map<String, Object> row : coinRows) {
-                String coinType = row.get("coin_type") != null ? row.get("coin_type").toString() : "";
-                long total = toLong(row.get("total"));
-                if ("GOLD".equalsIgnoreCase(coinType)) {
+        long goldSpend = 0L;
+        long bonusSpend = 0L;
+        List<Map<String, Object>> coinRows = jdbcTemplate.queryForList(coinSql, startDt, endDt);
+        for (Map<String, Object> row : coinRows) {
+            String coinType = row.get("coin_type") != null ? row.get("coin_type").toString() : "";
+            long total = toLong(row.get("total"));
+            if ("GOLD".equalsIgnoreCase(coinType)) {
                 goldSpend = total;
-                } else if ("BONUS".equalsIgnoreCase(coinType)) {
+            } else if ("BONUS".equalsIgnoreCase(coinType)) {
                 bonusSpend = total;
-                }
             }
-            long totalSpend = goldSpend + bonusSpend;
-            MemberGrowthReportRes.CoinUsageDistribution coinUsageDistribution = MemberGrowthReportRes.CoinUsageDistribution.builder()
+        }
+        long totalSpend = goldSpend + bonusSpend;
+        MemberGrowthReportRes.CoinUsageDistribution coinUsageDistribution = MemberGrowthReportRes.CoinUsageDistribution
+                .builder()
                 .goldSpend(goldSpend)
                 .bonusSpend(bonusSpend)
                 .goldPercentage(totalSpend > 0
-                    ? BigDecimal.valueOf(goldSpend).multiply(new BigDecimal("100"))
-                    .divide(BigDecimal.valueOf(totalSpend), 1, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO)
+                        ? BigDecimal.valueOf(goldSpend).multiply(new BigDecimal("100"))
+                                .divide(BigDecimal.valueOf(totalSpend), 1, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO)
                 .bonusPercentage(totalSpend > 0
-                    ? BigDecimal.valueOf(bonusSpend).multiply(new BigDecimal("100"))
-                    .divide(BigDecimal.valueOf(totalSpend), 1, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO)
+                        ? BigDecimal.valueOf(bonusSpend).multiply(new BigDecimal("100"))
+                                .divide(BigDecimal.valueOf(totalSpend), 1, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO)
                 .build();
 
-            // ── Q12: 支付型態分布（recharge_order）─────────────────────────────
-            String paymentSql = """
+        // ── Q12: 支付型態分布（recharge_order）─────────────────────────────
+        String paymentSql = """
                 SELECT
                     COALESCE(gateway_provider, 'UNKNOWN') AS payment_method,
                     COUNT(*) AS txn_count,
@@ -1026,23 +1041,25 @@ public class ReportServiceImpl implements ReportService {
                 ORDER BY total_amount DESC, txn_count DESC
                 """;
 
-            List<Map<String, Object>> paymentRows = jdbcTemplate.queryForList(paymentSql, startDt, endDt);
-            BigDecimal paymentTotalAmount = BigDecimal.ZERO;
-            for (Map<String, Object> row : paymentRows) {
-                paymentTotalAmount = paymentTotalAmount.add(toBigDecimal(row.get("total_amount")));
-            }
-            final BigDecimal paymentBase = paymentTotalAmount;
-            List<MemberGrowthReportRes.PaymentMethodDistribution> paymentMethodDistributions = paymentRows.stream()
+        List<Map<String, Object>> paymentRows = jdbcTemplate.queryForList(paymentSql, startDt, endDt);
+        BigDecimal paymentTotalAmount = BigDecimal.ZERO;
+        for (Map<String, Object> row : paymentRows) {
+            paymentTotalAmount = paymentTotalAmount.add(toBigDecimal(row.get("total_amount")));
+        }
+        final BigDecimal paymentBase = paymentTotalAmount;
+        List<MemberGrowthReportRes.PaymentMethodDistribution> paymentMethodDistributions = paymentRows.stream()
                 .map(row -> {
                     BigDecimal amount = toBigDecimal(row.get("total_amount"));
                     return MemberGrowthReportRes.PaymentMethodDistribution.builder()
-                        .paymentMethod(row.get("payment_method") != null ? row.get("payment_method").toString() : "UNKNOWN")
-                        .transactionCount(toInteger(row.get("txn_count")))
-                        .totalAmount(amount)
-                        .percentage(paymentBase.compareTo(BigDecimal.ZERO) > 0
-                            ? amount.multiply(new BigDecimal("100")).divide(paymentBase, 1, RoundingMode.HALF_UP)
-                            : BigDecimal.ZERO)
-                        .build();
+                            .paymentMethod(row.get("payment_method") != null ? row.get("payment_method").toString()
+                                    : "UNKNOWN")
+                            .transactionCount(toInteger(row.get("txn_count")))
+                            .totalAmount(amount)
+                            .percentage(paymentBase.compareTo(BigDecimal.ZERO) > 0
+                                    ? amount.multiply(new BigDecimal("100")).divide(paymentBase, 1,
+                                            RoundingMode.HALF_UP)
+                                    : BigDecimal.ZERO)
+                            .build();
                 })
                 .collect(Collectors.toList());
 
@@ -1121,7 +1138,8 @@ public class ReportServiceImpl implements ReportService {
         String filteredSql = sqlBuilder.toString();
         String countSql = "SELECT COUNT(*) FROM (" + filteredSql + ") AS total_count";
         Integer totalRecords = jdbcTemplate.queryForObject(countSql, Integer.class, params.toArray());
-        if (totalRecords == null) totalRecords = 0;
+        if (totalRecords == null)
+            totalRecords = 0;
 
         String querySql = filteredSql + " ORDER BY " + sortBy + " DESC LIMIT ?";
         List<Object> queryParams = new ArrayList<>(params);
@@ -1137,8 +1155,7 @@ public class ReportServiceImpl implements ReportService {
                         .revenue(rs.getLong("revenue"))
                         .rank(rowNum + 1)
                         .build(),
-                queryParams.toArray()
-        );
+                queryParams.toArray());
 
         return LotterySalesRankingRes.builder()
                 .totalRecords(totalRecords)
@@ -1153,17 +1170,21 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public StorePerformanceReportRes getStorePerformanceReport(QueryReq<StorePerformanceCondition> req) {
         StorePerformanceCondition condition = req != null && req.getCondition() != null
-                ? req.getCondition() : new StorePerformanceCondition();
+                ? req.getCondition()
+                : new StorePerformanceCondition();
 
         LocalDate startDate = condition.getStartDate() != null
-                ? condition.getStartDate() : LocalDate.now().minusDays(30);
+                ? condition.getStartDate()
+                : LocalDate.now().minusDays(30);
         LocalDate endDate = condition.getEndDate() != null
-                ? condition.getEndDate() : LocalDate.now();
+                ? condition.getEndDate()
+                : LocalDate.now();
         String storeId = condition.getStoreId();
 
         String rawSortBy = req != null ? req.getSortBy() : null;
         String sortBy = (rawSortBy != null && ALLOWED_SORT_FIELDS.contains(rawSortBy))
-                ? rawSortBy : "totalRevenue";
+                ? rawSortBy
+                : "totalRevenue";
         String sortOrder = (req != null && req.getSortOrder() != null) ? req.getSortOrder() : "DESC";
 
         log.info("📊 店家績效報表: storeId={}, {} ~ {}, sortBy={} {}", storeId, startDate, endDate, sortBy, sortOrder);
@@ -1250,11 +1271,12 @@ public class ReportServiceImpl implements ReportService {
                 """ + (storeId != null ? "AND l.store_id = ? " : "") + """
                 GROUP BY l.store_id
                 """).formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
-        if (storeId != null) params.add(storeId);
+        if (storeId != null)
+            params.add(storeId);
 
         Map<String, Integer> result = new HashMap<>();
-        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs ->
-                result.put(rs.getString("store_id"), rs.getInt("draw_count")));
+        jdbcTemplate.query(sql, params.toArray(),
+                (RowCallbackHandler) rs -> result.put(rs.getString("store_id"), rs.getInt("draw_count")));
         return result;
     }
 
@@ -1273,11 +1295,12 @@ public class ReportServiceImpl implements ReportService {
                 """ + (storeId != null ? "AND l.store_id = ? " : "") + """
                 GROUP BY l.store_id
                 """).formatted(utf8mb4Eq("wt.related_id", "lt.id"), utf8mb4Eq("lt.lottery_id", "l.id"));
-        if (storeId != null) params.add(storeId);
+        if (storeId != null)
+            params.add(storeId);
 
         Map<String, Long> result = new HashMap<>();
-        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs ->
-                result.put(rs.getString("store_id"), rs.getLong("total_revenue")));
+        jdbcTemplate.query(sql, params.toArray(),
+                (RowCallbackHandler) rs -> result.put(rs.getString("store_id"), rs.getLong("total_revenue")));
         return result;
     }
 
@@ -1306,7 +1329,7 @@ public class ReportServiceImpl implements ReportService {
                     utf8mb4Eq("lt.lottery_id", "l.id"),
                     utf8mb4Text("o.store_id"),
                     utf8mb4Text("o.user_id"));
-            params = new Object[]{start, end, start, end, storeId};
+            params = new Object[] { start, end, start, end, storeId };
         } else {
             sql = """
                     SELECT t.store_id, COUNT(DISTINCT uid) AS active_users FROM (
@@ -1325,12 +1348,12 @@ public class ReportServiceImpl implements ReportService {
                     utf8mb4Eq("lt.lottery_id", "l.id"),
                     utf8mb4Text("o.store_id"),
                     utf8mb4Text("o.user_id"));
-            params = new Object[]{start, end, start, end};
+            params = new Object[] { start, end, start, end };
         }
 
         Map<String, Integer> result = new HashMap<>();
-        jdbcTemplate.query(sql, params, (RowCallbackHandler) rs ->
-                result.put(rs.getString("store_id"), rs.getInt("active_users")));
+        jdbcTemplate.query(sql, params,
+                (RowCallbackHandler) rs -> result.put(rs.getString("store_id"), rs.getInt("active_users")));
         return result;
     }
 
@@ -1347,10 +1370,12 @@ public class ReportServiceImpl implements ReportService {
                   COUNT(*) AS total
                 FROM `order`
                 WHERE created_at BETWEEN ? AND ?
-                """ + (storeId != null ? "AND store_id = ? " : "") + """
-                GROUP BY store_id
-                """;
-        if (storeId != null) params.add(storeId);
+                """
+                + (storeId != null ? "AND store_id = ? " : "") + """
+                        GROUP BY store_id
+                        """;
+        if (storeId != null)
+            params.add(storeId);
 
         Map<String, OrderStats> result = new HashMap<>();
         jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs -> {
@@ -1383,7 +1408,7 @@ public class ReportServiceImpl implements ReportService {
                 """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"), utf8mb4Eq("wt.related_id", "lt.id"));
 
         Map<LocalDate, StorePerformanceReportRes.DailyStat.DailyStatBuilder> builderMap = new LinkedHashMap<>();
-        jdbcTemplate.query(dailySql, new Object[]{storeId, start, end}, (RowCallbackHandler) rs -> {
+        jdbcTemplate.query(dailySql, new Object[] { storeId, start, end }, (RowCallbackHandler) rs -> {
             LocalDate date = rs.getDate("stat_date").toLocalDate();
             builderMap.put(date, StorePerformanceReportRes.DailyStat.builder()
                     .date(date)
@@ -1410,12 +1435,13 @@ public class ReportServiceImpl implements ReportService {
                 utf8mb4Eq("lt.lottery_id", "l.id"),
                 utf8mb4Text("o.user_id"));
 
-        jdbcTemplate.query(newUsersSql, new Object[]{storeId, start, end, storeId, start, end}, (RowCallbackHandler) rs -> {
-            LocalDate date = rs.getDate("stat_date").toLocalDate();
-            if (builderMap.containsKey(date)) {
-                builderMap.get(date).newUsers(rs.getInt("new_users"));
-            }
-        });
+        jdbcTemplate.query(newUsersSql, new Object[] { storeId, start, end, storeId, start, end },
+                (RowCallbackHandler) rs -> {
+                    LocalDate date = rs.getDate("stat_date").toLocalDate();
+                    if (builderMap.containsKey(date)) {
+                        builderMap.get(date).newUsers(rs.getInt("new_users"));
+                    }
+                });
 
         return builderMap.values().stream()
                 .map(StorePerformanceReportRes.DailyStat.DailyStatBuilder::build)
@@ -1447,7 +1473,8 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
                   AND coin_type = 'GOLD'
-                  AND created_at BETWEEN ? AND ?
+                                                                        AND created_at >= ?
+                                                                        AND created_at < ?
                 """, BigDecimal.class, start, end);
         return value != null ? value.longValue() : 0L;
     }
@@ -1459,7 +1486,8 @@ public class ReportServiceImpl implements ReportService {
                 SELECT COALESCE(ABS(SUM(amount)), 0)
                 FROM wallet_transaction
                 WHERE transaction_type = 'DRAW'
-                  AND created_at BETWEEN ? AND ?
+                                                                        AND created_at >= ?
+                                                                        AND created_at < ?
                 """, BigDecimal.class, start, end);
         return value != null ? value.longValue() : 0L;
     }
@@ -1471,7 +1499,8 @@ public class ReportServiceImpl implements ReportService {
                 SELECT coin_type, COALESCE(ABS(SUM(amount)), 0) AS total
                 FROM wallet_transaction
                 WHERE transaction_type = 'DRAW'
-                  AND created_at BETWEEN ? AND ?
+                                                                        AND created_at >= ?
+                                                                        AND created_at < ?
                 GROUP BY coin_type
                 """, start, end);
 
@@ -1500,7 +1529,8 @@ public class ReportServiceImpl implements ReportService {
                 SELECT COUNT(*)
                 FROM lottery_ticket
                 WHERE status = 'DRAWN'
-                  AND drawn_at BETWEEN ? AND ?
+                                                                        AND drawn_at >= ?
+                                                                        AND drawn_at < ?
                 """, Long.class, start, end);
         return value != null ? value : 0L;
     }
@@ -1528,7 +1558,7 @@ public class ReportServiceImpl implements ReportService {
         long days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
         LocalDate prevEnd = startDate.minusDays(1);
         LocalDate prevStart = prevEnd.minusDays(days - 1);
-        return new LocalDate[]{prevStart, prevEnd};
+        return new LocalDate[] { prevStart, prevEnd };
     }
 
     private List<PlatformRevenueReportRes.DailyRevenueItem> buildDailyRevenue(LocalDate startDate, LocalDate endDate) {
@@ -1549,7 +1579,8 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
-    private Map<LocalDate, Long> queryDailyAmountByType(LocalDate startDate, LocalDate endDate, String transactionType, String coinType) {
+    private Map<LocalDate, Long> queryDailyAmountByType(LocalDate startDate, LocalDate endDate, String transactionType,
+            String coinType) {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.plusDays(1).atStartOfDay();
         List<Object> params = new ArrayList<>(List.of(transactionType, start, end));
@@ -1558,7 +1589,8 @@ public class ReportServiceImpl implements ReportService {
                        COALESCE(SUM(ABS(amount)), 0) AS total
                 FROM wallet_transaction
                 WHERE transaction_type = ?
-                  AND created_at BETWEEN ? AND ?
+                                                                        AND created_at >= ?
+                                                                        AND created_at < ?
                 """;
         if (coinType != null) {
             sql += " AND coin_type = ? ";
@@ -1567,12 +1599,13 @@ public class ReportServiceImpl implements ReportService {
         sql += " GROUP BY DATE(created_at) ORDER BY stat_date";
 
         Map<LocalDate, Long> result = new LinkedHashMap<>();
-        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs ->
-                result.put(rs.getDate("stat_date").toLocalDate(), rs.getLong("total")));
+        jdbcTemplate.query(sql, params.toArray(),
+                (RowCallbackHandler) rs -> result.put(rs.getDate("stat_date").toLocalDate(), rs.getLong("total")));
         return result;
     }
 
-    private List<PlatformRevenueReportRes.StoreBreakdownItem> queryStoreBreakdown(LocalDate startDate, LocalDate endDate) {
+    private List<PlatformRevenueReportRes.StoreBreakdownItem> queryStoreBreakdown(LocalDate startDate,
+            LocalDate endDate) {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.plusDays(1).atStartOfDay();
 
@@ -1581,31 +1614,35 @@ public class ReportServiceImpl implements ReportService {
                        mapped.store_name,
                        ABS(SUM(mapped.amount)) AS total_spend
                 FROM (
-                    SELECT COALESCE(%s, %s) AS store_id,
+                      SELECT COALESCE(%s, %s, %s) AS store_id,
                            s.store_name,
                            wt.amount AS amount
                     FROM wallet_transaction wt
+                      LEFT JOIN lottery l_direct ON %s
                     LEFT JOIN lottery_ticket lt ON %s
-                    LEFT JOIN lottery l ON %s
+                      LEFT JOIN lottery l_ticket ON %s
                     LEFT JOIN `order` o ON %s
                     LEFT JOIN store s ON %s
                     WHERE wt.transaction_type = 'DRAW'
-                      AND wt.created_at BETWEEN ? AND ?
+                         AND wt.created_at >= ?
+                         AND wt.created_at < ?
                 ) mapped
                 WHERE mapped.store_id IS NOT NULL
                 GROUP BY mapped.store_id, mapped.store_name
                 ORDER BY total_spend DESC
                 """.formatted(
-                utf8mb4Text("l.store_id"),
+                  utf8mb4Text("l_direct.store_id"),
+                  utf8mb4Text("l_ticket.store_id"),
                 utf8mb4Text("o.store_id"),
+                  utf8mb4Eq("wt.related_id", "l_direct.id"),
                 utf8mb4Eq("wt.related_id", "lt.id"),
-                utf8mb4Eq("lt.lottery_id", "l.id"),
+                  utf8mb4Eq("lt.lottery_id", "l_ticket.id"),
                 utf8mb4Eq("wt.related_id", "o.id"),
-                utf8mb4Eq("s.id", "COALESCE(l.store_id, o.store_id)"));
+                  utf8mb4Eq("s.id", "COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id)"));
 
         Map<String, Long> drawCounts = queryStoreDrawCountForPlatformRevenue(startDate, endDate);
         List<PlatformRevenueReportRes.StoreBreakdownItem> result = new ArrayList<>();
-        jdbcTemplate.query(spendSql, new Object[]{start, end}, (RowCallbackHandler) rs -> {
+        jdbcTemplate.query(spendSql, new Object[] { start, end }, (RowCallbackHandler) rs -> {
             String storeId = rs.getString("store_id");
             result.add(PlatformRevenueReportRes.StoreBreakdownItem.builder()
                     .storeId(storeId)
@@ -1626,34 +1663,42 @@ public class ReportServiceImpl implements ReportService {
                 FROM lottery_ticket lt
                 JOIN lottery l ON %s
                 WHERE lt.status = 'DRAWN'
-                  AND lt.drawn_at BETWEEN ? AND ?
+                                                                        AND lt.drawn_at >= ?
+                                                                        AND lt.drawn_at < ?
                 GROUP BY l.store_id
-                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id")), new Object[]{start, end}, (RowCallbackHandler) rs ->
-                result.put(rs.getString("store_id"), rs.getLong("draw_count")));
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id")), new Object[] { start, end },
+                (RowCallbackHandler) rs -> result.put(rs.getString("store_id"), rs.getLong("draw_count")));
         return result;
     }
 
     // ========== 工具方法 ==========
 
     private BigDecimal toBigDecimal(Object value) {
-        if (value == null) return BigDecimal.ZERO;
-        if (value instanceof BigDecimal) return (BigDecimal) value;
-        if (value instanceof Number) return new BigDecimal(value.toString());
+        if (value == null)
+            return BigDecimal.ZERO;
+        if (value instanceof BigDecimal)
+            return (BigDecimal) value;
+        if (value instanceof Number)
+            return new BigDecimal(value.toString());
         return BigDecimal.ZERO;
     }
-    
+
     private Integer toInteger(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Number) return ((Number) value).intValue();
+        if (value == null)
+            return 0;
+        if (value instanceof Number)
+            return ((Number) value).intValue();
         return 0;
     }
 
     private long toLong(Object value) {
-        if (value == null) return 0L;
-        if (value instanceof Number) return ((Number) value).longValue();
+        if (value == null)
+            return 0L;
+        if (value instanceof Number)
+            return ((Number) value).longValue();
         return 0L;
     }
-    
+
     private BigDecimal calculateGrowthRate(BigDecimal current, BigDecimal previous) {
         if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
             return current.compareTo(BigDecimal.ZERO) > 0 ? new BigDecimal("100") : BigDecimal.ZERO;
@@ -1671,7 +1716,7 @@ public class ReportServiceImpl implements ReportService {
                 .multiply(new BigDecimal("100"))
                 .divide(previous, 1, RoundingMode.HALF_UP);
     }
-    
+
     private String getBonusTypeName(String bonusType) {
         return switch (bonusType) {
             case "BONUS" -> "一般贈送";
@@ -1693,21 +1738,20 @@ public class ReportServiceImpl implements ReportService {
         String storeId = condition.getStoreId();
 
         // 日期預設：最近 30 天
-        LocalDate endDate   = condition.getEndDate()   != null ? condition.getEndDate()   : LocalDate.now();
+        LocalDate endDate = condition.getEndDate() != null ? condition.getEndDate() : LocalDate.now();
         LocalDate startDate = condition.getStartDate() != null ? condition.getStartDate() : endDate.minusDays(29);
 
         log.info("📦 產生獎品出貨報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
 
         // --- US1: 狀態計數 ---
         Map<String, Object> statusCounts = queryStatusCounts(storeId, startDate, endDate);
-        Integer pendingCount   = toInt(statusCounts.get("pending_count"));
+        Integer pendingCount = toInt(statusCounts.get("pending_count"));
         Integer preparingCount = toInt(statusCounts.get("preparing_count"));
-        Integer shippedCount   = toInt(statusCounts.get("shipped_count"));
+        Integer shippedCount = toInt(statusCounts.get("shipped_count"));
         Integer completedCount = toInt(statusCounts.get("completed_count"));
 
         // --- US1: 每日出貨明細 ---
-        List<PrizeShipmentReportRes.DailyShipment> dailyDetails =
-                queryDailyDetails(storeId, startDate, endDate);
+        List<PrizeShipmentReportRes.DailyShipment> dailyDetails = queryDailyDetails(storeId, startDate, endDate);
 
         // --- US2: 平均出貨天數 ---
         BigDecimal avgShipDays = queryAvgShipDays(storeId, startDate, endDate);
@@ -1784,12 +1828,10 @@ public class ReportServiceImpl implements ReportService {
         }
         sql += " GROUP BY DATE(shipped_at) ORDER BY date";
 
-        return jdbcTemplate.query(sql, params.toArray(), (rs, rowNum) ->
-                PrizeShipmentReportRes.DailyShipment.builder()
-                        .date(rs.getDate("date").toLocalDate())
-                        .shippedCount(rs.getInt("shipped_count"))
-                        .build()
-        );
+        return jdbcTemplate.query(sql, params.toArray(), (rs, rowNum) -> PrizeShipmentReportRes.DailyShipment.builder()
+                .date(rs.getDate("date").toLocalDate())
+                .shippedCount(rs.getInt("shipped_count"))
+                .build());
     }
 
     /** T016: 平均出貨天數（preparing_at → shipped_at），精確至 0.1 天 */
@@ -1865,7 +1907,7 @@ public class ReportServiceImpl implements ReportService {
                 """;
 
         return jdbcTemplate.query(sql,
-                new Object[]{startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay()},
+                new Object[] { startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay() },
                 (rs, rowNum) -> PrizeShipmentReportRes.StoreShipment.builder()
                         .storeId(rs.getString("store_id"))
                         .storeName(rs.getString("store_name"))
@@ -1875,14 +1917,15 @@ public class ReportServiceImpl implements ReportService {
                         .completedCount(rs.getInt("completed_count"))
                         .avgShipDays(rs.getBigDecimal("avg_ship_days"))
                         .overdueCount(rs.getInt("overdue_count"))
-                        .build()
-        );
+                        .build());
     }
 
     /** null 安全的 Integer 轉換（處理 SUM 在無資料時回傳 null） */
     private Integer toInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Number) return ((Number) value).intValue();
+        if (value == null)
+            return 0;
+        if (value instanceof Number)
+            return ((Number) value).intValue();
         return 0;
     }
 

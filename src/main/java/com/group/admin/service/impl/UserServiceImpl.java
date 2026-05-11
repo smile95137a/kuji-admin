@@ -216,9 +216,11 @@ public class UserServiceImpl implements UserService {
         userMapper.updateByPrimaryKey(user);
         loginHistoryService.record(user.getId(), "user", "EMAIL", "SUCCESS", null, null, null);
 
-        // 生成 Token（包含 userId 和 userType）
-        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"));
-        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        // 生成 Token（含 gen，支援登出後整包失效）
+        int currentGen = userTokenBlacklistService.getBlacklistGen(user.getId());
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"), null,
+            currentGen);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getId(), "user", currentGen);
 
         AuthRes res = new AuthRes();
         res.setAccessToken(accessToken);
@@ -304,9 +306,11 @@ public class UserServiceImpl implements UserService {
                 log.info("✅ Google OAuth 用戶登入: {}", email);
             }
 
-            // 生成 Token
-            String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"));
-            String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+                // 生成 Token（含 gen，支援登出後整包失效）
+                int currentGen = userTokenBlacklistService.getBlacklistGen(user.getId());
+                String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"), null,
+                    currentGen);
+                String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getId(), "user", currentGen);
 
             boolean isNewUser = Integer.valueOf(1).equals(user.getIsOauthNewUser());
 

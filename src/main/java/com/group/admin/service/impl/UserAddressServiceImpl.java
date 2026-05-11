@@ -1,7 +1,9 @@
 package com.group.admin.service.impl;
 
+import com.group.admin.entity.User;
 import com.group.admin.entity.UserAddress;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.mapper.UserMapper;
 import com.group.admin.mapper.UserAddressMapper;
 import com.group.admin.repository.UserAddressRepository;
 import com.group.admin.req.address.UserAddressCreateReq;
@@ -16,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * 使用者地址服務實作
@@ -31,6 +32,7 @@ public class UserAddressServiceImpl implements UserAddressService {
     
     private final UserAddressMapper userAddressMapper;
     private final UserAddressRepository userAddressRepository;
+    private final UserMapper userMapper;
     
     @Override
     @Transactional
@@ -60,6 +62,11 @@ public class UserAddressServiceImpl implements UserAddressService {
         address.setUpdatedAt(LocalDateTime.now());
         
         userAddressMapper.insert(address);
+
+        if (Boolean.TRUE.equals(address.getIsDefault())) {
+            syncUserAddressSnapshot(userId, address);
+        }
+
         log.info("✅ 收件地址新增成功: id={}", address.getId());
         
         return toUserAddressRes(address);
@@ -105,6 +112,11 @@ public class UserAddressServiceImpl implements UserAddressService {
         address.setUpdatedAt(LocalDateTime.now());
         
         userAddressMapper.updateByPrimaryKey(address);
+
+        if (Boolean.TRUE.equals(address.getIsDefault())) {
+            syncUserAddressSnapshot(userId, address);
+        }
+
         log.info("✅ 收件地址更新成功: id={}", addressId);
         
         return toUserAddressRes(address);
@@ -131,6 +143,9 @@ public class UserAddressServiceImpl implements UserAddressService {
                 firstAddress.setIsDefault(true);
                 firstAddress.setUpdatedAt(LocalDateTime.now());
                 userAddressMapper.updateByPrimaryKey(firstAddress);
+                syncUserAddressSnapshot(userId, firstAddress);
+            } else {
+                syncUserAddressSnapshot(userId, null);
             }
         }
         
@@ -151,7 +166,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         List<UserAddress> addresses = userAddressRepository.selectByUserId(userId);
         return addresses.stream()
                 .map(this::toUserAddressRes)
-                .collect(Collectors.toList());
+                .toList();
     }
     
     @Override
@@ -177,9 +192,32 @@ public class UserAddressServiceImpl implements UserAddressService {
         address.setIsDefault(true);
         address.setUpdatedAt(LocalDateTime.now());
         userAddressMapper.updateByPrimaryKey(address);
+
+        syncUserAddressSnapshot(userId, address);
         
         log.info("✅ 預設地址設定成功: id={}", addressId);
         return toUserAddressRes(address);
+    }
+
+    private void syncUserAddressSnapshot(String userId, UserAddress defaultAddress) {
+        User update = new User();
+        update.setId(userId);
+
+        if (defaultAddress == null) {
+            update.setRecipientName(null);
+            update.setRecipientPhone(null);
+            update.setCity(null);
+            update.setDistrict(null);
+            update.setAddressDetail(null);
+        } else {
+            update.setRecipientName(defaultAddress.getRecipientName());
+            update.setRecipientPhone(defaultAddress.getRecipientPhone());
+            update.setCity(defaultAddress.getCity());
+            update.setDistrict(defaultAddress.getDistrict());
+            update.setAddressDetail(defaultAddress.getAddress());
+        }
+        update.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateByPrimaryKeySelective(update);
     }
     
     /**

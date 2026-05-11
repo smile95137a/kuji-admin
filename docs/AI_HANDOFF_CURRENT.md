@@ -2,6 +2,84 @@
 
 最後更新：2026-05-11
 
+## 0.1 2026-05-11（同步節點補充）
+
+1. 使用者已明確要求：前後端需持續同步，且 AI 交接檔需持續更新。
+2. 本工作區為後端 repo（`kuji-admin`），跨 repo 前端同步需在 `kuji-admin-web`（必要時含 `kuji-client`）接續執行。
+3. 本輪結束前需完成版本控管節點：`commit + push`，避免接手上下文遺失。
+
+## 0. 2026-05-11（本次會話）追加交接
+
+### 使用者協作偏好（必須遵守）
+
+1. 下一位 AI 必須先把要做的範圍一次討論完整，再進入一次性調整。
+2. 交付節奏要以「一包一包完整落地」為主，避免斷斷續續的小段回報。
+3. 每一包開始前要先列出：影響檔案、改動邊界、驗證方式；使用者確認後再改。
+4. 不得在未說明全貌時直接擴散修改範圍。
+
+### 本次已完成（後端）
+
+1. `ReportServiceImpl` 已修正平台營收關鍵 correctness：
+   - `storeBreakdown` 的店家映射改為三路來源（`related_id -> lottery.id`、`related_id -> lottery_ticket.id -> lottery.id`、`related_id -> order.id`）。
+   - 多個統計查詢時間邊界改為半開區間（`>= start`、`< endExclusive`），降低日切換 off-by-one 風險。
+2. `LotteryServiceImpl` 已完成：
+   - 新架構 `tags`、`galleryImages` 儲存統一為 JSON。
+   - 讀取時兼容 JSON + CSV（舊資料相容）。
+   - 已修補先前語法斷裂造成的編譯阻斷。
+3. 會員管理串接已做過一輪收斂（前端權限顯示 + 後端遮罩邏輯）並有實際改動紀錄。
+
+### 編譯 / 驗證現況（覆蓋舊說明）
+
+1. 本機可執行 Maven，但終端輸出偶發空白，導致成功訊號可讀性不穩。
+2. 目前未見新的阻斷編譯錯誤；IDE 顯示多為既有規則警告（常數抽取、deprecated、Sonar 建議），非本輪新增阻斷。
+3. 下一位 AI 仍需在本機再跑一次可追蹤的 compile / package，補齊可交付證據。
+
+### 下一輪「一次性交付包」
+
+第一包（建議直接執行）：會員主線封口（不跨 DB）
+
+1. Token 失效閉環：登入 / refresh / filter / logout 的 `gen` 行為一致。
+2. 會員 DTO 拆分：list / detail 契約分離，避免查詢頁與詳情頁共用過重欄位。
+3. 契約同步：後端 `res` + 後台前端 service / page 一次對齊。
+4. 驗證：
+   - compile
+   - 會員查詢/詳情/登出流程 smoke test（至少 API 層）
+   - 變更檔案錯誤清單為零（阻斷級）。
+
+第二包（第一包完成後）：平台營收報表補強
+
+1. 補 `storeBreakdown` 與時間邊界測試案例。
+2. 收斂 period 定義與欄位命名，避免前後端解讀差異。
+
+### 第二包執行進度（2026-05-11，本輪已落地）
+
+已完成：
+
+1. 新增 `ReportServiceImpl` 單元測試：
+   - `src/test/java/com/group/admin/service/ReportServiceImplTest.java`
+2. 已驗證 `queryTotalRecharge` 使用半開區間（`created_at >= ?`、`created_at < ?`）。
+3. 已驗證 `queryDailyAmountByType` 使用半開區間並保留 `coin_type` 條件。
+4. 已驗證 `queryStoreBreakdown` SQL 含三路店家映射（`l_direct.store_id`、`l_ticket.store_id`、`o.store_id`）與半開區間。
+5. 測試結果：`Tests run: 3, Failures: 0, Errors: 0, Skipped: 0`。
+6. 已補會員認證 smoke 測試（API 層）：
+   - 更新 `src/test/java/com/group/admin/controller/api/ApiAuthControllerTest.java`
+   - 新增 refresh 關鍵情境：缺 claims、gen mismatch、成功旋轉 token
+   - 測試結果：`Tests run: 8, Failures: 0, Errors: 0, Skipped: 0`
+
+尚待下一步：
+
+1. 若要進一步封口，可補 period 欄位命名一致性檢查（DTO/前端欄位對照）。
+2. 後台前端契約同步仍需在 `kuji-admin-web` 工作區執行（本工作區僅後端）。
+
+### 目前整體系統走向（給接手 AI）
+
+1. 方向不是加新功能，而是主流程「封口」與跨端契約一致性。
+2. 優先順序：
+   - 正確性（交易/報表統計）
+   - 安全性（token 失效與權限）
+   - 可維護性（DTO 分層與欄位責任清楚）
+3. 若任務涉及跨多檔/改行為，先討論邊界，再一次性落地。
+
 ## 1. 專案現況
 
 目前專案主線已從「補功能」進入「主流程封口與一致性收斂」階段。
@@ -130,7 +208,7 @@
 
 目前環境限制：
 
-1. 本機無 `mvn` 指令，無法直接執行 `mvn compile` / `mvn test`。
+1. 目前可執行 `mvn`，但終端輸出偶發空白，建議用可回傳 exit code 的方式保留證據。
 2. 目前無法在 UAT 環境做完整流程驗收。
 
 因此現階段可接受的驗證方式是：

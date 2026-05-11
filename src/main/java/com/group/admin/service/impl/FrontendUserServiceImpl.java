@@ -1,6 +1,7 @@
 package com.group.admin.service.impl;
 
 import com.group.admin.entity.User;
+import com.group.admin.enums.CoinTypeEnum;
 import com.group.admin.enums.UserStatusEnum;
 import com.group.admin.example.UserExample;
 import com.group.admin.exception.BusinessException;
@@ -9,15 +10,22 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.req.user.FrontendUserCondition;
 import com.group.admin.req.user.FrontendUserUpdateReq;
-import com.group.admin.res.user.FrontendUserRes;
+import com.group.admin.res.user.FrontendUserDetailRes;
+import com.group.admin.res.user.FrontendUserListRes;
+import com.group.admin.service.CoinService;
 import com.group.admin.service.FrontendUserService;
+import com.group.admin.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * 前台會員管理服務實作
@@ -29,85 +37,87 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FrontendUserServiceImpl implements FrontendUserService {
+
+    private static final Map<String, String> USER_SORT_FIELD_MAP;
+
+    static {
+        Map<String, String> sortMap = new HashMap<>();
+        sortMap.put("id", "id");
+        sortMap.put("email", "email");
+        sortMap.put("nickname", "nickname");
+        sortMap.put("phone", "phone_number");
+        sortMap.put("phoneNumber", "phone_number");
+        sortMap.put("provider", "provider");
+        sortMap.put("goldCoins", "gold_coins");
+        sortMap.put("bonusCoins", "bonus_coins");
+        sortMap.put("status", "status");
+        sortMap.put("createdAt", "created_at");
+        sortMap.put("updatedAt", "updated_at");
+        sortMap.put("lastLoginAt", "last_login_at");
+        USER_SORT_FIELD_MAP = Collections.unmodifiableMap(sortMap);
+    }
     
     private final UserMapper userMapper;
+    private final CoinService coinService;
     
     @Override
-    public List<FrontendUserRes> queryUsers(QueryReq<FrontendUserCondition> req) {
+    public List<FrontendUserListRes> queryUsers(QueryReq<FrontendUserCondition> req) {
         log.info("🔍 查詢前台會員列表: {}", req);
         
         FrontendUserCondition condition = req != null ? req.getCondition() : null;
         
         UserExample example = new UserExample();
-        UserExample.Criteria criteria = example.createCriteria();
-        
-        // ✅ 排除已刪除的會員
-        criteria.andStatusNotEqualTo(UserStatusEnum.DELETED.getCode());
-        
-        // ✅ 所有條件都是可選的
-        if (condition != null) {
-            if (isNotBlank(condition.getEmail())) {
-                criteria.andEmailLike("%" + condition.getEmail() + "%");
-            }
-            if (isNotBlank(condition.getNickname())) {
-                criteria.andNicknameLike("%" + condition.getNickname() + "%");
-            }
-            if (isNotBlank(condition.getPhone())) {
-                criteria.andPhoneNumberLike("%" + condition.getPhone() + "%");
-            }
-            if (condition.getStatus() != null) {
-                criteria.andStatusEqualTo(condition.getStatus());
-            }
-            if (condition.getProvider() != null) {
-                criteria.andProviderEqualTo(condition.getProvider());
-            }
-            if (condition.getGoldCoinsMin() != null) {
-                criteria.andGoldCoinsGreaterThanOrEqualTo(condition.getGoldCoinsMin());
-            }
-            if (condition.getGoldCoinsMax() != null) {
-                criteria.andGoldCoinsLessThanOrEqualTo(condition.getGoldCoinsMax());
-            }
-            // 日期範圍（LocalDate 轉 LocalDateTime）
-            if (condition.getCreatedAtStart() != null) {
-                criteria.andCreatedAtGreaterThanOrEqualTo(
-                    condition.getCreatedAtStart().atStartOfDay()
-                );
-            }
-            if (condition.getCreatedAtEnd() != null) {
-                criteria.andCreatedAtLessThanOrEqualTo(
-                    condition.getCreatedAtEnd().atTime(23, 59, 59)
-                );
-            }
-            if (isNotBlank(condition.getKeyword())) {
-                // 關鍵字搜尋：Email 或暱稱 或手機號碼
-                UserExample.Criteria orCriteria = example.or();
-                orCriteria.andEmailLike("%" + condition.getKeyword() + "%");
-                orCriteria = example.or();
-                orCriteria.andNicknameLike("%" + condition.getKeyword() + "%");
-                orCriteria = example.or();
-                orCriteria.andPhoneNumberLike("%" + condition.getKeyword() + "%");
-            }
+
+        if (condition != null && isNotBlank(condition.getKeyword())) {
+            String keywordLike = "%" + condition.getKeyword().trim() + "%";
+
+            UserExample.Criteria emailKeywordCriteria = example.createCriteria();
+            applyCommonFilters(emailKeywordCriteria, condition);
+            emailKeywordCriteria.andEmailLike(keywordLike);
+
+            UserExample.Criteria nicknameKeywordCriteria = example.or();
+            applyCommonFilters(nicknameKeywordCriteria, condition);
+            nicknameKeywordCriteria.andNicknameLike(keywordLike);
+
+            UserExample.Criteria phoneKeywordCriteria = example.or();
+            applyCommonFilters(phoneKeywordCriteria, condition);
+            phoneKeywordCriteria.andPhoneNumberLike(keywordLike);
+        } else {
+            UserExample.Criteria criteria = example.createCriteria();
+            applyCommonFilters(criteria, condition);
         }
         
         // 排序
-        if (req != null && req.getSortBy() != null) {
-            String order = req.getSortOrder() != null ? req.getSortOrder() : "ASC";
-            example.setOrderByClause(req.getSortBy() + " " + order);
-        } else {
-            example.setOrderByClause("created_at DESC");
-        }
+        example.setOrderByClause(resolveOrderByClause(req));
         
         List<User> users = userMapper.selectByExample(example);
+
+        if (req != null && req.getPage() != null && req.getSize() != null
+                && req.getPage() > 0 && req.getSize() > 0) {
+            int page = req.getPage();
+            int size = req.getSize();
+            int fromIndex = Math.max(0, (page - 1) * size);
+
+            if (fromIndex >= users.size()) {
+                users = Collections.emptyList();
+            } else {
+                int toIndex = Math.min(users.size(), fromIndex + size);
+                users = new ArrayList<>(users.subList(fromIndex, toIndex));
+            }
+        }
         
         log.info("✅ 查詢成功: 共 {} 筆", users.size());
+
+        boolean shouldMaskSensitiveFields = !SecurityUtils.isAdmin();
         
         return users.stream()
-                .map(this::toRes)
-                .collect(Collectors.toList());
+                .map(this::toListRes)
+            .map(res -> applyListRoleMask(res, shouldMaskSensitiveFields))
+            .toList();
     }
     
     @Override
-    public FrontendUserRes getUserById(String id) {
+    public FrontendUserDetailRes getUserById(String id) {
         log.info("🔍 查詢會員詳情: userId={}", id);
         
         User user = userMapper.selectByPrimaryKey(id);
@@ -115,11 +125,12 @@ public class FrontendUserServiceImpl implements FrontendUserService {
             throw new BusinessException("會員不存在");
         }
         
-        return toRes(user);
+        boolean shouldMaskSensitiveFields = !SecurityUtils.isAdmin();
+        return applyDetailRoleMask(toDetailRes(user), shouldMaskSensitiveFields);
     }
     
     @Override
-    public FrontendUserRes updateUser(String id, FrontendUserUpdateReq req) {
+    public FrontendUserDetailRes updateUser(String id, FrontendUserUpdateReq req) {
         log.info("✏️ 更新會員資訊: userId={}, req={}", id, req);
         
         User user = userMapper.selectByPrimaryKey(id);
@@ -178,7 +189,7 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         userMapper.updateByPrimaryKey(user);
         
         log.info("✅ 更新成功");
-        return toRes(user);
+        return toDetailRes(user);
     }
     
     @Override
@@ -234,8 +245,25 @@ public class FrontendUserServiceImpl implements FrontendUserService {
     /**
      * 轉換為 Res
      */
-    private FrontendUserRes toRes(User user) {
-        return FrontendUserRes.builder()
+    private FrontendUserListRes toListRes(User user) {
+        return FrontendUserListRes.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .nickname(user.getNickname())
+                .avatar(user.getAvatar())
+                .provider(user.getProvider())
+                .goldCoins(user.getGoldCoins() != null ? user.getGoldCoins() : 0L)
+                .bonusCoins(user.getBonusCoins() != null ? user.getBonusCoins() : 0L)
+                .status(user.getStatus())
+                .statusName(UserStatusEnum.getNameByCode(user.getStatus()))
+                .lastLoginAt(user.getLastLoginAt())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
+    private FrontendUserDetailRes toDetailRes(User user) {
+        return FrontendUserDetailRes.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
@@ -262,6 +290,98 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         return str != null && !str.trim().isEmpty();
     }
 
+    private FrontendUserListRes applyListRoleMask(FrontendUserListRes source, boolean shouldMaskSensitiveFields) {
+        if (!shouldMaskSensitiveFields || source == null) {
+            return source;
+        }
+
+        return FrontendUserListRes.builder()
+                .id(source.getId())
+                .nickname(source.getNickname())
+                .avatar(source.getAvatar())
+                .provider(source.getProvider())
+                .status(source.getStatus())
+                .statusName(source.getStatusName())
+                .createdAt(source.getCreatedAt())
+                .updatedAt(source.getUpdatedAt())
+                .build();
+    }
+
+    private FrontendUserDetailRes applyDetailRoleMask(FrontendUserDetailRes source, boolean shouldMaskSensitiveFields) {
+        if (!shouldMaskSensitiveFields || source == null) {
+            return source;
+        }
+
+        return FrontendUserDetailRes.builder()
+                .id(source.getId())
+                .nickname(source.getNickname())
+                .avatar(source.getAvatar())
+                .provider(source.getProvider())
+                .status(source.getStatus())
+                .statusName(source.getStatusName())
+                .createdAt(source.getCreatedAt())
+                .updatedAt(source.getUpdatedAt())
+                .build();
+    }
+
+    private void applyCommonFilters(UserExample.Criteria criteria, FrontendUserCondition condition) {
+        criteria.andStatusNotEqualTo(UserStatusEnum.DELETED.getCode());
+
+        if (condition == null) {
+            return;
+        }
+
+        if (isNotBlank(condition.getEmail())) {
+            criteria.andEmailLike("%" + condition.getEmail().trim() + "%");
+        }
+        if (isNotBlank(condition.getNickname())) {
+            criteria.andNicknameLike("%" + condition.getNickname().trim() + "%");
+        }
+        if (isNotBlank(condition.getPhone())) {
+            criteria.andPhoneNumberLike("%" + condition.getPhone().trim() + "%");
+        }
+        if (isNotBlank(condition.getStatus())) {
+            criteria.andStatusEqualTo(condition.getStatus().trim());
+        }
+        if (isNotBlank(condition.getProvider())) {
+            criteria.andProviderEqualTo(condition.getProvider().trim());
+        }
+        if (condition.getGoldCoinsMin() != null) {
+            criteria.andGoldCoinsGreaterThanOrEqualTo(condition.getGoldCoinsMin());
+        }
+        if (condition.getGoldCoinsMax() != null) {
+            criteria.andGoldCoinsLessThanOrEqualTo(condition.getGoldCoinsMax());
+        }
+        if (condition.getCreatedAtStart() != null) {
+            criteria.andCreatedAtGreaterThanOrEqualTo(condition.getCreatedAtStart().atStartOfDay());
+        }
+        if (condition.getCreatedAtEnd() != null) {
+            criteria.andCreatedAtLessThanOrEqualTo(condition.getCreatedAtEnd().atTime(23, 59, 59));
+        }
+    }
+
+    private String resolveOrderByClause(QueryReq<FrontendUserCondition> req) {
+        if (req == null || !isNotBlank(req.getSortBy())) {
+            return "created_at DESC";
+        }
+
+        String normalizedSortBy = req.getSortBy().trim();
+        String safeSortColumn = USER_SORT_FIELD_MAP.get(normalizedSortBy);
+
+        if (!isNotBlank(safeSortColumn)) {
+            return "created_at DESC";
+        }
+
+        String normalizedOrder = isNotBlank(req.getSortOrder())
+                ? req.getSortOrder().trim().toUpperCase(Locale.ROOT)
+                : "ASC";
+        if (!"ASC".equals(normalizedOrder) && !"DESC".equals(normalizedOrder)) {
+            normalizedOrder = "ASC";
+        }
+
+        return safeSortColumn + " " + normalizedOrder;
+    }
+
     @Override
     public void unlockUser(String userId) {
         User user = userMapper.selectByPrimaryKey(userId);
@@ -280,19 +400,38 @@ public class FrontendUserServiceImpl implements FrontendUserService {
     @Override
     public void adjustUserCoin(String userId, CoinAdjustReq req) {
         User user = userMapper.selectByPrimaryKey(userId);
-        if (user == null) throw new BusinessException("用戶不存在");
-        if ("GOLD".equals(req.getCoinType())) {
-            long newGold = (user.getGoldCoins() == null ? 0L : user.getGoldCoins()) + req.getAmount();
-            if (newGold < 0) throw new BusinessException("金幣餘額不足");
-            user.setGoldCoins(newGold);
-        } else if ("BONUS".equals(req.getCoinType())) {
-            long newBonus = (user.getBonusCoins() == null ? 0L : user.getBonusCoins()) + req.getAmount();
-            if (newBonus < 0) throw new BusinessException("紅利不足");
-            user.setBonusCoins(newBonus);
-        } else {
+        if (user == null) {
+            throw new BusinessException("用戶不存在");
+        }
+
+        if (!isNotBlank(req.getRemark())) {
+            throw new BusinessException("調整備註不可為空");
+        }
+
+        if (req.getAmount() == null || req.getAmount() == 0L) {
+            throw new BusinessException("調整金額不可為 0");
+        }
+
+        String normalizedCoinType = req.getCoinType() != null ? req.getCoinType().trim().toUpperCase() : null;
+        if (!CoinTypeEnum.GOLD.getCode().equals(normalizedCoinType)
+                && !CoinTypeEnum.BONUS.getCode().equals(normalizedCoinType)) {
             throw new BusinessException("coinType 不合法，只支援 GOLD / BONUS");
         }
-        userMapper.updateByPrimaryKey(user);
-        log.info("✅ 點數調整成功: userId={}, coinType={}, amount={}", userId, req.getCoinType(), req.getAmount());
+
+        String operatorId = SecurityUtils.getCurrentAdminUserId();
+        if (!isNotBlank(operatorId)) {
+            throw new BusinessException("無法取得操作者資訊");
+        }
+
+        com.group.admin.req.wallet.CoinAdjustReq adjustReq = new com.group.admin.req.wallet.CoinAdjustReq();
+        adjustReq.setUserId(userId);
+        adjustReq.setCoinType(normalizedCoinType);
+        adjustReq.setAmount(req.getAmount());
+        adjustReq.setReason(req.getRemark());
+
+        coinService.adjustCoins(adjustReq, operatorId);
+
+        log.info("✅ 點數調整成功（已記錄交易）: userId={}, coinType={}, amount={}, operatorId={}",
+                userId, normalizedCoinType, req.getAmount(), operatorId);
     }
 }

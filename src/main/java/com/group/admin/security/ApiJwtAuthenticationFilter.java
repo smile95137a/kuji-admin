@@ -199,7 +199,10 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
                 int currentGen = userTokenBlacklistService.getBlacklistGen(userId);
                 if (tokenGen < currentGen) {
                     log.warn("🚫 用戶 token 已失效 (gen mismatch): email={}", email);
-                    return true;
+                    writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                            ErrorCodes.AUTH_TOKEN_REVOKED,
+                            "Token 已失效，請重新登入");
+                    return false;
                 }
             }
             UserExample example = new UserExample();
@@ -212,6 +215,30 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             User user = users.get(0);
+
+            if ("INACTIVE".equals(user.getStatus()) || "SUSPENDED".equals(user.getStatus())) {
+                log.warn("⚠️ [API] 帳號已停用或暫停: userId={}, status={}", user.getId(), user.getStatus());
+                writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
+                        ErrorCodes.AUTH_ACCOUNT_DISABLED,
+                        "帳號已停用或暫停使用，請聯繫客服");
+                return false;
+            }
+
+            if ("DELETED".equals(user.getStatus())) {
+                log.warn("⚠️ [API] 帳號已刪除: userId={}", user.getId());
+                writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                        ErrorCodes.AUTH_INVALID_CREDENTIALS,
+                        "帳號或密碼錯誤");
+                return false;
+            }
+
+            if (user.getEmailVerified() == null || user.getEmailVerified() == 0) {
+                log.warn("⚠️ [API] Email 未驗證: userId={}", user.getId());
+                writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
+                        ErrorCodes.COMMON_VALIDATION_ERROR,
+                        "請先完成 Email 驗證");
+                return false;
+            }
 
             // 臨時密碼登入後，除了改密碼 API 以外全部禁止操作。
             if (requiresForceChangePassword(user) && !path.equals("/user/me/change-password")) {

@@ -144,6 +144,23 @@ public class JwtUtil {
     }
 
     /**
+     * 生成 Refresh Token（含 userId / userType / gen）
+     */
+    public String generateRefreshToken(String username, String userId, String userType, long gen) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("userType", userType);
+        claims.put("gen", gen);
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(SignatureAlgorithm.HS256, secret)
+                .compact();
+    }
+
+    /**
      * 從 Token 取得使用者帳號
      * 
      * @param token JWT Token

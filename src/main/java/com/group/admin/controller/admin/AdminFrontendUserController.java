@@ -3,7 +3,8 @@ package com.group.admin.controller.admin;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.user.FrontendUserCondition;
 import com.group.admin.req.user.FrontendUserUpdateReq;
-import com.group.admin.res.user.FrontendUserRes;
+import com.group.admin.res.user.FrontendUserDetailRes;
+import com.group.admin.res.user.FrontendUserListRes;
 import com.group.admin.entity.UserLoginHistory;
 import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.service.FrontendUserService;
@@ -23,7 +24,10 @@ import java.util.List;
  * 前台會員管理 API（後台使用）
  * 
  * 路由：/admin/frontend-users/**
- * 權限：所有後台角色都可以查看和編輯
+ * 權限：
+ * - ADMIN：可查看與管理
+ * - STORE_OWNER：僅可查看
+ * - STORE_EDITOR：僅可查看（部分欄位由服務層遮罩）
  * 
  * @author KUJI System
  * @since 1.0.0
@@ -51,12 +55,12 @@ public class AdminFrontendUserController {
     @PostMapping("/list")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "查詢前台會員列表", description = "查詢所有前台會員（不過濾店家）")
-    public ResponseEntity<List<FrontendUserRes>> queryUsers(
+    public ResponseEntity<List<FrontendUserListRes>> queryUsers(
             @RequestBody(required = false) QueryReq<FrontendUserCondition> req) {
         
         log.info("🔍 查詢前台會員列表: req={}", req);
         
-        List<FrontendUserRes> result = frontendUserService.queryUsers(req);
+        List<FrontendUserListRes> result = frontendUserService.queryUsers(req);
         
         log.info("✅ 查詢成功: 共 {} 筆", result.size());
         return ResponseEntity.ok(result);
@@ -71,11 +75,11 @@ public class AdminFrontendUserController {
     @GetMapping("/{id:[a-f0-9\\-]{36}}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
     @Operation(summary = "取得會員詳情", description = "查詢單一會員詳細資訊")
-    public ResponseEntity<FrontendUserRes> getUser(@PathVariable String id) {
+    public ResponseEntity<FrontendUserDetailRes> getUser(@PathVariable String id) {
         
         log.info("🔍 查詢會員詳情: userId={}", id);
         
-        FrontendUserRes result = frontendUserService.getUserById(id);
+        FrontendUserDetailRes result = frontendUserService.getUserById(id);
         
         return ResponseEntity.ok(result);
     }
@@ -88,15 +92,15 @@ public class AdminFrontendUserController {
      * @return 更新後的會員資訊
      */
     @PutMapping("/{id:[a-f0-9\\-]{36}}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER', 'STORE_EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "更新會員資訊", description = "編輯會員資料")
-    public ResponseEntity<FrontendUserRes> updateUser(
+    public ResponseEntity<FrontendUserDetailRes> updateUser(
             @PathVariable String id,
             @Valid @RequestBody FrontendUserUpdateReq req) {
         
         log.info("✏️ 更新會員資訊: userId={}, req={}", id, req);
         
-        FrontendUserRes result = frontendUserService.updateUser(id, req);
+        FrontendUserDetailRes result = frontendUserService.updateUser(id, req);
         
         log.info("✅ 更新成功");
         return ResponseEntity.ok(result);
@@ -112,7 +116,7 @@ public class AdminFrontendUserController {
      * @return 成功訊息
      */
     @PostMapping("/{id:[a-f0-9\\-]{36}}/activate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "啟用會員", description = "將會員設為 ACTIVE 狀態")
     public ResponseEntity<Void> activateUser(@PathVariable String id) {
         
@@ -130,7 +134,7 @@ public class AdminFrontendUserController {
      * @return 成功訊息
      */
     @PostMapping("/{id:[a-f0-9\\-]{36}}/deactivate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "停用會員", description = "將會員設為 INACTIVE 狀態")
     public ResponseEntity<Void> deactivateUser(@PathVariable String id) {
         
@@ -148,7 +152,7 @@ public class AdminFrontendUserController {
      * @return 成功訊息
      */
     @PostMapping("/{id:[a-f0-9\\-]{36}}/suspend")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "暫停會員", description = "將會員設為 SUSPENDED 狀態（暫停使用）")
     public ResponseEntity<Void> suspendUser(@PathVariable String id) {
         

@@ -4,7 +4,8 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.req.user.FrontendUserCondition;
 import com.group.admin.req.user.FrontendUserUpdateReq;
-import com.group.admin.res.user.FrontendUserRes;
+import com.group.admin.res.user.FrontendUserDetailRes;
+import com.group.admin.res.user.FrontendUserListRes;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public interface FrontendUserService {
      * @param req 查詢請求
      * @return 會員列表
      */
-    List<FrontendUserRes> queryUsers(QueryReq<FrontendUserCondition> req);
+    List<FrontendUserListRes> queryUsers(QueryReq<FrontendUserCondition> req);
     
     /**
      * 取得會員詳情
@@ -30,7 +31,7 @@ public interface FrontendUserService {
      * @param id 會員 ID
      * @return 會員詳情
      */
-    FrontendUserRes getUserById(String id);
+    FrontendUserDetailRes getUserById(String id);
     
     /**
      * 更新會員資訊
@@ -39,7 +40,7 @@ public interface FrontendUserService {
      * @param req 更新請求
      * @return 更新後的會員資訊
      */
-    FrontendUserRes updateUser(String id, FrontendUserUpdateReq req);
+    FrontendUserDetailRes updateUser(String id, FrontendUserUpdateReq req);
     
     /**
      * 軟刪除會員（標記為 DELETED）
