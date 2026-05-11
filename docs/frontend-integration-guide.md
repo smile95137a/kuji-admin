@@ -2,7 +2,7 @@
 
 > **文件目的**：列出本次後端全數修改項目，說明每個 API 的參數意義、哪些欄位前端必須配合調整，以及各功能的實際行為變化。  
 > **適用對象**：後台前端開發人員。  
-> **最後更新**：2026-05-09
+> **最後更新**：2026-05-11
 
 ---
 
@@ -519,11 +519,11 @@ Request Body（**必填**）：
 ### 問題描述
 
 設定定時上架的商品在排程時間到達後，沒有自動上架。  
-**根本原因**：排程 SQL 查詢條件過舊，沒有正確對應新的待上架模型；目前待排程上架商品應以 `WAITING_ON_SHELF` 為主，並兼容舊資料 `DRAFT` / `CONFIGURED`。
+**根本原因**：排程 SQL 查詢條件過舊，沒有正確對應新的待上架模型；目前待排程上架商品應以 `WAITING_ON_SHELF` 為唯一來源。
 
 ### 修復內容
 
-純後端 SQL 修復，排程現在會正確找到 `WAITING_ON_SHELF` 狀態的待上架商品，並兼容舊資料 `DRAFT` / `CONFIGURED`。
+純後端 SQL 修復，排程現在只會從 `WAITING_ON_SHELF` 狀態挑選待上架商品。
 
 ### 前端是否需要調整
 
@@ -1037,4 +1037,115 @@ PUT  /admin/lottery/{id}/with-prizes
   - `ALL_DRAWN`：已售完 / 全數已抽完
 
 > 如有任何 API 行為疑問，可查閱 Swagger UI：`http://localhost:8080/api/swagger-ui.html`
+
+---
+
+## 20. 2026-05-11 第三輪契約收斂（商品 + 報表）
+
+### A. 後端商品狀態相容清理
+
+本輪已落地：
+
+1. `LotteryServiceImpl` 的 `VALID_TRANSITIONS` 移除 `CONFIGURED` 相容轉換。
+2. `LotteryMapper.xml` 的 `selectScheduledForPromotion` 改為只查 `WAITING_ON_SHELF`。
+3. `LotteryService` 與 `ScheduledTasks` 註解已同步為新語意，不再描述 `CONFIGURED` 相容。
+
+### B. 後端報表權限邏輯收斂
+
+本輪已落地：
+
+1. `AdminReportController` 移除 `recharge` / `bonus` / `member-growth` / `platform-revenue` 內重複 `isAdmin` 判斷。
+2. 以上端點統一由 `@PreAuthorize("hasRole('ADMIN')")` 控制。
+
+### C. 後台前端報表型別補齊
+
+本輪已落地：
+
+1. `adminReportService.ts` 補齊全部報表回應型別（Revenue / Referral / Recharge / Bonus / MemberGrowth / LotteryResult / PlatformRevenue / LotterySales / StorePerformance / PrizeShipment）。
+2. 報表 API 方法改為對應泛型回應，降低 `any` 契約盲區。
+3. 各報表頁 `reportData` 已改用對應 DTO 型別。
+4. `PlatformRevenueReport.vue` 已對齊每日欄位 `net`（舊 `netRevenue` 已修正）。
+
+### D. 前台前端終態 fallback 收斂
+
+本輪已落地：
+
+1. `IchibanKujiCard.vue` 移除 `SOLD_OUT` fallback。
+2. `StoreProductCard.vue` 移除 `SOLD_OUT` fallback。
+3. 前台終態語意保留 `GRAND_PRIZE_DRAWN` / `ALL_DRAWN`。
+
+---
+
+## 21. 2026-05-12 第二包收尾補丁（分類聚合 / 店家圖片 / 後台查詢）
+
+### A. 前台分類 API 改為顯示分類聚合
+
+API：
+
+```
+GET /api/category/categories
+```
+
+本次行為固定為回傳 5 個前台顯示分類，不再直接以 DB `category` 原值做前台主分類來源。
+
+固定 buckets：
+
+- 官方一番賞
+- 自製一番賞
+- 刮刮樂
+- 扭蛋
+- 卡牌
+
+補充規則：
+
+1. 刮刮樂判定以 `subCategory/playMode = SCRATCH_MODE` 為準，不只看 `category`。
+2. API 即使某分類目前商品數為 0，也仍會保留 bucket，避免前台分類語意漂移。
+
+### B. 店家頁圖片體驗補強
+
+本次已完成的前台行為：
+
+1. 店家列表卡片：封面補 skeleton、載入失敗 fallback、首圖優先策略統一。
+2. 店家詳頁封面輪播：補 skeleton、失敗 fallback、placeholder。
+3. 店家 logo：補 skeleton，失敗時退回首字 fallback badge。
+4. 店家商品卡：補 skeleton，圖片失敗時退回內建 SVG fallback。
+
+前端整合重點：
+
+1. 不要假設 `coverImageUrl` 一定可用。
+2. 店家封面圖請優先使用正規化後的第一張 cover image。
+3. UI 必須接受圖片失敗時退回 placeholder / fallback，而不是顯示破圖。
+
+### C. 後台商品與獎品列表查詢：`playMode` 篩選修正
+
+API：
+
+```
+POST /api/admin/lottery/with-prizes/list
+```
+
+Request Body 範例：
+
+```json
+{
+  "condition": {
+    "playMode": "SCRATCH_MODE"
+  }
+}
+```
+
+本次修正：
+
+1. `with-prizes/list` 原本漏套 `playMode` 條件，導致後台查詢結果混入其他玩法。
+2. 後端已補上 `criteria.andPlayModeEqualTo(condition.getPlayMode())`。
+
+驗證結果：
+
+1. `playMode=LOTTERY_MODE` 時，回傳唯一 `playMode` 為 `LOTTERY_MODE`。
+2. `playMode=SCRATCH_MODE` 時，回傳唯一 `playMode` 為 `SCRATCH_MODE`。
+
+注意：
+
+1. `subCategory` 與 `playMode` 不是同一維度。
+2. 前端若要做篩選 UI，必須分開理解，不要把 `subCategory` 當作 `playMode` 成功與否的驗證依據。
 

@@ -3,6 +3,12 @@
 **Branch**: `033-platform-revenue-report` | **Date**: 2026-05-05 | **Spec**: [spec.md](spec.md)  
 **Input**: Feature specification from `/specs/033-platform-revenue-report/spec.md`
 
+## 現況註記（2026-05-11）
+
+1. 本計畫對應的 API 與前後台基本實作已存在。
+2. 目前主線改為跨 repo 契約收斂與管理模組巡檢，非新增報表能力。
+3. 執行實作前請先對照 `docs/AI_HANDOFF_CURRENT.md` 最新節點，避免沿用過期假設。
+
 ## Summary
 
 新增 `POST /admin/report/platform-revenue` 端點，提供 Admin 查詢指定時間區間內的平台

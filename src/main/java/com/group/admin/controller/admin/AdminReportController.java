@@ -32,7 +32,7 @@ public class AdminReportController {
     @PostMapping("/revenue")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<RevenueReportRes> getRevenueReport(
-            @RequestBody QueryReq<RevenueReportCondition> req) {
+            @RequestBody(required = false) QueryReq<RevenueReportCondition> req) {
         
         // 非 Admin 只能查自己店家的報表
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
@@ -80,9 +80,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RechargeReportRes> getRechargeReport(
             @RequestBody(required = false) QueryReq<RechargeReportCondition> req) {
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
         return ResponseEntity.ok(reportService.getRechargeReport(req));
     }
     
@@ -93,10 +90,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BonusReportRes> getBonusReport(
             @RequestBody(required = false) QueryReq<BonusReportCondition> req) {
-
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
         return ResponseEntity.ok(reportService.getBonusReport(req));
     }
 
@@ -113,9 +106,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MemberGrowthReportRes> getMemberGrowthReport(
             @RequestBody(required = false) QueryReq<MemberGrowthReportCondition> req) {
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
         return ResponseEntity.ok(reportService.getMemberGrowthReport(req));
     }
 
@@ -127,11 +117,6 @@ public class AdminReportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PlatformRevenueReportRes> getPlatformRevenueReport(
             @RequestBody(required = false) QueryReq<PlatformRevenueReportCondition> req) {
-
-        if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
-        }
-
         return ResponseEntity.ok(reportService.getPlatformRevenueReport(req));
     }
 
@@ -142,7 +127,7 @@ public class AdminReportController {
     @PostMapping("/lottery-sales")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<LotterySalesRankingRes> getLotterySalesRanking(
-            @RequestBody QueryReq<LotterySalesRankingCondition> req) {
+            @RequestBody(required = false) QueryReq<LotterySalesRankingCondition> req) {
 
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
         if (currentStoreId != null) {
@@ -163,7 +148,7 @@ public class AdminReportController {
     @PostMapping("/store-performance")
     @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
     public ResponseEntity<StorePerformanceReportRes> getStorePerformanceReport(
-            @RequestBody QueryReq<StorePerformanceCondition> req) {
+            @RequestBody(required = false) QueryReq<StorePerformanceCondition> req) {
 
         if (req == null) req = new QueryReq<>();
         if (req.getCondition() == null) req.setCondition(new StorePerformanceCondition());

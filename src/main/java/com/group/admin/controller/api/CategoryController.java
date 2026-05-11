@@ -46,7 +46,7 @@ public class CategoryController {
     @Operation(summary = "查詢商品類別", description = "查詢所有商品類別（如一番賞、扭蛋、刮刮樂等），返回每個類別的商品數量")
     public ResponseEntity<List<CategoryRes>> queryCategories() {
         log.info("📂 前台查詢類別");
-        return ResponseEntity.ok(categoryService.queryCategories(null));
+        return ResponseEntity.ok(categoryService.queryDisplayCategories(null));
     }
     
     /**

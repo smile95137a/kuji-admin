@@ -23,9 +23,9 @@ public interface LotteryService {
     
     // ==================== 排程觸發 ====================
 
-    /**
-     * 自動將排程到期商品從 WAITING_ON_SHELF（含舊資料 CONFIGURED）推進到 ON_SHELF
-     */
+        /**
+         * 自動將排程到期商品從 WAITING_ON_SHELF 推進到 ON_SHELF
+         */
     void promoteScheduledLotteries();
 
     /**

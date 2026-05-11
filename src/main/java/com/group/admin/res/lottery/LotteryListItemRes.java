@@ -43,6 +43,18 @@ public class LotteryListItemRes {
     @Schema(description = "商品分類中文")
     private String categoryName;
 
+    @Schema(description = "子分類")
+    private String subCategory;
+
+    @Schema(description = "子分類中文")
+    private String subCategoryName;
+
+    @Schema(description = "玩法模式")
+    private String playMode;
+
+    @Schema(description = "遊戲模式")
+    private String gameMode;
+
     @Schema(description = "每抽價格")
     private Long pricePerDraw;
 
@@ -82,6 +94,10 @@ public class LotteryListItemRes {
                 .imageUrl(res.getImageUrl())
                 .category(res.getCategory())
                 .categoryName(res.getCategoryName())
+                .subCategory(res.getSubCategory())
+                .subCategoryName(res.getSubCategoryName())
+                .playMode(res.getPlayMode())
+                .gameMode(res.getGameMode())
                 .pricePerDraw(res.getPricePerDraw())
                 .currentPrice(res.getCurrentPrice())
                 .maxDraws(res.getMaxDraws())
