@@ -2,6 +2,8 @@ package com.group.admin.config;
 
 import com.group.admin.security.AdminJwtAuthenticationFilter;
 import com.group.admin.security.ApiJwtAuthenticationFilter;
+import com.group.admin.security.ApiOAuth2AuthenticationFailureHandler;
+import com.group.admin.security.ApiOAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +33,8 @@ public class SecurityConfig {
 
     private final AdminJwtAuthenticationFilter adminJwtFilter;
     private final ApiJwtAuthenticationFilter apiJwtFilter;
+        private final ApiOAuth2AuthenticationSuccessHandler apiOAuth2AuthenticationSuccessHandler;
+        private final ApiOAuth2AuthenticationFailureHandler apiOAuth2AuthenticationFailureHandler;
 
     /**
      * 密碼加密器（使用 BCrypt）
@@ -80,7 +84,7 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         // 登入、註冊、OAuth 不需要認證
-                        .requestMatchers("/api/auth/**", "/login/oauth2/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/login/oauth2/**", "/oauth2/**").permitAll()
                         // 公開 API（不需要認證）
                         .requestMatchers("/api/district/**").permitAll()  // 行政區資料
                         .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
@@ -99,12 +103,9 @@ public class SecurityConfig {
                         // 其他 /api/** 需要 USER 或後台管理角色
                         .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
                 )
-                // ⚠️ 暫時停用 OAuth2 登入（需要先配置 OAuth2 Provider）
-                // .oauth2Login(oauth2 -> oauth2
-                //         .loginPage("/api/auth/login")
-                //         .defaultSuccessUrl("/api/auth/oauth2/success", true)
-                //         .failureUrl("/api/auth/oauth2/failure")
-                // )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(apiOAuth2AuthenticationSuccessHandler)
+                        .failureHandler(apiOAuth2AuthenticationFailureHandler))
                 .addFilterBefore(apiJwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

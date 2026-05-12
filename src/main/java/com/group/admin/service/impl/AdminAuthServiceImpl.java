@@ -163,7 +163,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         String displayName = user.getDisplayName() != null && !user.getDisplayName().isBlank()
                 ? user.getDisplayName()
                 : user.getUsername();
-        emailService.sendTemporaryPasswordEmail(
+        emailService.sendTemporaryPasswordEmailSync(
             user.getEmail(),
             displayName,
             temporaryPassword,

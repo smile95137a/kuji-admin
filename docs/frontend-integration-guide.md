@@ -1149,3 +1149,66 @@ Request Body 範例：
 1. `subCategory` 與 `playMode` 不是同一維度。
 2. 前端若要做篩選 UI，必須分開理解，不要把 `subCategory` 當作 `playMode` 成功與否的驗證依據。
 
+---
+
+## 22. 2026-05-12 OAuth2 與 SMTP 穩定化（手工測試前置）
+
+### A. 前台 Google OAuth2 改為標準 redirect/callback 流程
+
+本次後端已啟用 Spring Security `oauth2Login`，不再只有前端拿 `idToken` 再 POST 的舊模式。
+
+標準入口：
+
+```
+GET /api/oauth2/authorization/google
+```
+
+回呼（Spring Security 預設）：
+
+```
+GET /api/login/oauth2/code/google
+```
+
+成功後行為：
+
+1. 後端會以 Google profile（email/sub/name/picture）做帳號查找或建立。
+2. 後端仍使用既有 JWT 機制簽發 `accessToken` / `refreshToken`。
+3. 成功會 redirect 到前端：`{APP_FRONTEND_URL}/oauth2/callback`，並帶下列 query：
+  - `accessToken`
+  - `refreshToken`
+  - `expiresIn`
+  - `isNewUser`
+
+失敗後行為：
+
+1. 會 redirect 到同一個 callback 路徑。
+2. query 會帶：
+  - `error`
+  - `message`
+
+前端需配合：
+
+1. 新增/確認 `oauth2/callback` 頁，能處理成功 token 與失敗錯誤參數。
+2. 管理 Google 登入按鈕導向 `GET /api/oauth2/authorization/google`。
+3. 若前端仍保留舊 `idToken POST` 方式，請視為相容路徑，主流程以 redirect/callback 為準。
+
+---
+
+### B. SMTP 關鍵流程保護（避免「密碼已改但信未寄出」）
+
+本次調整重點：
+
+1. 關鍵密碼郵件改為同步發送（失敗即拋錯）：
+  - 前台忘記密碼（臨時密碼）
+  - 後台忘記密碼（臨時密碼）
+  - 後台建立 StoreOwner / StoreEditor（初始密碼）
+  - 後台重設密碼（初始密碼）
+2. SMTP 未設定時不再視為成功。
+3. `email_log` 會正確落 `FAILED`，不會再誤標 `SENT`。
+
+手工測試建議：
+
+1. 正常 SMTP：上述四條流程都應收得到信。
+2. 關閉/設錯 SMTP：上述流程應失敗，且不應留下「資料已改但使用者未收到密碼」的壞狀態。
+3. 檢查 `email_log`：狀態需與實際寄送結果一致。
+

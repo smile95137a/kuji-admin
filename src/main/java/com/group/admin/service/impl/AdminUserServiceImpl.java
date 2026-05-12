@@ -146,7 +146,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         log.info("店家負責人帳號建立成功：userId={}, storeId={}", adminUser.getId(), store.getId());
 
-        emailService.sendInitialPasswordEmail(adminUser.getEmail(), adminUser.getDisplayName(), initialPassword);
+        emailService.sendInitialPasswordEmailSync(adminUser.getEmail(), adminUser.getDisplayName(), initialPassword);
 
         return toAdminUserRes(adminUser);
     }
@@ -206,7 +206,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         log.info("店家編輯人員帳號建立成功：userId={}, storeId={}", adminUser.getId(), req.getStoreId());
 
-        emailService.sendInitialPasswordEmail(adminUser.getEmail(), adminUser.getDisplayName(), initialPassword);
+        emailService.sendInitialPasswordEmailSync(adminUser.getEmail(), adminUser.getDisplayName(), initialPassword);
 
         return toAdminUserRes(adminUser);
     }
@@ -326,7 +326,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         log.info("密碼重設成功：userId={}", userId);
 
-        emailService.sendInitialPasswordEmail(user.getEmail(), user.getDisplayName(), newPassword);
+        emailService.sendInitialPasswordEmailSync(user.getEmail(), user.getDisplayName(), newPassword);
 
         return newPassword;
     }

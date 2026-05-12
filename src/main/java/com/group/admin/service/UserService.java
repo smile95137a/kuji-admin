@@ -29,6 +29,11 @@ public interface UserService {
      * Google OAuth 登入（provider = GOOGLE）
      */
     AuthRes loginWithGoogle(AuthGoogleReq req);
+
+    /**
+     * Google OAuth 登入（標準 redirect/callback 後，直接使用 Google profile）
+     */
+    AuthRes loginWithGoogleProfile(String email, String googleId, String picture, String name);
     
     /**
      * 根據 Email 查詢使用者

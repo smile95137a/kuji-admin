@@ -2,6 +2,25 @@
 
 最後更新：2026-05-11
 
+## 0.5 2026-05-12（OAuth2 + SMTP 手測前置落地）
+
+1. OAuth2 已從舊 `idToken POST` 單一路徑，補上標準 Spring Security redirect/callback 流程：
+   - 啟用 `oauth2Login`
+   - 新增 OAuth2 success/failure handler
+   - 成功後 redirect 到 `{APP_FRONTEND_URL}/oauth2/callback` 並帶 `accessToken/refreshToken/expiresIn/isNewUser`
+2. Google 登入服務已補強：
+   - `loginWithGoogle` 新增 `aud`（client-id）驗證
+   - 新增 `loginWithGoogleProfile(...)` 給標準 OAuth2 回呼重用
+3. SMTP 關鍵流程保護已落地：
+   - 前/後台忘記密碼與後台建立/重設密碼改為同步寄送
+   - SMTP 未設定改為明確失敗，不再假成功
+   - 郵件失敗時流程會中止，避免「密碼先改但未收信」
+4. 本機編譯驗證：
+   - `mvn -DskipTests compile` → `BUILD SUCCESS`（exit code `0`）
+5. 待下一步手工測試：
+   - 本機 + 遠端 OAuth2 callback 流程
+   - 前/後台忘記密碼、建立負責人、重設密碼實收信驗證
+
 ## 0.3 2026-05-11（商品 + 報表第三輪收斂）
 
 > 本節為最新狀態，若與下方舊段落衝突，以本節為準。

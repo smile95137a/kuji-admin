@@ -113,6 +113,11 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendInitialPasswordEmail(String to, String displayName, String initialPassword) {
+        sendInitialPasswordEmailSync(to, displayName, initialPassword);
+    }
+
+    @Override
+    public void sendInitialPasswordEmailSync(String to, String displayName, String initialPassword) {
         String subject = String.format("[%s] 後台帳號初始密碼", appName);
 
         Context context = new Context();
@@ -126,13 +131,20 @@ public class EmailServiceImpl implements EmailService {
             "initialPassword", initialPassword
         );
 
-        sendEmail("INITIAL_PASSWORD", to, displayName, subject, content, "initial-password-email", params, null, null);
+        sendEmailOrThrow("INITIAL_PASSWORD", to, displayName, subject, content,
+                "initial-password-email", params, null, null);
     }
 
     @Override
     @Async
     public void sendTemporaryPasswordEmail(String to, String displayName, String temporaryPassword,
                                            String loginUrl, String scene) {
+        sendTemporaryPasswordEmailSync(to, displayName, temporaryPassword, loginUrl, scene);
+    }
+
+    @Override
+    public void sendTemporaryPasswordEmailSync(String to, String displayName, String temporaryPassword,
+                                               String loginUrl, String scene) {
         String safeScene = scene != null && !scene.isBlank() ? scene : "忘記密碼";
         String safeDisplayName = displayName != null && !displayName.isBlank() ? displayName : "使用者";
         String safeLoginUrl = loginUrl != null && !loginUrl.isBlank() ? loginUrl : frontendUrl + "/login";
@@ -152,7 +164,7 @@ public class EmailServiceImpl implements EmailService {
             "scene", safeScene
         );
 
-        sendEmail("TEMP_PASSWORD", to, safeDisplayName, subject, content,
+        sendEmailOrThrow("TEMP_PASSWORD", to, safeDisplayName, subject, content,
                 "temporary-password-email", params, null, null);
     }
 
@@ -186,6 +198,20 @@ public class EmailServiceImpl implements EmailService {
     private void sendEmail(String emailType, String toEmail, String toName, String subject, 
                           String content, String templateName, Map<String, Object> templateParams,
                           String relatedType, String relatedId) {
+        sendEmailInternal(emailType, toEmail, toName, subject, content, templateName,
+            templateParams, relatedType, relatedId, false);
+        }
+
+        private void sendEmailOrThrow(String emailType, String toEmail, String toName, String subject,
+                      String content, String templateName, Map<String, Object> templateParams,
+                      String relatedType, String relatedId) {
+        sendEmailInternal(emailType, toEmail, toName, subject, content, templateName,
+            templateParams, relatedType, relatedId, true);
+        }
+
+        private void sendEmailInternal(String emailType, String toEmail, String toName, String subject,
+                       String content, String templateName, Map<String, Object> templateParams,
+                       String relatedType, String relatedId, boolean throwOnFailure) {
         // 建立郵件記錄
         EmailLog emailLog = new EmailLog();
         emailLog.setId(UUID.randomUUID().toString());
@@ -229,13 +255,17 @@ public class EmailServiceImpl implements EmailService {
             emailLogRepository.updateStatus(emailLog);
             
             log.error("❌ 郵件發送失敗: type={}, to={}, error={}", emailType, toEmail, e.getMessage());
+
+            if (throwOnFailure) {
+                throw new IllegalStateException("郵件發送失敗，請稍後再試", e);
+            }
         }
     }
     
     private void doSendEmail(String to, String subject, String htmlContent) throws MessagingException {
         if (fromEmail == null || fromEmail.isEmpty()) {
-            log.warn("⚠️ 郵件發送功能未啟用（未設定 SMTP）");
-            return;
+            log.error("❌ 郵件發送功能未啟用（未設定 SMTP）");
+            throw new IllegalStateException("SMTP 未設定，無法寄送郵件");
         }
         
         MimeMessage message = mailSender.createMimeMessage();

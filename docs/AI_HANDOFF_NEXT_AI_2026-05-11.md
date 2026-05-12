@@ -2,6 +2,22 @@
 
 最後更新：2026-05-11（本次會話同步）
 
+## 最新增補（2026-05-12）
+
+1. OAuth2 標準流程已落地（redirect/callback），下一棒優先做端到端手測：
+  - `GET /api/oauth2/authorization/google`
+  - callback 成功/失敗都要驗證前端 `oauth2/callback` 接收是否正常
+2. SMTP 關鍵流程保護已落地，下一棒優先驗證四條路徑實收信：
+  - 前台 forgot password
+  - 後台 forgot password
+  - 後台建立 StoreOwner
+  - 後台 reset password
+3. 遠端環境必查：
+  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+  - `APP_FRONTEND_URL`
+  - `GMAIL_USERNAME` / `GMAIL_APP_PASSWORD`
+4. 若遠端仍出現「API 成功但沒收到信」，先查 `email_log` 狀態是否仍有舊資料表/舊欄位殘留問題，再決定是否走 DB migration 補丁包。
+
 ## 收尾狀態
 
 1. 本輪三 repo 已完成提交並推送，當前可視為乾淨接手點。

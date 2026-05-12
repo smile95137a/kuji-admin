@@ -252,76 +252,17 @@ public class UserServiceImpl implements UserService {
             String googleId = (String) body.get("sub"); // Google 唯一用戶 ID
             String picture = (String) body.getOrDefault("picture", null);
             String name = (String) body.getOrDefault("name", email.split("@")[0]);
-            
-            // 查詢是否已有此 Email 的用戶
-            User user = findByEmail(email);
-            
-            if (user == null) {
-                // 新用戶：使用 Google 註冊
-                user = new User();
-                user.setId(UUID.randomUUID().toString());
-                user.setEmail(email);
-                user.setNickname(name);
-                user.setAvatar(picture);
-                user.setProvider("GOOGLE"); // Google 登入
-                user.setProviderId(googleId); // 存儲 Google 用戶 ID
-                user.setGoldCoins(0L);
-                user.setBonusCoins(0L);
-                user.setTotalRecharged(0L);
-                user.setVersion(0);
-                user.setStatus("ACTIVE");
-                user.setEmailVerified((byte) 1); // Google 已驗證 Email
-                user.setFailedLoginAttempts(0);
-                user.setLastLoginAt(LocalDateTime.now());
-                user.setCreatedAt(LocalDateTime.now());
-                user.setUpdatedAt(LocalDateTime.now());
-                user.setIsOauthNewUser(1); // ⭐ 標記為 OAuth 新用戶，前端用於顯示補推薦碼引導
-                userMapper.insert(user);
-                log.info("Google OAuth 新用戶註冊: {}, userId={}", email, user.getId());
-            } else {
-                user = normalizeLegacyProvider(user);
-                // ✅ 帳號衝突檢查：EMAIL provider 帳號不能用 Google 登入（雙向不混用原則）
-                if (!"GOOGLE".equals(user.getProvider())) {
-                    log.warn("⚠️ 帳號衝突：email={} 已使用 {} 方式註冊，試圖用 Google 登入", email, user.getProvider());
-                    throw new BusinessException(
-                        "EMAIL_PROVIDER_CONFLICT",
-                        "此 Email 已用 Email/密碼方式註冊，請改用密碼登入"
-                    );
-                }
 
-                // ✅ 檢查會員狀態（停用或刪除的會員不能登入）
-                if ("INACTIVE".equals(user.getStatus())) {
-                    throw new IllegalArgumentException("帳號已被停用，請聯繫客服");
+            // 驗證 token audience（避免接受錯誤 client 的 token）
+            if (googleClientId != null && !googleClientId.isBlank()) {
+                String aud = (String) body.get("aud");
+                if (aud == null || !googleClientId.equals(aud)) {
+                    log.warn("⚠️ Google token audience 不符: aud={}, expected={}", aud, googleClientId);
+                    throw new IllegalArgumentException("Invalid Google token audience");
                 }
-                if ("DELETED".equals(user.getStatus())) {
-                    throw new IllegalArgumentException("帳號不存在");
-                }
-                if ("SUSPENDED".equals(user.getStatus())) {
-                    throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
-                }
-
-                // 更新登入時間
-                user.setLastLoginAt(LocalDateTime.now());
-                userMapper.updateByPrimaryKeySelective(user);
-                log.info("✅ Google OAuth 用戶登入: {}", email);
             }
 
-                // 生成 Token（含 gen，支援登出後整包失效）
-                int currentGen = userTokenBlacklistService.getBlacklistGen(user.getId());
-                String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"), null,
-                    currentGen);
-                String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getId(), "user", currentGen);
-
-            boolean isNewUser = Integer.valueOf(1).equals(user.getIsOauthNewUser());
-
-            AuthRes res = new AuthRes();
-            res.setAccessToken(accessToken);
-            res.setRefreshToken(refreshToken);
-            res.setExpiresIn(jwtUtil.getExpirationSeconds());
-            res.setUser(user);
-            res.setIsNewUser(isNewUser); // ⭐ 前端用於判斷是否要顯示補推薦碼引導
-            res.setForceChangePassword(false);
-            return res;
+            return loginWithGoogleProfile(email, googleId, picture, name);
             
         } catch (IllegalArgumentException e) {
             throw e;
@@ -329,6 +270,82 @@ public class UserServiceImpl implements UserService {
             log.error("Google OAuth 驗證失敗", ex);
             throw new IllegalArgumentException("Google authentication failed");
         }
+    }
+
+    @Override
+    @Transactional
+    public AuthRes loginWithGoogleProfile(String email, String googleId, String picture, String name) {
+        if (email == null || email.isBlank() || googleId == null || googleId.isBlank()) {
+            throw new IllegalArgumentException("Invalid Google profile");
+        }
+
+        String resolvedName = (name == null || name.isBlank())
+                ? email.split("@")[0]
+                : name;
+
+        User user = findByEmail(email);
+
+        if (user == null) {
+            user = new User();
+            user.setId(UUID.randomUUID().toString());
+            user.setEmail(email);
+            user.setNickname(resolvedName);
+            user.setAvatar(picture);
+            user.setProvider("GOOGLE");
+            user.setProviderId(googleId);
+            user.setGoldCoins(0L);
+            user.setBonusCoins(0L);
+            user.setTotalRecharged(0L);
+            user.setVersion(0);
+            user.setStatus("ACTIVE");
+            user.setEmailVerified((byte) 1);
+            user.setFailedLoginAttempts(0);
+            user.setLastLoginAt(LocalDateTime.now());
+            user.setCreatedAt(LocalDateTime.now());
+            user.setUpdatedAt(LocalDateTime.now());
+            user.setIsOauthNewUser(1);
+            userMapper.insert(user);
+            log.info("Google OAuth 新用戶註冊: {}, userId={}", email, user.getId());
+        } else {
+            user = normalizeLegacyProvider(user);
+
+            if (!"GOOGLE".equals(user.getProvider())) {
+                log.warn("⚠️ 帳號衝突：email={} 已使用 {} 方式註冊，試圖用 Google 登入", email, user.getProvider());
+                throw new BusinessException(
+                        "EMAIL_PROVIDER_CONFLICT",
+                        "此 Email 已用 Email/密碼方式註冊，請改用密碼登入");
+            }
+
+            if ("INACTIVE".equals(user.getStatus())) {
+                throw new IllegalArgumentException("帳號已被停用，請聯繫客服");
+            }
+            if ("DELETED".equals(user.getStatus())) {
+                throw new IllegalArgumentException("帳號不存在");
+            }
+            if ("SUSPENDED".equals(user.getStatus())) {
+                throw new IllegalArgumentException("帳號已被暫停使用，請聯繫客服");
+            }
+
+            user.setLastLoginAt(LocalDateTime.now());
+            userMapper.updateByPrimaryKeySelective(user);
+            log.info("✅ Google OAuth 用戶登入: {}", email);
+        }
+
+        int currentGen = userTokenBlacklistService.getBlacklistGen(user.getId());
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getId(), "user", List.of("USER"), null,
+                currentGen);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getId(), "user", currentGen);
+
+        boolean isNewUser = Integer.valueOf(1).equals(user.getIsOauthNewUser());
+
+        AuthRes res = new AuthRes();
+        res.setAccessToken(accessToken);
+        res.setRefreshToken(refreshToken);
+        res.setExpiresIn(jwtUtil.getExpirationSeconds());
+        res.setUser(user);
+        res.setIsNewUser(isNewUser);
+        res.setForceChangePassword(false);
+        return res;
     }
 
     /**
@@ -411,7 +428,7 @@ public class UserServiceImpl implements UserService {
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateByPrimaryKeySelective(user);
 
-        emailService.sendTemporaryPasswordEmail(
+        emailService.sendTemporaryPasswordEmailSync(
             email,
             user.getNickname(),
             temporaryPassword,
