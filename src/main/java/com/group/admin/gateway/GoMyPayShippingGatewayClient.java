@@ -5,16 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
-
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -26,51 +19,60 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
 
     @Override
     public ShippingPaymentResult createPayment(ShippingPaymentRequest request) {
-        if (request == null || request.getOrderNumber() == null) {
+        if (request == null || request.getMerchantOrderNo() == null) {
             return ShippingPaymentResult.builder()
                     .success(false)
                     .errorMessage("缺少訂單資訊")
                     .build();
         }
 
-        String tradeNo = "GMP-SHIP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        long amount = request.getAmount() == null
-                ? 0L
-                : request.getAmount().setScale(0, RoundingMode.HALF_UP).longValue();
+        String paymentMethod = GoMyPaySupport.normalizePaymentMethod(request.getPaymentMethod());
+        long amount = GoMyPaySupport.normalizeAmount(request.getAmount());
 
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("ShopID", safe(properties.getShopId()));
-        params.put("Order_No", request.getOrderNumber());
+        params.put("Send_Type", GoMyPaySupport.isBankTransfer(paymentMethod) ? "4" : "0");
+        params.put("Pay_Mode_No", "2");
+        params.put("CustomerId", GoMyPaySupport.safe(properties.getShopId()));
+        params.put("Order_No", request.getMerchantOrderNo());
         params.put("Amount", String.valueOf(amount));
-        params.put("ItemDesc", safe(request.getItemDescription()));
-        params.put("BuyerName", safe(request.getBuyerName()));
-        params.put("BuyerEmail", safe(request.getBuyerEmail()));
-        params.put("BuyerPhone", safe(request.getBuyerPhone()));
-        params.put("ReturnURL", safe(properties.getReturnUrl()));
-        params.put("NotifyURL", safe(properties.getNotifyUrl()));
-        params.put("TimeStamp", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
-        params.put("TradeNo", tradeNo);
+        params.put("Buyer_Name", GoMyPaySupport.safe(request.getBuyerName()));
+        params.put("Buyer_Telm", GoMyPaySupport.safe(request.getBuyerPhone()));
+        params.put("Buyer_Mail", GoMyPaySupport.safe(request.getBuyerEmail()));
+        params.put("Buyer_Memo", GoMyPaySupport.safe(request.getItemDescription()));
+        if (!GoMyPaySupport.isBankTransfer(paymentMethod)) {
+            params.put("TransCode", "00");
+            params.put("TransMode", "1");
+            params.put("Installment", "0");
+        }
+        params.put("Return_url", GoMyPaySupport.safe(properties.getShippingReturnUrl(), properties.getReturnUrl()));
+        params.put("Callback_Url", GoMyPaySupport.safe(properties.getShippingNotifyUrl(), properties.getNotifyUrl()));
+        params.put("Str_Check", GoMyPaySupport.safe(properties.getHashKey()));
 
-        String payUrl = buildPayUrl(params);
-        log.info("💳 [GoMyPay] 建立付款單: orderNo={}, tradeNo={}, amount={}", request.getOrderNumber(), tradeNo, amount);
+        String payUrl = GoMyPaySupport.buildPayUrl(properties.getApiUrl(), params);
+        log.info("💳 [GoMyPay] 建立運費付款單: merchantOrderNo={}, paymentMethod={}, amount={}",
+            request.getMerchantOrderNo(), paymentMethod, amount);
 
         return ShippingPaymentResult.builder()
                 .success(true)
-                .gatewayTradeNo(tradeNo)
+            .gatewayTradeNo(request.getMerchantOrderNo())
                 .payUrl(payUrl)
                 .build();
     }
 
     @Override
     public ShippingCallbackResult parseCallback(Map<String, String> params) {
-        String orderNo = firstNonBlank(params, "Order_No", "orderNo", "MerchantOrderNo");
-        String tradeNo = firstNonBlank(params, "TradeNo", "gatewayTradeNo", "Trade_No");
+        GoMyPaySupport.verifyCallback(params, properties);
+        String orderNo = GoMyPaySupport.firstNonBlank(params, "e_orderno", "Order_No", "orderNo", "MerchantOrderNo");
+        String tradeNo = GoMyPaySupport.firstNonBlank(params, "OrderID", "TradeNo", "gatewayTradeNo", "Trade_No");
 
-        String statusRaw = firstNonBlank(params,
+        String statusRaw = GoMyPaySupport.firstNonBlank(params,
                 "Status", "status", "PayStatus", "payStatus", "RtnCode", "rtnCode", "success");
-        boolean success = isSuccess(statusRaw);
+        if (statusRaw == null) {
+            statusRaw = GoMyPaySupport.firstNonBlank(params, "result");
+        }
+        boolean success = GoMyPaySupport.isSuccess(statusRaw);
 
-        String errorMessage = success ? null : firstNonBlank(params,
+        String errorMessage = success ? null : GoMyPaySupport.firstNonBlank(params,
                 "Message", "ErrMsg", "error", "errorMessage", "msg");
         if (!success && (errorMessage == null || errorMessage.isBlank())) {
             errorMessage = "GoMyPay callback status=" + statusRaw;
@@ -86,39 +88,5 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
                 .errorMessage(errorMessage)
                 .rawPayload(String.valueOf(params))
                 .build();
-    }
-
-    private String buildPayUrl(Map<String, String> params) {
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(safe(properties.getApiUrl()));
-        params.forEach(builder::queryParam);
-        return builder.build(false).encode(StandardCharsets.UTF_8).toUriString();
-    }
-
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
-
-    private String firstNonBlank(Map<String, String> params, String... keys) {
-        for (String key : keys) {
-            String value = params.get(key);
-            if (value != null && !value.trim().isEmpty()) {
-                return value.trim();
-            }
-        }
-        return null;
-    }
-
-    private boolean isSuccess(String value) {
-        if (value == null) {
-            return false;
-        }
-        String normalized = value.trim().toUpperCase();
-        return "1".equals(normalized)
-                || "Y".equals(normalized)
-                || "TRUE".equals(normalized)
-                || "SUCCESS".equals(normalized)
-                || "PAID".equals(normalized)
-                || "00".equals(normalized);
     }
 }

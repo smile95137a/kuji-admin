@@ -15,14 +15,14 @@ import java.time.LocalDateTime;
 public class StubPaymentGatewayClient implements PaymentGatewayClient {
 
     @Override
-    public GatewayInitResult charge(RechargeOrder order) {
+    public GatewayInitResult charge(RechargeOrder order, String paymentMethod) {
         log.info("🔧 [Stub] charge called for orderId={}", order.getId());
         String payUrl = "/api/wallet/recharge/callback/stub?orderId=" + order.getId() + "&success=true";
         return new GatewayInitResult(payUrl, "STUB-" + order.getId(), "stub");
     }
 
     @Override
-    public GatewayCallbackResult verifyCallback(String rawPayload, String signature) {
+    public GatewayCallbackResult verifyCallback(java.util.Map<String, String> params) {
         log.info("🔧 [Stub] verifyCallback called");
         return null; // not used directly; stub callback handled in controller
     }

@@ -1,11 +1,18 @@
 package com.group.admin.service.impl;
 
-import com.group.admin.entity.RechargeRecord;
+import com.group.admin.entity.RechargeOrder;
 import com.group.admin.entity.RechargePlan;
+import com.group.admin.entity.RechargeRecord;
 import com.group.admin.entity.User;
+import com.group.admin.enums.RechargeOrderStatus;
 import com.group.admin.exception.BusinessException;
-import com.group.admin.mapper.RechargeRecordMapper;
+import com.group.admin.gateway.GatewayCallbackResult;
+import com.group.admin.gateway.GatewayInitResult;
+import com.group.admin.gateway.GoMyPaySupport;
+import com.group.admin.gateway.PaymentGatewayClient;
+import com.group.admin.mapper.RechargeOrderMapper;
 import com.group.admin.mapper.RechargePlanMapper;
+import com.group.admin.mapper.RechargeRecordMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.PageResult;
@@ -14,11 +21,15 @@ import com.group.admin.service.CoinService;
 import com.group.admin.service.RechargeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -34,15 +45,61 @@ import java.util.UUID;
 public class RechargeServiceImpl implements RechargeService {
     
     private final RechargeRecordMapper rechargeRecordMapper;
+    private final RechargeOrderMapper rechargeOrderMapper;
     private final RechargePlanMapper rechargePlanMapper;
     private final UserMapper userMapper;
     private final CoinService coinService;
+    private final PaymentGatewayClient paymentGatewayClient;
+
+    @Value("${wallet.recharge-order.ttl-minutes:30}")
+    private long rechargeOrderTtlMinutes;
 
     @Override
-    public com.group.admin.res.wallet.RechargeOrderRes createRechargeOrder(String userId, String planId) {
-        log.info("💳 [Recharge] 建立儲值訂單：userId={}, planId={}", userId, planId);
-        // Stub: 真實串接第三方金流時實作；目前使用管理端 createRechargeRequest
-        throw new BusinessException("請使用 POST /recharge/request 進行儲值");
+    public com.group.admin.res.wallet.RechargeOrderRes createRechargeOrder(String userId, String planId, String paymentMethod) {
+        log.info("💳 [Recharge] 建立儲值訂單：userId={}, planId={}, paymentMethod={}", userId, planId, paymentMethod);
+
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            throw new BusinessException("使用者不存在");
+        }
+
+        RechargePlan plan = requireValidPlan(planId);
+        String normalizedPaymentMethod = GoMyPaySupport.normalizePaymentMethod(paymentMethod);
+        LocalDateTime now = LocalDateTime.now();
+
+        RechargeOrder order = RechargeOrder.builder()
+                .id(generateRechargeOrderId())
+                .userId(userId)
+                .planId(plan.getId())
+                .goldAmount(plan.getGoldCoins())
+                .bonusAmount(plan.getBonusCoins())
+                .priceTwd(BigDecimal.valueOf(plan.getAmount()))
+                .status(RechargeOrderStatus.PENDING)
+            .buyerName(user.getNickname() != null && !user.getNickname().isBlank() ? user.getNickname() : "KUJI會員")
+            .buyerEmail(user.getEmail())
+                .buyerPhone(user.getPhoneNumber())
+                .expiredAt(now.plusMinutes(rechargeOrderTtlMinutes))
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        GatewayInitResult initResult = paymentGatewayClient.charge(order, normalizedPaymentMethod);
+        order.setGatewayProvider(initResult.provider());
+        order.setGatewayOrderId(initResult.gatewayOrderId());
+        order.setGatewayRawResp(initResult.payUrl());
+        rechargeOrderMapper.insert(order);
+
+        return toRechargeOrderRes(order, initResult.payUrl());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.group.admin.res.wallet.RechargeOrderRes getRechargeOrder(String userId, String rechargeOrderId) {
+        RechargeOrder order = rechargeOrderMapper.selectById(rechargeOrderId);
+        if (order == null || !userId.equals(order.getUserId())) {
+            throw new BusinessException("找不到儲值訂單");
+        }
+        return toRechargeOrderRes(order, order.getGatewayRawResp());
     }
     
     @Override
@@ -239,17 +296,96 @@ public class RechargeServiceImpl implements RechargeService {
     }
 
     @Override
-    public void handleCallback(com.group.admin.gateway.GatewayCallbackResult result) {
+    public void handleCallback(GatewayCallbackResult result) {
         log.info("📥 [Recharge] 支付閘道回調：merchantOrderId={}, success={}", result.merchantOrderId(), result.success());
-        if (result.success()) {
-            try {
-                confirmPayment(result.merchantOrderId(), result.gatewayOrderId());
-            } catch (Exception e) {
-                log.error("❌ 回調確認失敗：merchantOrderId={}, error={}", result.merchantOrderId(), e.getMessage());
-            }
-        } else {
-            log.warn("⚠️ 支付閘道回報失敗：merchantOrderId={}", result.merchantOrderId());
+        RechargeOrder order = rechargeOrderMapper.selectById(result.merchantOrderId());
+        if (order == null) {
+            throw new BusinessException("找不到儲值訂單：" + result.merchantOrderId());
         }
+
+        if (result.success()) {
+            int updated = rechargeOrderMapper.updateStatusByIdAndExpectStatus(
+                    order.getId(),
+                    RechargeOrderStatus.SUCCESS,
+                    RechargeOrderStatus.PENDING,
+                    result.gatewayOrderId(),
+                    result.rawPayload(),
+                    result.paidAt() != null ? result.paidAt() : LocalDateTime.now()
+            );
+            if (updated == 0) {
+                log.info("ℹ️ [Recharge] 儲值訂單已處理過：{}", order.getId());
+                return;
+            }
+
+            coinService.addGold(order.getUserId(), order.getGoldAmount(), "RECHARGE", order.getId(),
+                    "儲值訂單：" + order.getPlanId());
+            if (order.getBonusAmount() != null && order.getBonusAmount() > 0) {
+                coinService.addBonus(order.getUserId(), order.getBonusAmount(), "RECHARGE", order.getId(),
+                        "儲值紅利：" + order.getPlanId());
+            }
+
+            User user = userMapper.selectByPrimaryKey(order.getUserId());
+            if (user != null) {
+                Long totalBefore = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
+                user.setTotalRecharged(totalBefore + order.getPriceTwd().longValue());
+                user.setUpdatedAt(LocalDateTime.now());
+                userMapper.updateByPrimaryKeySelective(user);
+            }
+            return;
+        }
+
+        rechargeOrderMapper.updateStatusByIdAndExpectStatus(
+                order.getId(),
+                RechargeOrderStatus.FAILED,
+                RechargeOrderStatus.PENDING,
+                result.gatewayOrderId(),
+                result.rawPayload(),
+                null
+        );
+        log.warn("⚠️ 支付閘道回報失敗：merchantOrderId={}", result.merchantOrderId());
+    }
+
+    @Override
+    public GatewayCallbackResult verifyGatewayCallback(Map<String, String> params) {
+        return paymentGatewayClient.verifyCallback(params);
+    }
+
+    private RechargePlan requireValidPlan(String planId) {
+        RechargePlan plan = rechargePlanMapper.selectByPrimaryKey(planId);
+        if (plan == null) {
+            throw new BusinessException("儲值方案不存在");
+        }
+        if (plan.getIsActive() == null || plan.getIsActive() != 1) {
+            throw new BusinessException("儲值方案已禁用");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (plan.getStartDate() != null && now.isBefore(plan.getStartDate())) {
+            throw new BusinessException("儲值方案尚未開始");
+        }
+        if (plan.getEndDate() != null && now.isAfter(plan.getEndDate())) {
+            throw new BusinessException("儲值方案已結束");
+        }
+        if (plan.getDeletedAt() != null) {
+            throw new BusinessException("儲值方案已刪除");
+        }
+        return plan;
+    }
+
+    private com.group.admin.res.wallet.RechargeOrderRes toRechargeOrderRes(RechargeOrder order, String payUrl) {
+        return com.group.admin.res.wallet.RechargeOrderRes.builder()
+                .rechargeOrderId(order.getId())
+                .payUrl(payUrl)
+                .goldAmount(order.getGoldAmount())
+                .bonusAmount(order.getBonusAmount())
+                .priceTwd(order.getPriceTwd())
+                .status(order.getStatus() != null ? order.getStatus().name() : null)
+                .expiredAt(order.getExpiredAt())
+                .build();
+    }
+
+    private String generateRechargeOrderId() {
+        return "RC" + DateTimeFormatter.ofPattern("yyMMddHHmmss").format(LocalDateTime.now())
+                + UUID.randomUUID().toString().replace("-", "").substring(0, 9).toUpperCase();
     }
 
     private int resolvePage(Integer page) {

@@ -26,8 +26,16 @@ public class WalletRechargeController {
     public ResponseEntity<ApiResponse<RechargeOrderRes>> createRechargeOrder(
             @Valid @RequestBody RechargeReq req) {
         String userId = SecurityUtils.getCurrentUserId();
-        log.info("💳 [API] POST /wallet/recharge: userId={}, planId={}", userId, req.getPlanId());
-        RechargeOrderRes res = rechargeService.createRechargeOrder(userId, req.getPlanId());
+        log.info("💳 [API] POST /wallet/recharge: userId={}, planId={}, paymentMethod={}",
+                userId, req.getPlanId(), req.getPaymentMethod());
+        RechargeOrderRes res = rechargeService.createRechargeOrder(userId, req.getPlanId(), req.getPaymentMethod());
+        return ResponseEntity.ok(ApiResponse.success(res));
+    }
+
+    @GetMapping("/{rechargeOrderId}")
+    public ResponseEntity<ApiResponse<RechargeOrderRes>> getRechargeOrder(@PathVariable String rechargeOrderId) {
+        String userId = SecurityUtils.getCurrentUserId();
+        RechargeOrderRes res = rechargeService.getRechargeOrder(userId, rechargeOrderId);
         return ResponseEntity.ok(ApiResponse.success(res));
     }
 
@@ -45,12 +53,9 @@ public class WalletRechargeController {
     }
 
     @PostMapping("/callback")
-    public ResponseEntity<String> gatewayCallback(
-            @RequestBody String rawPayload,
-            @RequestHeader(value = "X-Signature", required = false) String signature) {
-        log.info("📞 [Callback] POST /wallet/recharge/callback");
-        GatewayCallbackResult result = new GatewayCallbackResult(
-                rawPayload, true, null, null, LocalDateTime.now(), rawPayload);
+    public ResponseEntity<String> gatewayCallback(@RequestParam java.util.Map<String, String> params) {
+        log.info("📞 [Callback] POST /wallet/recharge/callback, paramsKeys={}", params.keySet());
+        GatewayCallbackResult result = rechargeService.verifyGatewayCallback(params);
         rechargeService.handleCallback(result);
         return ResponseEntity.ok("OK");
     }

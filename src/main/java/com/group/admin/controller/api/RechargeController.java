@@ -94,7 +94,8 @@ public class RechargeController {
     @GetMapping("/payment-methods")
     public ResponseEntity<List<Map<String, String>>> getPaymentMethods() {
         List<Map<String, String>> methods = List.of(
-            buildMethod("GOMYPAY", "信用卡 / 行動支付", "透過 GoMyPay 金流平台付款，支援 VISA、MasterCard、JCB 及街口、LINE Pay 等行動支付")
+            buildMethod("CREDIT_CARD", "信用卡", "透過 GoMyPay 信用卡頁面完成付款"),
+            buildMethod("BANK_TRANSFER", "銀行轉帳", "透過 GoMyPay 取得虛擬帳號後再進行轉帳")
         );
         return ResponseEntity.ok(methods);
     }

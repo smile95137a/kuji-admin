@@ -592,6 +592,14 @@
     LIMIT 1
   </select>
 
+  <select id="selectByGomypayTradeNo" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM `order`
+    WHERE gomypay_trade_no = #{gomypayTradeNo}
+    ORDER BY created_at DESC
+  </select>
+
   <update id="updatePaymentInit">
     UPDATE `order`
     SET shipping_fee = #{shippingFee},

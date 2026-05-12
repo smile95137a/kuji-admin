@@ -94,12 +94,20 @@ public class OrderController {
      * 運費重付款（僅限 PAYMENT_PENDING / PAYMENT_FAILED）
      */
     @PostMapping("/{orderId}/repay")
-    public ResponseEntity<OrderPaymentInitRes> repayShipping(@PathVariable String orderId) {
+    public ResponseEntity<OrderPaymentInitRes> repayShipping(
+            @PathVariable String orderId,
+            @RequestParam(required = false) String paymentMethod) {
         String userId = SecurityUtils.getCurrentUserId();
-        log.info("💳 [API] 訂單重付款：userId={}, orderId={}", userId, orderId);
+        log.info("💳 [API] 訂單重付款：userId={}, orderId={}, paymentMethod={}", userId, orderId, paymentMethod);
 
-        OrderPaymentInitRes result = orderService.retryShippingPayment(orderId, userId);
+        OrderPaymentInitRes result = orderService.retryShippingPayment(orderId, userId, paymentMethod);
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/payment-group/{merchantOrderNo}")
+    public ResponseEntity<List<OrderPaymentInitRes>> getPaymentGroupOrders(@PathVariable String merchantOrderNo) {
+        String userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(orderService.getOrdersByPaymentGroup(merchantOrderNo, userId));
     }
 
     /**

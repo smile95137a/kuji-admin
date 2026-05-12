@@ -24,6 +24,9 @@ public class RechargeOrder {
     private String gatewayProvider;
     private String gatewayOrderId;
     private String gatewayRawResp;
+    private String buyerName;
+    private String buyerEmail;
+    private String buyerPhone;
     private LocalDateTime paidAt;
     private LocalDateTime expiredAt;
     private LocalDateTime createdAt;

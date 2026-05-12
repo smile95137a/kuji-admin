@@ -164,24 +164,20 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
             }
         }
 
-        // 為每個店家建立訂單
-        List<OrderPaymentInitRes> orderResults = new ArrayList<>();
-        for (Map.Entry<String, List<String>> entry : groupedByStore.entrySet()) {
-            com.group.admin.req.order.CreateOrderReq createOrderReq = new com.group.admin.req.order.CreateOrderReq();
-            createOrderReq.setPrizeBoxIds(entry.getValue());
-            createOrderReq.setShippingMethod(req.getShippingMethod());
-            createOrderReq.setShippingMethodId(req.getShippingMethodId());
-            createOrderReq.setShippingFee(req.getShippingFee());
-            createOrderReq.setRecipientName(req.getRecipientName());
-            createOrderReq.setRecipientPhone(req.getRecipientPhone());
-            createOrderReq.setRecipientAddress(req.getRecipientAddress());
-            createOrderReq.setStoreCode(req.getStoreCode());
-            createOrderReq.setStoreName(req.getStoreName());
-            createOrderReq.setStoreAddress(req.getStoreAddress());
+        com.group.admin.req.order.CreateOrderReq createOrderReq = new com.group.admin.req.order.CreateOrderReq();
+        createOrderReq.setPrizeBoxIds(req.getPrizeBoxIds());
+        createOrderReq.setShippingMethod(req.getShippingMethod());
+        createOrderReq.setShippingMethodId(req.getShippingMethodId());
+        createOrderReq.setShippingFee(req.getShippingFee());
+        createOrderReq.setPaymentMethod(req.getPaymentMethod());
+        createOrderReq.setRecipientName(req.getRecipientName());
+        createOrderReq.setRecipientPhone(req.getRecipientPhone());
+        createOrderReq.setRecipientAddress(req.getRecipientAddress());
+        createOrderReq.setStoreCode(req.getStoreCode());
+        createOrderReq.setStoreName(req.getStoreName());
+        createOrderReq.setStoreAddress(req.getStoreAddress());
 
-            List<OrderPaymentInitRes> storeResults = orderService.createOrdersFromPrizeBoxWithPayment(userId, createOrderReq);
-            orderResults.addAll(storeResults);
-        }
+        List<OrderPaymentInitRes> orderResults = orderService.createOrdersFromPrizeBoxWithPayment(userId, createOrderReq);
 
         log.info("✅ 出貨完成（含支付初始化）：orderCount={}", orderResults.size());
         return orderResults;

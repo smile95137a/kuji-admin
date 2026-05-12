@@ -18,5 +18,6 @@ public class RechargeOrderRes {
     private Long goldAmount;
     private Long bonusAmount;
     private BigDecimal priceTwd;
+    private String status;
     private LocalDateTime expiredAt;
 }

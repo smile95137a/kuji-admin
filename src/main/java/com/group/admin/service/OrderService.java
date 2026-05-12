@@ -26,7 +26,9 @@ public interface OrderService {
 
     List<OrderPaymentInitRes> createOrdersFromPrizeBoxWithPayment(String userId, CreateOrderReq req);
 
-    OrderPaymentInitRes retryShippingPayment(String orderId, String userId);
+    OrderPaymentInitRes retryShippingPayment(String orderId, String userId, String paymentMethod);
+
+    List<OrderPaymentInitRes> getOrdersByPaymentGroup(String merchantOrderNo, String userId);
 
     PageResult<OrderRes> getOrders(QueryReq<OrderCondition> req);
 

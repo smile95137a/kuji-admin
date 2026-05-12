@@ -33,6 +33,9 @@ public class PrizeBoxShipReq {
 
     /** 前端帶入運費（後端仍會以 DB 為準驗證） */
     private Long shippingFee;
+
+    /** 付款方式：CREDIT_CARD / BANK_TRANSFER */
+    private String paymentMethod;
     
     /**
      * 收件人姓名（若無 userAddressId 則必填）

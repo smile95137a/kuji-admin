@@ -11,6 +11,9 @@ import java.math.BigDecimal;
 @Builder
 public class ShippingPaymentRequest {
 
+    /** GoMyPay 商戶訂單號（聚合付款用） */
+    private String merchantOrderNo;
+
     /** 系統訂單編號（唯一，傳給 GoMyPay） */
     private String orderNumber;
 
@@ -31,4 +34,7 @@ public class ShippingPaymentRequest {
 
     /** 商品描述（顯示在 GoMyPay 付款頁） */
     private String itemDescription;
+
+    /** 付款方式：CREDIT_CARD / BANK_TRANSFER */
+    private String paymentMethod;
 }

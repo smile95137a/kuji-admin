@@ -1,6 +1,81 @@
 # AI 交接現況
 
-最後更新：2026-05-11
+最後更新：2026-05-12
+
+## 1.0 2026-05-12（GoMyPay 金流整合 — 後端 + 前台同步落地）
+
+> **本節為最新狀態，若與下方舊段落衝突，以本節為準。**
+
+### 整合範圍
+本輪完整實作「GoMyPay 測試環境」的 **儲值** 與 **訂單運費** 兩條金流主線，前後端同步。
+
+### 後端（kuji-admin）
+
+#### 新增 / 修改核心檔案
+| 檔案 | 說明 |
+|------|------|
+| `gateway/GoMyPaySupport.java` | GoMyPay 共用工具：Send_Type 判斷、payUrl 組裝、callback MD5 驗簽（str_check）、paidAt 解析 |
+| `gateway/GoMyPayPaymentGatewayClient.java` | 儲值用 GoMyPay client，實作 `charge()` + `verifyCallback()` |
+| `gateway/GoMyPayShippingGatewayClient.java` | 運費 GoMyPay client，對齊 PDF 欄位（CustomerId / Buyer_* / Send_Type），使用分開的 shipping return/notify URL |
+| `gateway/PaymentGatewayClient.java` | 介面新增 `charge(RechargeOrder, paymentMethod)` + `verifyCallback()` |
+| `gateway/StubPaymentGatewayClient.java` | 跟進介面調整 |
+| `gateway/ShippingPaymentRequest.java` | 補充 `merchantOrderNo` / `paymentMethod` |
+| `config/GoMyPayProperties.java` | 預設 apiUrl 改為 TestShuntClass.aspx；新增 verifyCustomerId / rechargeReturnUrl / rechargeNotifyUrl / shippingReturnUrl / shippingNotifyUrl |
+| `service/impl/RechargeServiceImpl.java` | 儲值主線：建立 PENDING 訂單 → GoMyPay 取 payUrl → callback 入帳 (CoinService addGold/addBonus) → 更新 user.totalRecharged |
+| `service/impl/OrderServiceImpl.java` | 訂單運費主線改為**聚合付款**：拆單後所有訂單共用同一 merchantOrderNo/payUrl；新增 retryShippingPayment / getOrdersByPaymentGroup；callback 整組標記 |
+| `service/impl/PrizeBoxServiceImpl.java` | 移除破壞聚合付款的 per-store 二次拆單邏輯 |
+| `controller/api/WalletRechargeController.java` | `POST /wallet/recharge`（接 paymentMethod）；`GET /wallet/recharge/{id}`；`POST /wallet/recharge/callback`（form params） |
+| `controller/api/OrderController.java` | 新增 `POST /order/{id}/repay?paymentMethod=`；`GET /order/payment-group/{merchantOrderNo}` |
+| `controller/api/PaymentCallbackController.java` | 路由改為 `/payment/shipping/callback` |
+| `controller/api/RechargeController.java` | 公開付款方式固定為 `CREDIT_CARD` + `BANK_TRANSFER` |
+| `config/SecurityConfig.java` | permitAll 新增 `/api/payment/shipping/callback` + `/api/wallet/recharge/callback` |
+| `resources/application.yml` | GoMyPay 測試網址修正；新增 recharge/shipping 分開 return/callback URL |
+| `mapper/OrderMapper.xml` + `OrderMapper.java` | 新增 `selectByGomypayTradeNo` |
+
+#### 關鍵 GoMyPay 參數（測試環境）
+- 測試網址：`https://n.gomypay.asia/TestShuntClass.aspx`
+- 信用卡：`Send_Type=0`
+- 虛擬帳號（BANK_TRANSFER）：`Send_Type=4`
+- callback 驗簽：`MD5(result + e_orderno + CustomerId + Amount/PayAmount + OrderID + Str_CheckSecret)`
+
+#### 付款模型決策（使用者拍板）
+- 多店拆單仍**一次總付款**（aggregate payment）
+- `BANK_TRANSFER` = 虛擬帳號
+- 運費 + 儲值的 callback 路由完全分開
+
+#### 編譯驗證
+`mvn -DskipTests compile` → **BUILD SUCCESS**（2026-05-12）
+
+### 前端（kuji-client）
+
+#### 新增 / 修改核心檔案
+| 檔案 | 說明 |
+|------|------|
+| `services/rechargeService.ts` | 新增 `PaymentMethodCode` / `RechargeOrderRes` / `createWalletRechargeOrder()` / `getRechargeOrder()` |
+| `services/orderService.ts` | 新增 `OrderPaymentInitRes` / `repayShipping()` / `getPaymentGroupOrders()` |
+| `services/prizeBoxService.ts` | `PrizeBoxShipReq` + `ShipOrderResult` 補 paymentMethod |
+| `composables/useRechargePlans.ts` | 改走 `/wallet/recharge`；回傳 payUrl / rechargeOrderId；不再直接入帳 |
+| `composables/usePrizeBoxShip.ts` | 新增 selectedPaymentMethod / paymentUrl；整包 prizeBoxIds 一次送出 |
+| `composables/useOrderDetail.ts` | 新增 repay() / repayError / paymentStatus normalize |
+| `views/member/Deposit.vue` | 付款方式選擇 + 送出後導向 GoMyPay（測試環境） |
+| `components/wallet/RechargeConfirmDialog.vue` | 提示文案改為 GoMyPay 測試環境跳轉 |
+| `components/member/PrizeBoxShipDialog.vue` | 新增付款方式選擇；成功後有 paymentUrl 則導向 GoMyPay |
+| `views/member/OrderDetail.vue` | 新增運費付款卡片（選擇 CREDIT_CARD / BANK_TRANSFER + 重新付款導流） |
+| `views/member/DepositPaymentResult.vue` | **新頁**：儲值付款結果頁（讀 GoMyPay return query + 查 getRechargeOrder()；虛擬帳號顯示待付款說明） |
+| `views/member/OrderPaymentResult.vue` | **新頁**：訂單運費付款結果頁（讀 e_orderno + 查 getPaymentGroupOrders()；顯示多筆訂單摘要） |
+| `router/index.ts` | 新增 `DepositPaymentResult` + `OrderPaymentResult` 兩個獨立 route |
+
+#### 建置驗證
+`npm run build`（vue-tsc + Vite）→ **BUILD SUCCESS**（2026-05-12；僅 chunk size / dynamic import 警告，無錯誤）
+
+### 待手測
+1. 儲值信用卡 → GoMyPay 測試頁 → callback → 金幣入帳 → DepositPaymentResult
+2. 儲值虛擬帳號 → GoMyPay 虛擬帳號流程 → 同上
+3. 賞品盒出貨 → 聚合運費付款 → OrderPaymentResult
+4. 訂單詳情重付款（repay）→ 同上
+5. 確認 BANK_TRANSFER 結果頁顯示匯款說明
+
+---
 
 ## 0.5 2026-05-12（OAuth2 + SMTP 手測前置落地）
 

@@ -93,7 +93,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/recharge-plans/**").permitAll() // 儲值方案（複數路由）
                         .requestMatchers("/api/recharge/payment-methods").permitAll() // 支付方式查詢
                         .requestMatchers("/api/shipping-methods/**").permitAll()  // 配送方式
-                        .requestMatchers("/api/payment/callback", "/api/payment/callback/**").permitAll() // GoMyPay callback
+                        .requestMatchers("/api/payment/shipping/callback", "/api/payment/shipping/callback/**").permitAll() // GoMyPay shipping callback
+                        .requestMatchers("/api/wallet/recharge/callback", "/api/wallet/recharge/callback/**").permitAll() // GoMyPay recharge callback
                         .requestMatchers("/api/stores/list").permitAll()        // 公開店家列表（舊路由）
                         .requestMatchers("/api/stores", "/api/stores/**").permitAll()  // 公開店家列表與詳情
                         .requestMatchers("/api/lottery/list").permitAll()       // 公開商品列表

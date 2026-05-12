@@ -1,10 +1,12 @@
 package com.group.admin.service;
 
+import com.group.admin.gateway.GatewayCallbackResult;
 import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.PageResult;
 import com.group.admin.res.recharge.RechargeRes;
-import com.group.admin.gateway.GatewayCallbackResult;
 import com.group.admin.res.wallet.RechargeOrderRes;
+
+import java.util.Map;
 
 /**
  * 前台使用者儲值服務介面
@@ -71,7 +73,11 @@ public interface RechargeService {
      * @param planId 方案 ID
      * @return 訂單資訊（含支付 URL）
      */
-    RechargeOrderRes createRechargeOrder(String userId, String planId);
+    RechargeOrderRes createRechargeOrder(String userId, String planId, String paymentMethod);
+
+    RechargeOrderRes getRechargeOrder(String userId, String rechargeOrderId);
+
+    GatewayCallbackResult verifyGatewayCallback(Map<String, String> params);
 
     /**
      * 處理支付閘道回調

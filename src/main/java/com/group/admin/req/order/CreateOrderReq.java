@@ -25,6 +25,9 @@ public class CreateOrderReq {
     /** 前端帶入運費，後端會再驗證（可選） */
     private Long shippingFee;
 
+    /** 付款方式：CREDIT_CARD / BANK_TRANSFER */
+    private String paymentMethod;
+
     @NotBlank(message = "收件人姓名不可為空")
     @Size(max = 100, message = "收件人姓名不可超過 100 字元")
     private String recipientName;

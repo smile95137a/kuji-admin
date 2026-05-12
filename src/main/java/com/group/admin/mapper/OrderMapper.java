@@ -41,6 +41,8 @@ public interface OrderMapper {
 
     Order selectByOrderNumber(@Param("orderNumber") String orderNumber);
 
+    List<Order> selectByGomypayTradeNo(@Param("gomypayTradeNo") String gomypayTradeNo);
+
     int updatePaymentInit(@Param("orderId") String orderId,
                           @Param("shippingFee") Long shippingFee,
                           @Param("paymentMethod") String paymentMethod,

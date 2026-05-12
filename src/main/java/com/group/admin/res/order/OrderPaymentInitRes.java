@@ -15,6 +15,7 @@ public class OrderPaymentInitRes {
     private String orderNumber;
     private Long shippingFee;
     private String paymentStatus;
+    private String paymentMethod;
     private String paymentUrl;
     private String gatewayTradeNo;
 }

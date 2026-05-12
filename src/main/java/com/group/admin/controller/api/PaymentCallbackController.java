@@ -23,15 +23,15 @@ public class PaymentCallbackController {
     private final ShippingPaymentGatewayClient shippingPaymentGatewayClient;
     private final OrderService orderService;
 
-    @PostMapping("/callback")
+    @PostMapping("/shipping/callback")
     public ResponseEntity<String> gomypayCallback(@RequestParam Map<String, String> params) {
-        log.info("📞 [PaymentCallback] 收到 GoMyPay callback，paramsKeys={}", params.keySet());
+        log.info("📞 [PaymentCallback] 收到 GoMyPay shipping callback，paramsKeys={}", params.keySet());
         ShippingCallbackResult callbackResult = shippingPaymentGatewayClient.parseCallback(params);
         orderService.handleShippingPaymentCallback(callbackResult);
         return ResponseEntity.ok("OK");
     }
 
-    @GetMapping("/callback/stub")
+    @GetMapping("/shipping/callback/stub")
     public ResponseEntity<String> stubCallback(@RequestParam Map<String, String> params) {
         log.info("🔧 [PaymentCallback][Stub] 收到 callback: {}", params);
         ShippingCallbackResult callbackResult = shippingPaymentGatewayClient.parseCallback(params);

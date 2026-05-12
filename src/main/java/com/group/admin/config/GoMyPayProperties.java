@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class GoMyPayProperties {
 
     /** GoMyPay API 端點（測試或正式） */
-    private String apiUrl = "https://n.gomypay.asia/TestShopApi.aspx";
+    private String apiUrl = "https://n.gomypay.asia/TestShuntClass.aspx";
 
     /** 商店代號 */
     private String shopId;
@@ -31,4 +31,19 @@ public class GoMyPayProperties {
 
     /** GoMyPay 非同步通知後端的 URL */
     private String notifyUrl;
+
+    /** 明碼商店代號，供 callback 驗簽使用；未填時回退到 shopId */
+    private String verifyCustomerId;
+
+    /** 儲值完成後跳轉前台的 URL */
+    private String rechargeReturnUrl;
+
+    /** 儲值背景通知 URL */
+    private String rechargeNotifyUrl;
+
+    /** 運費付款完成後跳轉前台的 URL */
+    private String shippingReturnUrl;
+
+    /** 運費背景通知 URL */
+    private String shippingNotifyUrl;
 }

@@ -11,6 +11,7 @@ import com.group.admin.example.PrizeBoxExample;
 import com.group.admin.example.ShippingMethodExample;
 import com.group.admin.example.StoreUserExample;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.gateway.GoMyPaySupport;
 import com.group.admin.gateway.ShippingCallbackResult;
 import com.group.admin.gateway.ShippingPaymentGatewayClient;
 import com.group.admin.gateway.ShippingPaymentRequest;
@@ -110,6 +111,7 @@ public class OrderServiceImpl implements OrderService {
 
         ShippingMethod shippingMethod = resolveShippingMethod(req);
         Long shippingFee = shippingMethod.getFee() != null ? shippingMethod.getFee() : SHIPPING_FEE;
+        String paymentMethod = GoMyPaySupport.normalizePaymentMethod(req.getPaymentMethod());
 
         if (req.getShippingFee() != null && !shippingFee.equals(req.getShippingFee())) {
             throw new BusinessException("運費資訊已更新，請重新確認配送方式後再送出");
@@ -118,7 +120,7 @@ public class OrderServiceImpl implements OrderService {
         List<PrizeBox> prizeBoxes = validateAndLoadPrizeBoxes(userId, req.getPrizeBoxIds());
         Map<String, List<PrizeBox>> groupedByStore = prizeBoxes.stream().collect(Collectors.groupingBy(PrizeBox::getStoreId));
 
-        List<OrderPaymentInitRes> results = new ArrayList<>();
+        List<Order> createdOrders = new ArrayList<>();
 
         for (Map.Entry<String, List<PrizeBox>> entry : groupedByStore.entrySet()) {
             String storeId = entry.getKey();
@@ -131,8 +133,10 @@ public class OrderServiceImpl implements OrderService {
             order.setStoreId(storeId);
             order.setStatus(OrderStatusEnum.PAYMENT_PENDING.getCode());
             order.setPaymentStatus(PaymentStatusEnum.PAYMENT_PENDING.getCode());
+            order.setPaymentMethod(paymentMethod);
             order.setTotalItems(storePrizeBoxes.size());
             order.setShippingMethod(shippingMethod.getCode());
+            order.setShippingFee(shippingFee);
             order.setRecipientName(req.getRecipientName());
             order.setRecipientPhone(req.getRecipientPhone());
             order.setRecipientAddress(req.getRecipientAddress());
@@ -171,26 +175,33 @@ public class OrderServiceImpl implements OrderService {
                 orderItemMapper.batchInsertOrderItems(items);
             }
 
-            ShippingPaymentResult paymentResult = initShippingPayment(order, shippingFee, shippingMethod, userId);
             recordStatusLog(order.getId(), null, OrderStatusEnum.PAYMENT_PENDING.getCode(),
                     userId, "USER", null);
-            if (!paymentResult.isSuccess()) {
-                recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_PENDING.getCode(),
+                createdOrders.add(order);
+        }
+
+            ShippingPaymentResult paymentResult = initShippingPayment(createdOrders, shippingFee, shippingMethod, userId, paymentMethod);
+            List<OrderPaymentInitRes> results = createdOrders.stream()
+                .map(order -> {
+                    if (!paymentResult.isSuccess()) {
+                    recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_PENDING.getCode(),
                         OrderStatusEnum.PAYMENT_FAILED.getCode(),
                         userId, "SYSTEM", "建立付款單失敗");
-            }
+                    }
 
-            results.add(OrderPaymentInitRes.builder()
-                    .orderId(order.getId())
-                    .orderNumber(order.getOrderNumber())
-                    .shippingFee(shippingFee)
-                    .paymentStatus(paymentResult.isSuccess()
+                    return OrderPaymentInitRes.builder()
+                        .orderId(order.getId())
+                        .orderNumber(order.getOrderNumber())
+                        .shippingFee(order.getShippingFee())
+                        .paymentStatus(paymentResult.isSuccess()
                             ? PaymentStatusEnum.PAYMENT_PENDING.getCode()
                             : PaymentStatusEnum.FAILED.getCode())
-                    .paymentUrl(paymentResult.getPayUrl())
-                    .gatewayTradeNo(paymentResult.getGatewayTradeNo())
-                    .build());
-        }
+                        .paymentMethod(paymentMethod)
+                        .paymentUrl(paymentResult.getPayUrl())
+                        .gatewayTradeNo(paymentResult.getGatewayTradeNo())
+                        .build();
+                })
+                .collect(Collectors.toList());
 
         log.info("✅ 訂單建立完成（含支付初始化）：orderCount={}", results.size());
         return results;
@@ -198,7 +209,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderPaymentInitRes retryShippingPayment(String orderId, String userId) {
+            public OrderPaymentInitRes retryShippingPayment(String orderId, String userId, String paymentMethod) {
         Order order = orderMapper.selectByPrimaryKey(orderId);
         if (order == null) {
             throw new BusinessException("訂單不存在");
@@ -228,8 +239,11 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("運送方式不存在或已停用");
         }
 
+        String normalizedPaymentMethod = GoMyPaySupport.normalizePaymentMethod(
+            paymentMethod != null ? paymentMethod : order.getPaymentMethod());
+        List<Order> repayOrders = resolveRepayOrders(order);
         Long shippingFee = order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE;
-        ShippingPaymentResult paymentResult = initShippingPayment(order, shippingFee, shippingMethod, userId);
+        ShippingPaymentResult paymentResult = initShippingPayment(repayOrders, shippingFee, shippingMethod, userId, normalizedPaymentMethod);
 
         if (paymentResult.isSuccess() && currentStatus == OrderStatusEnum.PAYMENT_FAILED) {
             recordStatusLog(order.getId(), OrderStatusEnum.PAYMENT_FAILED.getCode(),
@@ -243,10 +257,26 @@ public class OrderServiceImpl implements OrderService {
                 .paymentStatus(paymentResult.isSuccess()
                         ? PaymentStatusEnum.PAYMENT_PENDING.getCode()
                         : PaymentStatusEnum.FAILED.getCode())
+                .paymentMethod(normalizedPaymentMethod)
                 .paymentUrl(paymentResult.getPayUrl())
                 .gatewayTradeNo(paymentResult.getGatewayTradeNo())
                 .build();
     }
+
+            @Override
+            public List<OrderPaymentInitRes> getOrdersByPaymentGroup(String merchantOrderNo, String userId) {
+            return orderMapper.selectByGomypayTradeNo(merchantOrderNo).stream()
+                .filter(order -> userId.equals(order.getUserId()))
+                .map(order -> OrderPaymentInitRes.builder()
+                    .orderId(order.getId())
+                    .orderNumber(order.getOrderNumber())
+                    .shippingFee(order.getShippingFee())
+                    .paymentStatus(order.getPaymentStatus())
+                    .paymentMethod(order.getPaymentMethod())
+                    .gatewayTradeNo(order.getGomypayTradeNo())
+                    .build())
+                .collect(Collectors.toList());
+            }
 
     // ==================== 訂單查詢 ====================
 
@@ -604,32 +634,43 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("付款回調資料不完整");
         }
 
-        Order order = orderMapper.selectByOrderNumber(callbackResult.getOrderNumber());
-        if (order == null) {
+        List<Order> orders = orderMapper.selectByGomypayTradeNo(callbackResult.getOrderNumber());
+        if (orders.isEmpty()) {
+            Order fallbackOrder = orderMapper.selectByOrderNumber(callbackResult.getOrderNumber());
+            if (fallbackOrder != null) {
+                orders = List.of(fallbackOrder);
+            }
+        }
+        if (orders.isEmpty()) {
             throw new BusinessException("找不到對應訂單：" + callbackResult.getOrderNumber());
         }
 
         if (callbackResult.isSuccess()) {
-            orderMapper.markShippingPaymentSuccess(order.getId(), callbackResult.getGatewayTradeNo());
+            for (Order order : orders) {
+                orderMapper.markShippingPaymentSuccess(order.getId(), null);
 
-            if (OrderStatusEnum.PAYMENT_PENDING.getCode().equals(order.getStatus())
-                    || OrderStatusEnum.PAYMENT_FAILED.getCode().equals(order.getStatus())) {
-                recordStatusLog(order.getId(), order.getStatus(), OrderStatusEnum.PENDING.getCode(),
-                        null, "SYSTEM", "GoMyPay 付款成功");
+                if (OrderStatusEnum.PAYMENT_PENDING.getCode().equals(order.getStatus())
+                        || OrderStatusEnum.PAYMENT_FAILED.getCode().equals(order.getStatus())) {
+                    recordStatusLog(order.getId(), order.getStatus(), OrderStatusEnum.PENDING.getCode(),
+                            null, "SYSTEM", "GoMyPay 付款成功");
+                }
+                log.info("✅ 運費付款成功：orderId={}, orderNo={}, gatewayOrderId={}",
+                        order.getId(), order.getOrderNumber(), callbackResult.getGatewayTradeNo());
             }
-            log.info("✅ 運費付款成功：orderId={}, orderNo={}", order.getId(), order.getOrderNumber());
             return;
         }
 
         String errorMessage = callbackResult.getErrorMessage();
-        String fromStatus = order.getStatus();
-        orderMapper.markShippingPaymentFailed(order.getId(), callbackResult.getGatewayTradeNo(), errorMessage);
-        if (!OrderStatusEnum.PAYMENT_FAILED.getCode().equals(fromStatus)) {
-            recordStatusLog(order.getId(), fromStatus, OrderStatusEnum.PAYMENT_FAILED.getCode(),
-                    null, "SYSTEM", "GoMyPay 付款失敗");
+        for (Order order : orders) {
+            String fromStatus = order.getStatus();
+            orderMapper.markShippingPaymentFailed(order.getId(), null, errorMessage);
+            if (!OrderStatusEnum.PAYMENT_FAILED.getCode().equals(fromStatus)) {
+                recordStatusLog(order.getId(), fromStatus, OrderStatusEnum.PAYMENT_FAILED.getCode(),
+                        null, "SYSTEM", "GoMyPay 付款失敗");
+            }
+            log.warn("⚠️ 運費付款失敗：orderId={}, orderNo={}, reason={}",
+                    order.getId(), order.getOrderNumber(), errorMessage);
         }
-        log.warn("⚠️ 運費付款失敗：orderId={}, orderNo={}, reason={}",
-                order.getId(), order.getOrderNumber(), errorMessage);
     }
 
     // ==================== 內部輔助方法 ====================
@@ -677,36 +718,75 @@ public class OrderServiceImpl implements OrderService {
         return shippingMethod;
     }
 
-    private ShippingPaymentResult initShippingPayment(Order order, Long shippingFee, ShippingMethod shippingMethod, String userId) {
+    private ShippingPaymentResult initShippingPayment(List<Order> orders, Long shippingFee, ShippingMethod shippingMethod,
+                                                      String userId, String paymentMethod) {
+        if (orders == null || orders.isEmpty()) {
+            return ShippingPaymentResult.builder().success(false).errorMessage("缺少訂單資訊").build();
+        }
+
+        String merchantOrderNo = generateShippingPaymentGroupNo();
         User user = userMapper.selectByPrimaryKey(userId);
+        long totalAmount = orders.stream()
+                .map(Order::getShippingFee)
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .sum();
+        if (totalAmount <= 0) {
+            totalAmount = shippingFee * orders.size();
+        }
         ShippingPaymentRequest paymentRequest = ShippingPaymentRequest.builder()
-                .orderId(order.getId())
-                .orderNumber(order.getOrderNumber())
-                .amount(BigDecimal.valueOf(shippingFee))
-                .buyerName(reqValue(order.getRecipientName(), user != null ? user.getNickname() : null, "玩家"))
+                .merchantOrderNo(merchantOrderNo)
+                .orderId(orders.get(0).getId())
+                .orderNumber(orders.get(0).getOrderNumber())
+                .amount(BigDecimal.valueOf(totalAmount))
+                .buyerName(reqValue(orders.get(0).getRecipientName(), user != null ? user.getNickname() : null, "玩家"))
                 .buyerEmail(user != null ? user.getEmail() : null)
-                .buyerPhone(reqValue(order.getRecipientPhone(), null, ""))
-                .itemDescription("訂單運費 " + order.getOrderNumber() + " (" + shippingMethod.getName() + ")")
+                .buyerPhone(reqValue(orders.get(0).getRecipientPhone(), null, ""))
+                .itemDescription("訂單運費 x" + orders.size() + " (" + shippingMethod.getName() + ")")
+                .paymentMethod(paymentMethod)
                 .build();
 
         ShippingPaymentResult paymentResult = shippingPaymentGatewayClient.createPayment(paymentRequest);
 
         if (paymentResult != null && paymentResult.isSuccess()) {
-            orderMapper.updatePaymentInit(order.getId(), shippingFee, "GOMYPAY",
-                    PaymentStatusEnum.PAYMENT_PENDING.getCode(), OrderStatusEnum.PAYMENT_PENDING.getCode(),
-                    paymentResult.getGatewayTradeNo());
+            for (Order order : orders) {
+                Long orderShippingFee = order.getShippingFee() != null ? order.getShippingFee() : shippingFee;
+                orderMapper.updatePaymentInit(order.getId(), orderShippingFee, paymentMethod,
+                        PaymentStatusEnum.PAYMENT_PENDING.getCode(), OrderStatusEnum.PAYMENT_PENDING.getCode(),
+                        paymentResult.getGatewayTradeNo());
+            }
             return paymentResult;
         }
 
         String failedReason = paymentResult != null ? paymentResult.getErrorMessage() : "建立付款單失敗";
-        orderMapper.updatePaymentInit(order.getId(), shippingFee, "GOMYPAY",
-                PaymentStatusEnum.FAILED.getCode(), OrderStatusEnum.PAYMENT_FAILED.getCode(), null);
-        orderMapper.markShippingPaymentFailed(order.getId(), null, failedReason);
+        for (Order order : orders) {
+            Long orderShippingFee = order.getShippingFee() != null ? order.getShippingFee() : shippingFee;
+            orderMapper.updatePaymentInit(order.getId(), orderShippingFee, paymentMethod,
+                    PaymentStatusEnum.FAILED.getCode(), OrderStatusEnum.PAYMENT_FAILED.getCode(), null);
+            orderMapper.markShippingPaymentFailed(order.getId(), null, failedReason);
+        }
 
         return ShippingPaymentResult.builder()
                 .success(false)
                 .errorMessage(failedReason)
                 .build();
+    }
+
+    private List<Order> resolveRepayOrders(Order order) {
+        if (isBlank(order.getGomypayTradeNo())) {
+            return List.of(order);
+        }
+
+        List<Order> groupOrders = orderMapper.selectByGomypayTradeNo(order.getGomypayTradeNo()).stream()
+                .filter(item -> OrderStatusEnum.PAYMENT_PENDING.getCode().equals(item.getStatus())
+                        || OrderStatusEnum.PAYMENT_FAILED.getCode().equals(item.getStatus()))
+                .collect(Collectors.toList());
+        return groupOrders.isEmpty() ? List.of(order) : groupOrders;
+    }
+
+    private String generateShippingPaymentGroupNo() {
+        return "SP" + DateTimeFormatter.ofPattern("yyMMddHHmmss").format(LocalDateTime.now())
+                + UUID.randomUUID().toString().replace("-", "").substring(0, 9).toUpperCase();
     }
 
     private String reqValue(String primary, String secondary, String fallback) {
