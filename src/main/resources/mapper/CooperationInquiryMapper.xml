@@ -3,96 +3,309 @@
 
 <mapper namespace="com.group.admin.mapper.CooperationInquiryMapper">
 
+  <!-- 合作洽談欄位對應 -->
   <resultMap id="BaseResultMap" type="com.group.admin.entity.CooperationInquiry">
+    <!-- 主鍵 UUID -->
     <id column="id" jdbcType="VARCHAR" property="id" />
+
+    <!-- 公司 / 單位名稱 -->
     <result column="company" jdbcType="VARCHAR" property="company" />
+
+    <!-- 聯絡人姓名 -->
     <result column="name" jdbcType="VARCHAR" property="name" />
+
+    <!-- 電子郵件 -->
     <result column="email" jdbcType="VARCHAR" property="email" />
+
+    <!-- 聯絡電話 -->
     <result column="phone" jdbcType="VARCHAR" property="phone" />
+
+    <!-- 合作類型：IP / SUPPLY / CHANNEL / MARKETING -->
     <result column="type" jdbcType="VARCHAR" property="type" />
+
+    <!-- 處理狀態：PENDING / PROCESSING / DONE / CLOSED -->
     <result column="status" jdbcType="VARCHAR" property="status" />
+
+    <!-- 是否已轉成廠商 -->
+    <result column="converted_to_vendor" jdbcType="BIT" property="convertedToVendor" />
+
+    <!-- 轉成的廠商 AdminUser ID -->
+    <result column="vendor_admin_user_id" jdbcType="VARCHAR" property="vendorAdminUserId" />
+
+    <!-- 是否刪除 -->
+    <result column="deleted" jdbcType="BIT" property="deleted" />
+
+    <!-- 刪除時間 -->
+    <result column="deleted_at" jdbcType="TIMESTAMP" property="deletedAt" />
+
+    <!-- 刪除者 AdminUser ID -->
+    <result column="deleted_by" jdbcType="VARCHAR" property="deletedBy" />
+
+    <!-- 建立時間 -->
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+
+    <!-- 更新時間 -->
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
   </resultMap>
 
-  <resultMap id="ResultMapWithBLOBs" type="com.group.admin.entity.CooperationInquiry" extends="BaseResultMap">
+  <!-- 合作洽談欄位對應，含 BLOB 欄位 -->
+  <resultMap id="ResultMapWithBLOBs"
+             type="com.group.admin.entity.CooperationInquiry"
+             extends="BaseResultMap">
+    <!-- 需求簡述 -->
     <result column="message" jdbcType="LONGVARCHAR" property="message" />
+
+    <!-- 後台備註 -->
     <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
   </resultMap>
 
+  <!-- 基本欄位清單，不含 BLOB 欄位 -->
   <sql id="Base_Column_List">
-    id, company, name, email, phone, type, status, created_at, updated_at
+    id,
+    company,
+    name,
+    email,
+    phone,
+    type,
+    status,
+    converted_to_vendor,
+    vendor_admin_user_id,
+    deleted,
+    deleted_at,
+    deleted_by,
+    created_at,
+    updated_at
   </sql>
 
+  <!-- BLOB 欄位清單 -->
   <sql id="Blob_Column_List">
-    message, remark
+    message,
+    remark
   </sql>
 
-  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
-    select
-    <include refid="Base_Column_List" />,
-    <include refid="Blob_Column_List" />
-    from cooperation_inquiry
-    where id = #{id,jdbcType=VARCHAR}
+  <!-- 依主鍵查詢合作洽談資料 -->
+  <select id="selectByPrimaryKey"
+          parameterType="java.lang.String"
+          resultMap="ResultMapWithBLOBs">
+    SELECT
+      <include refid="Base_Column_List" />,
+      <include refid="Blob_Column_List" />
+    FROM cooperation_inquiry
+    WHERE id = #{id,jdbcType=VARCHAR}
   </select>
 
+  <!-- 依 ID 查詢合作洽談資料，給 Service 使用 -->
+  <select id="selectById"
+          parameterType="java.lang.String"
+          resultMap="ResultMapWithBLOBs">
+    SELECT
+      <include refid="Base_Column_List" />,
+      <include refid="Blob_Column_List" />
+    FROM cooperation_inquiry
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <!-- 查詢全部未刪除合作洽談資料 -->
   <select id="selectAll" resultMap="ResultMapWithBLOBs">
-    select
-    <include refid="Base_Column_List" />,
-    <include refid="Blob_Column_List" />
-    from cooperation_inquiry
-    order by created_at desc
+    SELECT
+      <include refid="Base_Column_List" />,
+      <include refid="Blob_Column_List" />
+    FROM cooperation_inquiry
+    WHERE deleted = 0 OR deleted IS NULL
+    ORDER BY created_at DESC
   </select>
 
-  <insert id="insertSelective" parameterType="com.group.admin.entity.CooperationInquiry">
-    insert into cooperation_inquiry
+  <!-- 選擇性新增合作洽談資料 -->
+  <insert id="insertSelective"
+          parameterType="com.group.admin.entity.CooperationInquiry">
+    INSERT INTO cooperation_inquiry
     <trim prefix="(" suffix=")" suffixOverrides=",">
+      <!-- 主鍵 UUID -->
       <if test="id != null">id,</if>
+
+      <!-- 公司 / 單位名稱 -->
       <if test="company != null">company,</if>
+
+      <!-- 聯絡人姓名 -->
       <if test="name != null">name,</if>
+
+      <!-- 電子郵件 -->
       <if test="email != null">email,</if>
+
+      <!-- 聯絡電話 -->
       <if test="phone != null">phone,</if>
+
+      <!-- 合作類型 -->
       <if test="type != null">type,</if>
+
+      <!-- 需求簡述 -->
       <if test="message != null">message,</if>
+
+      <!-- 處理狀態 -->
       <if test="status != null">status,</if>
+
+      <!-- 後台備註 -->
       <if test="remark != null">remark,</if>
+
+      <!-- 是否已轉成廠商 -->
+      <if test="convertedToVendor != null">converted_to_vendor,</if>
+
+      <!-- 轉成的廠商 AdminUser ID -->
+      <if test="vendorAdminUserId != null">vendor_admin_user_id,</if>
+
+      <!-- 是否刪除 -->
+      <if test="deleted != null">deleted,</if>
+
+      <!-- 刪除時間 -->
+      <if test="deletedAt != null">deleted_at,</if>
+
+      <!-- 刪除者 AdminUser ID -->
+      <if test="deletedBy != null">deleted_by,</if>
+
+      <!-- 建立時間 -->
       <if test="createdAt != null">created_at,</if>
+
+      <!-- 更新時間 -->
       <if test="updatedAt != null">updated_at,</if>
     </trim>
-    <trim prefix="values (" suffix=")" suffixOverrides=",">
+    <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+      <!-- 主鍵 UUID -->
       <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+
+      <!-- 公司 / 單位名稱 -->
       <if test="company != null">#{company,jdbcType=VARCHAR},</if>
+
+      <!-- 聯絡人姓名 -->
       <if test="name != null">#{name,jdbcType=VARCHAR},</if>
+
+      <!-- 電子郵件 -->
       <if test="email != null">#{email,jdbcType=VARCHAR},</if>
+
+      <!-- 聯絡電話 -->
       <if test="phone != null">#{phone,jdbcType=VARCHAR},</if>
+
+      <!-- 合作類型 -->
       <if test="type != null">#{type,jdbcType=VARCHAR},</if>
+
+      <!-- 需求簡述 -->
       <if test="message != null">#{message,jdbcType=LONGVARCHAR},</if>
+
+      <!-- 處理狀態 -->
       <if test="status != null">#{status,jdbcType=VARCHAR},</if>
+
+      <!-- 後台備註 -->
       <if test="remark != null">#{remark,jdbcType=LONGVARCHAR},</if>
+
+      <!-- 是否已轉成廠商 -->
+      <if test="convertedToVendor != null">#{convertedToVendor,jdbcType=BIT},</if>
+
+      <!-- 轉成的廠商 AdminUser ID -->
+      <if test="vendorAdminUserId != null">#{vendorAdminUserId,jdbcType=VARCHAR},</if>
+
+      <!-- 是否刪除 -->
+      <if test="deleted != null">#{deleted,jdbcType=BIT},</if>
+
+      <!-- 刪除時間 -->
+      <if test="deletedAt != null">#{deletedAt,jdbcType=TIMESTAMP},</if>
+
+      <!-- 刪除者 AdminUser ID -->
+      <if test="deletedBy != null">#{deletedBy,jdbcType=VARCHAR},</if>
+
+      <!-- 建立時間 -->
       <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+
+      <!-- 更新時間 -->
       <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
     </trim>
   </insert>
 
-  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.CooperationInquiry">
-    update cooperation_inquiry
+  <!-- 依主鍵選擇性更新合作洽談資料 -->
+  <update id="updateByPrimaryKeySelective"
+          parameterType="com.group.admin.entity.CooperationInquiry">
+    UPDATE cooperation_inquiry
     <set>
+      <!-- 公司 / 單位名稱 -->
       <if test="company != null">company = #{company,jdbcType=VARCHAR},</if>
+
+      <!-- 聯絡人姓名 -->
       <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
+
+      <!-- 電子郵件 -->
       <if test="email != null">email = #{email,jdbcType=VARCHAR},</if>
+
+      <!-- 聯絡電話 -->
       <if test="phone != null">phone = #{phone,jdbcType=VARCHAR},</if>
+
+      <!-- 合作類型 -->
       <if test="type != null">type = #{type,jdbcType=VARCHAR},</if>
+
+      <!-- 需求簡述 -->
       <if test="message != null">message = #{message,jdbcType=LONGVARCHAR},</if>
+
+      <!-- 處理狀態 -->
       <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+
+      <!-- 後台備註 -->
       <if test="remark != null">remark = #{remark,jdbcType=LONGVARCHAR},</if>
+
+      <!-- 是否已轉成廠商 -->
+      <if test="convertedToVendor != null">converted_to_vendor = #{convertedToVendor,jdbcType=BIT},</if>
+
+      <!-- 轉成的廠商 AdminUser ID -->
+      <if test="vendorAdminUserId != null">vendor_admin_user_id = #{vendorAdminUserId,jdbcType=VARCHAR},</if>
+
+      <!-- 是否刪除 -->
+      <if test="deleted != null">deleted = #{deleted,jdbcType=BIT},</if>
+
+      <!-- 刪除時間 -->
+      <if test="deletedAt != null">deleted_at = #{deletedAt,jdbcType=TIMESTAMP},</if>
+
+      <!-- 刪除者 AdminUser ID -->
+      <if test="deletedBy != null">deleted_by = #{deletedBy,jdbcType=VARCHAR},</if>
+
+      <!-- 更新時間 -->
       <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
     </set>
-    where id = #{id,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
   </update>
 
-  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from cooperation_inquiry
-    where id = #{id,jdbcType=VARCHAR}
+  <!-- 更新合作洽談狀態與備註 -->
+  <update id="updateStatus">
+    UPDATE cooperation_inquiry
+    SET
+      status = #{status,jdbcType=VARCHAR},
+      remark = #{remark,jdbcType=LONGVARCHAR},
+      updated_at = NOW()
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <!-- 合作洽談轉成廠商 AdminUser 後回寫 -->
+  <update id="updateConvertedVendor">
+    UPDATE cooperation_inquiry
+    SET
+      converted_to_vendor = 1,
+      vendor_admin_user_id = #{vendorAdminUserId,jdbcType=VARCHAR},
+      updated_at = NOW()
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <!-- 軟刪除合作洽談，不做實體刪除 -->
+  <update id="softDeleteByPrimaryKey">
+    UPDATE cooperation_inquiry
+    SET
+      deleted = 1,
+      deleted_at = #{deletedAt,jdbcType=TIMESTAMP},
+      deleted_by = #{deletedBy,jdbcType=VARCHAR},
+      status = 'CLOSED',
+      updated_at = #{deletedAt,jdbcType=TIMESTAMP}
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </update>
+
+  <!-- 實體刪除合作洽談，原則上不給 Service 使用 -->
+  <delete id="deleteByPrimaryKey"
+          parameterType="java.lang.String">
+    DELETE FROM cooperation_inquiry
+    WHERE id = #{id,jdbcType=VARCHAR}
   </delete>
 
 </mapper>

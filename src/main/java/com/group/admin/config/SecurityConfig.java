@@ -36,13 +36,6 @@ public class SecurityConfig {
         private final ApiOAuth2AuthenticationSuccessHandler apiOAuth2AuthenticationSuccessHandler;
         private final ApiOAuth2AuthenticationFailureHandler apiOAuth2AuthenticationFailureHandler;
 
-    /**
-     * 密碼加密器（使用 BCrypt）
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 
     /**
      * 後台安全配置（/admin/**）

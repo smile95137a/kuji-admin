@@ -1,14 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.group.admin.mapper.RoleMapper">
+
+  <!-- 角色欄位對應 -->
   <resultMap id="BaseResultMap" type="com.group.admin.entity.Role">
+    <!-- 主鍵 UUID -->
     <id column="id" jdbcType="VARCHAR" property="id" />
+
+    <!-- 角色名稱 -->
     <result column="name" jdbcType="VARCHAR" property="name" />
+
+    <!-- 角色代碼 -->
     <result column="code" jdbcType="VARCHAR" property="code" />
+
+    <!-- 角色描述 -->
     <result column="description" jdbcType="VARCHAR" property="description" />
+
+    <!-- 建立時間 -->
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+
+    <!-- 更新時間 -->
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
   </resultMap>
+
+  <!-- Example 查詢條件 -->
   <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
@@ -17,17 +33,21 @@
             <foreach collection="criteria.criteria" item="criterion">
               <choose>
                 <when test="criterion.noValue">
-                  and ${criterion.condition}
+                  AND ${criterion.condition}
                 </when>
                 <when test="criterion.singleValue">
-                  and ${criterion.condition} #{criterion.value}
+                  AND ${criterion.condition} #{criterion.value}
                 </when>
                 <when test="criterion.betweenValue">
-                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                  AND ${criterion.condition} #{criterion.value} AND #{criterion.secondValue}
                 </when>
                 <when test="criterion.listValue">
-                  and ${criterion.condition}
-                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                  AND ${criterion.condition}
+                  <foreach close=")"
+                           collection="criterion.value"
+                           item="listItem"
+                           open="("
+                           separator=",">
                     #{listItem}
                   </foreach>
                 </when>
@@ -38,6 +58,8 @@
       </foreach>
     </where>
   </sql>
+
+  <!-- Example 更新條件 -->
   <sql id="Update_By_Example_Where_Clause">
     <where>
       <foreach collection="example.oredCriteria" item="criteria" separator="or">
@@ -46,17 +68,21 @@
             <foreach collection="criteria.criteria" item="criterion">
               <choose>
                 <when test="criterion.noValue">
-                  and ${criterion.condition}
+                  AND ${criterion.condition}
                 </when>
                 <when test="criterion.singleValue">
-                  and ${criterion.condition} #{criterion.value}
+                  AND ${criterion.condition} #{criterion.value}
                 </when>
                 <when test="criterion.betweenValue">
-                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                  AND ${criterion.condition} #{criterion.value} AND #{criterion.secondValue}
                 </when>
                 <when test="criterion.listValue">
-                  and ${criterion.condition}
-                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                  AND ${criterion.condition}
+                  <foreach close=")"
+                           collection="criterion.value"
+                           item="listItem"
+                           open="("
+                           separator=",">
                     #{listItem}
                   </foreach>
                 </when>
@@ -67,126 +93,149 @@
       </foreach>
     </where>
   </sql>
+
+  <!-- 基本欄位清單 -->
   <sql id="Base_Column_List">
-    id, name, code, description, created_at, updated_at
+    id,
+    name,
+    code,
+    description,
+    created_at,
+    updated_at
   </sql>
-  <select id="selectByExample" parameterType="com.group.admin.example.RoleExample" resultMap="BaseResultMap">
-    select
+
+  <!-- 依條件查詢角色列表 -->
+  <select id="selectByExample"
+          parameterType="com.group.admin.example.RoleExample"
+          resultMap="BaseResultMap">
+    SELECT
     <if test="distinct">
-      distinct
+      DISTINCT
     </if>
-    'true' as QUERYID,
+    'true' AS QUERYID,
     <include refid="Base_Column_List" />
-    from `role`
+    FROM `role`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
     <if test="orderByClause != null">
-      order by ${orderByClause}
+      ORDER BY ${orderByClause}
     </if>
   </select>
-  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
-    select 
+
+  <!-- 依主鍵查詢角色 -->
+  <select id="selectByPrimaryKey"
+          parameterType="java.lang.String"
+          resultMap="BaseResultMap">
+    SELECT
     <include refid="Base_Column_List" />
-    from `role`
-    where id = #{id,jdbcType=VARCHAR}
+    FROM `role`
+    WHERE id = #{id,jdbcType=VARCHAR}
   </select>
-  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from `role`
-    where id = #{id,jdbcType=VARCHAR}
+
+  <!-- 依角色代碼查詢角色 -->
+  <select id="selectByCode"
+          parameterType="java.lang.String"
+          resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM `role`
+    WHERE code = #{code,jdbcType=VARCHAR}
+    LIMIT 1
+  </select>
+
+  <!-- 依主鍵刪除角色 -->
+  <delete id="deleteByPrimaryKey"
+          parameterType="java.lang.String">
+    DELETE FROM `role`
+    WHERE id = #{id,jdbcType=VARCHAR}
   </delete>
-  <delete id="deleteByExample" parameterType="com.group.admin.example.RoleExample">
-    delete from `role`
+
+  <!-- 依條件刪除角色 -->
+  <delete id="deleteByExample"
+          parameterType="com.group.admin.example.RoleExample">
+    DELETE FROM `role`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
-  <insert id="insert" parameterType="com.group.admin.entity.Role">
-    insert into `role` (id, name, code, 
-      description, created_at, updated_at
-      )
-    values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{code,jdbcType=VARCHAR}, 
-      #{description,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}
-      )
+
+  <!-- 新增角色 -->
+  <insert id="insert"
+          parameterType="com.group.admin.entity.Role">
+    INSERT INTO `role` (
+      id,
+      name,
+      code,
+      description,
+      created_at,
+      updated_at
+    ) VALUES (
+      #{id,jdbcType=VARCHAR},
+      #{name,jdbcType=VARCHAR},
+      #{code,jdbcType=VARCHAR},
+      #{description,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedAt,jdbcType=TIMESTAMP}
+    )
   </insert>
-  <insert id="insertSelective" parameterType="com.group.admin.entity.Role">
-    insert into `role`
+
+  <!-- 選擇性新增角色 -->
+  <insert id="insertSelective"
+          parameterType="com.group.admin.entity.Role">
+    INSERT INTO `role`
     <trim prefix="(" suffix=")" suffixOverrides=",">
-      <if test="id != null">
-        id,
-      </if>
-      <if test="name != null">
-        name,
-      </if>
-      <if test="code != null">
-        code,
-      </if>
-      <if test="description != null">
-        description,
-      </if>
-      <if test="createdAt != null">
-        created_at,
-      </if>
-      <if test="updatedAt != null">
-        updated_at,
-      </if>
+      <if test="id != null">id,</if>
+      <if test="name != null">name,</if>
+      <if test="code != null">code,</if>
+      <if test="description != null">description,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedAt != null">updated_at,</if>
     </trim>
-    <trim prefix="values (" suffix=")" suffixOverrides=",">
-      <if test="id != null">
-        #{id,jdbcType=VARCHAR},
-      </if>
-      <if test="name != null">
-        #{name,jdbcType=VARCHAR},
-      </if>
-      <if test="code != null">
-        #{code,jdbcType=VARCHAR},
-      </if>
-      <if test="description != null">
-        #{description,jdbcType=VARCHAR},
-      </if>
-      <if test="createdAt != null">
-        #{createdAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="updatedAt != null">
-        #{updatedAt,jdbcType=TIMESTAMP},
-      </if>
+    <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+      <if test="name != null">#{name,jdbcType=VARCHAR},</if>
+      <if test="code != null">#{code,jdbcType=VARCHAR},</if>
+      <if test="description != null">#{description,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
     </trim>
   </insert>
-  <select id="countByExample" parameterType="com.group.admin.example.RoleExample" resultType="java.lang.Long">
-    select count(*) from `role`
+
+  <!-- 依條件查詢角色筆數 -->
+  <select id="countByExample"
+          parameterType="com.group.admin.example.RoleExample"
+          resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM `role`
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
-  <update id="updateByExampleSelective" parameterType="map">
-    update `role`
+
+  <!-- 依條件選擇性更新角色 -->
+  <update id="updateByExampleSelective"
+          parameterType="map">
+    UPDATE `role`
     <set>
-      <if test="row.id != null">
-        id = #{row.id,jdbcType=VARCHAR},
-      </if>
-      <if test="row.name != null">
-        name = #{row.name,jdbcType=VARCHAR},
-      </if>
-      <if test="row.code != null">
-        code = #{row.code,jdbcType=VARCHAR},
-      </if>
-      <if test="row.description != null">
-        description = #{row.description,jdbcType=VARCHAR},
-      </if>
-      <if test="row.createdAt != null">
-        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="row.updatedAt != null">
-        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
-      </if>
+      <if test="row.id != null">id = #{row.id,jdbcType=VARCHAR},</if>
+      <if test="row.name != null">name = #{row.name,jdbcType=VARCHAR},</if>
+      <if test="row.code != null">code = #{row.code,jdbcType=VARCHAR},</if>
+      <if test="row.description != null">description = #{row.description,jdbcType=VARCHAR},</if>
+      <if test="row.createdAt != null">created_at = #{row.createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="row.updatedAt != null">updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},</if>
     </set>
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExample" parameterType="map">
-    update `role`
-    set id = #{row.id,jdbcType=VARCHAR},
+
+  <!-- 依條件更新角色 -->
+  <update id="updateByExample"
+          parameterType="map">
+    UPDATE `role`
+    SET
+      id = #{row.id,jdbcType=VARCHAR},
       name = #{row.name,jdbcType=VARCHAR},
       code = #{row.code,jdbcType=VARCHAR},
       description = #{row.description,jdbcType=VARCHAR},
@@ -196,34 +245,32 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.Role">
-    update `role`
+
+  <!-- 依主鍵選擇性更新角色 -->
+  <update id="updateByPrimaryKeySelective"
+          parameterType="com.group.admin.entity.Role">
+    UPDATE `role`
     <set>
-      <if test="name != null">
-        name = #{name,jdbcType=VARCHAR},
-      </if>
-      <if test="code != null">
-        code = #{code,jdbcType=VARCHAR},
-      </if>
-      <if test="description != null">
-        description = #{description,jdbcType=VARCHAR},
-      </if>
-      <if test="createdAt != null">
-        created_at = #{createdAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="updatedAt != null">
-        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
-      </if>
+      <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
+      <if test="code != null">code = #{code,jdbcType=VARCHAR},</if>
+      <if test="description != null">description = #{description,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">created_at = #{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
     </set>
-    where id = #{id,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.Role">
-    update `role`
-    set name = #{name,jdbcType=VARCHAR},
+
+  <!-- 依主鍵更新角色 -->
+  <update id="updateByPrimaryKey"
+          parameterType="com.group.admin.entity.Role">
+    UPDATE `role`
+    SET
+      name = #{name,jdbcType=VARCHAR},
       code = #{code,jdbcType=VARCHAR},
       description = #{description,jdbcType=VARCHAR},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
       updated_at = #{updatedAt,jdbcType=TIMESTAMP}
-    where id = #{id,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
   </update>
+
 </mapper>

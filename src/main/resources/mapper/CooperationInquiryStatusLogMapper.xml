@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 合作洽詢狀態異動紀錄 Mapper XML -->
+<mapper namespace="com.group.admin.mapper.CooperationInquiryStatusLogMapper">
+
+  <!-- 合作洽詢狀態異動紀錄欄位對應 -->
+  <resultMap id="BaseResultMap" type="com.group.admin.entity.CooperationInquiryStatusLog">
+    <!-- 主鍵 UUID -->
+    <id column="id" jdbcType="VARCHAR" property="id" />
+
+    <!-- 合作洽詢 ID -->
+    <result column="inquiry_id" jdbcType="VARCHAR" property="inquiryId" />
+
+    <!-- 異動前狀態 -->
+    <result column="before_status" jdbcType="VARCHAR" property="beforeStatus" />
+
+    <!-- 異動後狀態 -->
+    <result column="after_status" jdbcType="VARCHAR" property="afterStatus" />
+
+    <!-- 異動備註 -->
+    <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
+
+    <!-- 操作者 AdminUser ID -->
+    <result column="operator_id" jdbcType="VARCHAR" property="operatorId" />
+
+    <!-- 操作者帳號 -->
+    <result column="operator_username" jdbcType="VARCHAR" property="operatorUsername" />
+
+    <!-- 操作者顯示名稱 -->
+    <result column="operator_display_name" jdbcType="VARCHAR" property="operatorDisplayName" />
+
+    <!-- 建立時間 -->
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <!-- 基本欄位清單 -->
+  <sql id="Base_Column_List">
+    id,
+    inquiry_id,
+    before_status,
+    after_status,
+    remark,
+    operator_id,
+    operator_username,
+    operator_display_name,
+    created_at
+  </sql>
+
+  <!-- 新增合作洽詢狀態異動紀錄 -->
+  <insert id="insertSelective" parameterType="com.group.admin.entity.CooperationInquiryStatusLog">
+    INSERT INTO cooperation_inquiry_status_log
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <!-- 主鍵 UUID -->
+      <if test="id != null">id,</if>
+
+      <!-- 合作洽詢 ID -->
+      <if test="inquiryId != null">inquiry_id,</if>
+
+      <!-- 異動前狀態 -->
+      <if test="beforeStatus != null">before_status,</if>
+
+      <!-- 異動後狀態 -->
+      <if test="afterStatus != null">after_status,</if>
+
+      <!-- 異動備註 -->
+      <if test="remark != null">remark,</if>
+
+      <!-- 操作者 AdminUser ID -->
+      <if test="operatorId != null">operator_id,</if>
+
+      <!-- 操作者帳號 -->
+      <if test="operatorUsername != null">operator_username,</if>
+
+      <!-- 操作者顯示名稱 -->
+      <if test="operatorDisplayName != null">operator_display_name,</if>
+
+      <!-- 建立時間 -->
+      <if test="createdAt != null">created_at,</if>
+    </trim>
+    <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+      <!-- 主鍵 UUID -->
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+
+      <!-- 合作洽詢 ID -->
+      <if test="inquiryId != null">#{inquiryId,jdbcType=VARCHAR},</if>
+
+      <!-- 異動前狀態 -->
+      <if test="beforeStatus != null">#{beforeStatus,jdbcType=VARCHAR},</if>
+
+      <!-- 異動後狀態 -->
+      <if test="afterStatus != null">#{afterStatus,jdbcType=VARCHAR},</if>
+
+      <!-- 異動備註 -->
+      <if test="remark != null">#{remark,jdbcType=LONGVARCHAR},</if>
+
+      <!-- 操作者 AdminUser ID -->
+      <if test="operatorId != null">#{operatorId,jdbcType=VARCHAR},</if>
+
+      <!-- 操作者帳號 -->
+      <if test="operatorUsername != null">#{operatorUsername,jdbcType=VARCHAR},</if>
+
+      <!-- 操作者顯示名稱 -->
+      <if test="operatorDisplayName != null">#{operatorDisplayName,jdbcType=VARCHAR},</if>
+
+      <!-- 建立時間 -->
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+
+  <!-- 依主鍵查詢合作洽詢狀態異動紀錄 -->
+  <select id="selectByPrimaryKey"
+          parameterType="java.lang.String"
+          resultMap="BaseResultMap">
+    SELECT
+      <include refid="Base_Column_List" />
+    FROM cooperation_inquiry_status_log
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <!-- 依合作洽詢 ID 查詢狀態異動紀錄，時間越新的排越前面 -->
+  <select id="selectByInquiryId"
+          parameterType="java.lang.String"
+          resultMap="BaseResultMap">
+    SELECT
+      <include refid="Base_Column_List" />
+    FROM cooperation_inquiry_status_log
+    WHERE inquiry_id = #{inquiryId,jdbcType=VARCHAR}
+    ORDER BY created_at DESC
+  </select>
+
+  <!-- 依主鍵刪除合作洽詢狀態異動紀錄 -->
+  <delete id="deleteByPrimaryKey"
+          parameterType="java.lang.String">
+    DELETE FROM cooperation_inquiry_status_log
+    WHERE id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+</mapper>

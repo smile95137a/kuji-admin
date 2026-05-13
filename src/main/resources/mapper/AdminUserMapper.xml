@@ -1,26 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.group.admin.mapper.AdminUserMapper">
+
+  <!-- 後台使用者欄位對應 -->
   <resultMap id="BaseResultMap" type="com.group.admin.entity.AdminUser">
+    <!-- 主鍵 UUID -->
     <id column="id" jdbcType="VARCHAR" property="id" />
+
+    <!-- 使用者帳號 -->
     <result column="username" jdbcType="VARCHAR" property="username" />
+
+    <!-- 使用者密碼 -->
     <result column="password" jdbcType="VARCHAR" property="password" />
+
+    <!-- 電子郵件 -->
     <result column="email" jdbcType="VARCHAR" property="email" />
+
+    <!-- 顯示名稱 -->
     <result column="display_name" jdbcType="VARCHAR" property="displayName" />
+
+    <!-- 聯絡電話 -->
     <result column="phone" jdbcType="VARCHAR" property="phone" />
+
+    <!-- 狀態 -->
     <result column="status" jdbcType="VARCHAR" property="status" />
+
+    <!-- 是否強制變更密碼 -->
     <result column="force_change_password" jdbcType="BIT" property="forceChangePassword" />
+
+    <!-- 最後登入時間 -->
     <result column="last_login_at" jdbcType="TIMESTAMP" property="lastLoginAt" />
+
+    <!-- 建立者 -->
     <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+
+    <!-- 建立時間 -->
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+
+    <!-- 更新者 -->
     <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
+
+    <!-- 更新時間 -->
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+
+    <!-- 登入失敗次數 -->
     <result column="failed_login_attempts" jdbcType="INTEGER" property="failedLoginAttempts" />
+
+    <!-- 鎖定到期時間 -->
     <result column="locked_until" jdbcType="TIMESTAMP" property="lockedUntil" />
   </resultMap>
-  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.group.admin.entity.AdminUser">
+
+  <!-- 後台使用者欄位對應，含備註 BLOB 欄位 -->
+  <resultMap id="ResultMapWithBLOBs"
+             type="com.group.admin.entity.AdminUser"
+             extends="BaseResultMap">
+    <!-- 備註 -->
     <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
   </resultMap>
+
+  <!-- Example 查詢條件 -->
   <sql id="Example_Where_Clause">
     <where>
       <foreach collection="oredCriteria" item="criteria" separator="or">
@@ -29,17 +68,21 @@
             <foreach collection="criteria.criteria" item="criterion">
               <choose>
                 <when test="criterion.noValue">
-                  and ${criterion.condition}
+                  AND ${criterion.condition}
                 </when>
                 <when test="criterion.singleValue">
-                  and ${criterion.condition} #{criterion.value}
+                  AND ${criterion.condition} #{criterion.value}
                 </when>
                 <when test="criterion.betweenValue">
-                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                  AND ${criterion.condition} #{criterion.value} AND #{criterion.secondValue}
                 </when>
                 <when test="criterion.listValue">
-                  and ${criterion.condition}
-                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                  AND ${criterion.condition}
+                  <foreach collection="criterion.value"
+                           item="listItem"
+                           open="("
+                           close=")"
+                           separator=",">
                     #{listItem}
                   </foreach>
                 </when>
@@ -50,6 +93,8 @@
       </foreach>
     </where>
   </sql>
+
+  <!-- Example 更新條件 -->
   <sql id="Update_By_Example_Where_Clause">
     <where>
       <foreach collection="example.oredCriteria" item="criteria" separator="or">
@@ -58,17 +103,21 @@
             <foreach collection="criteria.criteria" item="criterion">
               <choose>
                 <when test="criterion.noValue">
-                  and ${criterion.condition}
+                  AND ${criterion.condition}
                 </when>
                 <when test="criterion.singleValue">
-                  and ${criterion.condition} #{criterion.value}
+                  AND ${criterion.condition} #{criterion.value}
                 </when>
                 <when test="criterion.betweenValue">
-                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                  AND ${criterion.condition} #{criterion.value} AND #{criterion.secondValue}
                 </when>
                 <when test="criterion.listValue">
-                  and ${criterion.condition}
-                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                  AND ${criterion.condition}
+                  <foreach collection="criterion.value"
+                           item="listItem"
+                           open="("
+                           close=")"
+                           separator=",">
                     #{listItem}
                   </foreach>
                 </when>
@@ -79,245 +128,247 @@
       </foreach>
     </where>
   </sql>
+
+  <!-- 基本欄位清單，不含 BLOB -->
   <sql id="Base_Column_List">
-    id, username, password, email, display_name, phone, status, force_change_password, 
-    last_login_at, created_by, created_at, updated_by, updated_at,
-    failed_login_attempts, locked_until
+    id,
+    username,
+    password,
+    email,
+    display_name,
+    phone,
+    status,
+    force_change_password,
+    last_login_at,
+    created_by,
+    created_at,
+    updated_by,
+    updated_at,
+    failed_login_attempts,
+    locked_until
   </sql>
+
+  <!-- BLOB 欄位清單 -->
   <sql id="Blob_Column_List">
     remark
   </sql>
-  <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.AdminUserExample" resultMap="ResultMapWithBLOBs">
-    select
+
+  <!-- 依條件查詢，含 BLOB 欄位 -->
+  <select id="selectByExampleWithBLOBs"
+          parameterType="com.group.admin.example.AdminUserExample"
+          resultMap="ResultMapWithBLOBs">
+    SELECT
     <if test="distinct">
-      distinct
+      DISTINCT
     </if>
-    'true' as QUERYID,
-    <include refid="Base_Column_List" />
-    ,
+    'true' AS QUERYID,
+    <include refid="Base_Column_List" />,
     <include refid="Blob_Column_List" />
-    from admin_user
+    FROM admin_user
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
     <if test="orderByClause != null">
-      order by ${orderByClause}
+      ORDER BY ${orderByClause}
     </if>
   </select>
-  <select id="selectByExample" parameterType="com.group.admin.example.AdminUserExample" resultMap="BaseResultMap">
-    select
+
+  <!-- 依條件查詢，不含 BLOB 欄位 -->
+  <select id="selectByExample"
+          parameterType="com.group.admin.example.AdminUserExample"
+          resultMap="BaseResultMap">
+    SELECT
     <if test="distinct">
-      distinct
+      DISTINCT
     </if>
-    'true' as QUERYID,
+    'true' AS QUERYID,
     <include refid="Base_Column_List" />
-    from admin_user
+    FROM admin_user
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
     <if test="orderByClause != null">
-      order by ${orderByClause}
+      ORDER BY ${orderByClause}
     </if>
   </select>
-  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
-    select 
-    <include refid="Base_Column_List" />
-    ,
+
+  <!-- 依主鍵查詢後台使用者 -->
+  <select id="selectByPrimaryKey"
+          parameterType="java.lang.String"
+          resultMap="ResultMapWithBLOBs">
+    SELECT
+    <include refid="Base_Column_List" />,
     <include refid="Blob_Column_List" />
-    from admin_user
-    where id = #{id,jdbcType=VARCHAR}
+    FROM admin_user
+    WHERE id = #{id,jdbcType=VARCHAR}
   </select>
-  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from admin_user
-    where id = #{id,jdbcType=VARCHAR}
+
+  <!-- 依 Email 查詢後台使用者 -->
+  <select id="selectByEmail"
+          parameterType="java.lang.String"
+          resultMap="ResultMapWithBLOBs">
+    SELECT
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    FROM admin_user
+    WHERE email = #{email,jdbcType=VARCHAR}
+    LIMIT 1
+  </select>
+
+  <!-- 依帳號查詢後台使用者 -->
+  <select id="selectByUsername"
+          parameterType="java.lang.String"
+          resultMap="ResultMapWithBLOBs">
+    SELECT
+    <include refid="Base_Column_List" />,
+    <include refid="Blob_Column_List" />
+    FROM admin_user
+    WHERE username = #{username,jdbcType=VARCHAR}
+    LIMIT 1
+  </select>
+
+  <!-- 依主鍵刪除後台使用者 -->
+  <delete id="deleteByPrimaryKey"
+          parameterType="java.lang.String">
+    DELETE FROM admin_user
+    WHERE id = #{id,jdbcType=VARCHAR}
   </delete>
-  <delete id="deleteByExample" parameterType="com.group.admin.example.AdminUserExample">
-    delete from admin_user
+
+  <!-- 依條件刪除後台使用者 -->
+  <delete id="deleteByExample"
+          parameterType="com.group.admin.example.AdminUserExample">
+    DELETE FROM admin_user
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
-  <insert id="insert" parameterType="com.group.admin.entity.AdminUser">
-    insert into admin_user (id, username, password, 
-      email, display_name, phone, 
-      status, force_change_password, last_login_at, 
-      created_by, created_at, updated_by, 
-      updated_at, remark, failed_login_attempts, locked_until)
-    values (#{id,jdbcType=VARCHAR}, #{username,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR}, 
-      #{email,jdbcType=VARCHAR}, #{displayName,jdbcType=VARCHAR}, #{phone,jdbcType=VARCHAR}, 
-      #{status,jdbcType=VARCHAR}, #{forceChangePassword,jdbcType=BIT}, #{lastLoginAt,jdbcType=TIMESTAMP}, 
-      #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, 
-      #{updatedAt,jdbcType=TIMESTAMP}, #{remark,jdbcType=LONGVARCHAR},
-      #{failedLoginAttempts,jdbcType=INTEGER}, #{lockedUntil,jdbcType=TIMESTAMP})
+
+  <!-- 新增後台使用者 -->
+  <insert id="insert"
+          parameterType="com.group.admin.entity.AdminUser">
+    INSERT INTO admin_user (
+      id,
+      username,
+      password,
+      email,
+      display_name,
+      phone,
+      status,
+      force_change_password,
+      last_login_at,
+      created_by,
+      created_at,
+      updated_by,
+      updated_at,
+      remark,
+      failed_login_attempts,
+      locked_until
+    ) VALUES (
+      #{id,jdbcType=VARCHAR},
+      #{username,jdbcType=VARCHAR},
+      #{password,jdbcType=VARCHAR},
+      #{email,jdbcType=VARCHAR},
+      #{displayName,jdbcType=VARCHAR},
+      #{phone,jdbcType=VARCHAR},
+      #{status,jdbcType=VARCHAR},
+      #{forceChangePassword,jdbcType=BIT},
+      #{lastLoginAt,jdbcType=TIMESTAMP},
+      #{createdBy,jdbcType=VARCHAR},
+      #{createdAt,jdbcType=TIMESTAMP},
+      #{updatedBy,jdbcType=VARCHAR},
+      #{updatedAt,jdbcType=TIMESTAMP},
+      #{remark,jdbcType=LONGVARCHAR},
+      #{failedLoginAttempts,jdbcType=INTEGER},
+      #{lockedUntil,jdbcType=TIMESTAMP}
+    )
   </insert>
-  <insert id="insertSelective" parameterType="com.group.admin.entity.AdminUser">
-    insert into admin_user
+
+  <!-- 選擇性新增後台使用者 -->
+  <insert id="insertSelective"
+          parameterType="com.group.admin.entity.AdminUser">
+    INSERT INTO admin_user
     <trim prefix="(" suffix=")" suffixOverrides=",">
-      <if test="id != null">
-        id,
-      </if>
-      <if test="username != null">
-        username,
-      </if>
-      <if test="password != null">
-        password,
-      </if>
-      <if test="email != null">
-        email,
-      </if>
-      <if test="displayName != null">
-        display_name,
-      </if>
-      <if test="phone != null">
-        phone,
-      </if>
-      <if test="status != null">
-        status,
-      </if>
-      <if test="forceChangePassword != null">
-        force_change_password,
-      </if>
-      <if test="lastLoginAt != null">
-        last_login_at,
-      </if>
-      <if test="createdBy != null">
-        created_by,
-      </if>
-      <if test="createdAt != null">
-        created_at,
-      </if>
-      <if test="updatedBy != null">
-        updated_by,
-      </if>
-      <if test="updatedAt != null">
-        updated_at,
-      </if>
-      <if test="remark != null">
-        remark,
-      </if>
-      <if test="failedLoginAttempts != null">
-        failed_login_attempts,
-      </if>
-      <if test="lockedUntil != null">
-        locked_until,
-      </if>
+      <if test="id != null">id,</if>
+      <if test="username != null">username,</if>
+      <if test="password != null">password,</if>
+      <if test="email != null">email,</if>
+      <if test="displayName != null">display_name,</if>
+      <if test="phone != null">phone,</if>
+      <if test="status != null">status,</if>
+      <if test="forceChangePassword != null">force_change_password,</if>
+      <if test="lastLoginAt != null">last_login_at,</if>
+      <if test="createdBy != null">created_by,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedBy != null">updated_by,</if>
+      <if test="updatedAt != null">updated_at,</if>
+      <if test="remark != null">remark,</if>
+      <if test="failedLoginAttempts != null">failed_login_attempts,</if>
+      <if test="lockedUntil != null">locked_until,</if>
     </trim>
-    <trim prefix="values (" suffix=")" suffixOverrides=",">
-      <if test="id != null">
-        #{id,jdbcType=VARCHAR},
-      </if>
-      <if test="username != null">
-        #{username,jdbcType=VARCHAR},
-      </if>
-      <if test="password != null">
-        #{password,jdbcType=VARCHAR},
-      </if>
-      <if test="email != null">
-        #{email,jdbcType=VARCHAR},
-      </if>
-      <if test="displayName != null">
-        #{displayName,jdbcType=VARCHAR},
-      </if>
-      <if test="phone != null">
-        #{phone,jdbcType=VARCHAR},
-      </if>
-      <if test="status != null">
-        #{status,jdbcType=VARCHAR},
-      </if>
-      <if test="forceChangePassword != null">
-        #{forceChangePassword,jdbcType=BIT},
-      </if>
-      <if test="lastLoginAt != null">
-        #{lastLoginAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="createdBy != null">
-        #{createdBy,jdbcType=VARCHAR},
-      </if>
-      <if test="createdAt != null">
-        #{createdAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="updatedBy != null">
-        #{updatedBy,jdbcType=VARCHAR},
-      </if>
-      <if test="updatedAt != null">
-        #{updatedAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="remark != null">
-        #{remark,jdbcType=LONGVARCHAR},
-      </if>
-      <if test="failedLoginAttempts != null">
-        #{failedLoginAttempts,jdbcType=INTEGER},
-      </if>
-      <if test="lockedUntil != null">
-        #{lockedUntil,jdbcType=TIMESTAMP},
-      </if>
+    <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=VARCHAR},</if>
+      <if test="username != null">#{username,jdbcType=VARCHAR},</if>
+      <if test="password != null">#{password,jdbcType=VARCHAR},</if>
+      <if test="email != null">#{email,jdbcType=VARCHAR},</if>
+      <if test="displayName != null">#{displayName,jdbcType=VARCHAR},</if>
+      <if test="phone != null">#{phone,jdbcType=VARCHAR},</if>
+      <if test="status != null">#{status,jdbcType=VARCHAR},</if>
+      <if test="forceChangePassword != null">#{forceChangePassword,jdbcType=BIT},</if>
+      <if test="lastLoginAt != null">#{lastLoginAt,jdbcType=TIMESTAMP},</if>
+      <if test="createdBy != null">#{createdBy,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedBy != null">#{updatedBy,jdbcType=VARCHAR},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
+      <if test="remark != null">#{remark,jdbcType=LONGVARCHAR},</if>
+      <if test="failedLoginAttempts != null">#{failedLoginAttempts,jdbcType=INTEGER},</if>
+      <if test="lockedUntil != null">#{lockedUntil,jdbcType=TIMESTAMP},</if>
     </trim>
   </insert>
-  <select id="countByExample" parameterType="com.group.admin.example.AdminUserExample" resultType="java.lang.Long">
-    select count(*) from admin_user
+
+  <!-- 依條件查詢筆數 -->
+  <select id="countByExample"
+          parameterType="com.group.admin.example.AdminUserExample"
+          resultType="java.lang.Long">
+    SELECT COUNT(*)
+    FROM admin_user
     <if test="_parameter != null">
       <include refid="Example_Where_Clause" />
     </if>
   </select>
-  <update id="updateByExampleSelective" parameterType="map">
-    update admin_user
+
+  <!-- 依條件選擇性更新後台使用者 -->
+  <update id="updateByExampleSelective"
+          parameterType="map">
+    UPDATE admin_user
     <set>
-      <if test="row.id != null">
-        id = #{row.id,jdbcType=VARCHAR},
-      </if>
-      <if test="row.username != null">
-        username = #{row.username,jdbcType=VARCHAR},
-      </if>
-      <if test="row.password != null">
-        password = #{row.password,jdbcType=VARCHAR},
-      </if>
-      <if test="row.email != null">
-        email = #{row.email,jdbcType=VARCHAR},
-      </if>
-      <if test="row.displayName != null">
-        display_name = #{row.displayName,jdbcType=VARCHAR},
-      </if>
-      <if test="row.phone != null">
-        phone = #{row.phone,jdbcType=VARCHAR},
-      </if>
-      <if test="row.status != null">
-        status = #{row.status,jdbcType=VARCHAR},
-      </if>
-      <if test="row.forceChangePassword != null">
-        force_change_password = #{row.forceChangePassword,jdbcType=BIT},
-      </if>
-      <if test="row.lastLoginAt != null">
-        last_login_at = #{row.lastLoginAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="row.createdBy != null">
-        created_by = #{row.createdBy,jdbcType=VARCHAR},
-      </if>
-      <if test="row.createdAt != null">
-        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="row.updatedBy != null">
-        updated_by = #{row.updatedBy,jdbcType=VARCHAR},
-      </if>
-      <if test="row.updatedAt != null">
-        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="row.remark != null">
-        remark = #{row.remark,jdbcType=LONGVARCHAR},
-      </if>
-      <if test="row.failedLoginAttempts != null">
-        failed_login_attempts = #{row.failedLoginAttempts,jdbcType=INTEGER},
-      </if>
-      <if test="row.lockedUntil != null">
-        locked_until = #{row.lockedUntil,jdbcType=TIMESTAMP},
-      </if>
+      <if test="row.id != null">id = #{row.id,jdbcType=VARCHAR},</if>
+      <if test="row.username != null">username = #{row.username,jdbcType=VARCHAR},</if>
+      <if test="row.password != null">password = #{row.password,jdbcType=VARCHAR},</if>
+      <if test="row.email != null">email = #{row.email,jdbcType=VARCHAR},</if>
+      <if test="row.displayName != null">display_name = #{row.displayName,jdbcType=VARCHAR},</if>
+      <if test="row.phone != null">phone = #{row.phone,jdbcType=VARCHAR},</if>
+      <if test="row.status != null">status = #{row.status,jdbcType=VARCHAR},</if>
+      <if test="row.forceChangePassword != null">force_change_password = #{row.forceChangePassword,jdbcType=BIT},</if>
+      <if test="row.lastLoginAt != null">last_login_at = #{row.lastLoginAt,jdbcType=TIMESTAMP},</if>
+      <if test="row.createdBy != null">created_by = #{row.createdBy,jdbcType=VARCHAR},</if>
+      <if test="row.createdAt != null">created_at = #{row.createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="row.updatedBy != null">updated_by = #{row.updatedBy,jdbcType=VARCHAR},</if>
+      <if test="row.updatedAt != null">updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},</if>
+      <if test="row.remark != null">remark = #{row.remark,jdbcType=LONGVARCHAR},</if>
+      <if test="row.failedLoginAttempts != null">failed_login_attempts = #{row.failedLoginAttempts,jdbcType=INTEGER},</if>
+      <if test="row.lockedUntil != null">locked_until = #{row.lockedUntil,jdbcType=TIMESTAMP},</if>
     </set>
     <if test="example != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExampleWithBLOBs" parameterType="map">
-    update admin_user
-    set id = #{row.id,jdbcType=VARCHAR},
+
+  <!-- 依條件更新後台使用者，含 BLOB 欄位 -->
+  <update id="updateByExampleWithBLOBs"
+          parameterType="map">
+    UPDATE admin_user
+    SET
+      id = #{row.id,jdbcType=VARCHAR},
       username = #{row.username,jdbcType=VARCHAR},
       password = #{row.password,jdbcType=VARCHAR},
       email = #{row.email,jdbcType=VARCHAR},
@@ -337,9 +388,13 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByExample" parameterType="map">
-    update admin_user
-    set id = #{row.id,jdbcType=VARCHAR},
+
+  <!-- 依條件更新後台使用者，不含 BLOB 欄位 -->
+  <update id="updateByExample"
+          parameterType="map">
+    UPDATE admin_user
+    SET
+      id = #{row.id,jdbcType=VARCHAR},
       username = #{row.username,jdbcType=VARCHAR},
       password = #{row.password,jdbcType=VARCHAR},
       email = #{row.email,jdbcType=VARCHAR},
@@ -358,60 +413,37 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByPrimaryKeySelective" parameterType="com.group.admin.entity.AdminUser">
-    update admin_user
+
+  <!-- 依主鍵選擇性更新後台使用者 -->
+  <update id="updateByPrimaryKeySelective"
+          parameterType="com.group.admin.entity.AdminUser">
+    UPDATE admin_user
     <set>
-      <if test="username != null">
-        username = #{username,jdbcType=VARCHAR},
-      </if>
-      <if test="password != null">
-        password = #{password,jdbcType=VARCHAR},
-      </if>
-      <if test="email != null">
-        email = #{email,jdbcType=VARCHAR},
-      </if>
-      <if test="displayName != null">
-        display_name = #{displayName,jdbcType=VARCHAR},
-      </if>
-      <if test="phone != null">
-        phone = #{phone,jdbcType=VARCHAR},
-      </if>
-      <if test="status != null">
-        status = #{status,jdbcType=VARCHAR},
-      </if>
-      <if test="forceChangePassword != null">
-        force_change_password = #{forceChangePassword,jdbcType=BIT},
-      </if>
-      <if test="lastLoginAt != null">
-        last_login_at = #{lastLoginAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="createdBy != null">
-        created_by = #{createdBy,jdbcType=VARCHAR},
-      </if>
-      <if test="createdAt != null">
-        created_at = #{createdAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="updatedBy != null">
-        updated_by = #{updatedBy,jdbcType=VARCHAR},
-      </if>
-      <if test="updatedAt != null">
-        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
-      </if>
-      <if test="remark != null">
-        remark = #{remark,jdbcType=LONGVARCHAR},
-      </if>
-      <if test="failedLoginAttempts != null">
-        failed_login_attempts = #{failedLoginAttempts,jdbcType=INTEGER},
-      </if>
-      <if test="lockedUntil != null">
-        locked_until = #{lockedUntil,jdbcType=TIMESTAMP},
-      </if>
+      <if test="username != null">username = #{username,jdbcType=VARCHAR},</if>
+      <if test="password != null">password = #{password,jdbcType=VARCHAR},</if>
+      <if test="email != null">email = #{email,jdbcType=VARCHAR},</if>
+      <if test="displayName != null">display_name = #{displayName,jdbcType=VARCHAR},</if>
+      <if test="phone != null">phone = #{phone,jdbcType=VARCHAR},</if>
+      <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+      <if test="forceChangePassword != null">force_change_password = #{forceChangePassword,jdbcType=BIT},</if>
+      <if test="lastLoginAt != null">last_login_at = #{lastLoginAt,jdbcType=TIMESTAMP},</if>
+      <if test="createdBy != null">created_by = #{createdBy,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">created_at = #{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedBy != null">updated_by = #{updatedBy,jdbcType=VARCHAR},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
+      <if test="remark != null">remark = #{remark,jdbcType=LONGVARCHAR},</if>
+      <if test="failedLoginAttempts != null">failed_login_attempts = #{failedLoginAttempts,jdbcType=INTEGER},</if>
+      <if test="lockedUntil != null">locked_until = #{lockedUntil,jdbcType=TIMESTAMP},</if>
     </set>
-    where id = #{id,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.group.admin.entity.AdminUser">
-    update admin_user
-    set username = #{username,jdbcType=VARCHAR},
+
+  <!-- 依主鍵更新後台使用者，含 BLOB 欄位 -->
+  <update id="updateByPrimaryKeyWithBLOBs"
+          parameterType="com.group.admin.entity.AdminUser">
+    UPDATE admin_user
+    SET
+      username = #{username,jdbcType=VARCHAR},
       password = #{password,jdbcType=VARCHAR},
       email = #{email,jdbcType=VARCHAR},
       display_name = #{displayName,jdbcType=VARCHAR},
@@ -426,11 +458,15 @@
       remark = #{remark,jdbcType=LONGVARCHAR},
       failed_login_attempts = #{failedLoginAttempts,jdbcType=INTEGER},
       locked_until = #{lockedUntil,jdbcType=TIMESTAMP}
-    where id = #{id,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKey" parameterType="com.group.admin.entity.AdminUser">
-    update admin_user
-    set username = #{username,jdbcType=VARCHAR},
+
+  <!-- 依主鍵更新後台使用者，不含 BLOB 欄位 -->
+  <update id="updateByPrimaryKey"
+          parameterType="com.group.admin.entity.AdminUser">
+    UPDATE admin_user
+    SET
+      username = #{username,jdbcType=VARCHAR},
       password = #{password,jdbcType=VARCHAR},
       email = #{email,jdbcType=VARCHAR},
       display_name = #{displayName,jdbcType=VARCHAR},
@@ -444,6 +480,7 @@
       updated_at = #{updatedAt,jdbcType=TIMESTAMP},
       failed_login_attempts = #{failedLoginAttempts,jdbcType=INTEGER},
       locked_until = #{lockedUntil,jdbcType=TIMESTAMP}
-    where id = #{id,jdbcType=VARCHAR}
+    WHERE id = #{id,jdbcType=VARCHAR}
   </update>
+
 </mapper>

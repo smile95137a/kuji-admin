@@ -1,165 +1,60 @@
 package com.group.admin.entity;
 
+import lombok.Data;
+
 import java.time.LocalDateTime;
 
+/**
+ * 後台使用者
+ */
+@Data
 public class AdminUser {
+
+    /** 主鍵 UUID */
     private String id;
 
+    /** 使用者帳號 */
     private String username;
 
+    /** 使用者密碼 */
     private String password;
 
+    /** 電子郵件 */
     private String email;
 
+    /** 顯示名稱 */
     private String displayName;
 
+    /** 聯絡電話 */
     private String phone;
 
+    /** 狀態：ACTIVE / INACTIVE / LOCKED */
     private String status;
 
+    /** 是否強制變更密碼 */
     private Boolean forceChangePassword;
 
+    /** 最後登入時間 */
     private LocalDateTime lastLoginAt;
 
+    /** 建立者 */
     private String createdBy;
 
+    /** 建立時間 */
     private LocalDateTime createdAt;
 
+    /** 更新者 */
     private String updatedBy;
 
+    /** 更新時間 */
     private LocalDateTime updatedAt;
 
+    /** 備註 */
     private String remark;
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id == null ? null : id.trim();
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username == null ? null : username.trim();
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password == null ? null : password.trim();
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email == null ? null : email.trim();
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName == null ? null : displayName.trim();
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone == null ? null : phone.trim();
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status == null ? null : status.trim();
-    }
-
-    public Boolean getForceChangePassword() {
-        return forceChangePassword;
-    }
-
-    public void setForceChangePassword(Boolean forceChangePassword) {
-        this.forceChangePassword = forceChangePassword;
-    }
-
-    public LocalDateTime getLastLoginAt() {
-        return lastLoginAt;
-    }
-
-    public void setLastLoginAt(LocalDateTime lastLoginAt) {
-        this.lastLoginAt = lastLoginAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy == null ? null : createdBy.trim();
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getUpdatedBy() {
-        return updatedBy;
-    }
-
-    public void setUpdatedBy(String updatedBy) {
-        this.updatedBy = updatedBy == null ? null : updatedBy.trim();
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String remark) {
-        this.remark = remark == null ? null : remark.trim();
-    }
-
+    /** 登入失敗次數 */
     private Integer failedLoginAttempts;
 
+    /** 鎖定到期時間 */
     private LocalDateTime lockedUntil;
-
-    public Integer getFailedLoginAttempts() {
-        return failedLoginAttempts;
-    }
-
-    public void setFailedLoginAttempts(Integer failedLoginAttempts) {
-        this.failedLoginAttempts = failedLoginAttempts;
-    }
-
-    public LocalDateTime getLockedUntil() {
-        return lockedUntil;
-    }
-
-    public void setLockedUntil(LocalDateTime lockedUntil) {
-        this.lockedUntil = lockedUntil;
-    }
 }

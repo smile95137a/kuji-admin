@@ -1,5 +1,7 @@
 package com.group.admin.controller.admin;
 
+import com.group.admin.entity.AdminUser;
+import com.group.admin.req.cooperation.CooperationInquiryConvertVendorReq;
 import com.group.admin.req.cooperation.CooperationInquiryFilterCondition;
 import com.group.admin.req.cooperation.UpdateCooperationInquiryStatusReq;
 import com.group.admin.res.cooperation.CooperationInquiryRes;
@@ -14,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * 後台合作洽談管理 Controller
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -37,16 +42,18 @@ public class AdminCooperationInquiryController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDir
     ) {
-        log.info("查詢合作洽談列表: page={}, size={}, status={}, type={}",
+        log.info(
+                "查詢合作洽談列表: page={}, size={}, status={}, type={}, keyword={}, sortBy={}, sortDir={}",
                 page,
                 size,
                 status,
-                type
+                type,
+                keyword,
+                sortBy,
+                sortDir
         );
 
-        CooperationInquiryFilterCondition filters =
-                new CooperationInquiryFilterCondition();
-
+        CooperationInquiryFilterCondition filters = new CooperationInquiryFilterCondition();
         filters.setStatus(status);
         filters.setType(type);
         filters.setKeyword(keyword);
@@ -90,12 +97,38 @@ public class AdminCooperationInquiryController {
     }
 
     /**
-     * 刪除合作洽談
+     * 合作洽談轉成廠商帳號
+     */
+    @PostMapping("/{id}/convert-vendor")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AdminUser> convertToVendor(
+            @PathVariable String id,
+            @RequestBody(required = false) CooperationInquiryConvertVendorReq req
+    ) {
+        log.info("合作洽談轉成廠商帳號: id={}", id);
+
+        CooperationInquiryConvertVendorReq safeReq =
+                req == null ? new CooperationInquiryConvertVendorReq() : req;
+
+        safeReq.setId(id);
+
+        return ResponseEntity.ok(
+                cooperationInquiryService.convertToVendor(safeReq)
+        );
+    }
+
+    /**
+     * 注記刪除合作洽談
+     *
+     * 注意：這裡不是實體刪除。
+     * 實際邏輯由 Service 將 deleted 設為 true，並將狀態改成 CLOSED。
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteInquiry(@PathVariable String id) {
-        log.info("刪除合作洽談: id={}", id);
+    public ResponseEntity<Void> deleteInquiry(
+            @PathVariable String id
+    ) {
+        log.info("注記刪除合作洽談: id={}", id);
 
         cooperationInquiryService.deleteInquiry(id);
 
