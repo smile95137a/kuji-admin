@@ -4,6 +4,22 @@ spring:
     username: admin
     password: WUfan0667.
     driver-class-name: com.mysql.cj.jdbc.Driver
+  config:
+    import: optional:file:./config/application-dev-secrets.yml
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-google-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "http://localhost:8180/api/login/oauth2/code/{registrationId}"
+            client-name: Google
 
   jpa:
     hibernate:
@@ -28,11 +44,34 @@ logging:
 cors:
   allowed-origins: http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173
 
+app:
+  base-url: ${APP_BASE_URL:http://localhost:5173}
+  client-path: ${APP_CLIENT_PATH:/client}
+  admin-path: ${APP_ADMIN_PATH:/kuji}
+
 jwt:
-  secret: myDevSecret123
+  secret: ${JWT_SECRET:myDevSecret123}
 
 google:
-  client-id: ""
+  client-id: ${GOOGLE_CLIENT_ID:local-google-client-id}
+  client-secret: ${GOOGLE_CLIENT_SECRET:local-google-client-secret}
+
+payment:
+  gateway:
+    provider: ${PAYMENT_GATEWAY_PROVIDER:stub}
+    callback-base-url: ${PAYMENT_CALLBACK_BASE_URL:http://localhost:8180}
+    gomypay:
+      api-url: ${GOMYPAY_API_URL:https://n.gomypay.asia/TestShuntClass.aspx}
+      shop-id: ${GOMYPAY_SHOP_ID:TestShopId}
+      hash-key: ${GOMYPAY_HASH_KEY:TestHashKey}
+      hash-iv: ${GOMYPAY_HASH_IV:TestHashIV}
+      verify-customer-id: ${GOMYPAY_VERIFY_CUSTOMER_ID:${GOMYPAY_SHOP_ID:TestShopId}}
+      return-url: ${GOMYPAY_RETURN_URL:http://localhost:5173/client/member-center/order-payment-result}
+      notify-url: ${GOMYPAY_NOTIFY_URL:http://localhost:8180/api/payment/shipping/callback}
+      recharge-return-url: ${GOMYPAY_RECHARGE_RETURN_URL:http://localhost:5173/client/member-center/deposit-payment-result}
+      recharge-notify-url: ${GOMYPAY_RECHARGE_NOTIFY_URL:http://localhost:8180/api/wallet/recharge/callback}
+      shipping-return-url: ${GOMYPAY_SHIPPING_RETURN_URL:http://localhost:5173/client/member-center/order-payment-result}
+      shipping-notify-url: ${GOMYPAY_SHIPPING_NOTIFY_URL:http://localhost:8180/api/payment/shipping/callback}
 
 # AWS S3 配置（開發環境也使用 S3）
 # ⚠️ 憑證已移至環境變數，請在啟動前設定：
