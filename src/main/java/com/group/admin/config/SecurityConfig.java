@@ -5,6 +5,7 @@ import com.group.admin.security.ApiJwtAuthenticationFilter;
 import com.group.admin.security.ApiOAuth2AuthenticationFailureHandler;
 import com.group.admin.security.ApiOAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -18,13 +19,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/**
- * Spring Security 配置
- * 分離前台（/api/**）和後台（/admin/**）的認證機制
- * 
- * 前台：支援 Email + Google OAuth2
- * 後台：僅支援 Email + 密碼
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -33,97 +27,90 @@ public class SecurityConfig {
 
     private final AdminJwtAuthenticationFilter adminJwtFilter;
     private final ApiJwtAuthenticationFilter apiJwtFilter;
-        private final ApiOAuth2AuthenticationSuccessHandler apiOAuth2AuthenticationSuccessHandler;
-        private final ApiOAuth2AuthenticationFailureHandler apiOAuth2AuthenticationFailureHandler;
+    private final ApiOAuth2AuthenticationSuccessHandler apiOAuth2AuthenticationSuccessHandler;
+    private final ApiOAuth2AuthenticationFailureHandler apiOAuth2AuthenticationFailureHandler;
 
-
-    /**
-     * 後台安全配置（/admin/**）
-     * Order(1) 表示優先處理
-     */
     @Bean
     @Order(1)
     public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/admin/**")
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .authorizeHttpRequests(auth -> auth
-                        // 登入相關 API 不需要認證
                         .requestMatchers("/admin/auth/**").permitAll()
-                        // 其他 /admin/** 需要後台角色（注意：Spring Security 會自動移除 ROLE_ 前綴）
-                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STORE_OWNER", "STORE_EDITOR")
-                )
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STORE_OWNER", "STORE_EDITOR"))
                 .addFilterBefore(adminJwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                );
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
 
-    /**
-     * 前台安全配置（/api/**）
-     * Order(2) 表示次要處理
-     * 支援 OAuth2 登入
-     * 同時支援前台 USER 和後台 Admin/StoreOwner/StoreEditor 角色
-     */
     @Bean
     @Order(2)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/api/**")
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .authorizeHttpRequests(auth -> auth
-                        // 登入、註冊、OAuth 不需要認證
-                        .requestMatchers("/api/auth/**", "/login/oauth2/**", "/oauth2/**").permitAll()
-                        // 公開 API（不需要認證）
-                        .requestMatchers("/api/district/**").permitAll()  // 行政區資料
-                        .requestMatchers("/api/marquee/**").permitAll()   // 跑馬燈
-                        .requestMatchers("/api/ws/**").permitAll()        // WebSocket
-                        .requestMatchers("/api/recharge-plan/**").permitAll()  // 儲值方案
-                        .requestMatchers("/api/recharge-plans/**").permitAll() // 儲值方案（複數路由）
-                        .requestMatchers("/api/recharge/payment-methods").permitAll() // 支付方式查詢
-                        .requestMatchers("/api/shipping-methods/**").permitAll()  // 配送方式
-                        .requestMatchers("/api/payment/shipping/callback", "/api/payment/shipping/callback/**").permitAll() // GoMyPay shipping callback
-                        .requestMatchers("/api/wallet/recharge/callback", "/api/wallet/recharge/callback/**").permitAll() // GoMyPay recharge callback
-                        .requestMatchers("/api/stores/list").permitAll()        // 公開店家列表（舊路由）
-                        .requestMatchers("/api/stores", "/api/stores/**").permitAll()  // 公開店家列表與詳情
-                        .requestMatchers("/api/lottery/list").permitAll()       // 公開商品列表
-                        .requestMatchers("/api/lottery/browse/**").permitAll()  // 公開商品瀏覽
-                        .requestMatchers("/api/news/published").permitAll()     // 公開新聞
-                        .requestMatchers("/api/banners").permitAll()            // 公開輪播
-                        // 其他 /api/** 需要 USER 或後台管理角色
-                        .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
-                )
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(apiOAuth2AuthenticationSuccessHandler)
-                        .failureHandler(apiOAuth2AuthenticationFailureHandler))
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/district/**").permitAll()
+                        .requestMatchers("/api/marquee/**").permitAll()
+                        .requestMatchers("/api/ws/**").permitAll()
+                        .requestMatchers("/api/recharge-plan/**").permitAll()
+                        .requestMatchers("/api/recharge-plans/**").permitAll()
+                        .requestMatchers("/api/recharge/payment-methods").permitAll()
+                        .requestMatchers("/api/shipping-methods/**").permitAll()
+                        .requestMatchers("/api/payment/shipping/callback", "/api/payment/shipping/callback/**")
+                        .permitAll()
+                        .requestMatchers("/api/wallet/recharge/callback", "/api/wallet/recharge/callback/**")
+                        .permitAll()
+                        .requestMatchers("/api/stores/list").permitAll()
+                        .requestMatchers("/api/stores", "/api/stores/**").permitAll()
+                        .requestMatchers("/api/lottery/list").permitAll()
+                        .requestMatchers("/api/lottery/browse/**").permitAll()
+                        .requestMatchers("/api/news/published").permitAll()
+                        .requestMatchers("/api/banners").permitAll()
+                        .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR"))
                 .addFilterBefore(apiJwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                );
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
 
-    /**
-     * 預設安全配置（處理其他路徑）
-     */
     @Bean
     @Order(3)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Actuator 健康檢查端點（公開）
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        // Swagger 相關路徑
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .anyRequest().permitAll()
-                );
+                        .anyRequest().permitAll())
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(apiOAuth2AuthenticationSuccessHandler)
+                        .failureHandler(apiOAuth2AuthenticationFailureHandler));
 
         return http.build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<ApiJwtAuthenticationFilter> apiJwtAuthenticationFilterRegistration(
+            ApiJwtAuthenticationFilter filter) {
+        FilterRegistrationBean<ApiJwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<AdminJwtAuthenticationFilter> adminJwtAuthenticationFilterRegistration(
+            AdminJwtAuthenticationFilter filter) {
+        FilterRegistrationBean<AdminJwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 }

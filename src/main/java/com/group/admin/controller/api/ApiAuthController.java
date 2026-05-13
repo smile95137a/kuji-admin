@@ -20,6 +20,7 @@ import com.group.admin.req.AuthLoginReq;
 import com.group.admin.req.AuthRegisterReq;
 import com.group.admin.req.RefreshTokenReq;
 import com.group.admin.req.auth.ForgotPasswordReq;
+import com.group.admin.req.auth.ResendVerificationReq;
 import com.group.admin.req.auth.ResetPasswordReq;
 import com.group.admin.res.AuthRes;
 import com.group.admin.service.UserTokenBlacklistService;
@@ -31,6 +32,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 /**
  * 前台認證 API
@@ -225,7 +227,13 @@ public class ApiAuthController {
 
     @PostMapping("/resend-verification")
     @Operation(summary = "重新發送驗證郵件", description = "重新發送 Email 驗證郵件")
-    public ResponseEntity<Void> resendVerification() {
+    public ResponseEntity<Void> resendVerification(@RequestBody(required = false) ResendVerificationReq req) {
+        String email = req != null ? req.getEmail() : null;
+        if (StringUtils.hasText(email)) {
+            userService.resendVerificationEmailByEmail(email);
+            return ResponseEntity.ok().build();
+        }
+
         String userId = SecurityUtils.getCurrentApiUserId();
         userService.resendVerificationEmail(userId);
         return ResponseEntity.ok().build();

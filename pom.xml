@@ -203,7 +203,7 @@
 
 	<!-- ✅ 編譯與打包 -->
 	<build>
-		<!-- 資源檔案配置：確保 mapper XML 被複製到 target -->
+		<!-- 資源檔案配置：確保 mapper XML、模板、設定檔被複製到 target -->
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
@@ -211,6 +211,7 @@
 					<include>**/*.xml</include>
 					<include>**/*.yml</include>
 					<include>**/*.properties</include>
+					<include>**/*.html</include>
 				</includes>
 			</resource>
 		</resources>

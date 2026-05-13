@@ -1,10 +1,11 @@
 package com.group.admin.security;
 
+import com.group.admin.config.AppUrlProperties;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -14,10 +15,10 @@ import java.io.IOException;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ApiOAuth2AuthenticationFailureHandler implements AuthenticationFailureHandler {
 
-    @Value("${app.frontend-url:http://localhost:3000}")
-    private String frontendUrl;
+    private final AppUrlProperties appUrlProperties;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request,
@@ -26,7 +27,7 @@ public class ApiOAuth2AuthenticationFailureHandler implements AuthenticationFail
         log.warn("⚠️ OAuth2 驗證失敗: {}", exception.getMessage());
 
         String targetUrl = UriComponentsBuilder
-                .fromHttpUrl(frontendUrl + "/oauth2/callback")
+                .fromHttpUrl(appUrlProperties.getClientOAuth2CallbackUrl())
                 .queryParam("error", "OAUTH2_AUTHENTICATION_FAILED")
                 .queryParam("message", exception.getMessage())
                 .build(true)

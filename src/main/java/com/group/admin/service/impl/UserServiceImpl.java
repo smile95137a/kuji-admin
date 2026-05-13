@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import com.group.admin.config.AppUrlProperties;
 import com.group.admin.constants.ErrorCodes;
 import com.group.admin.entity.User;
 import com.group.admin.exception.BusinessException;
@@ -57,13 +58,11 @@ public class UserServiceImpl implements UserService {
     private final LoginHistoryService loginHistoryService;
     private final UserTokenBlacklistService userTokenBlacklistService;
     private final PasswordUtil passwordUtil;
+    private final AppUrlProperties appUrlProperties;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${google.client-id:}")
     private String googleClientId;
-
-    @Value("${app.frontend-url:http://localhost:3000}")
-    private String frontendUrl;
 
     @Override
     @Transactional
@@ -432,7 +431,7 @@ public class UserServiceImpl implements UserService {
             email,
             user.getNickname(),
             temporaryPassword,
-            frontendUrl + "/login",
+            appUrlProperties.getClientLoginUrl(),
             "前台忘記密碼");
 
         log.info("✅ 忘記密碼處理完成（已寄送臨時密碼）: email={}", email);
@@ -543,6 +542,27 @@ public class UserServiceImpl implements UserService {
         userMapper.updateByPrimaryKeySelective(update);
         emailService.sendVerificationEmail(user.getEmail(), user.getNickname(), verificationToken);
         log.info("✅ 重新發送驗證郵件: userId={}", userId);
+    }
+
+    @Override
+    public void resendVerificationEmailByEmail(String email) {
+        User user = normalizeLegacyProvider(findByEmail(email));
+        if (user == null) {
+            log.warn("⚠️ 重新發送驗證郵件時找不到會員: email={}", email);
+            return;
+        }
+
+        if (!"EMAIL".equals(user.getProvider())) {
+            log.warn("⚠️ 重新發送驗證郵件略過非 EMAIL 會員: email={}, provider={}", email, user.getProvider());
+            return;
+        }
+
+        if (user.getEmailVerified() != null && user.getEmailVerified() == 1) {
+            log.info("ℹ️ Email 已驗證，略過重寄: email={}", email);
+            return;
+        }
+
+        resendVerificationEmail(user.getId());
     }
 
     private boolean requiresForceChangePassword(User user) {

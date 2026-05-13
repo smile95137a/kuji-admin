@@ -31,7 +31,7 @@ mvn clean package -DskipTests
 ### 步驟 2：上傳到 EC2
 
 ```cmd
-scp -i C:\Users\user\OneDrive\Desktop\dream\ourkuji\ourkuji.pem target/admin-1.0.0.jar ec2-user@18.179.187.129:/home/ec2-user/
+scp -i C:\Users\KD\Desktop\onekuji\ourkuji\ourkuji.pem target/admin-1.0.0.jar ec2-user@18.179.187.129:/home/ec2-user/
 ```
 
 ---

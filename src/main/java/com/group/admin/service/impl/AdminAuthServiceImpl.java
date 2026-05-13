@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.group.admin.config.AppUrlProperties;
 import com.group.admin.constants.ErrorCodes;
 import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
@@ -61,9 +62,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final com.group.admin.service.TokenBlacklistService tokenBlacklistService;
     private final PasswordUtil passwordUtil;
     private final EmailService emailService;
-
-    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:http://localhost:3000}")
-    private String frontendUrl;
+    private final AppUrlProperties appUrlProperties;
 
     /**
      * {@inheritDoc}
@@ -167,7 +166,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             user.getEmail(),
             displayName,
             temporaryPassword,
-            frontendUrl + "/admin/login",
+            appUrlProperties.getAdminLoginUrl(),
             "後台忘記密碼");
 
         log.info("✅ 後台忘記密碼完成，已寄送臨時密碼: userId={}", user.getId());

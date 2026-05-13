@@ -138,4 +138,59 @@ class ReportServiceImplTest {
                 .contains("wt.created_at < ?")
                 .doesNotContain("BETWEEN ? AND ?");
     }
+
+    @Test
+    @DisplayName("queryRevenueAmount 應改用 wallet_transaction 並採半開區間")
+    void queryRevenueAmount_ShouldUseWalletTransactionAndHalfOpenInterval() {
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(Object[].class)))
+                .thenReturn(new BigDecimal("300"));
+
+        BigDecimal total = ReflectionTestUtils.invokeMethod(
+                reportService,
+                "queryRevenueAmount",
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 7),
+                "store-001");
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(BigDecimal.class), any(Object[].class));
+
+        String sql = sqlCaptor.getValue();
+        assertThat(total).isEqualByComparingTo("300");
+        assertThat(sql)
+                .contains("FROM wallet_transaction wt")
+                .contains("wt.transaction_type = 'DRAW'")
+                .contains("wt.created_at >= ?")
+                .contains("wt.created_at < ?")
+                .contains("COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id) = ?")
+                .doesNotContain("total_amount")
+                .doesNotContain("draw_count")
+                .doesNotContain("BETWEEN ? AND ?");
+    }
+
+    @Test
+    @DisplayName("queryRevenueDrawCount 應採半開區間且以 lottery_ticket 計算")
+    void queryRevenueDrawCount_ShouldUseLotteryTicketAndHalfOpenInterval() {
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(Object[].class)))
+                .thenReturn(12);
+
+        Integer total = ReflectionTestUtils.invokeMethod(
+                reportService,
+                "queryRevenueDrawCount",
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 7),
+                "store-001");
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(Integer.class), any(Object[].class));
+
+        String sql = sqlCaptor.getValue();
+        assertThat(total).isEqualTo(12);
+        assertThat(sql)
+                .contains("FROM lottery_ticket lt")
+                .contains("lt.status = 'DRAWN'")
+                .contains("lt.drawn_at >= ?")
+                .contains("lt.drawn_at < ?")
+                .doesNotContain("BETWEEN ? AND ?");
+    }
 }

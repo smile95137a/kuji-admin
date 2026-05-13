@@ -157,6 +157,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional
     public AdminUserRes createStoreEditor(CreateStoreEditorReq req) {
+        String storeId = req.resolveStoreId();
+        req.setStoreId(storeId);
         log.info("建立店家編輯人員帳號：email={}, storeId={}", req.getEmail(), req.getStoreId());
         String currentUserId = adminAuthService.getCurrentUserId();
 
@@ -370,6 +372,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         if (req.getPhone() != null) {
             user.setPhone(req.getPhone());
+        }
+        if (req.getRemark() != null) {
+            user.setRemark(req.getRemark());
         }
         if (req.getStatus() != null) {
             if (operatorId.equals(userId)) {

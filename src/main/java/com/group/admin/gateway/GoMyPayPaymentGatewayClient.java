@@ -23,6 +23,9 @@ public class GoMyPayPaymentGatewayClient implements PaymentGatewayClient {
     public GatewayInitResult charge(RechargeOrder order, String paymentMethod) {
         String normalizedMethod = GoMyPaySupport.normalizePaymentMethod(paymentMethod);
         long amount = GoMyPaySupport.normalizeAmount(order.getPriceTwd());
+        String returnUrl = GoMyPaySupport.safe(properties.getRechargeReturnUrl());
+        String callbackUrl = GoMyPaySupport.safe(properties.getRechargeNotifyUrl());
+        GoMyPaySupport.validatePaymentRequestConfig(properties, returnUrl, callbackUrl);
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("Send_Type", GoMyPaySupport.isBankTransfer(normalizedMethod) ? "4" : "0");
@@ -30,22 +33,22 @@ public class GoMyPayPaymentGatewayClient implements PaymentGatewayClient {
         params.put("CustomerId", GoMyPaySupport.safe(properties.getShopId()));
         params.put("Order_No", order.getId());
         params.put("Amount", String.valueOf(amount));
-        params.put("Buyer_Name", GoMyPaySupport.safe(order.getBuyerName(), "KUJI會員"));
-        params.put("Buyer_Telm", GoMyPaySupport.safe(order.getBuyerPhone(), "0900000000"));
-        params.put("Buyer_Mail", GoMyPaySupport.safe(order.getBuyerEmail(), "noreply@kuji.local"));
-        params.put("Buyer_Memo", "KUJI 儲值訂單 " + order.getId());
+        params.put("Buyer_Name", GoMyPaySupport.sanitizeBuyerName(order.getBuyerName(), "KUJI會員"));
+        params.put("Buyer_Telm", GoMyPaySupport.sanitizePhone(order.getBuyerPhone(), "0900000000"));
+        params.put("Buyer_Mail", GoMyPaySupport.sanitizeEmail(order.getBuyerEmail(), "noreply@kuji.local"));
+        params.put("Buyer_Memo", GoMyPaySupport.sanitizeBuyerMemo("KUJI 儲值訂單 " + order.getId(), "KUJI 儲值訂單"));
         if (!GoMyPaySupport.isBankTransfer(normalizedMethod)) {
             params.put("TransCode", "00");
             params.put("TransMode", "1");
             params.put("Installment", "0");
         }
-        params.put("Return_url", GoMyPaySupport.safe(properties.getRechargeReturnUrl()));
-        params.put("Callback_Url", GoMyPaySupport.safe(properties.getRechargeNotifyUrl()));
-        params.put("Str_Check", GoMyPaySupport.safe(properties.getHashKey()));
+        params.put("Return_url", returnUrl);
+        params.put("Callback_Url", callbackUrl);
+        params.put("Str_Check", GoMyPaySupport.computeRequestChecksum(order.getId(), amount, properties));
 
         String payUrl = GoMyPaySupport.buildPayUrl(properties.getApiUrl(), params);
-        log.info("💳 [GoMyPay][Recharge] 建立付款單：rechargeOrderId={}, paymentMethod={}, amount={}",
-                order.getId(), normalizedMethod, amount);
+        log.info("[GoMyPay][Recharge] 建立付款導頁 rechargeOrderId={}, paymentMethod={}, amount={}, returnUrl={}, callbackUrl={}",
+                order.getId(), normalizedMethod, amount, returnUrl, callbackUrl);
         return new GatewayInitResult(payUrl, order.getId(), "gomypay");
     }
 
@@ -66,3 +69,4 @@ public class GoMyPayPaymentGatewayClient implements PaymentGatewayClient {
         );
     }
 }
+

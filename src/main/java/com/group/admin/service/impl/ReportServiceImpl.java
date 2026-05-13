@@ -52,115 +52,27 @@ public class ReportServiceImpl implements ReportService {
 
         log.info("📊 產生營業額報表: storeId={}, {} ~ {}", storeId, startDate, endDate);
 
-        // 基本統計
-        String baseSql = """
-                SELECT
-                    COALESCE(SUM(total_amount), 0) as total_revenue,
-                    COUNT(*) as total_orders,
-                    COALESCE(SUM(draw_count), 0) as total_draws,
-                    COALESCE(AVG(total_amount), 0) as avg_amount
-                FROM `order`
-                WHERE status IN ('PAID', 'COMPLETED')
-                AND created_at BETWEEN ? AND ?
-                """;
-
-        List<Object> params = new ArrayList<>();
-        params.add(startDate.atStartOfDay());
-        params.add(endDate.plusDays(1).atStartOfDay());
-
-        if (storeId != null) {
-            baseSql += " AND store_id = ?";
-            params.add(storeId);
-        }
-
-        Map<String, Object> stats = jdbcTemplate.queryForMap(baseSql, params.toArray());
-
         // 計算成長率（與上期比較）
         LocalDate[] previousRange = calculatePreviousRange(startDate, endDate);
-        LocalDate prevStartDate = previousRange[0];
-        LocalDate prevEndDate = previousRange[1];
-
-        List<Object> prevParams = new ArrayList<>();
-        prevParams.add(prevStartDate.atStartOfDay());
-        prevParams.add(prevEndDate.plusDays(1).atStartOfDay());
-        if (storeId != null)
-            prevParams.add(storeId);
-
-        Map<String, Object> prevStats = jdbcTemplate.queryForMap(
-                baseSql.replace("? AND ?", "? AND ?"), prevParams.toArray());
-
-        BigDecimal currentRevenue = toBigDecimal(stats.get("total_revenue"));
-        BigDecimal prevRevenue = toBigDecimal(prevStats.get("total_revenue"));
+        BigDecimal currentRevenue = queryRevenueAmount(startDate, endDate, storeId);
+        BigDecimal prevRevenue = queryRevenueAmount(previousRange[0], previousRange[1], storeId);
+        Integer totalOrders = queryRevenueOrderCount(startDate, endDate, storeId);
+        Integer totalDraws = queryRevenueDrawCount(startDate, endDate, storeId);
         BigDecimal growthRate = calculateGrowthRate(currentRevenue, prevRevenue);
-
-        // 每日明細
-        String dailySql = """
-                SELECT
-                    DATE(created_at) as date,
-                    COALESCE(SUM(total_amount), 0) as revenue,
-                    COUNT(*) as orders,
-                    COALESCE(SUM(draw_count), 0) as draws
-                FROM `order`
-                WHERE status IN ('PAID', 'COMPLETED')
-                AND created_at BETWEEN ? AND ?
-                """ + (storeId != null ? " AND store_id = ?" : "") + """
-                GROUP BY DATE(created_at)
-                ORDER BY date
-                """;
-
-        List<RevenueReportRes.DailyRevenue> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
-                (rs, rowNum) -> RevenueReportRes.DailyRevenue.builder()
-                        .date(rs.getDate("date").toLocalDate())
-                        .revenue(rs.getBigDecimal("revenue"))
-                        .orders(rs.getInt("orders"))
-                        .draws(rs.getInt("draws"))
-                        .build());
-
-        // 各店家統計
-        String storeSql = """
-                SELECT
-                    o.store_id,
-                    s.store_name as store_name,
-                    COALESCE(SUM(o.total_amount), 0) as revenue,
-                    COUNT(*) as orders
-                FROM `order` o
-                LEFT JOIN store s ON %s
-                WHERE o.status IN ('PAID', 'COMPLETED')
-                AND o.created_at BETWEEN ? AND ?
-                GROUP BY o.store_id, s.name
-                ORDER BY revenue DESC
-                """.formatted(utf8mb4Eq("o.store_id", "s.id"));
-
-        List<Object> storeParams = new ArrayList<>();
-        storeParams.add(startDate.atStartOfDay());
-        storeParams.add(endDate.plusDays(1).atStartOfDay());
-
-        if (storeId != null && !storeId.isBlank()) {
-            storeSql = storeSql.replace("GROUP BY o.store_id, s.name", "AND o.store_id = ?\n                GROUP BY o.store_id, s.store_name");
-            storeParams.add(storeId);
-        } else {
-            storeSql = storeSql.replace("GROUP BY o.store_id, s.name", "GROUP BY o.store_id, s.store_name");
-        }
-
-        List<RevenueReportRes.StoreRevenue> storeDetails = jdbcTemplate.query(storeSql, storeParams.toArray(),
-                (rs, rowNum) -> RevenueReportRes.StoreRevenue.builder()
-                        .storeId(rs.getString("store_id"))
-                        .storeName(rs.getString("store_name"))
-                        .revenue(rs.getBigDecimal("revenue"))
-                        .orders(rs.getInt("orders"))
-                        .percentage(currentRevenue.compareTo(BigDecimal.ZERO) > 0
-                                ? rs.getBigDecimal("revenue").multiply(new BigDecimal("100"))
-                                        .divide(currentRevenue, 2, RoundingMode.HALF_UP)
-                                : BigDecimal.ZERO)
-                        .build());
+        BigDecimal avgOrderAmount = totalOrders > 0
+                ? currentRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        List<RevenueReportRes.DailyRevenue> dailyDetails = buildRevenueDailyDetails(startDate, endDate, storeId);
+        List<RevenueReportRes.StoreRevenue> storeDetails = queryRevenueStoreDetails(startDate, endDate, storeId,
+                currentRevenue);
 
         return RevenueReportRes.builder()
                 .startDate(startDate)
                 .endDate(endDate)
                 .totalRevenue(currentRevenue)
-                .totalOrders(toInteger(stats.get("total_orders")))
-                .totalDraws(toInteger(stats.get("total_draws")))
-                .avgOrderAmount(toBigDecimal(stats.get("avg_amount")))
+                .totalOrders(totalOrders)
+                .totalDraws(totalDraws)
+                .avgOrderAmount(avgOrderAmount)
                 .growthRate(growthRate)
                 .dailyDetails(dailyDetails)
                 .storeDetails(storeDetails)
@@ -1623,6 +1535,287 @@ public class ReportServiceImpl implements ReportService {
         LocalDate prevEnd = startDate.minusDays(1);
         LocalDate prevStart = prevEnd.minusDays(days - 1);
         return new LocalDate[] { prevStart, prevEnd };
+    }
+
+    private BigDecimal queryRevenueAmount(LocalDate startDate, LocalDate endDate, String storeId) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT COALESCE(ABS(SUM(mapped.amount)), 0) AS total_revenue
+                FROM (
+                    SELECT wt.amount
+                    FROM wallet_transaction wt
+                    LEFT JOIN lottery l_direct ON %s
+                    LEFT JOIN lottery_ticket lt ON %s
+                    LEFT JOIN lottery l_ticket ON %s
+                    LEFT JOIN `order` o ON %s
+                    WHERE wt.transaction_type = 'DRAW'
+                      AND wt.created_at >= ?
+                      AND wt.created_at < ?
+                """.formatted(
+                utf8mb4Eq("wt.related_id", "l_direct.id"),
+                utf8mb4Eq("wt.related_id", "lt.id"),
+                utf8mb4Eq("lt.lottery_id", "l_ticket.id"),
+                utf8mb4Eq("wt.related_id", "o.id"));
+        if (storeId != null && !storeId.isBlank()) {
+            sql += " AND COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id) = ? ";
+            params.add(storeId);
+        }
+        sql += ") mapped";
+        BigDecimal total = jdbcTemplate.queryForObject(sql, BigDecimal.class, params.toArray());
+        return total != null ? total : BigDecimal.ZERO;
+    }
+
+    private Integer queryRevenueOrderCount(LocalDate startDate, LocalDate endDate, String storeId) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT COUNT(*)
+                FROM `order`
+                WHERE status IN ('PAID', 'COMPLETED')
+                  AND created_at >= ?
+                  AND created_at < ?
+                """;
+        if (storeId != null && !storeId.isBlank()) {
+            sql += " AND store_id = ? ";
+            params.add(storeId);
+        }
+        Integer total = jdbcTemplate.queryForObject(sql, Integer.class, params.toArray());
+        return total != null ? total : 0;
+    }
+
+    private Integer queryRevenueDrawCount(LocalDate startDate, LocalDate endDate, String storeId) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT COUNT(*)
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                WHERE lt.status = 'DRAWN'
+                  AND lt.drawn_at >= ?
+                  AND lt.drawn_at < ?
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
+        if (storeId != null && !storeId.isBlank()) {
+            sql += " AND l.store_id = ? ";
+            params.add(storeId);
+        }
+        Integer total = jdbcTemplate.queryForObject(sql, Integer.class, params.toArray());
+        return total != null ? total : 0;
+    }
+
+    private List<RevenueReportRes.DailyRevenue> buildRevenueDailyDetails(LocalDate startDate, LocalDate endDate,
+            String storeId) {
+        Map<LocalDate, BigDecimal> revenueMap = queryRevenueAmountDailyMap(startDate, endDate, storeId);
+        Map<LocalDate, Integer> orderMap = queryRevenueOrderDailyMap(startDate, endDate, storeId);
+        Map<LocalDate, Integer> drawMap = queryRevenueDrawDailyMap(startDate, endDate, storeId);
+
+        List<RevenueReportRes.DailyRevenue> result = new ArrayList<>();
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            result.add(RevenueReportRes.DailyRevenue.builder()
+                    .date(date)
+                    .revenue(revenueMap.getOrDefault(date, BigDecimal.ZERO))
+                    .orders(orderMap.getOrDefault(date, 0))
+                    .draws(drawMap.getOrDefault(date, 0))
+                    .build());
+        }
+        return result;
+    }
+
+    private Map<LocalDate, BigDecimal> queryRevenueAmountDailyMap(LocalDate startDate, LocalDate endDate, String storeId) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT DATE(mapped.created_at) AS stat_date,
+                       COALESCE(ABS(SUM(mapped.amount)), 0) AS total_revenue
+                FROM (
+                    SELECT wt.created_at, wt.amount
+                    FROM wallet_transaction wt
+                    LEFT JOIN lottery l_direct ON %s
+                    LEFT JOIN lottery_ticket lt ON %s
+                    LEFT JOIN lottery l_ticket ON %s
+                    LEFT JOIN `order` o ON %s
+                    WHERE wt.transaction_type = 'DRAW'
+                      AND wt.created_at >= ?
+                      AND wt.created_at < ?
+                """.formatted(
+                utf8mb4Eq("wt.related_id", "l_direct.id"),
+                utf8mb4Eq("wt.related_id", "lt.id"),
+                utf8mb4Eq("lt.lottery_id", "l_ticket.id"),
+                utf8mb4Eq("wt.related_id", "o.id"));
+        if (storeId != null && !storeId.isBlank()) {
+            sql += " AND COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id) = ? ";
+            params.add(storeId);
+        }
+        sql += """
+                ) mapped
+                GROUP BY DATE(mapped.created_at)
+                ORDER BY stat_date
+                """;
+
+        Map<LocalDate, BigDecimal> result = new LinkedHashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs -> result.put(
+                rs.getDate("stat_date").toLocalDate(),
+                rs.getBigDecimal("total_revenue") != null ? rs.getBigDecimal("total_revenue") : BigDecimal.ZERO));
+        return result;
+    }
+
+    private Map<LocalDate, Integer> queryRevenueOrderDailyMap(LocalDate startDate, LocalDate endDate, String storeId) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT DATE(created_at) AS stat_date,
+                       COUNT(*) AS total_orders
+                FROM `order`
+                WHERE status IN ('PAID', 'COMPLETED')
+                  AND created_at >= ?
+                  AND created_at < ?
+                """;
+        if (storeId != null && !storeId.isBlank()) {
+            sql += " AND store_id = ? ";
+            params.add(storeId);
+        }
+        sql += " GROUP BY DATE(created_at) ORDER BY stat_date";
+
+        Map<LocalDate, Integer> result = new LinkedHashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs -> result.put(
+                rs.getDate("stat_date").toLocalDate(),
+                rs.getInt("total_orders")));
+        return result;
+    }
+
+    private Map<LocalDate, Integer> queryRevenueDrawDailyMap(LocalDate startDate, LocalDate endDate, String storeId) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> params = new ArrayList<>(List.of(start, end));
+        String sql = """
+                SELECT DATE(lt.drawn_at) AS stat_date,
+                       COUNT(*) AS total_draws
+                FROM lottery_ticket lt
+                JOIN lottery l ON %s
+                WHERE lt.status = 'DRAWN'
+                  AND lt.drawn_at >= ?
+                  AND lt.drawn_at < ?
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
+        if (storeId != null && !storeId.isBlank()) {
+            sql += " AND l.store_id = ? ";
+            params.add(storeId);
+        }
+        sql += " GROUP BY DATE(lt.drawn_at) ORDER BY stat_date";
+
+        Map<LocalDate, Integer> result = new LinkedHashMap<>();
+        jdbcTemplate.query(sql, params.toArray(), (RowCallbackHandler) rs -> result.put(
+                rs.getDate("stat_date").toLocalDate(),
+                rs.getInt("total_draws")));
+        return result;
+    }
+
+    private List<RevenueReportRes.StoreRevenue> queryRevenueStoreDetails(LocalDate startDate, LocalDate endDate,
+            String storeId, BigDecimal totalRevenue) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        List<Object> revenueParams = new ArrayList<>(List.of(start, end));
+        String revenueSql = """
+                SELECT mapped.store_id,
+                       mapped.store_name,
+                       ABS(SUM(mapped.amount)) AS revenue
+                FROM (
+                    SELECT COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id) AS store_id,
+                           s.store_name,
+                           wt.amount
+                    FROM wallet_transaction wt
+                    LEFT JOIN lottery l_direct ON %s
+                    LEFT JOIN lottery_ticket lt ON %s
+                    LEFT JOIN lottery l_ticket ON %s
+                    LEFT JOIN `order` o ON %s
+                    LEFT JOIN store s ON %s
+                    WHERE wt.transaction_type = 'DRAW'
+                      AND wt.created_at >= ?
+                      AND wt.created_at < ?
+                """.formatted(
+                utf8mb4Eq("wt.related_id", "l_direct.id"),
+                utf8mb4Eq("wt.related_id", "lt.id"),
+                utf8mb4Eq("lt.lottery_id", "l_ticket.id"),
+                utf8mb4Eq("wt.related_id", "o.id"),
+                utf8mb4Eq("s.id", "COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id)"));
+        if (storeId != null && !storeId.isBlank()) {
+            revenueSql += " AND COALESCE(l_direct.store_id, l_ticket.store_id, o.store_id) = ? ";
+            revenueParams.add(storeId);
+        }
+        revenueSql += """
+                ) mapped
+                WHERE mapped.store_id IS NOT NULL
+                GROUP BY mapped.store_id, mapped.store_name
+                ORDER BY revenue DESC
+                """;
+
+        Map<String, RevenueReportRes.StoreRevenue> builders = new LinkedHashMap<>();
+        jdbcTemplate.query(revenueSql, revenueParams.toArray(), (RowCallbackHandler) rs -> {
+            BigDecimal revenue = rs.getBigDecimal("revenue") != null ? rs.getBigDecimal("revenue") : BigDecimal.ZERO;
+            builders.put(
+            rs.getString("store_id"),
+            RevenueReportRes.StoreRevenue.builder()
+                    .storeId(rs.getString("store_id"))
+                    .storeName(rs.getString("store_name"))
+                    .revenue(revenue)
+                    .orders(0)
+                    .percentage(
+                            totalRevenue.compareTo(BigDecimal.ZERO) > 0
+                                    ? revenue.multiply(new BigDecimal("100"))
+                                            .divide(totalRevenue, 2, RoundingMode.HALF_UP)
+                                    : BigDecimal.ZERO
+                    )
+                    .build()
+    );
+        });
+
+        List<Object> orderParams = new ArrayList<>(List.of(start, end));
+        String orderSql = """
+                SELECT o.store_id,
+                       s.store_name,
+                       COUNT(*) AS total_orders
+                FROM `order` o
+                LEFT JOIN store s ON %s
+                WHERE o.status IN ('PAID', 'COMPLETED')
+                  AND o.created_at >= ?
+                  AND o.created_at < ?
+                """.formatted(utf8mb4Eq("o.store_id", "s.id"));
+        if (storeId != null && !storeId.isBlank()) {
+            orderSql += " AND o.store_id = ? ";
+            orderParams.add(storeId);
+        }
+        orderSql += " GROUP BY o.store_id, s.store_name ORDER BY total_orders DESC";
+
+        jdbcTemplate.query(orderSql, orderParams.toArray(), (RowCallbackHandler) rs -> {
+    String currentStoreId = rs.getString("store_id");
+    RevenueReportRes.StoreRevenue current = builders.get(currentStoreId);
+
+    if (current == null) {
+        current = RevenueReportRes.StoreRevenue.builder()
+                .storeId(currentStoreId)
+                .storeName(rs.getString("store_name"))
+                .revenue(BigDecimal.ZERO)
+                .percentage(BigDecimal.ZERO)
+                .orders(rs.getInt("total_orders"))
+                .build();
+    } else {
+        current = RevenueReportRes.StoreRevenue.builder()
+                .storeId(current.getStoreId())
+                .storeName(current.getStoreName())
+                .revenue(current.getRevenue())
+                .percentage(current.getPercentage())
+                .orders(rs.getInt("total_orders"))
+                .build();
+    }
+
+    builders.put(currentStoreId, current);
+});
+
+return new ArrayList<>(builders.values());
     }
 
     private List<PlatformRevenueReportRes.DailyRevenueItem> buildDailyRevenue(LocalDate startDate, LocalDate endDate) {

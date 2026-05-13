@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -59,7 +61,16 @@ public class RechargeController {
     public ResponseEntity<PageResult<RechargeRes>> getMyRechargeHistory(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
-        String userId = SecurityUtils.getCurrentUserId();
+
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+log.info("🔐 auth={}", auth);
+log.info("🔐 principal class={}", auth != null && auth.getPrincipal() != null
+        ? auth.getPrincipal().getClass().getName()
+        : null);
+log.info("🔐 principal={}", auth != null ? auth.getPrincipal() : null);
+
+String userId = SecurityUtils.getCurrentUserId();
         log.info("🔍 [API] 查詢儲值記錄：userId={}, page={}, size={}", userId, page, size);
         
         PageResult<RechargeRes> history = rechargeService.getUserRechargeHistory(userId, page, size);

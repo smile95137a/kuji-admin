@@ -1,5 +1,7 @@
 package com.group.admin.controller.api;
 
+import com.group.admin.constants.ErrorCodes;
+import com.group.admin.exception.BusinessException;
 import com.group.admin.req.prizebox.PrizeBoxRecycleReq;
 import com.group.admin.req.prizebox.PrizeBoxShipReq;
 import com.group.admin.res.PageResult;
@@ -13,16 +15,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * 前台獎品盒 API
- *
- * @author Kuji Admin
- * @since 2026-01-09
- */
 @Slf4j
 @RestController
 @RequestMapping("/prize-box")
@@ -31,71 +32,49 @@ public class PrizeBoxController {
 
     private final PrizeBoxService prizeBoxService;
 
-    /**
-     * 查詢我的獎品盒（IN_BOX，無分組）
-     */
     @GetMapping
     public ResponseEntity<List<PrizeBoxItemRes>> getMyPrizeBox() {
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔍 [API] 查詢我的獎品盒：userId={}", userId);
-
-        List<PrizeBoxItemRes> prizeBox = prizeBoxService.getPrizeBox(userId);
-
-        return ResponseEntity.ok(prizeBox);
+        String userId = requireCurrentUserId();
+        log.info("[API] 查詢我的賞品盒 userId={}", userId);
+        return ResponseEntity.ok(prizeBoxService.getPrizeBox(userId));
     }
 
-    /**
-     * 按店家分組查詢獎品盒（用於出貨選擇）
-     */
     @GetMapping("/summary")
     public ResponseEntity<List<PrizeBoxSummaryRes>> getSummaryByStore() {
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔍 [API] 查詢我的獎品盒（按店家分組）：userId={}", userId);
-
-        List<PrizeBoxSummaryRes> summary = prizeBoxService.getSummaryByStore(userId);
-
-        return ResponseEntity.ok(summary);
+        String userId = requireCurrentUserId();
+        log.info("[API] 查詢賞品盒店家摘要 userId={}", userId);
+        return ResponseEntity.ok(prizeBoxService.getSummaryByStore(userId));
     }
 
-    /**
-     * 查詢獎品盒歷史（含已出貨與已回收，支援分頁）
-     */
     @GetMapping("/history")
     public ResponseEntity<PageResult<PrizeBoxItemRes>> getHistory(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔍 [API] 查詢獎品盒歷史：userId={}, status={}, page={}, size={}", userId, status, page, size);
-
-        PageResult<PrizeBoxItemRes> history = prizeBoxService.getPrizeBoxHistory(userId, status, page, size);
-
-        return ResponseEntity.ok(history);
+        String userId = requireCurrentUserId();
+        log.info("[API] 查詢賞品盒歷史 userId={}, status={}, page={}, size={}", userId, status, page, size);
+        return ResponseEntity.ok(prizeBoxService.getPrizeBoxHistory(userId, status, page, size));
     }
 
-    /**
-     * 出貨（將選定的獎品產生訂單）
-     */
     @PostMapping("/ship")
     public ResponseEntity<List<OrderPaymentInitRes>> shipPrizes(@Valid @RequestBody PrizeBoxShipReq req) {
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔍 [API] 出貨獎品：userId={}, prizeBoxIds={}", userId, req.getPrizeBoxIds());
-
-        List<OrderPaymentInitRes> orderResults = prizeBoxService.shipPrizes(userId, req);
-
-        return ResponseEntity.ok(orderResults);
+        String userId = requireCurrentUserId();
+        log.info("[API] 賞品盒出貨 userId={}, prizeBoxIds={}", userId, req.getPrizeBoxIds());
+        return ResponseEntity.ok(prizeBoxService.shipPrizes(userId, req));
     }
 
-    /**
-     * 回收獎品（轉換為紅利）
-     */
     @PostMapping("/recycle")
     public ResponseEntity<RecycleResultRes> recyclePrizes(@Valid @RequestBody PrizeBoxRecycleReq req) {
-        String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔍 [API] 回收獎品：userId={}, prizeBoxIds={}", userId, req.getPrizeBoxIds());
+        String userId = requireCurrentUserId();
+        log.info("[API] 賞品盒回收 userId={}, prizeBoxIds={}", userId, req.getPrizeBoxIds());
+        return ResponseEntity.ok(prizeBoxService.recyclePrizes(userId, req));
+    }
 
-        RecycleResultRes result = prizeBoxService.recyclePrizes(userId, req);
-
-        return ResponseEntity.ok(result);
+    private String requireCurrentUserId() {
+        String userId = SecurityUtils.getCurrentApiUserId();
+        if (userId == null || userId.isBlank()) {
+            throw new BusinessException(ErrorCodes.AUTH_TOKEN_INVALID, "登入資訊已失效，請重新登入");
+        }
+        return userId;
     }
 }

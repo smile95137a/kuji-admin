@@ -28,6 +28,9 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
 
         String paymentMethod = GoMyPaySupport.normalizePaymentMethod(request.getPaymentMethod());
         long amount = GoMyPaySupport.normalizeAmount(request.getAmount());
+        String returnUrl = GoMyPaySupport.safe(properties.getShippingReturnUrl(), properties.getReturnUrl());
+        String callbackUrl = GoMyPaySupport.safe(properties.getShippingNotifyUrl(), properties.getNotifyUrl());
+        GoMyPaySupport.validatePaymentRequestConfig(properties, returnUrl, callbackUrl);
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("Send_Type", GoMyPaySupport.isBankTransfer(paymentMethod) ? "4" : "0");
@@ -35,18 +38,18 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
         params.put("CustomerId", GoMyPaySupport.safe(properties.getShopId()));
         params.put("Order_No", request.getMerchantOrderNo());
         params.put("Amount", String.valueOf(amount));
-        params.put("Buyer_Name", GoMyPaySupport.safe(request.getBuyerName()));
-        params.put("Buyer_Telm", GoMyPaySupport.safe(request.getBuyerPhone()));
-        params.put("Buyer_Mail", GoMyPaySupport.safe(request.getBuyerEmail()));
-        params.put("Buyer_Memo", GoMyPaySupport.safe(request.getItemDescription()));
+        params.put("Buyer_Name", GoMyPaySupport.sanitizeBuyerName(request.getBuyerName(), "KUJI會員"));
+        params.put("Buyer_Telm", GoMyPaySupport.sanitizePhone(request.getBuyerPhone(), "0900000000"));
+        params.put("Buyer_Mail", GoMyPaySupport.sanitizeEmail(request.getBuyerEmail(), "noreply@kuji.local"));
+        params.put("Buyer_Memo", GoMyPaySupport.sanitizeBuyerMemo(request.getItemDescription(), "KUJI 訂單付款"));
         if (!GoMyPaySupport.isBankTransfer(paymentMethod)) {
             params.put("TransCode", "00");
             params.put("TransMode", "1");
             params.put("Installment", "0");
         }
-        params.put("Return_url", GoMyPaySupport.safe(properties.getShippingReturnUrl(), properties.getReturnUrl()));
-        params.put("Callback_Url", GoMyPaySupport.safe(properties.getShippingNotifyUrl(), properties.getNotifyUrl()));
-        params.put("Str_Check", GoMyPaySupport.safe(properties.getHashKey()));
+        params.put("Return_url", returnUrl);
+        params.put("Callback_Url", callbackUrl);
+        params.put("Str_Check", GoMyPaySupport.computeRequestChecksum(request.getMerchantOrderNo(), amount, properties));
 
         String payUrl = GoMyPaySupport.buildPayUrl(properties.getApiUrl(), params);
         log.info("💳 [GoMyPay] 建立運費付款單: merchantOrderNo={}, paymentMethod={}, amount={}",

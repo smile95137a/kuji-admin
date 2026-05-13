@@ -27,7 +27,6 @@ import java.util.Map;
 @RequestMapping("/admin/upload")
 @RequiredArgsConstructor
 @Tag(name = "後台-圖片上傳", description = "圖片上傳到 S3（需 Admin 權限）")
-@PreAuthorize("hasRole('ADMIN')")
 public class UploadController {
 
     private final S3Service s3Service;
@@ -36,6 +35,7 @@ public class UploadController {
      * 上傳 News 圖片
      */
     @PostMapping("/news")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "上傳 News 圖片", description = "上傳最新消息的封面圖片到 S3")
     public ResponseEntity<Map<String, String>> uploadNewsImage(
             @RequestParam("file") 
@@ -56,6 +56,7 @@ public class UploadController {
      * 上傳 Banner 圖片
      */
     @PostMapping("/banner")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "上傳 Banner 圖片", description = "上傳 Banner 的圖片到 S3")
     public ResponseEntity<Map<String, String>> uploadBannerImage(
             @RequestParam("file") 
@@ -76,6 +77,7 @@ public class UploadController {
      * 上傳 Lottery 商品圖片
      */
     @PostMapping("/lottery")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "上傳 Lottery 商品圖片", description = "上傳商品的圖片到 S3")
     public ResponseEntity<Map<String, String>> uploadLotteryImage(
             @RequestParam("file") 
@@ -96,6 +98,7 @@ public class UploadController {
      * 上傳 Prize 獎品圖片
      */
     @PostMapping("/prize")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "上傳 Prize 獎品圖片", description = "上傳獎品的圖片到 S3")
     public ResponseEntity<Map<String, String>> uploadPrizeImage(
             @RequestParam("file") 
@@ -115,7 +118,62 @@ public class UploadController {
     /**
      * 刪除圖片
      */
+    @PostMapping("/store")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "銝 Store ??", description = "銝摨振??")
+    public ResponseEntity<Map<String, String>> uploadStoreImage(
+            @RequestParam("file")
+            @Parameter(description = "??瑼?嚗???5MB嚗??jpg/png/gif/webp嚗?")
+            MultipartFile file) {
+
+        log.info("? 銝 Store ??嚗?獢?蝔梧?{}", file.getOriginalFilename());
+
+        String imageUrl = s3Service.uploadImage(file, "store");
+
+        Map<String, String> response = new HashMap<>();
+        response.put("imageUrl", imageUrl);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/store-logo")
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_OWNER')")
+    @Operation(summary = "銝 Store Logo", description = "銝摨振 Logo ??")
+    public ResponseEntity<Map<String, String>> uploadStoreLogo(
+            @RequestParam("file")
+            @Parameter(description = "??瑼?嚗???5MB嚗??jpg/png/gif/webp嚗?")
+            MultipartFile file) {
+
+        log.info("? 銝 Store Logo 嚗?獢?蝔梧?{}", file.getOriginalFilename());
+
+        String imageUrl = s3Service.uploadImage(file, "store-logo");
+
+        Map<String, String> response = new HashMap<>();
+        response.put("imageUrl", imageUrl);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/store-cover")
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_OWNER')")
+    @Operation(summary = "銝 Store Cover", description = "銝摨振撠??")
+    public ResponseEntity<Map<String, String>> uploadStoreCover(
+            @RequestParam("file")
+            @Parameter(description = "??瑼?嚗???5MB嚗??jpg/png/gif/webp嚗?")
+            MultipartFile file) {
+
+        log.info("? 銝 Store Cover 嚗?獢?蝔梧?{}", file.getOriginalFilename());
+
+        String imageUrl = s3Service.uploadImage(file, "store-cover");
+
+        Map<String, String> response = new HashMap<>();
+        response.put("imageUrl", imageUrl);
+
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "刪除圖片", description = "從 S3 刪除圖片")
     public ResponseEntity<Void> deleteImage(
             @RequestParam 

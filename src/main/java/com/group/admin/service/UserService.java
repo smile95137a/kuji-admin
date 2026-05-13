@@ -84,4 +84,6 @@ public interface UserService {
      * 重新發送 Email 驗證郵件
      */
     void resendVerificationEmail(String userId);
+
+    void resendVerificationEmailByEmail(String email);
 }

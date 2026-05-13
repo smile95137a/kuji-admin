@@ -382,6 +382,47 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         return result;
     }
 
+    private void syncPlayerDesignationFromTickets(String lotteryId, LotterySession session) {
+        if (session == null) {
+            return;
+        }
+
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (lottery == null || !GameModeEnum.SCRATCH_PLAYER.getCode().equals(lottery.getGameMode())) {
+            return;
+        }
+
+        if (session.getPlayerDesignatedNumbers() != null && !session.getPlayerDesignatedNumbers().isBlank()) {
+            return;
+        }
+
+        List<Integer> persistedNumbers = getPersistedPlayerDesignatedNumbers(lotteryId);
+        if (persistedNumbers.isEmpty()) {
+            return;
+        }
+
+        session.setPlayerDesignatedNumbers(persistedNumbers.toString());
+        session.setDesignationDeadline(null);
+        session.setUpdatedAt(LocalDateTime.now());
+        lotterySessionMapper.updateByPrimaryKey(session);
+    }
+
+    private List<Integer> getPersistedPlayerDesignatedNumbers(String lotteryId) {
+        LotteryTicketExample example = new LotteryTicketExample();
+        example.createCriteria()
+                .andLotteryIdEqualTo(lotteryId)
+                .andIsDesignatedPrizeEqualTo((byte) 1)
+                .andDesignatedByEqualTo("PLAYER");
+        example.setOrderByClause("revealed_number ASC");
+
+        return lotteryTicketMapper.selectByExample(example).stream()
+                .map(LotteryTicket::getRevealedNumber)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
     @Override
     public List<LotteryTicketRes> getTicketsForBackend(String lotteryId) {
         log.info("🔍 後台查詢籤位: lotteryId={}", lotteryId);
@@ -952,6 +993,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         if (!activeSessions.isEmpty()) {
             // 有進行中的場次
             LotterySession activeSession = activeSessions.get(0);
+            syncPlayerDesignationFromTickets(lotteryId, activeSession);
             
             // 🛡️ 保護時間逾期檢查：保護時間已到且非開套者 → 自動 EXPIRED，讓當前使用者成為新開套者
             LocalDateTime now = LocalDateTime.now();
@@ -1032,6 +1074,11 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 🆕 SCRATCH_PLAYER 模式：設定 10 分鐘大獎指定截止時間
         if (GameModeEnum.SCRATCH_PLAYER.getCode().equals(lottery.getGameMode())) {
             newSession.setDesignationDeadline(LocalDateTime.now().plusMinutes(10));
+            List<Integer> persistedNumbers = getPersistedPlayerDesignatedNumbers(lotteryId);
+            if (!persistedNumbers.isEmpty()) {
+                newSession.setPlayerDesignatedNumbers(persistedNumbers.toString());
+                newSession.setDesignationDeadline(null);
+            }
             log.info("⏱️ SCRATCH_PLAYER：設定指定截止時間 = {}", newSession.getDesignationDeadline());
         }
         
@@ -1417,6 +1464,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         }
         
         LotterySession session = sessions.get(0);
+        syncPlayerDesignationFromTickets(lotteryId, session);
         
         // 如果保護時間已過，自動過期
         if (session.getProtectionEndTime() != null && session.getProtectionEndTime().isBefore(LocalDateTime.now())) {

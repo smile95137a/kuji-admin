@@ -1,5 +1,6 @@
 package com.group.admin.req.recharge;
 
+import com.group.admin.gateway.GoMyPaySupport;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -22,7 +23,7 @@ public class RechargeReq {
      * 支付方式（選填，預設 GOMYPAY）
      * 目前支援：GOMYPAY（信用卡／行動支付，由 GoMyPay 金流處理）
      */
-    private String paymentMethod = "GOMYPAY";
+    private String paymentMethod = GoMyPaySupport.PAYMENT_METHOD_CREDIT_CARD;
     
     /**
      * 支付備註（選填）

@@ -1,5 +1,6 @@
 package com.group.admin.service.impl;
 
+import com.group.admin.config.AppUrlProperties;
 import com.group.admin.service.EmailDispatchService;
 import com.group.admin.service.EmailService;
 import com.group.admin.service.MailTemplateService;
@@ -21,12 +22,10 @@ public class EmailServiceImpl implements EmailService {
 
     private final MailTemplateService mailTemplateService;
     private final EmailDispatchService emailDispatchService;
+    private final AppUrlProperties appUrlProperties;
     
     @Value("${app.name:KUJI 一番賞}")
     private String appName;
-    
-    @Value("${app.frontend-url:http://localhost:3000}")
-    private String frontendUrl;
     
     @Override
     @Async
@@ -46,7 +45,7 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendPasswordResetEmail(String email, String nickname, String resetToken) {
         String subject = String.format("[%s] 密碼重設請求", appName);
-        String resetUrl = frontendUrl + "/reset-password?token=" + resetToken;
+        String resetUrl = appUrlProperties.getClientBaseUrl() + "/reset-password?token=" + resetToken;
 
         Map<String, Object> params = Map.of(
             "nickname", nickname,
@@ -104,7 +103,7 @@ public class EmailServiceImpl implements EmailService {
         String content = mailTemplateService.render("initial-password-email", Map.of(
                 "displayName", displayName,
                 "initialPassword", initialPassword,
-                "loginUrl", frontendUrl + "/admin/login"
+                "loginUrl", appUrlProperties.getAdminLoginUrl()
         ));
 
         dispatchEmailOrThrow("INITIAL_PASSWORD", to, displayName, subject, content,
@@ -123,7 +122,7 @@ public class EmailServiceImpl implements EmailService {
                                                String loginUrl, String scene) {
         String safeScene = scene != null && !scene.isBlank() ? scene : "忘記密碼";
         String safeDisplayName = displayName != null && !displayName.isBlank() ? displayName : "使用者";
-        String safeLoginUrl = loginUrl != null && !loginUrl.isBlank() ? loginUrl : frontendUrl + "/login";
+        String safeLoginUrl = loginUrl != null && !loginUrl.isBlank() ? loginUrl : appUrlProperties.getClientLoginUrl();
         String subject = String.format("[%s] 臨時密碼通知", appName);
 
         Map<String, Object> params = Map.of(

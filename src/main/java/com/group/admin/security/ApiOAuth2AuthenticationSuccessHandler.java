@@ -1,5 +1,6 @@
 package com.group.admin.security;
 
+import com.group.admin.config.AppUrlProperties;
 import com.group.admin.res.AuthRes;
 import com.group.admin.service.UserService;
 import jakarta.servlet.ServletException;
@@ -7,7 +8,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -22,9 +22,7 @@ import java.io.IOException;
 public class ApiOAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserService userService;
-
-    @Value("${app.frontend-url:http://localhost:3000}")
-    private String frontendUrl;
+    private final AppUrlProperties appUrlProperties;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -47,7 +45,7 @@ public class ApiOAuth2AuthenticationSuccessHandler implements AuthenticationSucc
             AuthRes authRes = userService.loginWithGoogleProfile(email, googleId, picture, name);
 
             String targetUrl = UriComponentsBuilder
-                    .fromHttpUrl(frontendUrl + "/oauth2/callback")
+                    .fromHttpUrl(appUrlProperties.getClientOAuth2CallbackUrl())
                     .queryParam("accessToken", authRes.getAccessToken())
                     .queryParam("refreshToken", authRes.getRefreshToken())
                     .queryParam("expiresIn", authRes.getExpiresIn())
@@ -64,7 +62,7 @@ public class ApiOAuth2AuthenticationSuccessHandler implements AuthenticationSucc
 
     private void redirectFailure(HttpServletResponse response, String code, String message) throws IOException {
         String targetUrl = UriComponentsBuilder
-                .fromHttpUrl(frontendUrl + "/oauth2/callback")
+                .fromHttpUrl(appUrlProperties.getClientOAuth2CallbackUrl())
                 .queryParam("error", code)
                 .queryParam("message", message)
                 .build(true)

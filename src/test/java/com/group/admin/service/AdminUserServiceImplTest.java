@@ -13,6 +13,7 @@ import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.req.admin.ChangePasswordReq;
+import com.group.admin.req.admin.CreateStoreEditorReq;
 import com.group.admin.req.admin.UpdateAdminUserReq;
 import com.group.admin.service.impl.AdminUserServiceImpl;
 import com.group.admin.util.PasswordUtil;
@@ -74,7 +75,7 @@ class AdminUserServiceImplTest {
         assertThat(updateCaptor.getValue().getForceChangePassword()).isTrue();
         assertThat(updateCaptor.getValue().getUpdatedBy()).isEqualTo("admin-001");
 
-        verify(emailService).sendInitialPasswordEmail("editor@kuji.com", target.getDisplayName(), "TempPass123");
+        verify(emailService).sendInitialPasswordEmailSync("editor@kuji.com", target.getDisplayName(), "TempPass123");
     }
 
     @Test
@@ -106,7 +107,7 @@ class AdminUserServiceImplTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCodes.STORE_ACCESS_DENIED);
 
         verify(adminUserMapper, never()).updateByPrimaryKey(any());
-        verify(emailService, never()).sendInitialPasswordEmail(any(), any(), any());
+        verify(emailService, never()).sendInitialPasswordEmailSync(any(), any(), any());
     }
 
     @Test
@@ -168,6 +169,69 @@ class AdminUserServiceImplTest {
         assertThat(updateCaptor.getValue().getPassword()).isEqualTo("encoded-new-password");
         assertThat(updateCaptor.getValue().getForceChangePassword()).isFalse();
         assertThat(updateCaptor.getValue().getUpdatedBy()).isEqualTo("editor-001");
+    }
+
+    @Test
+    @DisplayName("建立店家小編應支援舊版 storeIds[0] 回填 storeId")
+    void createStoreEditor_ShouldFallbackToFirstStoreId() {
+        CreateStoreEditorReq req = new CreateStoreEditorReq();
+        req.setEmail("editor@kuji.com");
+        req.setDisplayName("店家小編");
+        req.setStoreIds(List.of("store-001"));
+
+        Role editorRole = role("role-editor", "ROLE_STORE_EDITOR");
+        Store store = store("store-001");
+        when(adminAuthService.getCurrentUserId()).thenReturn("admin-001");
+        when(storeMapper.selectByPrimaryKey("store-001")).thenReturn(store);
+        when(adminUserMapper.selectByExample(any())).thenReturn(List.of());
+        when(passwordUtil.generateRandomPassword()).thenReturn("TempPass123");
+        when(passwordEncoder.encode("TempPass123")).thenReturn("encoded-temp-password");
+        when(roleMapper.selectByExample(any())).thenReturn(List.of(editorRole));
+
+        service.createStoreEditor(req);
+
+        ArgumentCaptor<StoreUser> storeUserCaptor = ArgumentCaptor.forClass(StoreUser.class);
+        verify(storeUserMapper).insert(storeUserCaptor.capture());
+        assertThat(storeUserCaptor.getValue().getStoreId()).isEqualTo("store-001");
+        verify(emailService).sendInitialPasswordEmailSync("editor@kuji.com", "店家小編", "TempPass123");
+    }
+
+    @Test
+    @DisplayName("更新小編可修改備註與綁定店家")
+    void updateAdminUser_ShouldUpdateRemarkAndRebindStoreForEditor() {
+        AdminUser target = adminUser("editor-003", "editor3@kuji.com", false);
+        target.setRemark("old");
+        Role adminRole = role("role-admin", "ROLE_ADMIN");
+        Role editorRole = role("role-editor", "ROLE_STORE_EDITOR");
+        StoreUser binding = storeUser("editor-003", "store-001");
+        binding.setId("binding-001");
+        Store newStore = store("store-002");
+
+        when(adminUserMapper.selectByPrimaryKey("editor-003")).thenReturn(target);
+        when(adminUserRoleMapper.selectByExample(any())).thenReturn(
+                List.of(adminUserRole("admin-001", adminRole.getId())),
+                List.of(adminUserRole("editor-003", editorRole.getId())),
+                List.of(adminUserRole("editor-003", editorRole.getId())));
+        when(roleMapper.selectByPrimaryKey(adminRole.getId())).thenReturn(adminRole);
+        when(roleMapper.selectByPrimaryKey(editorRole.getId())).thenReturn(editorRole);
+        when(storeMapper.selectByPrimaryKey("store-002")).thenReturn(newStore);
+        when(storeUserMapper.selectByExample(any())).thenReturn(List.of(binding), List.of(binding));
+
+        UpdateAdminUserReq req = new UpdateAdminUserReq();
+        req.setPhone("0911222333");
+        req.setRemark("new remark");
+        req.setStoreId("store-002");
+
+        service.updateAdminUser("editor-003", req, "admin-001");
+
+        ArgumentCaptor<StoreUser> storeUserCaptor = ArgumentCaptor.forClass(StoreUser.class);
+        verify(storeUserMapper).updateByPrimaryKey(storeUserCaptor.capture());
+        assertThat(storeUserCaptor.getValue().getStoreId()).isEqualTo("store-002");
+
+        ArgumentCaptor<AdminUser> userCaptor = ArgumentCaptor.forClass(AdminUser.class);
+        verify(adminUserMapper).updateByPrimaryKeySelective(userCaptor.capture());
+        assertThat(userCaptor.getValue().getRemark()).isEqualTo("new remark");
+        assertThat(userCaptor.getValue().getPhone()).isEqualTo("0911222333");
     }
 
     private AdminUserRole adminUserRole(String userId, String roleId) {
