@@ -3,7 +3,7 @@ spring:
     name: admin
 
   # 預設 Profile - 開發環境（本地開發）
-  # 正式部署時使用 -Dspring.profiles.active=prod
+  # UAT/正式部署時請使用 -Dspring.profiles.active=uat 或 prod
   profiles:
     active: dev
 
@@ -96,7 +96,7 @@ app:
   frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}
 
 jwt:
-  secret: myDevSecret123  # 開發環境預設值，正式環境應使用環境變數覆蓋
+  secret: ${JWT_SECRET:myDevSecret123}  # 開發環境預設值，UAT/正式環境請由外部設定覆蓋
 
 payment:
   gateway:

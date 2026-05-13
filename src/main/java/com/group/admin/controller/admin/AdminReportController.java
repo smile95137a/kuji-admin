@@ -36,7 +36,7 @@ public class AdminReportController {
         
         // 非 Admin 只能查自己店家的報表
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null) {
+        if (!SecurityUtils.isAdmin() && currentStoreId != null) {
            if (req == null) req = new QueryReq<>();
             if (req.getCondition() == null) req.setCondition(new RevenueReportCondition());
             req.getCondition().setStoreId(currentStoreId);
@@ -64,7 +64,7 @@ public class AdminReportController {
             @RequestBody(required = false) QueryReq<LotteryResultReportCondition> req) {
         
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null) {
+        if (!SecurityUtils.isAdmin() && currentStoreId != null) {
             if (req == null) req = new QueryReq<>();
             if (req.getCondition() == null) req.setCondition(new LotteryResultReportCondition());
             req.getCondition().setStoreId(currentStoreId);
@@ -130,7 +130,7 @@ public class AdminReportController {
             @RequestBody(required = false) QueryReq<LotterySalesRankingCondition> req) {
 
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null) {
+        if (!SecurityUtils.isAdmin() && currentStoreId != null) {
             if (req == null) req = new QueryReq<>();
             if (req.getCondition() == null) req.setCondition(new LotterySalesRankingCondition());
             req.getCondition().setStoreId(currentStoreId);
@@ -154,7 +154,7 @@ public class AdminReportController {
         if (req.getCondition() == null) req.setCondition(new StorePerformanceCondition());
 
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null) {
+        if (!SecurityUtils.isAdmin() && currentStoreId != null) {
             String requested = req.getCondition().getStoreId();
             if (requested != null && !requested.equals(currentStoreId)) {
                 return ResponseEntity.status(403).build();
@@ -178,7 +178,7 @@ public class AdminReportController {
 
         // StoreOwner 只能查自己店家的報表（後端強制覆蓋 storeId）
         String currentStoreId = SecurityUtils.getCurrentUserPrimaryStoreId();
-        if (currentStoreId != null) {
+        if (!SecurityUtils.isAdmin() && currentStoreId != null) {
             if (req == null) req = new QueryReq<>();
             if (req.getCondition() == null) req.setCondition(new PrizeShipmentReportCondition());
             req.getCondition().setStoreId(currentStoreId);

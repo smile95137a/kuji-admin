@@ -1,0 +1,48 @@
+spring:
+  config:
+    import: optional:file:./config/application-uat-secrets.yml
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    root: INFO
+    com.group.admin: INFO
+  file:
+    name: logs/admin-uat.log
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://uat-admin.example.com,https://uat-client.example.com}
+
+app:
+  frontend-url: ${APP_FRONTEND_URL:https://uat-client.example.com}
+
+jwt:
+  secret: ${JWT_SECRET:REPLACE_IN_CONFIG_OR_ENV}
+  expiration: 86400000
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}
+
+payment:
+  gateway:
+    provider: ${PAYMENT_GATEWAY_PROVIDER:gomypay}
+    callback-base-url: ${PAYMENT_CALLBACK_BASE_URL:https://uat-api.example.com}
+    gomypay:
+      api-url: ${GOMYPAY_API_URL:https://n.gomypay.asia/TestShuntClass.aspx}
+      shop-id: ${GOMYPAY_SHOP_ID:}
+      hash-key: ${GOMYPAY_HASH_KEY:}
+      hash-iv: ${GOMYPAY_HASH_IV:}
+      verify-customer-id: ${GOMYPAY_VERIFY_CUSTOMER_ID:${GOMYPAY_SHOP_ID:}}
+      return-url: ${GOMYPAY_RETURN_URL:https://uat-client.example.com/client/member-center/order-payment-result}
+      notify-url: ${GOMYPAY_NOTIFY_URL:https://uat-api.example.com/api/payment/shipping/callback}
+      recharge-return-url: ${GOMYPAY_RECHARGE_RETURN_URL:https://uat-client.example.com/client/member-center/deposit-payment-result}
+      recharge-notify-url: ${GOMYPAY_RECHARGE_NOTIFY_URL:https://uat-api.example.com/api/wallet/recharge/callback}
+      shipping-return-url: ${GOMYPAY_SHIPPING_RETURN_URL:https://uat-client.example.com/client/member-center/order-payment-result}
+      shipping-notify-url: ${GOMYPAY_SHIPPING_NOTIFY_URL:https://uat-api.example.com/api/payment/shipping/callback}
+
+# 說明：
+# 1. 非敏感 UAT 預設值可放在本檔，由 profile=uat 自動載入。
+# 2. 敏感資料請固定放在 server 的 ./config/application-uat-secrets.yml，部署時不需每次重打環境變數。
+# 3. Spring Boot 啟動範例：java -Dspring.profiles.active=uat -jar target/admin-1.0.0.jar

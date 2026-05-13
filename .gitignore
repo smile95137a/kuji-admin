@@ -42,6 +42,8 @@ app.log
 ### AWS 憑證 ###
 **/application-local.yml
 **/application-*.yml.local
+/config/application-secrets.yml
+/config/application-*-secrets.yml
 
 ### 測試結果 ###
 test-result.txt

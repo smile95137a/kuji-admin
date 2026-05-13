@@ -1,5 +1,79 @@
 # KUJI 後端部署指南
 
+## 🧩 UAT 自動載入設定（推薦）
+
+目標：
+- 啟用 `uat` profile 後，Spring Boot 自動載入 UAT 公開設定
+- 敏感資訊固定放在 server 外部檔案，不用每次 deploy 重新輸入環境變數
+- 真實金鑰不進 Git
+
+### 1. 專案內設定
+
+專案已新增 [src/main/resources/application-uat.yml](../../src/main/resources/application-uat.yml)：
+
+- 啟用方式：`-Dspring.profiles.active=uat`
+- 自動額外載入：`./config/application-uat-secrets.yml`
+- 內含 UAT 的 GoMyPay return / notify URL 範例與基本 log 設定
+
+### 2. Server 上固定放一份 secrets 檔
+
+請在 jar 同層建立：`./config/application-uat-secrets.yml`
+
+範例：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://your-uat-db-host:3306/kuji?useSSL=true&serverTimezone=Asia/Taipei&characterEncoding=UTF-8
+    username: your_uat_db_user
+    password: your_uat_db_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  mail:
+    username: your_gmail_account@gmail.com
+    password: your_gmail_app_password
+
+google:
+  client-id: your_google_client_id
+
+jwt:
+  secret: your_uat_jwt_secret
+
+payment:
+  gateway:
+    gomypay:
+      shop-id: your_gomypay_shop_id
+      hash-key: your_gomypay_hash_key
+      hash-iv: your_gomypay_hash_iv
+      verify-customer-id: your_gomypay_verify_customer_id
+```
+
+### 3. 啟動方式
+
+第一次在 server 設定完成後，後續只要更新 jar 並重啟即可。
+
+```bash
+java -Dspring.profiles.active=uat -jar target/admin-1.0.0.jar
+```
+
+如果你是用 systemd，可把 profile 固定在 service 檔：
+
+```ini
+[Service]
+WorkingDirectory=/opt/kuji-admin
+ExecStart=/usr/bin/java -Dspring.profiles.active=uat -jar /opt/kuji-admin/admin-1.0.0.jar
+Restart=always
+```
+
+### 4. 注意事項
+
+- `application-uat.yml` 可進 Git
+- `./config/application-uat-secrets.yml` 不可進 Git
+- 專案 `.gitignore` 已補上 `config/application-*-secrets.yml`
+- GoMyPay 的 `notify-url` 必須是第三方能打到的 UAT 後端網址，不能是 `localhost`
+
+---
+
 ## 🚀 快速部署到 EC2
 
 ### 方式一：使用快速部署腳本（推薦）
