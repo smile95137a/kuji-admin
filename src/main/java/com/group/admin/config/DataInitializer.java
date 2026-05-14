@@ -123,6 +123,8 @@ public class DataInitializer implements CommandLineRunner {
             rescueMissingReportMenus();
             // 補救：若系統設定子選單未建立，補建缺少的選單
             rescueMissingSystemMenus();
+            // 補救：若類別管理選單未建立，補建商品管理底下的入口
+            rescueMissingCategoryMenu();
             log.info("系統資料已存在，跳過初始化");
             return;
         }
@@ -139,6 +141,7 @@ public class DataInitializer implements CommandLineRunner {
             initializeSystemConfigs();
             rescueMissingReportMenus();
             rescueMissingSystemMenus();
+            rescueMissingCategoryMenu();
             
             log.info("========================================");
             log.info("系統資料初始化完成！");
@@ -713,6 +716,34 @@ public class DataInitializer implements CommandLineRunner {
         if (anyAdded) {
             log.info("✅ 系統設定子選單補救完成");
         }
+    }
+
+    /**
+     * 補救：若商品管理底下沒有「類別管理」，補建選單與角色權限。
+     */
+    private void rescueMissingCategoryMenu() {
+        if (ROLE_ADMIN_ID == null || ROLE_STORE_OWNER_ID == null || ROLE_STORE_EDITOR_ID == null) {
+            loadRoleIdsFromDb();
+        }
+
+        Menu lotteryManagement = findMenuByCode("LOTTERY_MANAGEMENT");
+        if (lotteryManagement == null) {
+            log.warn("⚠️ 找不到商品管理父選單，略過類別管理選單補救");
+            return;
+        }
+
+        Menu categoryMenu = upsertSubMenu(
+                lotteryManagement.getId(),
+                "類別管理",
+                "CATEGORY_MANAGEMENT",
+                "/home/categories",
+                4);
+
+        ensureRoleMenuPermission(ROLE_ADMIN_ID, categoryMenu.getId(), true, true, true);
+        ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, categoryMenu.getId(), true, true, false);
+        ensureRoleMenuPermission(ROLE_STORE_EDITOR_ID, categoryMenu.getId(), true, true, false);
+
+        log.info("✅ 類別管理選單與角色權限已同步");
     }
 
     /**
