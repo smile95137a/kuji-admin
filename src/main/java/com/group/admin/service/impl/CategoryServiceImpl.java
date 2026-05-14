@@ -63,7 +63,7 @@ public class CategoryServiceImpl implements CategoryService {
         CategoryCondition condition = req != null ? req.getCondition() : null;
         
         // 查詢所有商品
-        LotteryExample example = buildExample(condition);
+        LotteryExample example = buildThemeLotteryExample(condition);
         List<Lottery> lotteries = lotteryMapper.selectByExample(example);
         
         // 按 category 分組
@@ -151,28 +151,6 @@ public class CategoryServiceImpl implements CategoryService {
                     .status(theme.getStatus())
                     .aliases(buildThemeAliases(theme.getId()))
                     .build());
-        }
-
-        // 歷史資料兜底：字典尚未收錄但商品已存在時，先補顯示，避免前台突然消失。
-        for (Map.Entry<String, List<Lottery>> entry : grouped.entrySet()) {
-            if (!isNotBlank(entry.getKey())) {
-                continue;
-            }
-            if (condition != null && isNotBlank(condition.getTheme())
-                    && !entry.getKey().equals(resolveCanonicalThemeName(condition.getTheme()))) {
-                continue;
-            }
-            if (condition != null && isNotBlank(condition.getKeyword())
-                    && !matchesKeyword(entry.getKey(), condition.getKeyword())) {
-                continue;
-            }
-
-            boolean exists = result.stream().anyMatch(r -> entry.getKey().equals(r.getName()));
-            if (!exists) {
-                CategoryRes fallback = buildCategoryRes(entry.getKey(), "theme", entry.getValue());
-                fallback.setDisplayOrder(9999);
-                result.add(fallback);
-            }
         }
 
         result = result.stream()
@@ -665,6 +643,21 @@ public class CategoryServiceImpl implements CategoryService {
         return example;
     }
 
+    private LotteryExample buildThemeLotteryExample(CategoryCondition condition) {
+        if (condition == null || !isDictionaryStatus(condition.getStatus())) {
+            return buildExample(condition);
+        }
+
+        CategoryCondition lotteryCondition = new CategoryCondition();
+        lotteryCondition.setCategory(condition.getCategory());
+        lotteryCondition.setTheme(condition.getTheme());
+        lotteryCondition.setTags(condition.getTags());
+        lotteryCondition.setKeyword(condition.getKeyword());
+        // ACTIVE / INACTIVE 是主題字典狀態，不是 lottery.status；商品數預設仍以 ON_SHELF 計算。
+        lotteryCondition.setStatus(null);
+        return buildExample(lotteryCondition);
+    }
+
     private boolean isNotBlank(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -689,6 +682,14 @@ public class CategoryServiceImpl implements CategoryService {
             return defaultActive ? "ACTIVE" : null;
         }
         return normalized;
+    }
+
+    private boolean isDictionaryStatus(String status) {
+        if (!isNotBlank(status)) {
+            return false;
+        }
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        return "ACTIVE".equals(normalized) || "INACTIVE".equals(normalized);
     }
 
     private boolean matchesKeyword(String source, String keyword) {

@@ -414,6 +414,51 @@ public class DataInitializer implements CommandLineRunner {
         return menu;
     }
 
+    private Menu ensureLotteryManagementMenu() {
+        Menu lotteryManagement = findMenuByCodes(
+                "LOTTERY_MANAGEMENT",
+                "PRODUCT_MANAGEMENT",
+                "PRODUCT_MANAGE",
+                "LOTTERY_MANAGE",
+                "lottery_management",
+                "product_management");
+        if (lotteryManagement == null) {
+            lotteryManagement = findMenuByName("商品管理");
+        }
+        if (lotteryManagement == null) {
+            lotteryManagement = findTopLevelMenuByPath("/admin/lotteries");
+        }
+        if (lotteryManagement == null) {
+            lotteryManagement = findTopLevelMenuByPath("/home/lottery-with-prizes");
+        }
+
+        if (lotteryManagement != null) {
+            lotteryManagement.setName("商品管理");
+            lotteryManagement.setCode("LOTTERY_MANAGEMENT");
+            lotteryManagement.setPath("/admin/lotteries");
+            lotteryManagement.setIcon("shopping");
+            lotteryManagement.setIsVisible(true);
+            lotteryManagement.setUpdatedAt(LocalDateTime.now());
+            menuMapper.updateByPrimaryKeySelective(lotteryManagement);
+            return lotteryManagement;
+        }
+
+        Menu menu = new Menu();
+        menu.setId(UUID.randomUUID().toString());
+        menu.setName("商品管理");
+        menu.setCode("LOTTERY_MANAGEMENT");
+        menu.setPath("/admin/lotteries");
+        menu.setParentId(null);
+        menu.setIcon("shopping");
+        menu.setOrderNum(20);
+        menu.setIsVisible(true);
+        menu.setCreatedAt(LocalDateTime.now());
+        menu.setUpdatedAt(LocalDateTime.now());
+        menuMapper.insert(menu);
+        log.warn("⚠️ 找不到既有商品管理父選單，已自動建立 LOTTERY_MANAGEMENT");
+        return menu;
+    }
+
     private Menu upsertSubMenu(String parentId, String name, String code, String path, int orderNum, String... legacyCodes) {
         Menu menu = findMenuByCodes(code, legacyCodes);
         if (menu == null) {
@@ -454,6 +499,29 @@ public class DataInitializer implements CommandLineRunner {
         MenuExample example = new MenuExample();
         example.createCriteria().andCodeEqualTo(code);
         return menuMapper.selectByExample(example).stream().findFirst().orElse(null);
+    }
+
+    private Menu findMenuByName(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+
+        MenuExample example = new MenuExample();
+        example.createCriteria().andNameEqualTo(name);
+        return menuMapper.selectByExample(example).stream().findFirst().orElse(null);
+    }
+
+    private Menu findTopLevelMenuByPath(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+
+        MenuExample example = new MenuExample();
+        example.createCriteria().andPathEqualTo(path);
+        return menuMapper.selectByExample(example).stream()
+                .filter(menu -> menu.getParentId() == null || menu.getParentId().isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     private void ensureRoleMenuPermission(String roleId, String menuId, boolean canView, boolean canEdit, boolean canDelete) {
@@ -726,11 +794,10 @@ public class DataInitializer implements CommandLineRunner {
             loadRoleIdsFromDb();
         }
 
-        Menu lotteryManagement = findMenuByCode("LOTTERY_MANAGEMENT");
-        if (lotteryManagement == null) {
-            log.warn("⚠️ 找不到商品管理父選單，略過類別管理選單補救");
-            return;
-        }
+        Menu lotteryManagement = ensureLotteryManagementMenu();
+        ensureRoleMenuPermission(ROLE_ADMIN_ID, lotteryManagement.getId(), true, true, true);
+        ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, lotteryManagement.getId(), true, true, true);
+        ensureRoleMenuPermission(ROLE_STORE_EDITOR_ID, lotteryManagement.getId(), true, true, false);
 
         Menu categoryMenu = upsertSubMenu(
                 lotteryManagement.getId(),
