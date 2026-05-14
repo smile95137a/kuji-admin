@@ -31,6 +31,7 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
         String returnUrl = GoMyPaySupport.safe(properties.getShippingReturnUrl(), properties.getReturnUrl());
         String callbackUrl = GoMyPaySupport.safe(properties.getShippingNotifyUrl(), properties.getNotifyUrl());
         GoMyPaySupport.validatePaymentRequestConfig(properties, returnUrl, callbackUrl);
+        GoMyPaySupport.validateMerchantOrderNo(request.getMerchantOrderNo());
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("Send_Type", GoMyPaySupport.isBankTransfer(paymentMethod) ? "4" : "0");
@@ -59,6 +60,9 @@ public class GoMyPayShippingGatewayClient implements ShippingPaymentGatewayClien
                 .success(true)
             .gatewayTradeNo(request.getMerchantOrderNo())
                 .payUrl(payUrl)
+                .submitMethod("POST")
+                .actionUrl(properties.getApiUrl())
+                .formFields(params)
                 .build();
     }
 

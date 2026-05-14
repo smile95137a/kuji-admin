@@ -399,7 +399,8 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
                 %s
-                AND created_at BETWEEN ? AND ?
+                AND created_at >= ?
+                AND created_at < ?
                 """.formatted(statusSuccessPredicate);
 
         List<Object> params = new ArrayList<>();
@@ -431,7 +432,8 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
                                 %s
-                AND created_at BETWEEN ? AND ?
+                AND created_at >= ?
+                AND created_at < ?
                 GROUP BY DATE(created_at)
                 ORDER BY date
                                 """.formatted(statusSuccessPredicate);
@@ -453,7 +455,8 @@ public class ReportServiceImpl implements ReportService {
                 FROM wallet_transaction
                 WHERE transaction_type = 'RECHARGE'
                                 %s
-                AND created_at BETWEEN ? AND ?
+                AND created_at >= ?
+                AND created_at < ?
                 GROUP BY amount
                 ORDER BY total_amount DESC
                                 """.formatted(statusSuccessPredicate);
@@ -991,7 +994,7 @@ public class ReportServiceImpl implements ReportService {
                     COUNT(*) AS txn_count,
                     COALESCE(SUM(price_twd), 0) AS total_amount
                 FROM recharge_order
-                WHERE status = 'PAID'
+                WHERE status = 'SUCCESS'
                   AND paid_at BETWEEN ? AND ?
                 GROUP BY COALESCE(gateway_provider, 'UNKNOWN')
                 ORDER BY total_amount DESC, txn_count DESC

@@ -1,6 +1,7 @@
 package com.group.admin.service.impl;
 
 import java.net.URI;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,8 @@ import lombok.extern.slf4j.Slf4j;
 public class UserServiceImpl implements UserService {
 
     private static final String FORCE_CHANGE_PASSWORD_MARKER = "FORCE_CHANGE_PASSWORD";
+    private static final SecureRandom EMAIL_VERIFICATION_RANDOM = new SecureRandom();
+    private static final int EMAIL_VERIFICATION_CODE_LENGTH = 6;
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -114,7 +117,7 @@ public class UserServiceImpl implements UserService {
 
         // ✅ 發送 Email 驗證信（讓用戶登出後仍能再登入）
         try {
-            String verificationToken = UUID.randomUUID().toString();
+            String verificationToken = generateEmailVerificationCode();
             User verifyUpdate = new User();
             verifyUpdate.setId(user.getId());
             verifyUpdate.setEmailVerificationToken(verificationToken);
@@ -528,13 +531,41 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean verifyEmailCode(String email, String code) {
+        if (email == null || email.isBlank() || code == null || code.isBlank()) {
+            return false;
+        }
+
+        UserExample example = new UserExample();
+        example.createCriteria()
+                .andEmailEqualTo(email.trim())
+                .andEmailVerificationTokenEqualTo(code.trim())
+                .andEmailVerificationExpiresGreaterThan(LocalDateTime.now());
+
+        List<User> users = userMapper.selectByExample(example);
+        if (users.isEmpty()) {
+            return false;
+        }
+
+        User user = users.get(0);
+        User update = new User();
+        update.setId(user.getId());
+        update.setEmailVerified((byte) 1);
+        update.setEmailVerificationToken(null);
+        update.setEmailVerificationExpires(null);
+        userMapper.updateByPrimaryKeySelective(update);
+        log.info("??Email 驗證碼驗證成功: userId={}, email={}", user.getId(), user.getEmail());
+        return true;
+    }
+
+    @Override
     public void resendVerificationEmail(String userId) {
         User user = userMapper.selectByPrimaryKey(userId);
         if (user == null) throw new IllegalArgumentException("用戶不存在");
         if (user.getEmailVerified() != null && user.getEmailVerified() == 1) {
             throw new IllegalArgumentException("Email 已完成驗證");
         }
-        String verificationToken = UUID.randomUUID().toString();
+        String verificationToken = generateEmailVerificationCode();
         User update = new User();
         update.setId(userId);
         update.setEmailVerificationToken(verificationToken);
@@ -574,6 +605,12 @@ public class UserServiceImpl implements UserService {
             return req.getNickname().trim();
         }
         return req.getEmail().split("@")[0];
+    }
+
+    private String generateEmailVerificationCode() {
+        int bound = (int) Math.pow(10, EMAIL_VERIFICATION_CODE_LENGTH);
+        int code = EMAIL_VERIFICATION_RANDOM.nextInt(bound);
+        return String.format("%0" + EMAIL_VERIFICATION_CODE_LENGTH + "d", code);
     }
 
     private User normalizeLegacyProvider(User user) {

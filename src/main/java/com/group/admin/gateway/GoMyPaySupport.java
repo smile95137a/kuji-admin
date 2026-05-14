@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -19,6 +20,7 @@ public final class GoMyPaySupport {
     public static final String PAYMENT_METHOD_CREDIT_CARD = "CREDIT_CARD";
     public static final String PAYMENT_METHOD_BANK_TRANSFER = "BANK_TRANSFER";
 
+    private static final int MAX_MERCHANT_ORDER_NO_LENGTH = 25;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}]");
@@ -55,9 +57,18 @@ public final class GoMyPaySupport {
     public static void validatePaymentRequestConfig(GoMyPayProperties properties, String returnUrl, String callbackUrl) {
         requireConfigured("GOMYPAY_API_URL", properties.getApiUrl(), false);
         requireConfigured("GOMYPAY_SHOP_ID", properties.getShopId(), false);
-        requireConfigured("GOMYPAY_HASH_KEY", properties.getHashKey(), false);
+        requireConfigured("GOMYPAY_TRANSACTION_PASSWORD", requestTransactionPassword(properties), false);
         requireConfigured("GOMYPAY_RETURN_URL", returnUrl, true);
         requireConfigured("GOMYPAY_NOTIFY_URL", callbackUrl, true);
+    }
+
+    public static void validateMerchantOrderNo(String merchantOrderNo) {
+        if (merchantOrderNo == null || merchantOrderNo.isBlank()) {
+            throw new BusinessException("GoMyPay 缺少商戶訂單編號");
+        }
+        if (merchantOrderNo.trim().length() > MAX_MERCHANT_ORDER_NO_LENGTH) {
+            throw new BusinessException("GoMyPay 商戶訂單編號不可超過 25 字元");
+        }
     }
 
     public static String sanitizeBuyerName(String value, String fallback) {
@@ -79,27 +90,40 @@ public final class GoMyPaySupport {
     }
 
     public static String computeRequestChecksum(String merchantOrderNo, long amount, GoMyPayProperties properties) {
-        String customerId = safe(properties.getShopId());
-        String secret = safe(properties.getHashKey());
-        if (merchantOrderNo == null || merchantOrderNo.isBlank() || amount <= 0L || customerId.isBlank() || secret.isBlank()) {
+        String secret = requestTransactionPassword(properties);
+        validateMerchantOrderNo(merchantOrderNo);
+        if (merchantOrderNo == null || merchantOrderNo.isBlank() || amount <= 0L || secret.isBlank()) {
             throw new BusinessException("GoMyPay 請求資料不足，無法產生 Str_Check");
         }
-        return md5Hex(customerId + merchantOrderNo + amount + secret);
+        return secret.trim();
     }
 
     public static String computeCallbackChecksum(Map<String, String> params, GoMyPayProperties properties) {
         String customerId = safe(properties.getVerifyCustomerId(), properties.getShopId());
-        String secret = safe(properties.getHashKey());
+        String secret = requestTransactionPassword(properties);
         String result = firstNonBlank(params, "result");
-        String merchantOrderNo = firstNonBlank(params, "e_orderno", "Order_No");
+        String merchantOrderNo = firstNonBlank(params, "e_orderno", "Order_No", "orderNo", "MerchantOrderNo");
         String amount = firstNonBlank(params, "PayAmount", "e_money", "Amount");
-        String gatewayOrderId = firstNonBlank(params, "OrderID");
+        String gatewayOrderId = firstNonBlank(params, "OrderID", "TradeNo", "gatewayTradeNo", "Trade_No");
 
         if (result == null || merchantOrderNo == null || amount == null || gatewayOrderId == null || customerId.isBlank() || secret.isBlank()) {
-            throw new BusinessException("GoMyPay callback 缺少驗章必要欄位");
+            throw new BusinessException("GoMyPay callback 驗章資料不足");
         }
 
         return md5Hex(result + merchantOrderNo + customerId + amount + gatewayOrderId + secret);
+    }
+
+    public static String requestTransactionPassword(GoMyPayProperties properties) {
+        return safe(properties.getTransactionPassword(), properties.getHashKey());
+    }
+
+    public static Map<String, String> toDebugParams(Map<String, String> params) {
+        Map<String, String> debugParams = new LinkedHashMap<>();
+        if (params == null) {
+            return debugParams;
+        }
+        params.forEach((key, value) -> debugParams.put(key, maskSensitiveValue(key, value)));
+        return debugParams;
     }
 
     public static void verifyCallback(Map<String, String> params, GoMyPayProperties properties) {
@@ -160,14 +184,34 @@ public final class GoMyPaySupport {
         return preferred == null || preferred.isBlank() ? safe(fallback) : preferred;
     }
 
+    private static String maskSensitiveValue(String key, String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalizedKey = key == null ? "" : key.trim().toLowerCase(Locale.ROOT);
+        if ("str_check".equals(normalizedKey)) {
+            return maskMiddle(value, 4, 4);
+        }
+        return value;
+    }
+
+    private static String maskMiddle(String value, int prefixLength, int suffixLength) {
+        if (value.length() <= prefixLength + suffixLength) {
+            return "*".repeat(Math.max(value.length(), 1));
+        }
+        return value.substring(0, prefixLength)
+                + "*".repeat(value.length() - prefixLength - suffixLength)
+                + value.substring(value.length() - suffixLength);
+    }
+
     private static void requireConfigured(String key, String value, boolean urlRequired) {
         String normalized = safe(value).trim();
         if (normalized.isBlank()) {
-            throw new BusinessException("GoMyPay 設定缺失: " + key);
+            throw new BusinessException("GoMyPay 缺少必要設定: " + key);
         }
         String lower = normalized.toLowerCase(Locale.ROOT);
-        if (lower.contains("example.com") || lower.contains("placeholder") || normalized.contains("雿")) {
-            throw new BusinessException("GoMyPay 設定不可使用預設或占位值: " + key);
+        if (lower.contains("example.com") || lower.contains("placeholder") || normalized.contains("??")) {
+            throw new BusinessException("GoMyPay 設定不可使用預設或占位值，請檢查 " + key);
         }
         if (urlRequired && !(lower.startsWith("http://") || lower.startsWith("https://"))) {
             throw new BusinessException("GoMyPay URL 設定格式錯誤: " + key);
@@ -206,4 +250,3 @@ public final class GoMyPaySupport {
         }
     }
 }
-

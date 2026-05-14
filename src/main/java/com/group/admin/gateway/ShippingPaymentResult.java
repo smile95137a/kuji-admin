@@ -3,6 +3,8 @@ package com.group.admin.gateway;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Map;
+
 /**
  * 出貨運費付款初始化結果（含 GoMyPay 付款頁 URL）
  */
@@ -12,6 +14,12 @@ public class ShippingPaymentResult {
 
     /** GoMyPay 付款頁 URL，前端重導至此讓使用者付款 */
     private String payUrl;
+
+    private String submitMethod;
+
+    private String actionUrl;
+
+    private Map<String, String> formFields;
 
     /** GoMyPay 交易編號（用於後續對帳） */
     private String gatewayTradeNo;

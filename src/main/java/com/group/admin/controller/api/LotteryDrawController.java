@@ -1,479 +1,368 @@
 package com.group.admin.controller.api;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.group.admin.entity.Lottery;
+import com.group.admin.entity.LotteryPrize;
+import com.group.admin.enums.GameModeEnum;
 import com.group.admin.res.lottery.DesignationCheckResponse;
-import com.group.admin.res.lottery.TicketListResponse;
+import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryTicketService;
+import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
 import com.group.admin.service.LotteryTicketService.DrawResult;
 import com.group.admin.service.LotteryTicketService.SessionInfo;
-import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
 import com.group.admin.service.impl.LotteryTicketServiceImpl;
 import com.group.admin.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
-/**
- * 前台抽獎功能 API
- * 
- * 路由：/lottery/draw/**（context-path 是 /api，所以完整路徑是 /api/lottery/draw/**）
- * 
- * 職責：
- * - 執行抽獎
- * - 查詢籤位列表
- * - 刮刮樂獎項指定
- * - Session 管理
- * 
- * <p>⚠️ 安全重點：此 Controller 不會洩漏未抽籤位的獎品資訊</p>
- * 
- * @author KUJI System
- * @since 1.0.0
- */
 @Slf4j
 @RestController
-@RequestMapping("/lottery/draw")  // 注意：context-path 是 /api，所以完整路徑是 /api/lottery/draw
+@RequestMapping("/lottery/draw")
 @RequiredArgsConstructor
-@Tag(name = "前台抽獎功能", description = "玩家抽獎、籤位查詢 API")
+@Tag(name = "前台抽獎", description = "前台刮刮樂與抽選 API")
 public class LotteryDrawController {
 
     private final LotteryTicketService ticketService;
-    private final LotteryTicketServiceImpl ticketServiceImpl;  // 🆕 用於 getGachaLock
+    private final LotteryTicketServiceImpl ticketServiceImpl;
 
-    /**
-     * 執行抽獎
-     * 
-     * <p>支援兩種模式：</p>
-     * <ul>
-     *   <li>指定票券：提供 ticket UUID 列表（推薦）</li>
-     *   <li>隨機抽獎：不提供 ticket 列表，系統隨機選擇</li>
-     * </ul>
-     * 
-     * <p>🆕 保護時間機制：</p>
-     * <ul>
-     *   <li>扭蛋(GACHA)：不需要保護時間，使用 synchronized 確保同時只有一個請求</li>
-     *   <li>一番賞/卡牌/刮刮樂：首次抽獎啟動保護時間，保護結束前其他玩家不能抽</li>
-     *   <li>抽獎回應包含 protectionEndTime，前端可顯示倒數計時</li>
-     * </ul>
-     */
     @PostMapping("/{lotteryId}/draw")
-    @Operation(summary = "執行抽獎", description = "支援批次抽獎：指定票券 UUID 列表或隨機抽獎。扭蛋使用 synchronized，其他模式使用保護時間。")
+    @Operation(summary = "執行抽獎")
     public ResponseEntity<?> draw(
-            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId,
+            @Parameter(description = "商品 ID") @PathVariable String lotteryId,
             @RequestBody DrawRequest request) {
-        
+
         String userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
             return ResponseEntity.status(401).build();
         }
-        
-        log.info("🎰 抽獎請求: lotteryId={}, userId={}, count={}, ticket列表長度={}, ticketNumber={}", 
-                lotteryId, userId, request.getCount(), 
-                request.getTickets() != null ? request.getTickets().size() : 0,
-                request.getTicketNumber());
-        
-        // 驗證 count（提前驗證，避免不必要的查詢）
+
         Integer count = request.getCount();
         if (count == null || count < 1) {
-            return ResponseEntity.badRequest().body("count 必須至少為 1");
+            return ResponseEntity.badRequest().body("count 不可小於 1");
         }
         if (count > 10) {
-            return ResponseEntity.badRequest().body("單次最多只能抽 10 張票券");
+            return ResponseEntity.badRequest().body("單次最多只能抽 10 次");
         }
-        
-        // 取得商品資訊
-        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
+
+        Lottery lottery = ticketService.getLottery(lotteryId);
         if (lottery == null) {
-            return ResponseEntity.badRequest().body("商品不存在");
+            return ResponseEntity.badRequest().body("找不到商品");
         }
-        
+
         String playMode = lottery.getPlayMode();
         String gameMode = lottery.getGameMode();
         String category = lottery.getCategory();
-        
-        // 🆕 扭蛋(GACHA)：使用 synchronized 確保同一商品同時只處理一個抽獎請求
+
         if ("GACHA".equals(category)) {
             Object lock = ticketServiceImpl.getGachaLock(lotteryId);
             synchronized (lock) {
-                log.info("🔒 扭蛋 synchronized 開始: lotteryId={}", lotteryId);
                 List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
-                log.info("🔓 扭蛋 synchronized 結束: lotteryId={}", lotteryId);
                 return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, null));
             }
         }
-        
-        // 非扭蛋：檢查是否需要玩家指定大獎（SCRATCH_PLAYER 模式）
+
         SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
-        
-        if ("SCRATCH_PLAYER".equals(gameMode)) {
-            String playerDesignated = session.playerDesignatedNumbers();
-            boolean designationPending = playerDesignated == null || playerDesignated.trim().isEmpty();
-            
-            if (designationPending) {
-                if (session.isOpener()) {
-                    // 開套玩家：回傳 202 requiresDesignation
-                    DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
-                    if (designationCheck != null) {
-                        log.info("⚠️ 需要先指定大獎位置 (開套玩家，HTTP 202)");
-                        return ResponseEntity.status(202).body(designationCheck);
-                    }
-                } else {
-                    // 非開套玩家：回傳 423 DESIGNATION_PENDING
-                    log.warn("❌ 非開套玩家在指定完成前嘗試抽獎，HTTP 423");
-                    return ResponseEntity.status(423).body("DESIGNATION_PENDING: 等待開套玩家指定大獎位置");
+        if (GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
+            DesignationCheckResponse check = ticketService.getDesignationStatus(lotteryId, userId);
+            if (check.isRequired()) {
+                if (check.isOpener()) {
+                    return ResponseEntity.status(202).body(toDesignationRequiredResponse(check));
                 }
-            }
-        } else if (session.isOpener()) {
-            DesignationRequiredResponse designationCheck = checkDesignationRequired(lotteryId, session);
-            if (designationCheck != null) {
-                log.info("⚠️ 需要先指定大獎位置");
-                return ResponseEntity.ok(designationCheck);
+                return ResponseEntity.status(423).body(new DesignationPendingResponse(
+                        true,
+                        true,
+                        check.getMessage() != null ? check.getMessage() : "請等待開套玩家完成大獎指定",
+                        session != null && session.designationDeadline() != null ? session.designationDeadline().toString() : null
+                ));
             }
         }
-        
-        // 執行抽獎
+
         List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
-        
-        // 🆕 取得更新後的場次資訊（包含保護結束時間）
         SessionInfo updatedSession = ticketService.getActiveSession(lotteryId, userId);
-        String protectionEndTime = null;
-        if (updatedSession != null && updatedSession.protectionEndTime() != null) {
-            protectionEndTime = updatedSession.protectionEndTime().toString();
-        }
-        
+        String protectionEndTime = updatedSession != null && updatedSession.protectionEndTime() != null
+                ? updatedSession.protectionEndTime().toString()
+                : null;
+
         return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, protectionEndTime));
     }
 
-    /**
-     * 刮刮樂(玩家指定)：開套玩家指定大獎位置
-     * 
-     * <p>🆕 回應包含已指定的大獎中獎號碼，讓前端即時顯示</p>
-     */
     @PostMapping("/{lotteryId}/designate")
-    @Operation(summary = "指定大獎位置", description = "刮刮樂模式：開套玩家指定大獎位置。回應包含已指定的中獎號碼清單。")
+    @Operation(summary = "指定大獎位置")
     public ResponseEntity<DesignateResponse> designatePrizePositions(
-            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId,
+            @Parameter(description = "商品 ID") @PathVariable String lotteryId,
             @RequestBody DesignateRequest request) {
-        
+
         String userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
             return ResponseEntity.status(401).build();
         }
-        
-        log.info("🎯 指定大獎位置: lotteryId={}, userId={}, designations={}", 
-                lotteryId, userId, request.designations());
-        
+
         ticketService.designatePrizePositions(lotteryId, userId, request.designations());
-        
-        // 🆕 回傳已指定的大獎號碼清單
         List<DesignatedWinningNumber> designatedNumbers = ticketService.getDesignatedWinningNumbers(lotteryId);
-        
+
         return ResponseEntity.ok(new DesignateResponse(
                 true,
-                "大獎位置指定完成，共 " + request.designations().size() + " 個",
+                "大獎位置指定成功",
                 designatedNumbers
         ));
     }
 
-    /**
-     * 取得票券列表（前台安全版）
-     *
-     * <p>嚴格執行資訊隱藏（FR-005, FR-006, SC-001）：</p>
-     * <ul>
-     *   <li>AVAILABLE 票券只顯示 ticketNumber + status</li>
-     *   <li>DRAWN 票券顯示完整獎品資訊</li>
-     * </ul>
-     */
     @GetMapping("/{lotteryId}/tickets")
-    @Operation(summary = "取得票券列表（資訊隱藏已強制執行）", description = "AVAILABLE 票券只顯示號碼與狀態；DRAWN 票券顯示完整獎品資訊。")
-    public ResponseEntity<TicketListResponse> getTickets(
-            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
-        log.info("🔍 查詢票券列表: lotteryId={}", lotteryId);
-        TicketListResponse response = ticketService.getTicketList(lotteryId);
-        return ResponseEntity.ok(response);
+    @Operation(summary = "查詢籤位列表")
+    public ResponseEntity<Map<String, Object>> getTickets(
+            @Parameter(description = "商品 ID") @PathVariable String lotteryId) {
+
+        String userId = SecurityUtils.getCurrentUserId();
+        List<LotteryTicketRes> tickets = ticketService.getTicketsForFrontend(lotteryId);
+        SessionInfo session = ticketService.getActiveSession(lotteryId, userId);
+        List<DesignatedWinningNumber> designatedNumbers = ticketService.getDesignatedWinningNumbers(lotteryId);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("tickets", tickets);
+        payload.put("session", session != null ? SessionResponse.from(session) : null);
+        payload.put("designatedWinningNumbers", designatedNumbers);
+        return ResponseEntity.ok(payload);
     }
 
-    /**
-     * 查詢 SCRATCH_PLAYER 大獎指定狀態
-     *
-     * <p>前端用於輪詢或在抽獎前確認是否需要先指定大獎位置。</p>
-     */
     @GetMapping("/{lotteryId}/designation-check")
-    @Operation(summary = "查詢 SCRATCH_PLAYER 指定狀態", description = "非 SCRATCH_PLAYER 模式固定回傳 required=false。開套玩家收到大獎清單，非開套玩家收到等待訊息。")
+    @Operation(summary = "查詢指定狀態")
     public ResponseEntity<DesignationCheckResponse> getDesignationCheck(
-            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
+            @Parameter(description = "商品 ID") @PathVariable String lotteryId) {
         String userId = SecurityUtils.getCurrentUserId();
-        log.info("🔍 查詢指定狀態: lotteryId={}, userId={}", lotteryId, userId);
-        DesignationCheckResponse response = ticketService.getDesignationStatus(lotteryId, userId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ticketService.getDesignationStatus(lotteryId, userId));
     }
+
     @GetMapping("/{lotteryId}/session")
-    @Operation(summary = "取得場次資訊", description = "取得目前的開套場次狀態（唯讀）")
+    @Operation(summary = "查詢目前場次")
     public ResponseEntity<SessionResponse> getSession(
-            @Parameter(description = "抽獎活動 ID") @PathVariable String lotteryId) {
-        
+            @Parameter(description = "商品 ID") @PathVariable String lotteryId) {
+
         String userId = SecurityUtils.getCurrentUserId();
-        
-        // 🆕 使用唯讀查詢
         SessionInfo session = ticketService.getActiveSession(lotteryId, userId);
-        
         if (session == null) {
             return ResponseEntity.ok(null);
         }
-        
-        return ResponseEntity.ok(SessionResponse.from(session, userId));
+        return ResponseEntity.ok(SessionResponse.from(session));
     }
 
-    // ==================== 私有輔助方法 ====================
-
-    /**
-     * 執行批次抽獎（統一處理票券模式和隨機模式）
-     */
     private List<DrawResult> executeDraws(String lotteryId, String userId, DrawRequest request, String playMode, String category) {
-        List<DrawResult> results = new java.util.ArrayList<>();
-
+        List<DrawResult> results = new ArrayList<>();
         boolean isScratchMode = "SCRATCH_MODE".equals(playMode) || "SCRATCH_CARD_MODE".equals(playMode);
-        // 自製抽籤型：玩家必須選籤號，禁止隨機
         boolean isCustomLotteryMode = "CUSTOM_GACHA".equals(category) && "LOTTERY_MODE".equals(playMode);
 
         if (request.getTickets() != null && !request.getTickets().isEmpty()) {
             List<String> tickets = request.getTickets();
             Integer count = request.getCount();
-            
-            // 驗證：長度必須等於 count
             if (tickets.size() != count) {
-                log.warn("❌ 票券列表長度不符: count={}, actual={}", count, tickets.size());
-                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表的長度必須等於 count", false, null, null, null));
+                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                        "ticket 數量與 count 不一致", false, null, null, null));
                 return results;
             }
-            
-            // 驗證：不可包含重複
+
             long distinct = tickets.stream().distinct().count();
             if (distinct != tickets.size()) {
-                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表不可包含重複項目", false, null, null, null));
+                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                        "ticket 不可重複", false, null, null, null));
                 return results;
             }
-            
-            // 驗證：UUID 格式
+
             try {
-                for (String t : tickets) {
-                    java.util.UUID.fromString(t);
+                for (String ticketId : tickets) {
+                    UUID.fromString(ticketId);
                 }
             } catch (IllegalArgumentException ex) {
-                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
-                        "ticket 列表必須包含有效的 UUID 格式", false, null, null, null));
+                results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                        "ticket 格式錯誤，必須為 UUID", false, null, null, null));
                 return results;
             }
-            
-            // 執行批次抽獎
+
             for (String ticketId : tickets) {
-                DrawResult r = ticketService.drawByTicketId(lotteryId, userId, ticketId);
-
-                // 防呆：指定票券抽獎時，回傳票券必須與請求完全一致，避免票券對應錯亂
-                if (r.success() && (r.ticketId() == null || !ticketId.equals(r.ticketId()))) {
-                    log.error("❌ 指定票券回傳不一致: lotteryId={}, requestedTicketId={}, returnedTicketId={}",
-                            lotteryId, ticketId, r.ticketId());
-                    results.add(new DrawResult(
-                            false,
-                            ticketId,
-                            0,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            false,
-                            false,
-                            0L,
-                            "系統偵測到票券對應不一致，請重新整理後重試",
-                            false,
-                            null,
-                            null,
-                            null
-                    ));
-                    continue;
-                }
-
-                results.add(r);
+                DrawResult result = ticketService.drawByTicketId(lotteryId, userId, ticketId);
+                results.add(result);
             }
-        } else if (request.getTicketNumber() != null) {
-            // 刮刮樂格號模式：直接用 ticketNumber 抽（只支援單張）
+            return results;
+        }
+
+        if (request.getTicketNumber() != null) {
             if (request.getCount() != null && request.getCount() > 1) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                        "ticketNumber 模式每次只能抽 1 張", false, null, null, null));
+                        "ticketNumber 模式一次只能抽 1 次", false, null, null, null));
                 return results;
             }
-            DrawResult r = ticketService.draw(lotteryId, userId, request.getTicketNumber(), 1);
-            results.add(r);
-        } else if (isScratchMode) {
-            // ⚠️ 刮刮樂模式禁止隨機抽：玩家必須指定要刮哪張（傳 ticket UUID 或 ticketNumber）
-            log.warn("❌ 刮刮樂模式未指定票券位置，拒絕隨機抽: lotteryId={}", lotteryId);
-            results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                    "刮刮樂模式必須指定票券（傳 ticket UUID 或 ticketNumber）", false, null, null, null));
-        } else if (isCustomLotteryMode) {
-            // ⚠️ 自製抽籤型禁止隨機抽：玩家必須選籤號（傳 ticket UUID 或 ticketNumber）
-            log.warn("❌ 自製抽籤型未指定籤號，拒絕隨機抽: lotteryId={}", lotteryId);
-            results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                    "自製抽籤型必須指定籤號（傳 ticket UUID 或 ticketNumber）", false, null, null, null));
-        } else {
-            // 隨機抽獎（GACHA 扭蛋 / OFFICIAL_ICHIBAN 一番賞 / TRADING_CARD 卡牌）
-            for (int i = 0; i < request.getCount(); i++) {
-                DrawResult r = ticketService.draw(lotteryId, userId, null, 1);
-                results.add(r);
-            }
+            results.add(ticketService.draw(lotteryId, userId, request.getTicketNumber(), 1));
+            return results;
         }
-        
-        log.info("✅ 抽獎完成，共 {} 張，成功 {} 張", 
-                results.size(), results.stream().filter(DrawResult::success).count());
+
+        if (isScratchMode) {
+            results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                    "刮刮樂模式必須指定 ticket UUID 或 ticketNumber", false, null, null, null));
+            return results;
+        }
+
+        if (isCustomLotteryMode) {
+            results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
+                    "自訂籤筒模式必須指定 ticket UUID 或 ticketNumber", false, null, null, null));
+            return results;
+        }
+
+        for (int i = 0; i < request.getCount(); i++) {
+            results.add(ticketService.draw(lotteryId, userId, null, 1));
+        }
         return results;
     }
 
-    /**
-     * 檢查是否需要玩家指定大獎
-     * 
-     * 只有 gameMode=SCRATCH_PLAYER 的開套者需要指定。
-     * SCRATCH_STORE 由店家在建立商品時已指定，不攔截。
-     */
-    private DesignationRequiredResponse checkDesignationRequired(String lotteryId, SessionInfo session) {
-        // 已指定過，不需要
-        if (session.playerDesignatedNumbers() != null && !session.playerDesignatedNumbers().trim().isEmpty()) {
-            return null;
+    private DesignationRequiredResponse toDesignationRequiredResponse(DesignationCheckResponse check) {
+        List<GrandPrizeInfo> grandPrizes = check.getGrandPrizes() == null
+                ? List.of()
+                : check.getGrandPrizes().stream()
+                        .map(prize -> new GrandPrizeInfo(
+                                prize.getPrizeId(),
+                                prize.getPrizeName(),
+                                prize.getPrizeLevel(),
+                                1,
+                                prize.getPrizeImageUrl()))
+                        .toList();
+
+        int requiredCount = check.getRequiredDesignationCount() != null
+                ? check.getRequiredDesignationCount()
+                : grandPrizes.size();
+
+        if (!grandPrizes.isEmpty() && requiredCount > grandPrizes.size()) {
+            List<GrandPrizeInfo> expanded = new ArrayList<>();
+            for (GrandPrizeInfo prize : grandPrizes) {
+                expanded.add(prize);
+            }
+            while (expanded.size() < requiredCount) {
+                GrandPrizeInfo template = grandPrizes.get(expanded.size() % grandPrizes.size());
+                expanded.add(new GrandPrizeInfo(
+                        template.prizeId(),
+                        template.prizeName(),
+                        template.prizeLevel(),
+                        template.quantity(),
+                        template.prizeImageUrl()));
+            }
+            grandPrizes = expanded;
         }
-
-        com.group.admin.entity.Lottery lottery = ticketService.getLottery(lotteryId);
-        if (lottery == null || lottery.getGameMode() == null) {
-            return null;
-        }
-
-        // ⚠️ 只有 SCRATCH_PLAYER 才需要玩家指定大獎位置
-        if (!"SCRATCH_PLAYER".equals(lottery.getGameMode())) {
-            return null;
-        }
-
-        // 取得可用 revealedNumber（前端顯示「可選號碼格子」）
-        List<Integer> availableNumbers = ticketService.getAvailableRevealedNumbers(lotteryId);
-
-        // 取得大獎清單，告知前端要指定幾個位置、各類大獎的資訊
-        List<com.group.admin.entity.LotteryPrize> grandPrizes = ticketService.getGrandPrizes(lotteryId);
-        int requiredCount = grandPrizes.stream()
-                .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
-                .sum();
-
-        List<GrandPrizeInfo> grandPrizeInfos = grandPrizes.stream()
-                .map(p -> new GrandPrizeInfo(
-                        p.getId(),
-                        p.getName(),
-                        p.getLevel(),
-                        p.getQuantity() != null ? p.getQuantity() : 0,
-                        p.getImageUrl()
-                )).toList();
 
         return new DesignationRequiredResponse(
                 true,
-                "請先指定大獎位置（共需指定 " + requiredCount + " 個號碼）",
-                availableNumbers,
-                grandPrizeInfos
+                check.getMessage() != null ? check.getMessage() : "請先指定大獎位置",
+                check.getAvailableRevealedNumbers() != null ? check.getAvailableRevealedNumbers() : List.of(),
+                grandPrizes
         );
     }
 
-    // ==================== Request/Response DTOs ====================
-
-    /**
-     * 抽獎請求
-     */
     public static class DrawRequest {
-        private Integer count;  // 必填：抽獎次數（1-10）
-        
-        @com.fasterxml.jackson.annotation.JsonAlias({"ticket", "tickets"})
-        private List<String> tickets;  // 選填：指定票券的 UUID 列表（接受 "ticket" 或 "tickets" 兩種 key）
+        private Integer count;
 
-        private Integer ticketNumber;  // 選填：刮刮樂專用，指定格子的物理序號（1-N），與 ticket UUID 二擇一
+        @JsonAlias({"ticket", "tickets"})
+        private List<String> tickets;
 
-        public Integer getCount() { return count; }
-        public void setCount(Integer count) { this.count = count; }
+        private Integer ticketNumber;
 
-        public List<String> getTickets() { return tickets; }
-        public void setTickets(List<String> tickets) { this.tickets = tickets; }
+        public Integer getCount() {
+            return count;
+        }
 
-        public Integer getTicketNumber() { return ticketNumber; }
-        public void setTicketNumber(Integer ticketNumber) { this.ticketNumber = ticketNumber; }
+        public void setCount(Integer count) {
+            this.count = count;
+        }
+
+        public List<String> getTickets() {
+            return tickets;
+        }
+
+        public void setTickets(List<String> tickets) {
+            this.tickets = tickets;
+        }
+
+        public Integer getTicketNumber() {
+            return ticketNumber;
+        }
+
+        public void setTicketNumber(Integer ticketNumber) {
+            this.ticketNumber = ticketNumber;
+        }
     }
 
-    /**
-     * 大獎指定請求
-     */
-    public record DesignateRequest(
-        @Parameter(description = "大獎指定列表")
-        List<LotteryTicketService.PrizeDesignation> designations
-    ) {}
+    public record DesignateRequest(List<LotteryTicketService.PrizeDesignation> designations) {
+    }
 
-    /**
-     * 🆕 大獎指定回應（包含已指定的中獎號碼清單）
-     */
     public record DesignateResponse(
-        boolean success,
-        String message,
-        List<DesignatedWinningNumber> designatedWinningNumbers  // 已指定的中獎號碼
-    ) {}
+            boolean success,
+            String message,
+            List<DesignatedWinningNumber> designatedWinningNumbers) {
+    }
 
-    /**
-     * 🆕 批次抽獎回應（包含 playMode/gameMode + protectionEndTime）
-     */
     public record DrawBatchResponse(
-        String playMode,   // LOTTERY_MODE / SCRATCH_MODE
-        String gameMode,   // RANDOM / SCRATCH_STORE / SCRATCH_PLAYER
-        List<DrawResult> results,
-        String protectionEndTime  // 🆕 保護結束時間（ISO格式），前端用於顯示倒數計時；扭蛋為 null
-    ) {}
+            String playMode,
+            String gameMode,
+            List<DrawResult> results,
+            String protectionEndTime) {
+    }
 
     public record SessionResponse(
-        String sessionId,
-        boolean isOpener,
-        String openerNickname,
-        int protectionDraws,
-        String protectionEndTime,
-        int openerDrawCount,
-        boolean freeDrawEnabled,
-        String status
-    ) {
-        public static SessionResponse from(SessionInfo info, String currentUserId) {
+            String sessionId,
+            boolean isOpener,
+            String openerNickname,
+            int protectionDraws,
+            String protectionEndTime,
+            int openerDrawCount,
+            boolean freeDrawEnabled,
+            String status,
+            String designationDeadline,
+            boolean isDesignationComplete) {
+
+        public static SessionResponse from(SessionInfo info) {
             return new SessionResponse(
                     info.sessionId(),
                     info.isOpener(),
-                    null, // TODO: 查詢開套者暱稱
+                    null,
                     info.protectionDraws(),
                     info.protectionEndTime() != null ? info.protectionEndTime().toString() : null,
                     info.openerDrawCount(),
                     info.freeDrawEnabled(),
-                    info.status()
+                    info.status(),
+                    info.designationDeadline() != null ? info.designationDeadline().toString() : null,
+                    info.playerDesignatedNumbers() != null && !info.playerDesignatedNumbers().isBlank()
             );
         }
     }
 
-    /**
-     * 指定大獎要求回應
-     */
     public record DesignationRequiredResponse(
-        boolean designationRequired,
-        String message,
-        List<Integer> availableNumbers,  // 可選的 revealedNumber 列表
-        List<GrandPrizeInfo> grandPrizes  // 大獎清單（告知前端要指定幾個、哪些）
-    ) {}
+            boolean designationRequired,
+            String message,
+            List<Integer> availableNumbers,
+            List<GrandPrizeInfo> grandPrizes) {
+    }
 
-    /**
-     * 大獎資訊（供前端顯示指定 UI 用）
-     */
+    public record DesignationPendingResponse(
+            boolean awaitingDesignation,
+            boolean designationPending,
+            String message,
+            String openerDeadline) {
+    }
+
     public record GrandPrizeInfo(
-        String prizeId,
-        String prizeName,
-        String prizeLevel,
-        int quantity,         // 此獎品需要指定幾個 revealedNumber
-        String prizeImageUrl
-    ) {}
+            String prizeId,
+            String prizeName,
+            String prizeLevel,
+            int quantity,
+            String prizeImageUrl) {
+    }
 }

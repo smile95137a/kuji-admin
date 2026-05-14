@@ -198,6 +198,9 @@ public class OrderServiceImpl implements OrderService {
                             : PaymentStatusEnum.FAILED.getCode())
                         .paymentMethod(paymentMethod)
                         .paymentUrl(paymentResult.getPayUrl())
+                        .submitMethod(paymentResult.getSubmitMethod())
+                        .actionUrl(paymentResult.getActionUrl())
+                        .formFields(paymentResult.getFormFields())
                         .gatewayTradeNo(paymentResult.getGatewayTradeNo())
                         .build();
                 })
@@ -259,6 +262,9 @@ public class OrderServiceImpl implements OrderService {
                         : PaymentStatusEnum.FAILED.getCode())
                 .paymentMethod(normalizedPaymentMethod)
                 .paymentUrl(paymentResult.getPayUrl())
+                .submitMethod(paymentResult.getSubmitMethod())
+                .actionUrl(paymentResult.getActionUrl())
+                .formFields(paymentResult.getFormFields())
                 .gatewayTradeNo(paymentResult.getGatewayTradeNo())
                 .build();
     }

@@ -17,6 +17,7 @@ import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.res.category.CategoryHealthRes;
 import com.group.admin.res.category.CategoryRes;
+import com.group.admin.res.category.ThemeAliasRes;
 import com.group.admin.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -140,12 +141,15 @@ public class CategoryServiceImpl implements CategoryService {
                 : (!matched.isEmpty() ? matched.get(0).getImageUrl() : null);
 
             result.add(CategoryRes.builder()
+                    .id(theme.getId())
                     .name(theme.getName())
                     .type("theme")
                     .productCount((long) matched.size())
                     .imageUrl(imageUrl)
                     .displayOrder(theme.getDisplayOrder())
                     .hotCount(hotCount)
+                    .status(theme.getStatus())
+                    .aliases(buildThemeAliases(theme.getId()))
                     .build());
         }
 
@@ -342,10 +346,11 @@ public class CategoryServiceImpl implements CategoryService {
 
         LotteryTheme existed = lotteryThemeMapper.selectByNormalizedName(normalizedKey);
         if (existed != null) {
+            boolean needUpdate = false;
             if (!"ACTIVE".equals(existed.getStatus())) {
                 existed.setStatus("ACTIVE");
+                needUpdate = true;
             }
-            boolean needUpdate = false;
             if (isNotBlank(imageUrl) && !imageUrl.equals(existed.getImageUrl())) {
                 existed.setImageUrl(imageUrl.trim());
                 needUpdate = true;
@@ -859,24 +864,42 @@ public class CategoryServiceImpl implements CategoryService {
 
     private CategoryRes buildThemeRes(LotteryTheme theme, long productCount, long hotCount) {
         return CategoryRes.builder()
+                .id(theme.getId())
                 .name(theme.getName())
                 .type("theme")
                 .productCount(productCount)
                 .imageUrl(theme.getImageUrl())
                 .displayOrder(theme.getDisplayOrder())
                 .hotCount(hotCount)
+                .status(theme.getStatus())
+                .aliases(buildThemeAliases(theme.getId()))
                 .build();
     }
 
     private CategoryRes buildTagRes(LotteryTag tag, long productCount, long hotCount, String imageUrl) {
         return CategoryRes.builder()
+                .id(tag.getId())
                 .name(tag.getName())
                 .type("tag")
                 .productCount(productCount)
                 .imageUrl(imageUrl)
                 .displayOrder(tag.getDisplayOrder())
                 .hotCount(hotCount)
+                .status(tag.getStatus())
                 .build();
+    }
+
+    private List<ThemeAliasRes> buildThemeAliases(String themeId) {
+        if (!isNotBlank(themeId)) {
+            return List.of();
+        }
+        return lotteryThemeAliasMapper.selectByThemeId(themeId, "ACTIVE").stream()
+                .map(alias -> ThemeAliasRes.builder()
+                        .id(alias.getId())
+                        .aliasName(alias.getAliasName())
+                        .status(alias.getStatus())
+                        .build())
+                .collect(Collectors.toList());
     }
     
     /**

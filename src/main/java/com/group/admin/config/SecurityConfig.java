@@ -8,14 +8,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -31,69 +28,69 @@ public class SecurityConfig {
     private final ApiOAuth2AuthenticationFailureHandler apiOAuth2AuthenticationFailureHandler;
 
     @Bean
-    @Order(1)
-    public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/admin/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> {
                 })
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/admin/auth/**").permitAll()
-                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STORE_OWNER", "STORE_EDITOR"))
-                .addFilterBefore(adminJwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        return http.build();
-    }
-
-    @Bean
-    @Order(2)
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/api/**")
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> {
-                })
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/district/**").permitAll()
-                        .requestMatchers("/api/marquee/**").permitAll()
-                        .requestMatchers("/api/ws/**").permitAll()
-                        .requestMatchers("/api/recharge-plan/**").permitAll()
-                        .requestMatchers("/api/recharge-plans/**").permitAll()
-                        .requestMatchers("/api/recharge/payment-methods").permitAll()
-                        .requestMatchers("/api/shipping-methods/**").permitAll()
-                        .requestMatchers("/api/payment/shipping/callback", "/api/payment/shipping/callback/**")
-                        .permitAll()
-                        .requestMatchers("/api/wallet/recharge/callback", "/api/wallet/recharge/callback/**")
-                        .permitAll()
-                        .requestMatchers("/api/stores/list").permitAll()
-                        .requestMatchers("/api/stores", "/api/stores/**").permitAll()
-                        .requestMatchers("/api/lottery/list").permitAll()
-                        .requestMatchers("/api/lottery/browse/**").permitAll()
-                        .requestMatchers("/api/news/published").permitAll()
-                        .requestMatchers("/api/banners").permitAll()
-                        .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR"))
-                .addFilterBefore(apiJwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        return http.build();
-    }
-
-    @Bean
-    @Order(3)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
+                        // OAuth2 / Swagger / health
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+
+                        // Admin auth
+                        .requestMatchers("/admin/auth/**").permitAll()
+
+                        // Frontend auth
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // Public frontend APIs
+                        .requestMatchers("/district/**").permitAll()
+                        .requestMatchers("/marquee/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/recharge-plan/**").permitAll()
+                        .requestMatchers("/recharge-plans/**").permitAll()
+                        .requestMatchers("/recharge/payment-methods").permitAll()
+                        .requestMatchers("/shipping-methods/**").permitAll()
+                        .requestMatchers("/payment/shipping/callback", "/payment/shipping/callback/**").permitAll()
+                        .requestMatchers("/wallet/recharge/callback", "/wallet/recharge/callback/**").permitAll()
+                        .requestMatchers("/payment/shipping/result", "/payment/shipping/result/**").permitAll()
+                        .requestMatchers("/wallet/recharge/result", "/wallet/recharge/result/**").permitAll()
+                        .requestMatchers("/stores/list").permitAll()
+                        .requestMatchers("/stores", "/stores/**").permitAll()
+                        .requestMatchers("/lottery/list").permitAll()
+                        .requestMatchers("/lottery/browse/**").permitAll()
+                        .requestMatchers("/news/published").permitAll()
+                        .requestMatchers("/banners").permitAll()
+
+                        // Protected admin APIs
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STORE_OWNER", "STORE_EDITOR")
+
+                        // Protected frontend APIs
+                        .requestMatchers(
+                                "/user/**",
+                                "/order/**",
+                                "/orders/**",
+                                "/draw/**",
+                                "/random-draw/**",
+                                "/lottery-lock/**",
+                                "/prize-box/**",
+                                "/recharge/**",
+                                "/wallet/**",
+                                "/consumption-record/**",
+                                "/referral/**",
+                                "/user-address/**"
+                        ).hasAnyRole("USER", "ADMIN", "STORE_OWNER", "STORE_EDITOR")
+
+                        // Everything else can stay open unless controller/method security says otherwise.
                         .anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(apiOAuth2AuthenticationSuccessHandler)
-                        .failureHandler(apiOAuth2AuthenticationFailureHandler));
+                        .failureHandler(apiOAuth2AuthenticationFailureHandler))
+                .addFilterBefore(adminJwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiJwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -22,6 +22,7 @@ import com.group.admin.req.RefreshTokenReq;
 import com.group.admin.req.auth.ForgotPasswordReq;
 import com.group.admin.req.auth.ResendVerificationReq;
 import com.group.admin.req.auth.ResetPasswordReq;
+import com.group.admin.req.auth.VerifyEmailCodeReq;
 import com.group.admin.res.AuthRes;
 import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.service.UserService;
@@ -222,6 +223,16 @@ public class ApiAuthController {
     public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {
         boolean ok = userService.verifyEmail(token);
         if (!ok) throw new IllegalArgumentException("驗證連結已失效或不存在");
+        return ResponseEntity.ok(Map.of("message", "Email 驗證成功"));
+    }
+
+    @PostMapping("/verify-email/code")
+    @Operation(summary = "Email 驗證碼驗證", description = "輸入 Email 與 6 位數驗證碼完成 Email 驗證")
+    public ResponseEntity<Map<String, String>> verifyEmailCode(@Valid @RequestBody VerifyEmailCodeReq req) {
+        boolean ok = userService.verifyEmailCode(req.getEmail(), req.getCode());
+        if (!ok) {
+            throw new IllegalArgumentException("驗證碼錯誤、已失效，或 Email 不存在");
+        }
         return ResponseEntity.ok(Map.of("message", "Email 驗證成功"));
     }
 

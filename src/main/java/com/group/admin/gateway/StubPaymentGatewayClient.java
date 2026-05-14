@@ -18,7 +18,7 @@ public class StubPaymentGatewayClient implements PaymentGatewayClient {
     public GatewayInitResult charge(RechargeOrder order, String paymentMethod) {
         log.info("🔧 [Stub] charge called for orderId={}", order.getId());
         String payUrl = "/api/wallet/recharge/callback/stub?orderId=" + order.getId() + "&success=true";
-        return new GatewayInitResult(payUrl, "STUB-" + order.getId(), "stub");
+        return new GatewayInitResult(payUrl, "STUB-" + order.getId(), "stub", "GET", payUrl, null);
     }
 
     @Override

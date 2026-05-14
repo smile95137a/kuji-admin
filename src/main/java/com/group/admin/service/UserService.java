@@ -80,6 +80,8 @@ public interface UserService {
      */
     boolean verifyEmail(String token);
 
+    boolean verifyEmailCode(String email, String code);
+
     /**
      * 重新發送 Email 驗證郵件
      */

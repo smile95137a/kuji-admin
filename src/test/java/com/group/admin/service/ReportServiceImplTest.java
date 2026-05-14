@@ -193,4 +193,53 @@ class ReportServiceImplTest {
                 .contains("lt.drawn_at < ?")
                 .doesNotContain("BETWEEN ? AND ?");
     }
+
+    @Test
+    @DisplayName("getRechargeReport 應使用 wallet_transaction 與半開區間")
+    void getRechargeReport_ShouldUseWalletTransactionAndHalfOpenInterval() {
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(), any()))
+                .thenReturn(0);
+        when(jdbcTemplate.queryForMap(anyString(), any(Object[].class)))
+                .thenReturn(Map.of(
+                        "total_amount", BigDecimal.ZERO,
+                        "total_count", 0,
+                        "avg_amount", BigDecimal.ZERO));
+        when(jdbcTemplate.query(anyString(), any(Object[].class), any(org.springframework.jdbc.core.RowMapper.class)))
+                .thenReturn(List.of());
+
+        reportService.getRechargeReport(null);
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate, atLeast(2)).query(sqlCaptor.capture(), any(Object[].class), any(org.springframework.jdbc.core.RowMapper.class));
+
+        assertThat(sqlCaptor.getAllValues())
+                .allSatisfy(sql -> assertThat(sql)
+                        .contains("FROM wallet_transaction")
+                        .contains("transaction_type = 'RECHARGE'")
+                        .contains("created_at >= ?")
+                        .contains("created_at < ?")
+                        .doesNotContain("BETWEEN ? AND ?"));
+    }
+
+    @Test
+    @DisplayName("會員成長支付型態分布應統計 recharge_order SUCCESS 狀態")
+    void getMemberGrowthReport_ShouldUseRechargeOrderSuccessStatus() {
+        String source = java.util.Arrays.stream(ReportServiceImpl.class.getDeclaredMethods())
+                .filter(method -> "getMemberGrowthReport".equals(method.getName()))
+                .findFirst()
+                .map(method -> {
+                    try {
+                        return java.nio.file.Files.readString(java.nio.file.Path.of(
+                                "src/main/java/com/group/admin/service/impl/ReportServiceImpl.java"));
+                    } catch (java.io.IOException e) {
+                        throw new IllegalStateException(e);
+                    }
+                })
+                .orElse("");
+
+        assertThat(source)
+                .contains("FROM recharge_order")
+                .contains("WHERE status = 'SUCCESS'")
+                .doesNotContain("WHERE status = 'PAID'");
+    }
 }

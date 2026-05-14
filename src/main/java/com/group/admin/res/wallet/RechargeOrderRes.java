@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 @Builder
@@ -15,6 +16,9 @@ import java.time.LocalDateTime;
 public class RechargeOrderRes {
     private String rechargeOrderId;
     private String payUrl;
+    private String submitMethod;
+    private String actionUrl;
+    private Map<String, String> formFields;
     private Long goldAmount;
     private Long bonusAmount;
     private BigDecimal priceTwd;

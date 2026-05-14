@@ -117,6 +117,22 @@ class ApiJwtAuthenticationFilterTest {
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    @Test
+    @DisplayName("GoMyPay callback 即使帶錯誤 Authorization 也應略過 JWT 驗證")
+    void doFilter_ShouldBypassJwtForPaymentCallback() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/wallet/recharge/callback");
+        request.setRequestURI("/api/wallet/recharge/callback");
+        request.setServletPath("/wallet/recharge/callback");
+        request.addHeader("Authorization", "Bearer broken-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(jwtUtil, never()).validateToken("broken-token");
+    }
+
     private MockHttpServletRequest buildBearerRequest(String servletPath) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", servletPath);
         request.setRequestURI("/api" + servletPath);
@@ -139,6 +155,8 @@ class ApiJwtAuthenticationFilterTest {
         User user = new User();
         user.setId("user-001");
         user.setEmail("user@kuji.com");
+        user.setStatus("ACTIVE");
+        user.setEmailVerified((byte) 1);
         user.setPasswordResetToken(passwordResetToken);
         return user;
     }

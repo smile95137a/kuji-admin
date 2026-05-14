@@ -22,13 +22,15 @@ public class GoMyPayPaymentGatewayClient implements PaymentGatewayClient {
     @Override
     public GatewayInitResult charge(RechargeOrder order, String paymentMethod) {
         String normalizedMethod = GoMyPaySupport.normalizePaymentMethod(paymentMethod);
+        boolean bankTransfer = GoMyPaySupport.isBankTransfer(normalizedMethod);
         long amount = GoMyPaySupport.normalizeAmount(order.getPriceTwd());
         String returnUrl = GoMyPaySupport.safe(properties.getRechargeReturnUrl());
         String callbackUrl = GoMyPaySupport.safe(properties.getRechargeNotifyUrl());
         GoMyPaySupport.validatePaymentRequestConfig(properties, returnUrl, callbackUrl);
+        GoMyPaySupport.validateMerchantOrderNo(order.getId());
 
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("Send_Type", GoMyPaySupport.isBankTransfer(normalizedMethod) ? "4" : "0");
+        params.put("Send_Type", bankTransfer ? "4" : "0");
         params.put("Pay_Mode_No", "2");
         params.put("CustomerId", GoMyPaySupport.safe(properties.getShopId()));
         params.put("Order_No", order.getId());
@@ -37,28 +39,46 @@ public class GoMyPayPaymentGatewayClient implements PaymentGatewayClient {
         params.put("Buyer_Telm", GoMyPaySupport.sanitizePhone(order.getBuyerPhone(), "0900000000"));
         params.put("Buyer_Mail", GoMyPaySupport.sanitizeEmail(order.getBuyerEmail(), "noreply@kuji.local"));
         params.put("Buyer_Memo", GoMyPaySupport.sanitizeBuyerMemo("KUJI 儲值訂單 " + order.getId(), "KUJI 儲值訂單"));
-        if (!GoMyPaySupport.isBankTransfer(normalizedMethod)) {
+
+        if (bankTransfer) {
+            params.put("e_return", "1");
+        } else {
             params.put("TransCode", "00");
             params.put("TransMode", "1");
             params.put("Installment", "0");
         }
         params.put("Return_url", returnUrl);
         params.put("Callback_Url", callbackUrl);
-        params.put("Str_Check", GoMyPaySupport.computeRequestChecksum(order.getId(), amount, properties));
 
+        params.put("Str_Check", GoMyPaySupport.computeRequestChecksum(order.getId(), amount, properties));
         String payUrl = GoMyPaySupport.buildPayUrl(properties.getApiUrl(), params);
-        log.info("[GoMyPay][Recharge] 建立付款導頁 rechargeOrderId={}, paymentMethod={}, amount={}, returnUrl={}, callbackUrl={}",
-                order.getId(), normalizedMethod, amount, returnUrl, callbackUrl);
-        return new GatewayInitResult(payUrl, order.getId(), "gomypay");
+
+        log.info("[GoMyPay][Recharge] 初始化付款參數 rechargeOrderId={}, paymentMethod={}, amount={}, customerIdLength={}, hasReturnUrl={}, hasCallbackUrl={}",
+                order.getId(),
+                normalizedMethod,
+                amount,
+                GoMyPaySupport.safe(properties.getShopId()).length(),
+                !returnUrl.isBlank(),
+                !callbackUrl.isBlank());
+
+        return new GatewayInitResult(
+                payUrl,
+                order.getId(),
+                "gomypay",
+                "POST",
+                properties.getApiUrl(),
+                params
+        );
     }
 
     @Override
     public GatewayCallbackResult verifyCallback(Map<String, String> params) {
         GoMyPaySupport.verifyCallback(params, properties);
-        String merchantOrderId = GoMyPaySupport.firstNonBlank(params, "e_orderno", "Order_No");
+        String merchantOrderId = GoMyPaySupport.firstNonBlank(params, "e_orderno", "Order_No", "orderNo", "MerchantOrderNo");
         boolean success = GoMyPaySupport.isSuccess(GoMyPaySupport.firstNonBlank(params, "result"));
-        BigDecimal amount = new BigDecimal(GoMyPaySupport.firstNonBlank(params, "PayAmount", "e_money", "Amount", "0"));
-        String gatewayOrderId = GoMyPaySupport.firstNonBlank(params, "OrderID");
+        String amountRaw = GoMyPaySupport.firstNonBlank(params, "PayAmount", "e_money", "Amount");
+        BigDecimal amount = amountRaw != null ? new BigDecimal(amountRaw) : BigDecimal.ZERO;
+        String gatewayOrderId = GoMyPaySupport.firstNonBlank(params, "OrderID", "TradeNo", "gatewayTradeNo", "Trade_No");
         return new GatewayCallbackResult(
                 merchantOrderId,
                 success,
@@ -69,4 +89,3 @@ public class GoMyPayPaymentGatewayClient implements PaymentGatewayClient {
         );
     }
 }
-

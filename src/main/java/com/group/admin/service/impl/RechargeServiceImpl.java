@@ -75,8 +75,8 @@ public class RechargeServiceImpl implements RechargeService {
                 .bonusAmount(plan.getBonusCoins())
                 .priceTwd(BigDecimal.valueOf(plan.getAmount()))
                 .status(RechargeOrderStatus.PENDING)
-            .buyerName(user.getNickname() != null && !user.getNickname().isBlank() ? user.getNickname() : "KUJI會員")
-            .buyerEmail(user.getEmail())
+                .buyerName(user.getNickname() != null && !user.getNickname().isBlank() ? user.getNickname() : "KUJI會員")
+                .buyerEmail(user.getEmail())
                 .buyerPhone(user.getPhoneNumber())
                 .expiredAt(now.plusMinutes(rechargeOrderTtlMinutes))
                 .createdAt(now)
@@ -89,7 +89,7 @@ public class RechargeServiceImpl implements RechargeService {
         order.setGatewayRawResp(initResult.payUrl());
         rechargeOrderMapper.insert(order);
 
-        return toRechargeOrderRes(order, initResult.payUrl());
+        return toRechargeOrderRes(order, initResult);
     }
 
     @Override
@@ -369,6 +369,21 @@ public class RechargeServiceImpl implements RechargeService {
             throw new BusinessException("儲值方案已刪除");
         }
         return plan;
+    }
+
+    private com.group.admin.res.wallet.RechargeOrderRes toRechargeOrderRes(RechargeOrder order, GatewayInitResult initResult) {
+        return com.group.admin.res.wallet.RechargeOrderRes.builder()
+                .rechargeOrderId(order.getId())
+                .payUrl(initResult.payUrl())
+                .submitMethod(initResult.submitMethod())
+                .actionUrl(initResult.actionUrl())
+                .formFields(initResult.formFields())
+                .goldAmount(order.getGoldAmount())
+                .bonusAmount(order.getBonusAmount())
+                .priceTwd(order.getPriceTwd())
+                .status(order.getStatus() != null ? order.getStatus().name() : null)
+                .expiredAt(order.getExpiredAt())
+                .build();
     }
 
     private com.group.admin.res.wallet.RechargeOrderRes toRechargeOrderRes(RechargeOrder order, String payUrl) {

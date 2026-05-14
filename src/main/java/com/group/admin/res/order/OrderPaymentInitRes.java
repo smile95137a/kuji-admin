@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,5 +19,8 @@ public class OrderPaymentInitRes {
     private String paymentStatus;
     private String paymentMethod;
     private String paymentUrl;
+    private String submitMethod;
+    private String actionUrl;
+    private Map<String, String> formFields;
     private String gatewayTradeNo;
 }

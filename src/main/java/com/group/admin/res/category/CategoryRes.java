@@ -1,5 +1,7 @@
 package com.group.admin.res.category;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +18,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryRes {
+
+    /**
+     * 字典資料 ID。由 lottery_theme / lottery_tag 等字典表提供；歷史資料聚合時可能為空。
+     */
+    private String id;
     
     /**
      * 類別名稱（category 或 theme）
@@ -46,4 +53,14 @@ public class CategoryRes {
      * 熱門度（該類別所有商品的總熱度）
      */
     private Long hotCount;
+
+    /**
+     * 狀態（ACTIVE / INACTIVE）。僅字典資料會回傳。
+     */
+    private String status;
+
+    /**
+     * 主題同義詞列表。僅 type=theme 時使用。
+     */
+    private List<ThemeAliasRes> aliases;
 }

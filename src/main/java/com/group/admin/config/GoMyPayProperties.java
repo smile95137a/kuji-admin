@@ -21,6 +21,8 @@ public class GoMyPayProperties {
     private String shopId;
 
     /** Hash Key（加密用） */
+    private String transactionPassword;
+
     private String hashKey;
 
     /** Hash IV（加密用） */

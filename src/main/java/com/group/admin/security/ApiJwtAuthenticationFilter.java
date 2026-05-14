@@ -40,6 +40,10 @@ import java.util.List;
 public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String FORCE_CHANGE_PASSWORD_MARKER = "FORCE_CHANGE_PASSWORD";
+    private static final List<String> PUBLIC_PAYMENT_CALLBACK_PATHS = List.of(
+            "/payment/shipping/callback",
+            "/wallet/recharge/callback"
+    );
 
     private final JwtUtil jwtUtil;
     private final UserMapper userMapper;
@@ -50,13 +54,20 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getServletPath();
+        return PUBLIC_PAYMENT_CALLBACK_PATHS.stream()
+                .anyMatch(publicPath -> path.equals(publicPath) || path.startsWith(publicPath + "/"));
+    }
+
+    @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
-log.info("🔥 [ApiJwtFilter] RUN: requestURI={}, servletPath={}, authHeader={}",
-        request.getRequestURI(),
-        request.getServletPath(),
-        request.getHeader("Authorization") != null ? "HAS_AUTH" : "NO_AUTH");
+        log.debug("🔥 [ApiJwtFilter] RUN: requestURI={}, servletPath={}, authHeader={}",
+                request.getRequestURI(),
+                request.getServletPath(),
+                request.getHeader("Authorization") != null ? "HAS_AUTH" : "NO_AUTH");
         String path = request.getServletPath();
 
         if (path.startsWith("/auth/") || path.startsWith("/admin/auth/")) {

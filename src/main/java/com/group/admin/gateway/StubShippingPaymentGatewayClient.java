@@ -28,6 +28,8 @@ public class StubShippingPaymentGatewayClient implements ShippingPaymentGatewayC
         return ShippingPaymentResult.builder()
                 .success(true)
                 .payUrl(payUrl)
+                .submitMethod("GET")
+                .actionUrl(payUrl)
                 .gatewayTradeNo(tradeNo)
                 .build();
     }
