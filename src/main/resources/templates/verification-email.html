@@ -1,138 +1,472 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>驗證您的帳號</title>
-    <style>
-        body {
-            font-family: 'Microsoft JhengHei', 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .email-container {
-            max-width: 600px;
-            margin: 40px auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
-            padding: 30px 20px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        .content {
-            padding: 40px 30px;
-            color: #333333;
-            line-height: 1.6;
-        }
-        .greeting {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #333333;
-        }
-        .message {
-            font-size: 14px;
-            color: #666666;
-            margin-bottom: 20px;
-        }
-        .code-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 8px;
-            padding: 30px;
-            text-align: center;
-            margin: 30px 0;
-        }
-        .verification-code {
-            font-size: 36px;
-            font-weight: 700;
-            color: #ffffff;
-            letter-spacing: 8px;
-            font-family: 'Courier New', monospace;
-        }
-        .code-label {
-            color: #ffffff;
-            font-size: 12px;
-            margin-top: 10px;
-            opacity: 0.9;
-        }
-        .warning {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 13px;
-            color: #856404;
-        }
-        .footer {
-            background-color: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #6c757d;
-            border-top: 1px solid #dee2e6;
-        }
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>驗證您的 STARDO 帳號</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fff8ef;
+      font-family: 'Microsoft JhengHei', 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
+      color: #1f2937;
+    }
+
+    .email-wrapper {
+      width: 100%;
+      padding: 46px 16px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255, 149, 0, 0.18), transparent 28%),
+        radial-gradient(circle at 100% 12%, rgba(255, 232, 204, 0.95), transparent 32%),
+        radial-gradient(circle at 8% 86%, rgba(255, 122, 0, 0.08), transparent 28%),
+        radial-gradient(circle at 94% 90%, rgba(229, 111, 0, 0.08), transparent 30%),
+        linear-gradient(135deg, #fffaf3 0%, #ffffff 48%, #fff4e5 100%);
+    }
+
+    .email-container {
+      position: relative;
+      max-width: 660px;
+      margin: 0 auto;
+      background:
+        radial-gradient(circle at top left, rgba(255, 149, 0, 0.08), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(255, 122, 0, 0.06), transparent 32%),
+        rgba(255, 255, 255, 0.96);
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(31, 41, 55, 0.13);
+      border: 1px solid rgba(255, 149, 0, 0.18);
+    }
+
+    .corner-top {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 118px;
+      height: 118px;
+      border-top: 8px solid #ff9500;
+      border-left: 8px solid #ff9500;
+      z-index: 0;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .brand-area,
+    .content,
+    .footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-area {
+      padding: 42px 42px 8px;
+      text-align: right;
+    }
+
+    .brand-mark {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background-color: rgba(255, 149, 0, 0.1);
+      border: 1px solid rgba(255, 149, 0, 0.28);
+      color: #e56f00;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 3px;
+    }
+
+    .content {
+      position: relative;
+      padding: 34px 58px 72px;
+      text-align: center;
+    }
+
+    .content-inner {
+      position: relative;
+      z-index: 2;
+    }
+
+    .content-corner {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      width: 118px;
+      height: 118px;
+      border-right: 8px solid #ff9500;
+      border-bottom: 8px solid #ff9500;
+      z-index: 1;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #ff9500;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 38px;
+      line-height: 1.25;
+      font-weight: 900;
+      color: #1f2937;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      font-size: 20px;
+      line-height: 1.5;
+      font-weight: 700;
+      color: #ff9500;
+      letter-spacing: 1px;
+    }
+
+    .greeting {
+      margin-top: 38px;
+      font-size: 18px;
+      line-height: 1.7;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .message {
+      max-width: 440px;
+      margin: 14px auto 0;
+      font-size: 14px;
+      line-height: 1.9;
+      color: #6b7280;
+    }
+
+    .code-panel {
+      max-width: 410px;
+      margin: 34px auto 0;
+      padding: 1px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #ff9500, #ff7a00, #e56f00);
+      box-shadow: 0 18px 42px rgba(255, 149, 0, 0.18);
+    }
+
+    .code-box {
+      padding: 30px 20px 28px;
+      border-radius: 21px;
+      background:
+        radial-gradient(circle at top, rgba(255, 149, 0, 0.08), transparent 42%),
+        #ffffff;
+    }
+
+    .code-label {
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #e56f00;
+      letter-spacing: 2px;
+    }
+
+    .verification-code {
+      display: inline-block;
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 900;
+      color: #1f2937;
+      letter-spacing: 11px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .code-line {
+      width: 54px;
+      height: 3px;
+      margin: 18px auto 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ff9500, #e56f00);
+    }
+
+    .code-hint {
+      font-size: 12px;
+      line-height: 1.7;
+      color: #6b7280;
+    }
+
+    .notice {
+      margin: 38px auto 0;
+      max-width: 540px;
+    }
+
+    .notice-title {
+      margin-bottom: 18px;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 900;
+      color: #1f2937;
+      letter-spacing: 1px;
+    }
+
+    .notice-cards {
+      width: 100%;
+      text-align: center;
+      font-size: 0;
+    }
+
+    .notice-card {
+      display: inline-block;
+      vertical-align: top;
+      width: 31%;
+      min-height: 156px;
+      margin: 0 1.1%;
+      box-sizing: border-box;
+      padding: 18px 14px 16px;
+      border-radius: 16px;
+      background-color: #fffaf4;
+      border: 1px solid #ffe1bf;
+      box-shadow: 0 8px 20px rgba(255, 149, 0, 0.05);
+      text-align: center;
+    }
+
+    .notice-card-icon {
+      display: table;
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 14px;
+      border-radius: 14px;
+      background-color: #fff0dc;
+      color: #ff9500;
+      font-size: 18px;
+      font-weight: 900;
+      overflow: hidden;
+    }
+
+    .notice-card-icon span {
+      display: table-cell;
+      width: 42px;
+      height: 42px;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+
+    .notice-card-title {
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 900;
+      color: #e56f00;
+    }
+
+    .notice-card-desc {
+      font-size: 12px;
+      line-height: 1.8;
+      color: #8b5a2b;
+      text-align: center;
+    }
+
+    .signature {
+      margin-top: 40px;
+      font-size: 13px;
+      line-height: 1.9;
+      color: #6b7280;
+    }
+
+    .signature strong {
+      color: #1f2937;
+      letter-spacing: 1px;
+    }
+
+    .footer {
+      padding: 26px 24px 32px;
+      text-align: center;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-top: 1px solid rgba(255, 149, 0, 0.12);
+    }
+
+    .footer-brand {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 900;
+      color: #374151;
+      letter-spacing: 5px;
+    }
+
+    .footer-copy {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #6b7280;
+    }
+
+    .footer-links {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .footer a {
+      color: #ff9500;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    @media screen and (max-width: 640px) {
+      .notice-card {
+        display: block;
+        width: 100%;
+        min-height: auto;
+        margin: 0 0 12px;
+      }
+    }
+
+    @media screen and (max-width: 480px) {
+      .email-wrapper {
+        padding: 26px 12px;
+      }
+
+      .email-container {
+        border-radius: 20px;
+      }
+
+      .corner-top {
+        top: 18px;
+        left: 18px;
+        width: 72px;
+        height: 72px;
+        border-top-width: 6px;
+        border-left-width: 6px;
+      }
+
+      .brand-area {
+        padding: 34px 28px 0;
+      }
+
+      .content {
+        padding: 30px 24px 56px;
+      }
+
+      .content-corner {
+        right: 18px;
+        bottom: 18px;
+        width: 72px;
+        height: 72px;
+        border-right-width: 6px;
+        border-bottom-width: 6px;
+      }
+
+      .title {
+        font-size: 30px;
+      }
+
+      .subtitle {
+        font-size: 18px;
+      }
+
+      .greeting {
+        margin-top: 30px;
+        font-size: 16px;
+      }
+
+      .verification-code {
+        font-size: 35px;
+        letter-spacing: 7px;
+      }
+    }
+  </style>
 </head>
+
 <body>
+  <div class="email-wrapper">
     <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🎉 歡迎加入 KUJI</h1>
-        </div>
-        
-        <!-- Content -->
-        <div class="content">
-            <div class="greeting">
-                您好，<span th:text="${nickname}">用戶</span>！
-            </div>
-            
-            <div class="message">
-                感謝您註冊 KUJI 抽抽樂！請使用以下驗證碼完成帳號驗證：
-            </div>
-            
-            <!-- Verification Code -->
+
+      <div class="corner-top"></div>
+
+      <!-- 品牌 -->
+      <div class="brand-area">
+        <div class="brand-mark">STARDO</div>
+      </div>
+
+      <!-- 內容 -->
+      <div class="content">
+        <div class="content-corner"></div>
+
+        <div class="content-inner">
+          <div class="eyebrow">帳號驗證</div>
+
+          <h1 class="title">歡迎加入 STARDO</h1>
+          <div class="subtitle">完成驗證，開啟您的會員服務</div>
+
+          <div class="greeting">
+            您好，<span th:text="${nickname}">用戶</span>！
+          </div>
+
+          <p class="message">
+            感謝您註冊 STARDO，請使用下方驗證碼完成帳號驗證，
+            驗證成功後即可開始使用會員功能。
+          </p>
+
+          <!-- 驗證碼 -->
+          <div class="code-panel">
             <div class="code-box">
-                <div class="verification-code" th:text="${verificationCode}">123456</div>
-                <div class="code-label">驗證碼</div>
+              <div class="code-label">您的驗證碼</div>
+              <div class="verification-code" th:text="${verificationCode}">123456</div>
+              <div class="code-line"></div>
+              <div class="code-hint">請於驗證頁面輸入此 6 位數字</div>
             </div>
-            
-            <!-- Warning -->
-            <div class="warning">
-                ⚠️ <strong>重要提醒：</strong><br>
-                • 此驗證碼將在 <strong>15 分鐘</strong>後失效<br>
-                • 請勿將驗證碼分享給任何人<br>
-                • 如果您沒有註冊帳號，請忽略此郵件
+          </div>
+
+          <!-- 安全提醒 -->
+          <div class="notice">
+            <div class="notice-title">安全提醒</div>
+
+            <div class="notice-cards">
+              <div class="notice-card">
+                <div class="notice-card-icon"><span>1</span></div>
+                <div class="notice-card-title">15 分鐘內完成</div>
+                <div class="notice-card-desc">
+                  驗證碼逾時將失效。
+                </div>
+              </div>
+
+              <div class="notice-card">
+                <div class="notice-card-icon"><span>2</span></div>
+                <div class="notice-card-title">驗證碼請保密</div>
+                <div class="notice-card-desc">
+                  請勿提供給任何人。
+                </div>
+              </div>
+
+              <div class="notice-card">
+                <div class="notice-card-icon"><span>3</span></div>
+                <div class="notice-card-title">若非本人操作</div>
+                <div class="notice-card-desc">
+                  請直接忽略此郵件。
+                </div>
+              </div>
             </div>
-            
-            <div class="message" style="margin-top: 30px; font-size: 13px; color: #999;">
-                此郵件由系統自動發送，請勿直接回覆。
-            </div>
+          </div>
+
+          <div class="signature">
+            此郵件由系統自動發送，請勿直接回覆。<br />
+            祝您使用愉快，<strong>STARDO 團隊</strong>
+          </div>
         </div>
-        
-        <!-- Footer -->
-        <div class="footer">
-            <p>© 2026 KUJI 抽抽樂. All rights reserved.</p>
-            <p>
-                <a href="#">隱私政策</a> | 
-                <a href="#">服務條款</a> | 
-                <a href="#">聯絡我們</a>
-            </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p class="footer-brand">STARDO</p>
+        <p class="footer-copy">© 2026 STARDO 版權所有</p>
+        <div class="footer-links">
+          <a href="#">隱私政策</a>
+          &nbsp;｜&nbsp;
+          <a href="#">服務條款</a>
+          &nbsp;｜&nbsp;
+          <a href="#">聯絡我們</a>
         </div>
+      </div>
+
     </div>
+  </div>
 </body>
 </html>
