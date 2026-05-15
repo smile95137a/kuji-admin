@@ -1,36 +1,40 @@
 package com.group.admin.controller.api;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
 import com.group.admin.enums.GameModeEnum;
-import com.group.admin.exception.BusinessException;
 import com.group.admin.req.draw.DrawRequest;
 import com.group.admin.res.draw.DrawBatchRes;
 import com.group.admin.res.draw.DrawItemRes;
 import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.service.LotteryTicketService;
-import com.group.admin.service.LotteryTicketService.DrawResult;
-import com.group.admin.service.LotteryTicketService.SessionInfo;
 import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
+import com.group.admin.service.LotteryTicketService.SessionInfo;
 import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.draw.DrawStrategy;
 import com.group.admin.service.draw.DrawStrategyFactory;
 import com.group.admin.service.impl.LotteryTicketServiceImpl;
 import com.group.admin.util.SecurityUtils;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 統一抽獎 API（前台）

@@ -16,7 +16,7 @@
     <result column="facebook_url" jdbcType="VARCHAR" property="facebookUrl" />
     <result column="instagram_url" jdbcType="VARCHAR" property="instagramUrl" />
     <result column="line_id" jdbcType="VARCHAR" property="lineId" />
-    <result column="business_hours" jdbcType="VARCHAR" property="businessHours" />
+    <result column="business_hours" jdbcType="LONGVARCHAR" property="businessHours" />
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="activated_at" jdbcType="TIMESTAMP" property="activatedAt" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
@@ -156,7 +156,7 @@
       #{referralCodeId,jdbcType=VARCHAR}, #{storeName,jdbcType=VARCHAR}, #{shortDescription,jdbcType=VARCHAR},
       #{logoUrl,jdbcType=VARCHAR}, #{coverImageUrl,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR},
       #{phone,jdbcType=VARCHAR}, #{address,jdbcType=VARCHAR}, #{facebookUrl,jdbcType=VARCHAR},
-      #{instagramUrl,jdbcType=VARCHAR}, #{lineId,jdbcType=VARCHAR}, #{businessHours,jdbcType=VARCHAR},
+      #{instagramUrl,jdbcType=VARCHAR}, #{lineId,jdbcType=VARCHAR}, #{businessHours,jdbcType=LONGVARCHAR},
       #{status,jdbcType=VARCHAR}, #{activatedAt,jdbcType=TIMESTAMP}, #{createdAt,jdbcType=TIMESTAMP},
       #{updatedAt,jdbcType=TIMESTAMP}, #{updatedBy,jdbcType=VARCHAR}, #{longDescription,jdbcType=LONGVARCHAR},
       #{remark,jdbcType=LONGVARCHAR})
@@ -352,7 +352,7 @@
         line_id = #{row.lineId,jdbcType=VARCHAR},
       </if>
       <if test="row.businessHours != null">
-        business_hours = #{row.businessHours,jdbcType=VARCHAR},
+        business_hours = #{row.businessHours,jdbcType=LONGVARCHAR},
       </if>
       <if test="row.status != null">
         status = #{row.status,jdbcType=VARCHAR},
@@ -396,7 +396,7 @@
       facebook_url = #{row.facebookUrl,jdbcType=VARCHAR},
       instagram_url = #{row.instagramUrl,jdbcType=VARCHAR},
       line_id = #{row.lineId,jdbcType=VARCHAR},
-      business_hours = #{row.businessHours,jdbcType=VARCHAR},
+      business_hours = #{row.businessHours,jdbcType=LONGVARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
       activated_at = #{row.activatedAt,jdbcType=TIMESTAMP},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
@@ -424,7 +424,7 @@
       facebook_url = #{row.facebookUrl,jdbcType=VARCHAR},
       instagram_url = #{row.instagramUrl,jdbcType=VARCHAR},
       line_id = #{row.lineId,jdbcType=VARCHAR},
-      business_hours = #{row.businessHours,jdbcType=VARCHAR},
+      business_hours = #{row.businessHours,jdbcType=LONGVARCHAR},
       status = #{row.status,jdbcType=VARCHAR},
       activated_at = #{row.activatedAt,jdbcType=TIMESTAMP},
       created_at = #{row.createdAt,jdbcType=TIMESTAMP},
@@ -477,7 +477,7 @@
         line_id = #{lineId,jdbcType=VARCHAR},
       </if>
       <if test="businessHours != null">
-        business_hours = #{businessHours,jdbcType=VARCHAR},
+        business_hours = #{businessHours,jdbcType=LONGVARCHAR},
       </if>
       <if test="status != null">
         status = #{status,jdbcType=VARCHAR},
@@ -518,7 +518,7 @@
       facebook_url = #{facebookUrl,jdbcType=VARCHAR},
       instagram_url = #{instagramUrl,jdbcType=VARCHAR},
       line_id = #{lineId,jdbcType=VARCHAR},
-      business_hours = #{businessHours,jdbcType=VARCHAR},
+      business_hours = #{businessHours,jdbcType=LONGVARCHAR},
       status = #{status,jdbcType=VARCHAR},
       activated_at = #{activatedAt,jdbcType=TIMESTAMP},
       created_at = #{createdAt,jdbcType=TIMESTAMP},
@@ -543,7 +543,7 @@
       facebook_url = #{facebookUrl,jdbcType=VARCHAR},
       instagram_url = #{instagramUrl,jdbcType=VARCHAR},
       line_id = #{lineId,jdbcType=VARCHAR},
-      business_hours = #{businessHours,jdbcType=VARCHAR},
+      business_hours = #{businessHours,jdbcType=LONGVARCHAR},
       status = #{status,jdbcType=VARCHAR},
       activated_at = #{activatedAt,jdbcType=TIMESTAMP},
       created_at = #{createdAt,jdbcType=TIMESTAMP},

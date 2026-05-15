@@ -103,8 +103,8 @@ public class BannerServiceImpl implements BannerService {
         banner.setImageUrl(req.getImageUrl());
         banner.setLinkUrl(req.getLinkUrl());
         banner.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
-        // DRAFT if scheduled, ACTIVE immediately otherwise
-        banner.setStatus(req.getStartTime() != null ? "DRAFT" : "ACTIVE");
+        // ARCHIVED if scheduled, PUBLISHED immediately otherwise
+        banner.setStatus(req.getStartTime() != null ? "ARCHIVED" : "PUBLISHED");
         banner.setStartTime(req.getStartTime());
         banner.setEndTime(req.getEndTime());
         banner.setCreatedAt(LocalDateTime.now());
@@ -164,7 +164,7 @@ public class BannerServiceImpl implements BannerService {
         if (banner == null) {
             throw new RuntimeException("Banner 不存在");
         }
-        banner.setStatus("ACTIVE");
+        banner.setStatus("PUBLISHED");
         banner.setUpdatedAt(LocalDateTime.now());
         bannerMapper.updateByPrimaryKeySelective(banner);
         log.info("✅ Banner 上架成功：{}", banner.getTitle());
@@ -179,7 +179,7 @@ public class BannerServiceImpl implements BannerService {
         if (banner == null) {
             throw new RuntimeException("Banner 不存在");
         }
-        banner.setStatus("INACTIVE");
+        banner.setStatus("UNPUBLISHED");
         banner.setUpdatedAt(LocalDateTime.now());
         bannerMapper.updateByPrimaryKeySelective(banner);
         log.info("✅ Banner 下架成功：{}", banner.getTitle());
@@ -266,9 +266,8 @@ public class BannerServiceImpl implements BannerService {
     private String getStatusName(String status) {
         if (status == null) return "未知";
         switch (status) {
-            case "ACTIVE":   return "已上架";
-            case "INACTIVE": return "已下架";
-            case "DRAFT":    return "草稿";
+            case "PUBLISHED":   return "已上架";
+            case "UNPUBLISHED": return "已下架";
             default:         return status;
         }
     }

@@ -1611,13 +1611,14 @@ public class LotteryServiceImpl implements LotteryService {
             Integer requestFreeDrawThreshold,
             String requestDesignatedPrizeNumbers) {
         boolean isScratchMode = isScratchMode(category, subCategory);
+        boolean isCustomGacha = "CUSTOM_GACHA".equals(category);
 
         if (!isScratchMode && isNotBlank(requestGameMode)) {
             throw new BusinessException("只有 CUSTOM_GACHA 的 SCRATCH_MODE 可手動設定 gameMode");
         }
 
-        if (!isScratchMode && requestFreeDrawThreshold != null) {
-            throw new BusinessException("freeDrawThreshold 僅限 CUSTOM_GACHA 的 SCRATCH_MODE 使用");
+        if (!isCustomGacha && requestFreeDrawThreshold != null) {
+            throw new BusinessException("freeDrawThreshold 僅限 CUSTOM_GACHA 使用");
         }
 
         if (isNotBlank(requestDesignatedPrizeNumbers)) {
@@ -1677,13 +1678,13 @@ public class LotteryServiceImpl implements LotteryService {
             return "ALL_DRAWN";
         }
         if ("CUSTOM_GACHA".equals(category)) {
-            return "SCRATCH_MODE".equals(subCategory) ? "GRAND_PRIZE_DRAWN" : "ALL_DRAWN";
+            return "GRAND_PRIZE_DRAWN";
         }
         throw new BusinessException("不支援的商品分類: " + category);
     }
 
     private Integer normalizeFreeDrawThreshold(String category, String subCategory, Integer threshold) {
-        if (!"CUSTOM_GACHA".equals(category) || !"SCRATCH_MODE".equals(subCategory)) {
+        if (!"CUSTOM_GACHA".equals(category)) {
             return null;
         }
         if (threshold == null) {
@@ -1696,7 +1697,7 @@ public class LotteryServiceImpl implements LotteryService {
     }
 
     private Integer sanitizeFreeDrawThresholdForResponse(String category, String subCategory, Integer threshold) {
-        if (!"CUSTOM_GACHA".equals(category) || !"SCRATCH_MODE".equals(subCategory)) {
+        if (!"CUSTOM_GACHA".equals(category)) {
             return null;
         }
         if (threshold == null || threshold < 1) {

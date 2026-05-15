@@ -72,38 +72,32 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     private final PrizeBoxService prizeBoxService;
     private final CoinService walletService;
     private final ConsumptionRecordService consumptionRecordService;
-        for (LotteryPrize lastPrize : lastPrizes) {
-            int qty = lastPrize.getQuantity() != null ? lastPrize.getQuantity() : 1;
-            for (int i = 0; i < qty; i++) {
-                try {
-                    prizeBoxService.addToPrizeBox(lastUserId, lottery.getId(), lastPrize.getId(),
-                            lottery.getStoreId(), recycleBonus);
-                } catch (Exception e) {
-                    log.error("發放末獎時發生錯誤: prizeId={}, error={}", lastPrize.getId(), e.getMessage());
-                }
-            }
-            // 更新末獎的剩餘數量
-            lastPrize.setRemaining(0);
-            lastPrize.setUpdatedAt(LocalDateTime.now());
-            lotteryPrizeMapper.updateByPrimaryKey(lastPrize);
-            awarded.add(lastPrize);
-            log.info("[發放末獎] userId={}, prizeId={}, prizeName={}, qty={}",
-                    lastUserId, lastPrize.getId(), lastPrize.getName(), qty);
+    private final SystemConfigService systemConfigService;
+
+    @Lazy
+    @Autowired
+    private LotteryService lotteryService;
+
+    private final SecureRandom random = new SecureRandom();
+    private final Map<String, Object> gachaLocks = new ConcurrentHashMap<>();
+
+    @Override
+    @Transactional
+    public void generateTickets(String lotteryId) {
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
         if (lottery == null) {
             throw new BusinessException("找不到抽獎活動: " + lotteryId);
         }
 
-        // 解析遊戲模式與籤數
         String gameMode = lottery.getPlayMode();
         int totalTickets = lottery.getMaxDraws();
-        
+
         if (totalTickets <= 0) {
             throw new BusinessException("maxDraws 必須大於 0");
         }
 
         log.info("生成籤位模式: {}, 總籤數: {}", gameMode, totalTickets);
 
-        // 根據遊戲模式選擇籤位產生方式（預設為 LOTTERY_MODE）
         switch (gameMode != null ? gameMode : "LOTTERY_MODE") {
             case "LOTTERY_MODE" -> generateRandomTickets(lotteryId, totalTickets);
             case "SCRATCH_MODE", "SCRATCH_CARD_MODE" -> generateScratchTickets(lotteryId, totalTickets, lottery);
@@ -207,14 +201,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         Set<Integer> winningRevealedNumbers = new HashSet<>();
         String gameMode = lottery.getGameMode(); // SCRATCH_STORE / SCRATCH_PLAYER / RANDOM
         if (GameModeEnum.SCRATCH_STORE.getCode().equals(gameMode)) {
-            String designatedJson = lottery.getDesignatedPrizeNumbers();
-            if (designatedJson != null && !designatedJson.trim().isEmpty()) {
-                String cleaned = designatedJson.trim().replaceAll("[\\[\\]\\s]", "");
-                for (String numStr : cleaned.split(",")) {
-                    try { winningRevealedNumbers.add(Integer.parseInt(numStr.trim())); }
-                    catch (NumberFormatException ignored) {}
-                }
-            }
+            winningRevealedNumbers.addAll(parseDesignatedPrizeNumbers(lottery.getDesignatedPrizeNumbers()));
         }
 
         // 步驟3：建立獎池並將部分獎項（若有）指派給指定的 revealedNumber
@@ -222,6 +209,13 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         prizeExample.createCriteria().andLotteryIdEqualTo(lotteryId);
         prizeExample.setOrderByClause("order_num ASC");
         List<LotteryPrize> prizes = lotteryPrizeMapper.selectByExample(prizeExample);
+        List<LotteryPrize> grandPrizes = prizes.stream()
+                .filter(prize -> prize.getIsGrandPrize() != null && prize.getIsGrandPrize() == 1)
+                .toList();
+
+        if (GameModeEnum.SCRATCH_STORE.getCode().equals(gameMode)) {
+            validateScratchStoreDesignation(winningRevealedNumbers, grandPrizes, totalTickets);
+        }
 
         List<PrizeSlot> prizePool = new ArrayList<>();
         for (LotteryPrize prize : prizes) {
@@ -233,11 +227,19 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
 
         // 若後台有指定大獎 revealedNumber，將對應的獎品分配到該 revealedNumber
         Map<Integer, PrizeSlot> revealedToPrize = new HashMap<>();
-        Iterator<PrizeSlot> prizeIter = prizePool.iterator();
-        for (Integer winNum : winningRevealedNumbers) {
-            if (prizeIter.hasNext()) {
-                revealedToPrize.put(winNum, prizeIter.next());
+        List<PrizeSlot> grandPrizeSlots = new ArrayList<>();
+        for (LotteryPrize prize : grandPrizes) {
+            int quantity = prize.getQuantity() != null ? prize.getQuantity() : 0;
+            for (int i = 0; i < quantity; i++) {
+                grandPrizeSlots.add(new PrizeSlot(prize.getId(), prize.getLevel()));
             }
+        }
+        Iterator<PrizeSlot> grandPrizeIterator = grandPrizeSlots.iterator();
+        for (Integer winNum : winningRevealedNumbers.stream().sorted().toList()) {
+            if (!grandPrizeIterator.hasNext()) {
+                throw new BusinessException("SCRATCH_STORE 指定大獎號碼數量超過大獎數量");
+            }
+            revealedToPrize.put(winNum, grandPrizeIterator.next());
         }
 
         // 步驟4：建立每張票並註記是否為指定大獎
@@ -267,6 +269,62 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         // 若為 SCRATCH_STORE，完成指定後自動分配其餘非大獎獎項
         if (GameModeEnum.SCRATCH_STORE.getCode().equals(gameMode) && !winningRevealedNumbers.isEmpty()) {
             autoAssignNonGrandPrizes(lotteryId);
+        }
+    }
+
+    private List<Integer> parseDesignatedPrizeNumbers(String designatedPrizeNumbers) {
+        if (designatedPrizeNumbers == null || designatedPrizeNumbers.trim().isEmpty()) {
+            return List.of();
+        }
+
+        String cleaned = designatedPrizeNumbers.trim().replaceAll("[\\[\\]\\s]", "");
+        if (cleaned.isEmpty()) {
+            return List.of();
+        }
+
+        List<Integer> result = new ArrayList<>();
+        for (String numStr : cleaned.split(",")) {
+            if (numStr == null || numStr.isBlank()) {
+                continue;
+            }
+            try {
+                result.add(Integer.parseInt(numStr.trim()));
+            } catch (NumberFormatException e) {
+                throw new BusinessException("designatedPrizeNumbers 格式錯誤，請使用數字清單，例如 [5] 或 5,12");
+            }
+        }
+        return result;
+    }
+
+    private void validateScratchStoreDesignation(Set<Integer> winningRevealedNumbers,
+            List<LotteryPrize> grandPrizes,
+            int totalTickets) {
+        if (winningRevealedNumbers.isEmpty()) {
+            throw new BusinessException("SCRATCH_STORE 模式必須指定 designatedPrizeNumbers");
+        }
+
+        int requiredGrandPrizeCount = grandPrizes.stream()
+                .mapToInt(prize -> prize.getQuantity() != null ? prize.getQuantity() : 0)
+                .sum();
+
+        if (requiredGrandPrizeCount <= 0) {
+            throw new BusinessException("SCRATCH_STORE 模式缺少大獎設定，無法生成指定籤位");
+        }
+
+        if (winningRevealedNumbers.size() != requiredGrandPrizeCount) {
+            throw new BusinessException(String.format(
+                    "SCRATCH_STORE 指定號碼數量(%d)必須等於大獎數量(%d)",
+                    winningRevealedNumbers.size(),
+                    requiredGrandPrizeCount));
+        }
+
+        for (Integer revealedNumber : winningRevealedNumbers) {
+            if (revealedNumber == null || revealedNumber < 1 || revealedNumber > totalTickets) {
+                throw new BusinessException(String.format(
+                        "SCRATCH_STORE 指定號碼 %s 超出可用範圍 1~%d",
+                        String.valueOf(revealedNumber),
+                        totalTickets));
+            }
         }
     }
 

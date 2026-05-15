@@ -250,7 +250,6 @@ class LotteryServiceImplTest {
         req.setTitle("custom-lottery");
         req.setCategory("CUSTOM_GACHA");
         req.setSubCategory("LOTTERY_MODE");
-        req.setGameMode("SCRATCH_PLAYER");
         req.setPricePerDraw(100L);
         req.setFreeDrawThreshold(5);
 
@@ -258,10 +257,10 @@ class LotteryServiceImplTest {
 
         assertThat(res.getPlayMode()).isEqualTo("LOTTERY_MODE");
         assertThat(res.getGameMode()).isNull();
-        assertThat(res.getFreeDrawThreshold()).isNull();
-        assertThat(res.getDelistStrategy()).isEqualTo("ALL_DRAWN");
+        assertThat(res.getFreeDrawThreshold()).isEqualTo(5);
+        assertThat(res.getDelistStrategy()).isEqualTo("GRAND_PRIZE_DRAWN");
         assertThat(insertedLottery.getGameMode()).isNull();
-        assertThat(insertedLottery.getFreeDrawThreshold()).isNull();
+        assertThat(insertedLottery.getFreeDrawThreshold()).isEqualTo(5);
     }
 
     @Test
@@ -347,7 +346,7 @@ class LotteryServiceImplTest {
 
         LotteryRes res = lotteryService.updateLottery("lottery-2", req);
 
-        verify(lotteryMapper).updateByPrimaryKey(existing);
+        verify(lotteryMapper).updateByPrimaryKeyWithBLOBs(existing);
         assertThat(existing.getFreeDrawEnabled()).isEqualTo((byte) 1);
         assertThat(existing.getProtectionDraws()).isEqualTo(7);
         assertThat(res.getFreeDrawEnabled()).isTrue();
@@ -356,7 +355,7 @@ class LotteryServiceImplTest {
 
     @Test
     @DisplayName("GRAND_PRIZE_DRAWN 在最後一個大獎抽完後應轉為 ENDED")
-    void checkAndDelist_GrandPrizeDrawn_ShouldSetEnded() {
+    void checkAndDelist_GrandPrizeDrawn_ShouldSetGrandPrizeDrawn() {
         Lottery lottery = new Lottery();
         lottery.setId("lottery-grand");
         lottery.setStatus("ON_SHELF");
@@ -365,12 +364,13 @@ class LotteryServiceImplTest {
         when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class))).thenReturn(List.of(
                 prize("grand-1", (byte) 1, 0, 1)
         ));
+        when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class))).thenReturn(1L);
 
         lotteryService.checkAndDelist("lottery-grand");
 
         ArgumentCaptor<Lottery> captor = ArgumentCaptor.forClass(Lottery.class);
         verify(lotteryMapper).updateByPrimaryKeySelective(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo("ENDED");
+        assertThat(captor.getValue().getStatus()).isEqualTo("GRAND_PRIZE_DRAWN");
     }
 
     @Test
@@ -388,7 +388,7 @@ class LotteryServiceImplTest {
 
         ArgumentCaptor<Lottery> captor = ArgumentCaptor.forClass(Lottery.class);
         verify(lotteryMapper).updateByPrimaryKeySelective(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo("ENDED");
+        assertThat(captor.getValue().getStatus()).isEqualTo("ALL_DRAWN");
     }
 
     @Test
@@ -405,7 +405,7 @@ class LotteryServiceImplTest {
 
         ArgumentCaptor<Lottery> captor = ArgumentCaptor.forClass(Lottery.class);
         verify(lotteryMapper).updateByPrimaryKeySelective(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo("SOLD_OUT");
+        assertThat(captor.getValue().getStatus()).isEqualTo("ALL_DRAWN");
     }
 
     @Test
@@ -420,6 +420,24 @@ class LotteryServiceImplTest {
                 .thenAnswer(invocation -> countTickets(invocation.getArgument(0), 10L, 3L));
 
         lotteryService.checkAndDelist("lottery-available");
+
+        verify(lotteryMapper, never()).updateByPrimaryKeySelective(any(Lottery.class));
+    }
+
+    @Test
+    @DisplayName("GRAND_PRIZE_DRAWN 尚有大獎剩餘時應維持 ON_SHELF")
+    void checkAndDelist_GrandPrizeRemaining_ShouldKeepOnShelf() {
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-grand-remaining");
+        lottery.setStatus("ON_SHELF");
+        lottery.setDelistStrategy("GRAND_PRIZE_DRAWN");
+        when(lotteryMapper.selectByPrimaryKey("lottery-grand-remaining")).thenReturn(lottery);
+        when(lotteryPrizeMapper.selectByExample(any(LotteryPrizeExample.class))).thenReturn(List.of(
+                prize("grand-remaining", (byte) 1, 1, 1)
+        ));
+        when(lotteryPrizeMapper.countByExample(any(LotteryPrizeExample.class))).thenReturn(2L);
+
+        lotteryService.checkAndDelist("lottery-grand-remaining");
 
         verify(lotteryMapper, never()).updateByPrimaryKeySelective(any(Lottery.class));
     }
