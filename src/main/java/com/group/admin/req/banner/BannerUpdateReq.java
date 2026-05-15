@@ -35,4 +35,7 @@ public class BannerUpdateReq {
     
     @Schema(description = "結束顯示時間", example = "2026-02-10T23:59:59")
     private LocalDateTime endTime;
+
+    @Schema(description = "狀態（PUBLISHED=已上架，UNPUBLISHED=已下架）", example = "PUBLISHED")
+    private String status;
 }

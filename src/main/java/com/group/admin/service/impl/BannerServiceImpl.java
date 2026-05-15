@@ -137,6 +137,7 @@ public class BannerServiceImpl implements BannerService {
         if (req.getOrderNum() != null) banner.setOrderNum(req.getOrderNum());
         if (req.getStartTime() != null) banner.setStartTime(req.getStartTime());
         if (req.getEndTime() != null) banner.setEndTime(req.getEndTime());
+        if (req.getStatus() != null) banner.setStatus(req.getStatus());
         banner.setUpdatedAt(LocalDateTime.now());
 
         bannerMapper.updateByPrimaryKeySelective(banner);
