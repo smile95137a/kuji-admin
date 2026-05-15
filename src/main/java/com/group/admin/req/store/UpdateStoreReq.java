@@ -1,6 +1,7 @@
 package com.group.admin.req.store;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -73,11 +74,11 @@ public class UpdateStoreReq {
     private String address;
 
     /**
-     * 營業時間
+     * 營業時間（請使用 `businessHoursStructured`）
      */
-    @NotBlank(message = "營業時間不可為空")
-    @Schema(description = "營業時間", example = "每日 10:00~22:00", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String businessHours;
+    @Valid
+    @Schema(description = "結構化營業時間（優先使用）")
+    private BusinessHoursReq businessHoursStructured;
 
     /**
      * Facebook 連結

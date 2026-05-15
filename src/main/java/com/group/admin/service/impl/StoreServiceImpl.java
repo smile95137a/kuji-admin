@@ -32,6 +32,7 @@ import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.store.CreateStoreReq;
 import com.group.admin.req.store.UpdateStoreReq;
 import com.group.admin.req.store.UpdateStoreStatusReq;
+import com.group.admin.req.store.BusinessHoursReq;
 import com.group.admin.res.PageResult;
 import com.group.admin.res.lottery.LotteryListItemRes;
 import com.group.admin.res.store.StoreDetailRes;
@@ -49,6 +50,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -73,6 +76,7 @@ public class StoreServiceImpl implements StoreService {
     private final BannerMapper bannerMapper;
     private final PasswordEncoder passwordEncoder;
     private final PasswordUtil passwordUtil;
+    private final ObjectMapper objectMapper;
 
     @Override
     public List<StoreRes> queryStores(QueryReq<StoreCondition> req) {
@@ -199,7 +203,13 @@ public class StoreServiceImpl implements StoreService {
         if (req.getEmail() != null) store.setEmail(req.getEmail());
         if (req.getPhone() != null) store.setPhone(req.getPhone());
         if (req.getAddress() != null) store.setAddress(req.getAddress());
-        if (req.getBusinessHours() != null) store.setBusinessHours(req.getBusinessHours());
+        if (req.getBusinessHoursStructured() != null) {
+            try {
+                store.setBusinessHours(objectMapper.writeValueAsString(req.getBusinessHoursStructured()));
+            } catch (JsonProcessingException e) {
+                throw new BusinessException("INVALID_BUSINESS_HOURS", "營業時間格式錯誤");
+            }
+        }
         if (req.getFacebookUrl() != null) store.setFacebookUrl(req.getFacebookUrl());
         if (req.getInstagramUrl() != null) store.setInstagramUrl(req.getInstagramUrl());
         if (req.getLineId() != null) store.setLineId(req.getLineId());
@@ -286,7 +296,16 @@ public class StoreServiceImpl implements StoreService {
         store.setEmail(req.getEmail());
         store.setPhone(req.getPhone());
         store.setAddress(req.getAddress());
-        store.setBusinessHours(req.getBusinessHours());
+        // 支援結構化營業時間（必填，優先使用）
+        if (req.getBusinessHoursStructured() != null) {
+            try {
+                store.setBusinessHours(objectMapper.writeValueAsString(req.getBusinessHoursStructured()));
+            } catch (JsonProcessingException e) {
+                throw new BusinessException("INVALID_BUSINESS_HOURS", "營業時間格式錯誤");
+            }
+        } else {
+            throw new BusinessException("BUSINESS_HOURS_REQUIRED", "營業時間不可為空，請提供結構化營業時間");
+        }
         store.setFacebookUrl(req.getFacebookUrl());
         store.setInstagramUrl(req.getInstagramUrl());
         store.setLineId(req.getLineId());
@@ -465,7 +484,7 @@ public class StoreServiceImpl implements StoreService {
                         .build())
                 .collect(Collectors.toList());
 
-        return StoreDetailRes.builder()
+        StoreDetailRes res = StoreDetailRes.builder()
                 .id(store.getId())
                 .storeName(store.getStoreName())
                 .shortDescription(store.getShortDescription())
@@ -475,12 +494,23 @@ public class StoreServiceImpl implements StoreService {
                 .email(store.getEmail())
                 .phone(store.getPhone())
                 .address(store.getAddress())
-                .businessHours(store.getBusinessHours())
+                .businessHours(null)
                 .facebookUrl(store.getFacebookUrl())
                 .instagramUrl(store.getInstagramUrl())
                 .lineId(store.getLineId())
                 .products(products)
                 .build();
+
+        if (store.getBusinessHours() != null) {
+            try {
+                BusinessHoursReq bh = objectMapper.readValue(store.getBusinessHours(), BusinessHoursReq.class);
+                res.setBusinessHoursStructured(bh);
+            } catch (Exception ignored) {
+                res.setBusinessHours(store.getBusinessHours());
+            }
+        }
+
+        return res;
     }
 
     @Override
@@ -563,7 +593,7 @@ public class StoreServiceImpl implements StoreService {
                 .email(store.getEmail())
                 .phone(store.getPhone())
                 .address(store.getAddress())
-                .businessHours(store.getBusinessHours())
+            .businessHours(null)
                 .facebookUrl(store.getFacebookUrl())
                 .instagramUrl(store.getInstagramUrl())
                 .lineId(store.getLineId())
@@ -618,6 +648,16 @@ public class StoreServiceImpl implements StoreService {
                             .email(owner.getEmail())
                             .build());
                 }
+            }
+        }
+
+        // 嘗試將 DB 欄位解析為結構化營業時間，若失敗則保留原文字
+        if (store.getBusinessHours() != null) {
+            try {
+                BusinessHoursReq bh = objectMapper.readValue(store.getBusinessHours(), BusinessHoursReq.class);
+                res.setBusinessHoursStructured(bh);
+            } catch (Exception ignored) {
+                res.setBusinessHours(store.getBusinessHours());
             }
         }
 

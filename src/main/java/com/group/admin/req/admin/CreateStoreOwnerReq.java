@@ -1,9 +1,12 @@
 package com.group.admin.req.admin;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import com.group.admin.req.store.BusinessHoursReq;
 
 /**
  * 建立 StoreOwner 帳號請求
@@ -104,11 +107,12 @@ public class CreateStoreOwnerReq {
     private String storeAddress;
 
     /**
-     * 營業時間
+     * 結構化營業時間（必填）
      */
-    @NotBlank(message = "營業時間不可為空")
-    @Schema(description = "營業時間", example = "每日 10:00~22:00", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String businessHours;
+    @Valid
+    @NotNull(message = "營業時間不可為空")
+    @Schema(description = "結構化營業時間（JSON 結構）", requiredMode = Schema.RequiredMode.REQUIRED)
+    private BusinessHoursReq businessHoursStructured;
 
     /**
      * Facebook 連結

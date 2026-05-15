@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
@@ -39,8 +40,10 @@ public class CreateStoreReq {
     @Schema(description = "店家地址")
     private String address;
 
-    @Schema(description = "營業時間")
-    private String businessHours;
+    @Valid
+    @NotNull(message = "營業時間不可為空，請提供結構化營業時間")
+    @Schema(description = "結構化營業時間（JSON 結構，必填）")
+    private BusinessHoursReq businessHoursStructured;
 
     @Schema(description = "Facebook 連結")
     private String facebookUrl;

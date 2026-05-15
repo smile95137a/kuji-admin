@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import com.group.admin.req.store.BusinessHoursReq;
 
 @Data
 @Builder
@@ -45,6 +46,9 @@ public class StoreDetailRes {
 
     @Schema(description = "營業時間")
     private String businessHours;
+
+    @Schema(description = "結構化營業時間（若 DB 為 JSON，會反序列化至此欄位）")
+    private BusinessHoursReq businessHoursStructured;
 
     @Schema(description = "Facebook 連結")
     private String facebookUrl;

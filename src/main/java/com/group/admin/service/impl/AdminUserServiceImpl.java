@@ -126,7 +126,17 @@ public class AdminUserServiceImpl implements AdminUserService {
         store.setEmail(req.getStoreEmail());
         store.setPhone(req.getStorePhone());
         store.setAddress(req.getStoreAddress());
-        store.setBusinessHours(req.getBusinessHours());
+        if (req.getBusinessHoursStructured() != null) {
+            try {
+                // lazy-create ObjectMapper via new instance to avoid constructor change in this service
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                store.setBusinessHours(mapper.writeValueAsString(req.getBusinessHoursStructured()));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new BusinessException("INVALID_BUSINESS_HOURS", "營業時間格式錯誤");
+            }
+        } else {
+            throw new BusinessException("BUSINESS_HOURS_REQUIRED", "營業時間不可為空，請提供結構化營業時間");
+        }
         store.setFacebookUrl(req.getFacebookUrl());
         store.setInstagramUrl(req.getInstagramUrl());
         store.setLineId(req.getLineId());

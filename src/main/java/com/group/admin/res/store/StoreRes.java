@@ -1,6 +1,7 @@
 package com.group.admin.res.store;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.group.admin.req.store.BusinessHoursReq;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -82,6 +83,12 @@ public class StoreRes {
      */
     @Schema(description = "營業時間")
     private String businessHours;
+
+    /**
+     * 結構化營業時間（若 DB 儲存為結構化 JSON，會反序列化到此欄位）
+     */
+    @Schema(description = "結構化營業時間")
+    private BusinessHoursReq businessHoursStructured;
 
     /**
      * Facebook 連結
