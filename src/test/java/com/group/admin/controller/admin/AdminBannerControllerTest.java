@@ -98,4 +98,23 @@ class AdminBannerControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/admin/banners/test-id"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("批次更新 Banner 排序 - 成功")
+    void reorderBanners_ShouldReturnOk() throws Exception {
+        doNothing().when(bannerService).reorderBanners(any());
+
+        String requestBody = """
+            {
+                "ids": ["banner-1", "banner-2", "banner-3"]
+            }
+            """;
+
+        mockMvc.perform(put("/admin/banners/reorder")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        verify(bannerService).reorderBanners(any());
+    }
 }

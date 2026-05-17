@@ -381,13 +381,13 @@ public class StoreServiceImpl implements StoreService {
             lotterySetter.setUpdatedAt(LocalDateTime.now());
             int productsOffShelf = lotteryMapper.updateByExampleSelective(lotterySetter, lotteryFilter);
 
-            // Cascade: set banners INACTIVE
+            // Cascade: unpublish published banners
             BannerExample bannerFilter = new BannerExample();
             bannerFilter.createCriteria()
                     .andStoreIdEqualTo(storeId)
-                    .andStatusEqualTo("ACTIVE");
+                    .andStatusEqualTo("PUBLISHED");
             Banner bannerSetter = new Banner();
-            bannerSetter.setStatus("INACTIVE");
+            bannerSetter.setStatus("UNPUBLISHED");
             bannerSetter.setUpdatedAt(LocalDateTime.now());
             int bannersDisabled = bannerMapper.updateByExampleSelective(bannerSetter, bannerFilter);
 

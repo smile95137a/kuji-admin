@@ -87,6 +87,10 @@ public class Lottery {
 
     private String delistStrategy;
 
+    private String firstOpenerUserId;
+
+    private String firstOpenerSessionId;
+
     public String getId() {
         return id;
     }
@@ -421,5 +425,21 @@ public class Lottery {
 
     public void setDelistStrategy(String delistStrategy) {
         this.delistStrategy = delistStrategy == null ? null : delistStrategy.trim();
+    }
+
+    public String getFirstOpenerUserId() {
+        return firstOpenerUserId;
+    }
+
+    public void setFirstOpenerUserId(String firstOpenerUserId) {
+        this.firstOpenerUserId = firstOpenerUserId == null ? null : firstOpenerUserId.trim();
+    }
+
+    public String getFirstOpenerSessionId() {
+        return firstOpenerSessionId;
+    }
+
+    public void setFirstOpenerSessionId(String firstOpenerSessionId) {
+        this.firstOpenerSessionId = firstOpenerSessionId == null ? null : firstOpenerSessionId.trim();
     }
 }

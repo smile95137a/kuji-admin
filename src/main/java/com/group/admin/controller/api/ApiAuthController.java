@@ -163,6 +163,7 @@ public class ApiAuthController {
         res.setRefreshToken(newRefreshToken);
         res.setExpiresIn(jwtUtil.getExpirationSeconds());
         res.setUser(user);
+        res.setForceChangePassword("FORCE_CHANGE_PASSWORD".equals(user.getPasswordResetToken()));
         
         return ResponseEntity.ok(res);
     }

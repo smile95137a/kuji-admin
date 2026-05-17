@@ -524,6 +524,8 @@ CALL AddColIfNotExists('lottery','bonus_rate',             'DECIMAL(5,2) DEFAULT
 CALL AddColIfNotExists('lottery','payment_type',           'VARCHAR(20)  NOT NULL DEFAULT ''GOLD''');
 CALL AddColIfNotExists('lottery','free_draw_threshold',    'INT          NULL');
 CALL AddColIfNotExists('lottery','delist_strategy',        'VARCHAR(30)  NOT NULL DEFAULT ''ALL_DRAWN''');
+CALL AddColIfNotExists('lottery','first_opener_user_id',   'VARCHAR(36)  NULL');
+CALL AddColIfNotExists('lottery','first_opener_session_id','VARCHAR(36)  NULL');
 
 -- lottery 表：索引
 CREATE INDEX IF NOT EXISTS `idx_lottery_scheduled_at` ON `lottery`(`scheduled_at`);

@@ -11,6 +11,7 @@ import com.group.admin.res.draw.DrawResultRes;
 import com.group.admin.service.DrawService;
 import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.CoinService;
+import com.group.admin.service.impl.LotteryTicketServiceImpl;
 import com.group.admin.util.SecurityUtils;
 
 import jakarta.validation.constraints.Min;
@@ -47,6 +48,9 @@ public class RandomDrawController {
     
     @Autowired
     private CoinService walletService;
+
+    @Autowired
+    private LotteryTicketServiceImpl ticketServiceImpl;
 
         @Autowired
         private SystemConfigService systemConfigService;
@@ -139,18 +143,25 @@ public class RandomDrawController {
         log.info("🎲 用戶 {} 開始加權隨機抽獎，一番賞 ID: {}，次數: {}", userId, lotteryId, count);
         
         // 記錄抽獎前錢包餘額
-        var walletBefore = walletService.getWallet(userId);
-        Long goldBefore = walletBefore.getGoldCoins();
-        Long bonusBefore = walletBefore.getBonusCoins();
+        Long goldBefore;
+        Long bonusBefore;
+        Long goldAfter;
+        Long bonusAfter;
+        List<DrawResultRes> results;
         
         // 🎯 執行抽獎
-        List<DrawResultRes> results = drawService.executeDraw(userId, lotteryId, count);
+        Object lock = ticketServiceImpl.getGachaLock(lotteryId);
+        synchronized (lock) {
+            var walletBefore = walletService.getWallet(userId);
+            goldBefore = walletBefore.getGoldCoins();
+            bonusBefore = walletBefore.getBonusCoins();
+            results = drawService.executeDraw(userId, lotteryId, count);
+            var walletAfter = walletService.getWallet(userId);
+            goldAfter = walletAfter.getGoldCoins();
+            bonusAfter = walletAfter.getBonusCoins();
+        }
         
         // 查詢抽獎後錢包餘額
-        var walletAfter = walletService.getWallet(userId);
-        Long goldAfter = walletAfter.getGoldCoins();
-        Long bonusAfter = walletAfter.getBonusCoins();
-        
         // 計算實際使用的點數
         Long goldUsed = goldBefore - goldAfter;
         Long bonusUsed = bonusBefore - bonusAfter;

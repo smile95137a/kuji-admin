@@ -23,6 +23,7 @@ import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
 import com.group.admin.service.LotteryTicketService.DrawResult;
 import com.group.admin.service.LotteryTicketService.SessionInfo;
+import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.impl.LotteryTicketServiceImpl;
 import com.group.admin.util.SecurityUtils;
 
@@ -41,6 +42,7 @@ public class LotteryDrawController {
 
     private final LotteryTicketService ticketService;
     private final LotteryTicketServiceImpl ticketServiceImpl;
+    private final SystemConfigService systemConfigService;
 
     @PostMapping("/{lotteryId}/draw")
     @Operation(summary = "執行抽獎")
@@ -57,8 +59,9 @@ public class LotteryDrawController {
         if (count == null || count < 1) {
             return ResponseEntity.badRequest().body("count 不可小於 1");
         }
-        if (count > 10) {
-            return ResponseEntity.badRequest().body("單次最多只能抽 10 次");
+        int maxCount = systemConfigService.getInt(SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST, 10);
+        if (count > maxCount) {
+            return ResponseEntity.badRequest().body("單次最多只能抽 " + maxCount + " 張");
         }
 
         Lottery lottery = ticketService.getLottery(lotteryId);
@@ -70,13 +73,12 @@ public class LotteryDrawController {
         String gameMode = lottery.getGameMode();
         String category = lottery.getCategory();
 
-        if ("GACHA".equals(category)) {
-            Object lock = ticketServiceImpl.getGachaLock(lotteryId);
-            synchronized (lock) {
+        Object lock = ticketServiceImpl.getGachaLock(lotteryId);
+        synchronized (lock) {
+            if ("GACHA".equals(category)) {
                 List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
                 return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, null));
             }
-        }
 
         SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
         if (GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
@@ -100,7 +102,8 @@ public class LotteryDrawController {
                 ? updatedSession.protectionEndTime().toString()
                 : null;
 
-        return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, protectionEndTime));
+            return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, protectionEndTime));
+        }
     }
 
     @PostMapping("/{lotteryId}/designate")

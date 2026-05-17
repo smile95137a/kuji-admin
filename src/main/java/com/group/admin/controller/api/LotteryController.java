@@ -215,14 +215,14 @@ public class LotteryController {
         LotteryDetailRes.SessionInfoRes sessionInfo;
         if (userId != null) {
             boolean canDraw = lotteryTicketService.canDrawNow(id, userId);
-            LotteryTicketService.SessionInfo session = lotteryTicketService.getOrCreateSession(id, userId);
+            LotteryTicketService.SessionInfo session = lotteryTicketService.getActiveSession(id, userId);
             sessionInfo = LotteryDetailRes.SessionInfoRes.builder()
-                    .isOpener(session.isOpener())
+                    .isOpener(session != null && session.isOpener())
                     .openerNickname(null)
-                    .protectionEndTime(session.protectionEndTime() != null
+                    .protectionEndTime(session != null && session.protectionEndTime() != null
                             ? session.protectionEndTime().toString()
                             : null)
-                    .status(session.status())
+                    .status(session != null ? session.status() : null)
                     .canDraw(canDraw)
                     .cannotDrawReason(canDraw ? null : "商品正在被其他玩家抽獎中，請稍後再試")
                     .build();

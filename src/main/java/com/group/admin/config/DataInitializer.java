@@ -667,8 +667,9 @@ public class DataInitializer implements CommandLineRunner {
                 }
                 removeRoleMenuPermission(ROLE_STORE_EDITOR_ID, menu.getId());
             }
+            hideLegacyReportMenus(reportCenter.getId());
 
-            log.info("??報表選單與角色權限已同步為正式報表設定");
+            log.info("報表選單與角色權限已同步為正式報表設定");
             return;
         }
         // 找父選單「報表中心」
@@ -740,6 +741,27 @@ public class DataInitializer implements CommandLineRunner {
     /**
      * 補救：若系統設定子選單未建立，補建缺少的選單（系統日誌、跑馬燈、儲值方案等）。
      */
+    private void hideLegacyReportMenus(String reportCenterId) {
+        MenuExample legacyEx = new MenuExample();
+        legacyEx.createCriteria().andPathLike("/admin/reports%");
+        for (Menu legacyMenu : menuMapper.selectByExample(legacyEx)) {
+            legacyMenu.setIsVisible(false);
+            legacyMenu.setUpdatedAt(LocalDateTime.now());
+            menuMapper.updateByPrimaryKeySelective(legacyMenu);
+        }
+
+        MenuExample duplicateEx = new MenuExample();
+        duplicateEx.createCriteria().andParentIdEqualTo(reportCenterId);
+        for (Menu menu : menuMapper.selectByExample(duplicateEx)) {
+            if (!"STORE_PERF_REPORT".equals(menu.getCode())) {
+                continue;
+            }
+            menu.setIsVisible(false);
+            menu.setUpdatedAt(LocalDateTime.now());
+            menuMapper.updateByPrimaryKeySelective(menu);
+        }
+    }
+
     private void rescueMissingSystemMenus() {
         MenuExample parentEx = new MenuExample();
         parentEx.createCriteria().andCodeEqualTo("SYSTEM_SETTING");

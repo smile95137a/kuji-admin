@@ -290,15 +290,15 @@ class LotteryServiceImplTest {
         req.setGameMode("SCRATCH_STORE");
         req.setPricePerDraw(100L);
         req.setFreeDrawEnabled(true);
-        req.setProtectionDraws(5);
+        req.setFreeDrawThreshold(5);
 
         LotteryRes res = lotteryService.createLottery(req);
 
         assertThat(insertedLottery).isNotNull();
         assertThat(insertedLottery.getFreeDrawEnabled()).isEqualTo((byte) 1);
-        assertThat(insertedLottery.getProtectionDraws()).isEqualTo(5);
+        assertThat(insertedLottery.getFreeDrawThreshold()).isEqualTo(5);
         assertThat(res.getFreeDrawEnabled()).isTrue();
-        assertThat(res.getProtectionDraws()).isEqualTo(5);
+        assertThat(res.getFreeDrawThreshold()).isEqualTo(5);
     }
 
     @Test
@@ -342,15 +342,15 @@ class LotteryServiceImplTest {
 
         LotteryUpdateReq req = new LotteryUpdateReq();
         req.setFreeDrawEnabled(true);
-        req.setProtectionDraws(7);
+        req.setFreeDrawThreshold(7);
 
         LotteryRes res = lotteryService.updateLottery("lottery-2", req);
 
         verify(lotteryMapper).updateByPrimaryKeyWithBLOBs(existing);
         assertThat(existing.getFreeDrawEnabled()).isEqualTo((byte) 1);
-        assertThat(existing.getProtectionDraws()).isEqualTo(7);
+        assertThat(existing.getFreeDrawThreshold()).isEqualTo(7);
         assertThat(res.getFreeDrawEnabled()).isTrue();
-        assertThat(res.getProtectionDraws()).isEqualTo(7);
+        assertThat(res.getFreeDrawThreshold()).isEqualTo(7);
     }
 
     @Test

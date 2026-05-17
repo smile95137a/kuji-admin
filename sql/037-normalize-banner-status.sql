@@ -1,0 +1,7 @@
+UPDATE banner
+SET status = 'PUBLISHED'
+WHERE status = 'ACTIVE';
+
+UPDATE banner
+SET status = 'UNPUBLISHED'
+WHERE status IN ('INACTIVE', 'ARCHIVED', 'SCHEDULED', 'EXPIRED');

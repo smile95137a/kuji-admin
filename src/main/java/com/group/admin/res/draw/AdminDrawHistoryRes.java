@@ -35,6 +35,10 @@ public class AdminDrawHistoryRes {
         private String prizeLevel;
         private String prizeImageUrl;
         private Boolean isLastPrize;
+        private Boolean isOpenerDraw;
+        private Boolean triggeredFreeDraw;
+        private Integer openerDrawCount;
+        private Long freeDrawRefundAmount;
         private String costType;
         private Long costAmount;
         private String status;

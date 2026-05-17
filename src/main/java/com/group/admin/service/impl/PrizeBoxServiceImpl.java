@@ -1,9 +1,12 @@
 package com.group.admin.service.impl;
 
 import com.group.admin.entity.*;
+import com.group.admin.example.LotteryExample;
+import com.group.admin.example.LotteryPrizeExample;
 import com.group.admin.enums.PrizeBoxStatusEnum;
 import com.group.admin.enums.TransactionTypeEnum;
 import com.group.admin.example.PrizeBoxExample;
+import com.group.admin.example.StoreExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.*;
 import com.group.admin.req.prizebox.PrizeBoxRecycleReq;
@@ -77,7 +80,26 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
         example.setOrderByClause("created_at DESC");
 
         List<PrizeBox> prizeBoxes = prizeBoxMapper.selectByExample(example);
-        return prizeBoxes.stream().map(this::convertToItemRes).collect(Collectors.toList());
+        return convertToItemResList(prizeBoxes);
+    }
+
+    @Override
+    public PageResult<PrizeBoxItemRes> getPrizeBoxPage(String userId, int page, int size) {
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, Math.min(size, 100));
+
+        PrizeBoxExample example = new PrizeBoxExample();
+        example.createCriteria()
+                .andUserIdEqualTo(userId)
+                .andStatusEqualTo(PrizeBoxStatusEnum.IN_BOX.getCode());
+        example.setOrderByClause("created_at DESC");
+
+        long total = prizeBoxMapper.countByExample(example);
+        int offset = (safePage - 1) * safeSize;
+        List<PrizeBox> prizeBoxes = prizeBoxMapper.selectByExampleWithPage(example, offset, safeSize);
+        List<PrizeBoxItemRes> items = convertToItemResList(prizeBoxes);
+
+        return PageResult.of(safePage, safeSize, total, items);
     }
 
     @Override
@@ -251,9 +273,66 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
         long total = prizeBoxMapper.countByExample(example);
         int offset = (page - 1) * size;
         List<PrizeBox> prizeBoxes = prizeBoxMapper.selectByExampleWithPage(example, offset, size);
-        List<PrizeBoxItemRes> items = prizeBoxes.stream().map(this::convertToItemRes).collect(Collectors.toList());
+        List<PrizeBoxItemRes> items = convertToItemResList(prizeBoxes);
 
         return PageResult.of(page, size, total, items);
+    }
+
+    private List<PrizeBoxItemRes> convertToItemResList(List<PrizeBox> prizeBoxes) {
+        if (prizeBoxes == null || prizeBoxes.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> lotteryIds = prizeBoxes.stream()
+                .map(PrizeBox::getLotteryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<String> prizeIds = prizeBoxes.stream()
+                .map(PrizeBox::getPrizeId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<String> storeIds = prizeBoxes.stream()
+                .map(PrizeBox::getStoreId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<String, Lottery> lotteryMap = new HashMap<>();
+        if (!lotteryIds.isEmpty()) {
+            LotteryExample lotteryExample = new LotteryExample();
+            lotteryExample.createCriteria().andIdIn(lotteryIds);
+            lotteryMap = lotteryMapper.selectByExample(lotteryExample).stream()
+                    .collect(Collectors.toMap(Lottery::getId, item -> item));
+        }
+
+        Map<String, LotteryPrize> prizeMap = new HashMap<>();
+        if (!prizeIds.isEmpty()) {
+            LotteryPrizeExample prizeExample = new LotteryPrizeExample();
+            prizeExample.createCriteria().andIdIn(prizeIds);
+            prizeMap = lotteryPrizeMapper.selectByExample(prizeExample).stream()
+                    .collect(Collectors.toMap(LotteryPrize::getId, item -> item));
+        }
+
+        Map<String, Store> storeMap = new HashMap<>();
+        if (!storeIds.isEmpty()) {
+            StoreExample storeExample = new StoreExample();
+            storeExample.createCriteria().andIdIn(storeIds);
+            storeMap = storeMapper.selectByExample(storeExample).stream()
+                    .collect(Collectors.toMap(Store::getId, item -> item));
+        }
+
+        Map<String, Lottery> finalLotteryMap = lotteryMap;
+        Map<String, LotteryPrize> finalPrizeMap = prizeMap;
+        Map<String, Store> finalStoreMap = storeMap;
+        return prizeBoxes.stream()
+                .map(prizeBox -> convertToItemRes(
+                        prizeBox,
+                        finalLotteryMap.get(prizeBox.getLotteryId()),
+                        finalPrizeMap.get(prizeBox.getPrizeId()),
+                        finalStoreMap.get(prizeBox.getStoreId())))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -263,7 +342,10 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
         Lottery lottery = lotteryMapper.selectByPrimaryKey(prizeBox.getLotteryId());
         LotteryPrize prize = lotteryPrizeMapper.selectByPrimaryKey(prizeBox.getPrizeId());
         Store store = storeMapper.selectByPrimaryKey(prizeBox.getStoreId());
+        return convertToItemRes(prizeBox, lottery, prize, store);
+    }
 
+    private PrizeBoxItemRes convertToItemRes(PrizeBox prizeBox, Lottery lottery, LotteryPrize prize, Store store) {
         return PrizeBoxItemRes.builder()
                 .id(prizeBox.getId())
                 .userId(prizeBox.getUserId())

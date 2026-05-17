@@ -39,6 +39,16 @@ public interface PrizeBoxService {
     List<PrizeBoxItemRes> getPrizeBox(String userId);
 
     /**
+     * 分頁查詢使用者目前仍在賞品盒中的項目。
+     *
+     * @param userId 使用者 ID
+     * @param page   頁碼，從 1 開始
+     * @param size   每頁筆數
+     * @return 分頁後的賞品盒項目
+     */
+    PageResult<PrizeBoxItemRes> getPrizeBoxPage(String userId, int page, int size);
+
+    /**
      * 按店家分組查詢獎品盒（用於出貨選擇）
      *
      * @param userId 玩家 ID

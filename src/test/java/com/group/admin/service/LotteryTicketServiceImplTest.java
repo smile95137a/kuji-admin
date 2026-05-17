@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -202,6 +203,74 @@ class LotteryTicketServiceImplTest {
                         new LotteryTicketService.PrizeDesignation(22, "prize-grand"),
                         new LotteryTicketService.PrizeDesignation(22, "prize-grand"))))
                 .hasMessageContaining("DUPLICATE_REVEALED_NUMBER");
+    }
+
+    @Test
+    @DisplayName("免單應以 freeDrawThreshold 判斷前 N 抽")
+    void checkAndTriggerFreeDraw_ShouldUseFreeDrawThreshold() {
+        LotterySession session = new LotterySession();
+        session.setId("session-1");
+        session.setLotteryId("lottery-1");
+        session.setOpenerUserId("user-1");
+        session.setFreeDrawEnabled((byte) 1);
+        session.setFreeDrawTriggered((byte) 0);
+        session.setOpenerDrawCount(7);
+        session.setProtectionDraws(2);
+        session.setOpenerTotalCost(700L);
+
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-1");
+        lottery.setCategory("CUSTOM_GACHA");
+        lottery.setFreeDrawThreshold(10);
+        lottery.setFirstOpenerUserId("user-1");
+        lottery.setFirstOpenerSessionId("session-1");
+
+        LotteryPrize prize = new LotteryPrize();
+        prize.setId("prize-grand");
+        prize.setIsGrandPrize((byte) 1);
+
+        when(lotterySessionMapper.selectByPrimaryKey("session-1")).thenReturn(session);
+        when(lotteryMapper.selectByPrimaryKey("lottery-1")).thenReturn(lottery);
+        when(lotteryPrizeMapper.selectByPrimaryKey("prize-grand")).thenReturn(prize);
+
+        boolean triggered = ticketService.checkAndTriggerFreeDraw("session-1", "prize-grand");
+
+        assertThat(triggered).isTrue();
+        verify(coinService).addGold("user-1", 700L, "FREE_DRAW_REFUND", "session-1", "FREE_DRAW_REFUND");
+        verify(lotterySessionMapper).updateByPrimaryKey(session);
+    }
+
+    @Test
+    @DisplayName("非首輪開套 session 不可觸發免單")
+    void checkAndTriggerFreeDraw_ShouldRejectNonOriginalOpenerSession() {
+        LotterySession session = new LotterySession();
+        session.setId("session-2");
+        session.setLotteryId("lottery-1");
+        session.setOpenerUserId("user-1");
+        session.setFreeDrawEnabled((byte) 1);
+        session.setFreeDrawTriggered((byte) 0);
+        session.setOpenerDrawCount(3);
+        session.setOpenerTotalCost(300L);
+
+        Lottery lottery = new Lottery();
+        lottery.setId("lottery-1");
+        lottery.setCategory("CUSTOM_GACHA");
+        lottery.setFreeDrawThreshold(10);
+        lottery.setFirstOpenerUserId("user-1");
+        lottery.setFirstOpenerSessionId("session-1");
+
+        LotteryPrize prize = new LotteryPrize();
+        prize.setId("prize-grand");
+        prize.setIsGrandPrize((byte) 1);
+
+        when(lotterySessionMapper.selectByPrimaryKey("session-2")).thenReturn(session);
+        when(lotteryMapper.selectByPrimaryKey("lottery-1")).thenReturn(lottery);
+        when(lotteryPrizeMapper.selectByPrimaryKey("prize-grand")).thenReturn(prize);
+
+        boolean triggered = ticketService.checkAndTriggerFreeDraw("session-2", "prize-grand");
+
+        assertThat(triggered).isFalse();
+        verify(coinService, never()).addGold(any(), any(), any(), any(), any());
     }
 
     private LotteryTicket ticket(String id, int ticketNumber, String status, String prizeId) {

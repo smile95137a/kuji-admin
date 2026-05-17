@@ -17,11 +17,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * 消費紀錄 Service 實作
- * 
- * ⚠️ 只記錄金幣/紅利消費 與 運費支付，儲值不屬於消費紀錄
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,9 +28,10 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
     @Override
     @Transactional
     public void recordConsumption(String userId, String type, String lotteryId, String lotteryTitle,
-                                  String orderId, String orderNumber, Long goldAmount, Long bonusAmount, String description) {
-        log.info("💰 記錄消費: userId={}, type={}, gold={}, bonus={}", userId, type, goldAmount, bonusAmount);
-        
+                                  String orderId, String orderNumber, Long goldAmount, Long bonusAmount,
+                                  String description) {
+        log.info("建立消費紀錄: userId={}, type={}, gold={}, bonus={}", userId, type, goldAmount, bonusAmount);
+
         ConsumptionRecord record = new ConsumptionRecord();
         record.setId(UUID.randomUUID().toString());
         record.setUserId(userId);
@@ -48,14 +44,14 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
         record.setBonusAmount(bonusAmount);
         record.setDescription(description);
         record.setCreatedAt(LocalDateTime.now());
-        
+
         consumptionRecordMapper.insert(record);
-        log.info("✅ 消費紀錄已建立, ID={}", record.getId());
+        log.info("消費紀錄已建立, id={}", record.getId());
     }
 
     @Override
     public PageResult<ConsumptionRecordRes> getMyConsumptions(String userId, QueryReq<ConsumptionRecordCondition> req) {
-        log.info("📋 查詢用戶消費紀錄: userId={}", userId);
+        log.info("查詢我的消費紀錄: userId={}", userId);
 
         QueryReq<ConsumptionRecordCondition> safeReq = normalizeReq(req);
         ConsumptionRecordCondition condition = safeReq.getCondition();
@@ -73,14 +69,14 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
         var records = consumptionRecordRepository.selectByConditionPaged(condition, offset, size);
         var items = records.stream().map(this::convertToRes).collect(Collectors.toList());
 
-        log.info("✅ 查詢到 {} 筆用戶消費紀錄（本頁 {} 筆）", total, items.size());
+        log.info("我的消費紀錄共 {} 筆，本頁回傳 {} 筆", total, items.size());
         return PageResult.of(page, size, total, items);
     }
 
     @Override
     public PageResult<ConsumptionRecordRes> queryConsumptions(QueryReq<ConsumptionRecordCondition> req) {
-        log.info("📋 後台查詢所有消費紀錄");
-        
+        log.info("後台查詢消費紀錄");
+
         QueryReq<ConsumptionRecordCondition> safeReq = normalizeReq(req);
         ConsumptionRecordCondition condition = safeReq.getCondition();
         int page = resolvePage(safeReq.getPage());
@@ -95,7 +91,7 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
         var records = consumptionRecordRepository.selectByConditionPaged(condition, offset, size);
         var items = records.stream().map(this::convertToRes).collect(Collectors.toList());
 
-        log.info("✅ 查詢到 {} 筆消費紀錄（本頁 {} 筆）", total, items.size());
+        log.info("消費紀錄共 {} 筆，本頁回傳 {} 筆", total, items.size());
         return PageResult.of(page, size, total, items);
     }
 
@@ -138,13 +134,15 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
     }
 
     private String getTypeName(String type) {
-        if (type == null) return "未知";
-        switch (type) {
-            case "DRAW_GOLD": return "金幣抽獎消費";
-            case "DRAW_BONUS": return "紅利抽獎消費";
-            case "SHIPPING_FEE": return "運費支付";
-            default: return type;
+        if (type == null) {
+            return "未知類型";
         }
+        return switch (type) {
+            case "DRAW_GOLD" -> "抽獎扣款（金幣）";
+            case "DRAW_BONUS" -> "抽獎扣款（紅利）";
+            case "SHIPPING_FEE" -> "配送運費";
+            case "FREE_DRAW_REFUND" -> "免單退款";
+            default -> type;
+        };
     }
-
 }

@@ -117,6 +117,10 @@ public class AdminDrawHistoryServiceImpl implements AdminDrawHistoryService {
                 .prizeLevel(getString(row, "prizeLevel"))
                 .prizeImageUrl(getString(row, "prizeImageUrl"))
                 .isLastPrize(getBoolean(row, "isLastPrize"))
+                .isOpenerDraw(getBoolean(row, "isOpenerDraw"))
+                .triggeredFreeDraw(getBoolean(row, "triggeredFreeDraw"))
+                .openerDrawCount(getInteger(row, "openerDrawCount"))
+                .freeDrawRefundAmount(getLong(row, "freeDrawRefundAmount"))
                 .costType(getString(row, "costType"))
                 .costAmount(getLong(row, "costAmount"))
                 .status(getString(row, "status"))
@@ -133,6 +137,12 @@ public class AdminDrawHistoryServiceImpl implements AdminDrawHistoryService {
     private Long getLong(Map<String, Object> row, String key) {
         Object val = row.get(key);
         if (val instanceof Number) return ((Number) val).longValue();
+        return null;
+    }
+
+    private Integer getInteger(Map<String, Object> row, String key) {
+        Object val = row.get(key);
+        if (val instanceof Number) return ((Number) val).intValue();
         return null;
     }
 

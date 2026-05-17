@@ -33,10 +33,12 @@ public class PrizeBoxController {
     private final PrizeBoxService prizeBoxService;
 
     @GetMapping
-    public ResponseEntity<List<PrizeBoxItemRes>> getMyPrizeBox() {
+    public ResponseEntity<PageResult<PrizeBoxItemRes>> getMyPrizeBox(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
         String userId = requireCurrentUserId();
         log.info("[API] 查詢我的賞品盒 userId={}", userId);
-        return ResponseEntity.ok(prizeBoxService.getPrizeBox(userId));
+        return ResponseEntity.ok(prizeBoxService.getPrizeBoxPage(userId, page, size));
     }
 
     @GetMapping("/summary")
