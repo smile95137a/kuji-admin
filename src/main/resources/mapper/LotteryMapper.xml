@@ -12,6 +12,8 @@
     <result column="payment_type" jdbcType="VARCHAR" property="paymentType" />
     <result column="free_draw_threshold" jdbcType="INTEGER" property="freeDrawThreshold" />
     <result column="delist_strategy" jdbcType="VARCHAR" property="delistStrategy" />
+    <result column="first_opener_user_id" jdbcType="VARCHAR" property="firstOpenerUserId" />
+    <result column="first_opener_session_id" jdbcType="VARCHAR" property="firstOpenerSessionId" />
     <result column="price_per_draw" jdbcType="BIGINT" property="pricePerDraw" />
     <result column="discounted_price" jdbcType="BIGINT" property="discountedPrice" />
     <result column="auto_discount_enabled" jdbcType="TINYINT" property="autoDiscountEnabled" />
@@ -46,6 +48,15 @@
     <result column="remark" jdbcType="LONGVARCHAR" property="remark" />
     <result column="gallery_images" jdbcType="LONGVARCHAR" property="galleryImages" />
     <result column="content" jdbcType="LONGVARCHAR" property="content" />
+  </resultMap>
+  <resultMap id="ScheduledLotteryResultMap" type="com.group.admin.entity.Lottery">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="store_id" jdbcType="VARCHAR" property="storeId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="scheduled_at" jdbcType="TIMESTAMP" property="scheduledAt" />
+    <result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -107,7 +118,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, store_id, title, image_url, category, sub_category, game_mode, payment_type, 
-    free_draw_threshold, delist_strategy, price_per_draw, discounted_price, auto_discount_enabled, 
+    free_draw_threshold, delist_strategy, first_opener_user_id, first_opener_session_id, price_per_draw, discounted_price, auto_discount_enabled, 
     allow_multi_draw, multi_draw_options, scheduled_at, 
     start_time, end_time, total_draws, max_draws, protection_draws, protection_minutes, 
     free_draw_enabled, designated_prize_numbers, tickets_generated, status, order_num, 
@@ -116,6 +127,9 @@
   </sql>
   <sql id="Blob_Column_List">
     description, remark, gallery_images, content
+  </sql>
+  <sql id="Scheduled_Column_List">
+    id, store_id, title, scheduled_at, start_time, status, updated_at
   </sql>
   <select id="selectByExampleWithBLOBs" parameterType="com.group.admin.example.LotteryExample" resultMap="ResultMapWithBLOBs">
     select
@@ -171,7 +185,7 @@
     insert into lottery (id, store_id, title, 
       image_url, category, sub_category, 
       game_mode, payment_type, free_draw_threshold, 
-      delist_strategy, price_per_draw, discounted_price, 
+      delist_strategy, first_opener_user_id, first_opener_session_id, price_per_draw, discounted_price, 
       auto_discount_enabled, 
       scheduled_at, start_time, end_time, 
       total_draws, max_draws, free_draw_enabled, designated_prize_numbers, 
@@ -185,7 +199,7 @@
     values (#{id,jdbcType=VARCHAR}, #{storeId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
       #{imageUrl,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR}, #{subCategory,jdbcType=VARCHAR}, 
       #{gameMode,jdbcType=VARCHAR}, #{paymentType,jdbcType=VARCHAR}, #{freeDrawThreshold,jdbcType=INTEGER}, 
-      #{delistStrategy,jdbcType=VARCHAR}, #{pricePerDraw,jdbcType=BIGINT}, #{discountedPrice,jdbcType=BIGINT}, 
+      #{delistStrategy,jdbcType=VARCHAR}, #{firstOpenerUserId,jdbcType=VARCHAR}, #{firstOpenerSessionId,jdbcType=VARCHAR}, #{pricePerDraw,jdbcType=BIGINT}, #{discountedPrice,jdbcType=BIGINT}, 
       #{autoDiscountEnabled,jdbcType=TINYINT}, 
       #{scheduledAt,jdbcType=TIMESTAMP}, #{startTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, 
       #{totalDraws,jdbcType=INTEGER}, #{maxDraws,jdbcType=INTEGER}, #{freeDrawEnabled,jdbcType=TINYINT}, #{designatedPrizeNumbers,jdbcType=VARCHAR}, 
@@ -229,6 +243,12 @@
       </if>
       <if test="delistStrategy != null">
         delist_strategy,
+      </if>
+      <if test="firstOpenerUserId != null">
+        first_opener_user_id,
+      </if>
+      <if test="firstOpenerSessionId != null">
+        first_opener_session_id,
       </if>
       <if test="pricePerDraw != null">
         price_per_draw,
@@ -345,6 +365,12 @@
       </if>
       <if test="delistStrategy != null">
         #{delistStrategy,jdbcType=VARCHAR},
+      </if>
+      <if test="firstOpenerUserId != null">
+        #{firstOpenerUserId,jdbcType=VARCHAR},
+      </if>
+      <if test="firstOpenerSessionId != null">
+        #{firstOpenerSessionId,jdbcType=VARCHAR},
       </if>
       <if test="pricePerDraw != null">
         #{pricePerDraw,jdbcType=BIGINT},
@@ -572,6 +598,8 @@
       payment_type = #{row.paymentType,jdbcType=VARCHAR},
       free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
       delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR},
+      first_opener_user_id = #{row.firstOpenerUserId,jdbcType=VARCHAR},
+      first_opener_session_id = #{row.firstOpenerSessionId,jdbcType=VARCHAR},
       price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
@@ -616,6 +644,8 @@
       payment_type = #{row.paymentType,jdbcType=VARCHAR},
       free_draw_threshold = #{row.freeDrawThreshold,jdbcType=INTEGER},
       delist_strategy = #{row.delistStrategy,jdbcType=VARCHAR},
+      first_opener_user_id = #{row.firstOpenerUserId,jdbcType=VARCHAR},
+      first_opener_session_id = #{row.firstOpenerSessionId,jdbcType=VARCHAR},
       price_per_draw = #{row.pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{row.discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{row.autoDiscountEnabled,jdbcType=TINYINT},
@@ -673,6 +703,12 @@
       </if>
       <if test="delistStrategy != null">
         delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
+      </if>
+      <if test="firstOpenerUserId != null">
+        first_opener_user_id = #{firstOpenerUserId,jdbcType=VARCHAR},
+      </if>
+      <if test="firstOpenerSessionId != null">
+        first_opener_session_id = #{firstOpenerSessionId,jdbcType=VARCHAR},
       </if>
       <if test="pricePerDraw != null">
         price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
@@ -778,6 +814,8 @@
       payment_type = #{paymentType,jdbcType=VARCHAR},
       free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
       delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
+      first_opener_user_id = #{firstOpenerUserId,jdbcType=VARCHAR},
+      first_opener_session_id = #{firstOpenerSessionId,jdbcType=VARCHAR},
       price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
@@ -821,6 +859,8 @@
       payment_type = #{paymentType,jdbcType=VARCHAR},
       free_draw_threshold = #{freeDrawThreshold,jdbcType=INTEGER},
       delist_strategy = #{delistStrategy,jdbcType=VARCHAR},
+      first_opener_user_id = #{firstOpenerUserId,jdbcType=VARCHAR},
+      first_opener_session_id = #{firstOpenerSessionId,jdbcType=VARCHAR},
       price_per_draw = #{pricePerDraw,jdbcType=BIGINT},
       discounted_price = #{discountedPrice,jdbcType=BIGINT},
       auto_discount_enabled = #{autoDiscountEnabled,jdbcType=TINYINT},
@@ -1003,16 +1043,16 @@
       AND auto_discount_enabled = 1
   </update>
 
-  <select id="selectScheduledForPromotion" resultMap="BaseResultMap">
-    SELECT <include refid="Base_Column_List" />
+  <select id="selectScheduledForPromotion" resultMap="ScheduledLotteryResultMap">
+    SELECT <include refid="Scheduled_Column_List" />
     FROM lottery
     WHERE status = 'WAITING_ON_SHELF'
       AND scheduled_at IS NOT NULL
       AND scheduled_at &lt;= NOW()
   </select>
 
-  <select id="selectDrawableForStart" resultMap="BaseResultMap">
-    SELECT <include refid="Base_Column_List" />
+  <select id="selectDrawableForStart" resultMap="ScheduledLotteryResultMap">
+    SELECT <include refid="Scheduled_Column_List" />
     FROM lottery
     WHERE status     = 'ON_SHELF'
       AND start_time IS NOT NULL

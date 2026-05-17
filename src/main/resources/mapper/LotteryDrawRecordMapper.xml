@@ -343,12 +343,15 @@
     SELECT ldr.id, ldr.lottery_id AS lotteryId, ldr.user_id AS userId,
            u.nickname AS userNickname, u.email AS userEmail,
            ldr.prize_id AS prizeId, lp.name AS prizeName, lp.level AS prizeLevel,
+           ldr.is_opener_draw AS isOpenerDraw, ldr.triggered_free_draw AS triggeredFreeDraw,
+           ls.opener_draw_count AS openerDrawCount, ls.free_draw_refund_amount AS freeDrawRefundAmount,
            ldr.ticket_id AS ticketId, ldr.selected_number AS selectedNumber,
            ldr.cost_type AS costType, ldr.cost_amount AS costAmount,
            ldr.status, ldr.created_at AS createdAt
     FROM lottery_draw_record ldr
     LEFT JOIN `user` u ON ldr.user_id = u.id
     LEFT JOIN lottery_prize lp ON ldr.prize_id = lp.id
+    LEFT JOIN lottery_session ls ON ldr.session_id = ls.id
     <where>
       ldr.lottery_id = #{lotteryId,jdbcType=VARCHAR}
       <if test="userId != null and userId != ''">

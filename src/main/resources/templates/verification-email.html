@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>驗證您的 STARDO 帳號</title>
+  <title>驗證您的 KUJI 帳號</title>
 
   <style>
     body {
@@ -190,6 +190,25 @@
       font-size: 12px;
       line-height: 1.7;
       color: #6b7280;
+    }
+
+    .button-wrap {
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    .action-button {
+      display: inline-block;
+      min-width: 168px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ff9500 0%, #ff7a00 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      box-shadow: 0 12px 26px rgba(255, 149, 0, 0.22);
     }
 
     .notice {
@@ -381,50 +400,50 @@
 
       <div class="corner-top"></div>
 
-      <!-- 品牌 -->
       <div class="brand-area">
-        <div class="brand-mark">STARDO</div>
+        <div class="brand-mark">KUJI</div>
       </div>
 
-      <!-- 內容 -->
       <div class="content">
         <div class="content-corner"></div>
 
         <div class="content-inner">
           <div class="eyebrow">帳號驗證</div>
 
-          <h1 class="title">歡迎加入 STARDO</h1>
-          <div class="subtitle">完成驗證，開啟您的會員服務</div>
+          <h1 class="title">驗證您的 Email</h1>
+          <div class="subtitle">完成驗證後即可繼續使用 KUJI</div>
 
           <div class="greeting">
-            您好，<span th:text="${nickname}">用戶</span>！
+            您好，<span th:text="${nickname}">會員</span>！
           </div>
 
           <p class="message">
-            感謝您註冊 STARDO，請使用下方驗證碼完成帳號驗證，
-            驗證成功後即可開始使用會員功能。
+            請使用下方驗證碼完成 Email 驗證，
+            或點擊下方按鈕直接完成驗證。
           </p>
 
-          <!-- 驗證碼 -->
           <div class="code-panel">
             <div class="code-box">
               <div class="code-label">您的驗證碼</div>
               <div class="verification-code" th:text="${verificationCode}">123456</div>
               <div class="code-line"></div>
-              <div class="code-hint">請於驗證頁面輸入此 6 位數字</div>
+              <div class="code-hint">驗證碼有效時間為 24 小時</div>
             </div>
           </div>
 
-          <!-- 安全提醒 -->
+          <div class="button-wrap">
+            <a class="action-button" th:href="${verifyUrl}">立即驗證 Email</a>
+          </div>
+
           <div class="notice">
             <div class="notice-title">安全提醒</div>
 
             <div class="notice-cards">
               <div class="notice-card">
                 <div class="notice-card-icon"><span>1</span></div>
-                <div class="notice-card-title">15 分鐘內完成</div>
+                <div class="notice-card-title">盡快完成驗證</div>
                 <div class="notice-card-desc">
-                  驗證碼逾時將失效。
+                  驗證碼逾時後需重新取得。
                 </div>
               </div>
 
@@ -440,29 +459,24 @@
                 <div class="notice-card-icon"><span>3</span></div>
                 <div class="notice-card-title">若非本人操作</div>
                 <div class="notice-card-desc">
-                  請直接忽略此郵件。
+                  請直接忽略此信件。
                 </div>
               </div>
             </div>
           </div>
 
           <div class="signature">
-            此郵件由系統自動發送，請勿直接回覆。<br />
-            祝您使用愉快，<strong>STARDO 團隊</strong>
+            此信件由系統自動寄送，請勿直接回覆。<br />
+            祝您使用愉快，<strong>KUJI 團隊</strong>
           </div>
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="footer">
-        <p class="footer-brand">STARDO</p>
-        <p class="footer-copy">© 2026 STARDO 版權所有</p>
+        <p class="footer-brand">KUJI</p>
+        <p class="footer-copy">© 2026 KUJI 版權所有</p>
         <div class="footer-links">
-          <a href="#">隱私政策</a>
-          &nbsp;｜&nbsp;
-          <a href="#">服務條款</a>
-          &nbsp;｜&nbsp;
-          <a href="#">聯絡我們</a>
+          <span>請以 KUJI 官網與信件內容為準</span>
         </div>
       </div>
 

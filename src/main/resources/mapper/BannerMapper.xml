@@ -315,34 +315,38 @@
            b.created_at AS createdAt, b.updated_at AS updatedAt
     FROM banner b
     LEFT JOIN store s ON b.store_id = s.id
-    WHERE b.status = 'PUBLISHED'
-    ORDER BY b.order_num ASC
+    WHERE b.status IN ('PUBLISHED', 'ACTIVE')
+      AND (b.start_time IS NULL OR b.start_time &lt;= NOW())
+      AND (b.end_time IS NULL OR b.end_time &gt;= NOW())
+      AND (b.store_id IS NULL OR s.status = 'ACTIVE')
+    ORDER BY COALESCE(b.order_num, 9999) ASC, b.updated_at DESC, b.created_at DESC
   </select>
 
   <update id="autoPublishBanners">
     UPDATE banner
     SET status     = 'PUBLISHED',
         updated_at = NOW()
-    WHERE status     = 'SCHEDULED'
+    WHERE status IN ('SCHEDULED', 'ACTIVE')
       AND start_time IS NOT NULL
       AND start_time &lt;= NOW()
+      AND (end_time IS NULL OR end_time &gt; NOW())
   </update>
 
   <update id="autoUnpublishBanners">
     UPDATE banner
-    SET status     = 'EXPIRED',
+    SET status     = 'UNPUBLISHED',
         updated_at = NOW()
-    WHERE status   = 'PUBLISHED'
+    WHERE status IN ('PUBLISHED', 'ACTIVE')
       AND end_time IS NOT NULL
       AND end_time &lt;= NOW()
   </update>
 
   <update id="unpublishBannersByStoreId">
     UPDATE banner
-    SET status     = 'EXPIRED',
+    SET status     = 'UNPUBLISHED',
         updated_at = NOW()
     WHERE store_id = #{storeId,jdbcType=VARCHAR}
-      AND status   = 'PUBLISHED'
+      AND status IN ('PUBLISHED', 'ACTIVE')
   </update>
 
 </mapper>
