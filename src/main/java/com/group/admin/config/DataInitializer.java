@@ -120,6 +120,7 @@ public class DataInitializer implements CommandLineRunner {
                 log.info("✅ role_menu 補救初始化完成");
             }
             // 補救：若報表子選單未完整初始化，補建缺少的選單
+            deduplicateMenusByCode();
             rescueMissingReportMenus();
             // 補救：若系統設定子選單未建立，補建缺少的選單
             rescueMissingSystemMenus();
@@ -139,6 +140,7 @@ public class DataInitializer implements CommandLineRunner {
             initializeLotteries();
             initializeShippingMethods();
             initializeSystemConfigs();
+            deduplicateMenusByCode();
             rescueMissingReportMenus();
             rescueMissingSystemMenus();
             rescueMissingCategoryMenu();
@@ -524,6 +526,77 @@ public class DataInitializer implements CommandLineRunner {
                 .orElse(null);
     }
 
+    private void deduplicateMenusByCode() {
+        MenuExample example = new MenuExample();
+        example.createCriteria().andCodeIsNotNull();
+        example.setOrderByClause("code ASC, is_visible DESC, updated_at DESC, created_at DESC");
+
+        java.util.Map<String, java.util.List<Menu>> menuGroups = new java.util.LinkedHashMap<>();
+        for (Menu menu : menuMapper.selectByExample(example)) {
+            if (menu.getCode() == null || menu.getCode().isBlank()) {
+                continue;
+            }
+            menuGroups.computeIfAbsent(menu.getCode(), key -> new java.util.ArrayList<>()).add(menu);
+        }
+
+        for (java.util.Map.Entry<String, java.util.List<Menu>> entry : menuGroups.entrySet()) {
+            java.util.List<Menu> menus = entry.getValue();
+            if (menus.size() <= 1) {
+                continue;
+            }
+
+            Menu canonical = menus.get(0);
+            for (int i = 1; i < menus.size(); i++) {
+                mergeMenuIntoCanonical(canonical, menus.get(i));
+            }
+            log.warn("⚠️ 偵測到重複選單代碼，已合併：code={}, count={}", entry.getKey(), menus.size());
+        }
+    }
+
+    private void mergeMenuIntoCanonical(Menu canonical, Menu duplicate) {
+        if (canonical == null || duplicate == null || canonical.getId().equals(duplicate.getId())) {
+            return;
+        }
+
+        rebindChildMenus(duplicate.getId(), canonical.getId());
+        mergeRoleMenuPermissions(canonical.getId(), duplicate.getId());
+        menuMapper.deleteByPrimaryKey(duplicate.getId());
+    }
+
+    private void rebindChildMenus(String sourceParentId, String targetParentId) {
+        MenuExample example = new MenuExample();
+        example.createCriteria().andParentIdEqualTo(sourceParentId);
+        for (Menu child : menuMapper.selectByExample(example)) {
+            child.setParentId(targetParentId);
+            child.setUpdatedAt(LocalDateTime.now());
+            menuMapper.updateByPrimaryKeySelective(child);
+        }
+    }
+
+    private void mergeRoleMenuPermissions(String targetMenuId, String sourceMenuId) {
+        RoleMenuExample example = new RoleMenuExample();
+        example.createCriteria().andMenuIdEqualTo(sourceMenuId);
+        for (RoleMenu sourceRoleMenu : roleMenuMapper.selectByExample(example)) {
+            RoleMenuExample targetExample = new RoleMenuExample();
+            targetExample.createCriteria()
+                    .andRoleIdEqualTo(sourceRoleMenu.getRoleId())
+                    .andMenuIdEqualTo(targetMenuId);
+            RoleMenu targetRoleMenu = roleMenuMapper.selectByExample(targetExample).stream().findFirst().orElse(null);
+
+            if (targetRoleMenu == null) {
+                sourceRoleMenu.setMenuId(targetMenuId);
+                roleMenuMapper.updateByPrimaryKeySelective(sourceRoleMenu);
+                continue;
+            }
+
+            targetRoleMenu.setCanView(Boolean.TRUE.equals(targetRoleMenu.getCanView()) || Boolean.TRUE.equals(sourceRoleMenu.getCanView()));
+            targetRoleMenu.setCanEdit(Boolean.TRUE.equals(targetRoleMenu.getCanEdit()) || Boolean.TRUE.equals(sourceRoleMenu.getCanEdit()));
+            targetRoleMenu.setCanDelete(Boolean.TRUE.equals(targetRoleMenu.getCanDelete()) || Boolean.TRUE.equals(sourceRoleMenu.getCanDelete()));
+            roleMenuMapper.updateByPrimaryKeySelective(targetRoleMenu);
+            roleMenuMapper.deleteByPrimaryKey(sourceRoleMenu.getId());
+        }
+    }
+
     private void ensureRoleMenuPermission(String roleId, String menuId, boolean canView, boolean canEdit, boolean canDelete) {
         if (roleId == null || menuId == null) {
             return;
@@ -748,17 +821,6 @@ public class DataInitializer implements CommandLineRunner {
             legacyMenu.setIsVisible(false);
             legacyMenu.setUpdatedAt(LocalDateTime.now());
             menuMapper.updateByPrimaryKeySelective(legacyMenu);
-        }
-
-        MenuExample duplicateEx = new MenuExample();
-        duplicateEx.createCriteria().andParentIdEqualTo(reportCenterId);
-        for (Menu menu : menuMapper.selectByExample(duplicateEx)) {
-            if (!"STORE_PERF_REPORT".equals(menu.getCode())) {
-                continue;
-            }
-            menu.setIsVisible(false);
-            menu.setUpdatedAt(LocalDateTime.now());
-            menuMapper.updateByPrimaryKeySelective(menu);
         }
     }
 

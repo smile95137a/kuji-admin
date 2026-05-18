@@ -160,9 +160,10 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setCreatedAt(LocalDateTime.now());
         lottery.setUpdatedAt(LocalDateTime.now());
         lottery.setRemark(req.getRemark());
-        lottery.setFreeDrawEnabled(Boolean.TRUE.equals(req.getFreeDrawEnabled()) ? (byte) 1 : (byte) 0);
-        lottery.setProtectionDraws(req.getProtectionDraws());
         // T007: paymentType / delistStrategy defaults; freeDrawThreshold validation
+        Byte freeDrawEnabled = resolveFreeDrawEnabled(req.getFreeDrawEnabled(), normalizedFreeDrawThreshold);
+        lottery.setFreeDrawEnabled(freeDrawEnabled);
+        lottery.setProtectionDraws(req.getProtectionDraws());
         lottery.setPaymentType(normalizedPaymentType);
         lottery.setDelistStrategy(resolvedDelistStrategy);
         lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
@@ -1103,9 +1104,10 @@ public class LotteryServiceImpl implements LotteryService {
         lottery.setBonusEnabled(req.getBonusEnabled());
         lottery.setBonusPointsPerDraw(req.getBonusPointsPerDraw());
         lottery.setBonusCostPerDraw(req.getBonusCostPerDraw());
-        lottery.setFreeDrawEnabled(Boolean.TRUE.equals(req.getFreeDrawEnabled()) ? (byte) 1 : (byte) 0);
-        lottery.setProtectionDraws(req.getProtectionDraws());
         // T007: paymentType / delistStrategy defaults; freeDrawThreshold validation
+        Byte freeDrawEnabled = resolveFreeDrawEnabled(req.getFreeDrawEnabled(), normalizedFreeDrawThreshold);
+        lottery.setFreeDrawEnabled(freeDrawEnabled);
+        lottery.setProtectionDraws(req.getProtectionDraws());
         lottery.setPaymentType(normalizePaymentType(req.getPaymentType()));
         lottery.setDelistStrategy(resolvedDelistStrategy);
         lottery.setFreeDrawThreshold(normalizedFreeDrawThreshold);
@@ -1704,6 +1706,13 @@ public class LotteryServiceImpl implements LotteryService {
             return null;
         }
         return threshold;
+    }
+
+    private Byte resolveFreeDrawEnabled(Boolean requestEnabled, Integer normalizedFreeDrawThreshold) {
+        if (normalizedFreeDrawThreshold != null && normalizedFreeDrawThreshold >= 1) {
+            return (byte) 1;
+        }
+        return Boolean.TRUE.equals(requestEnabled) ? (byte) 1 : (byte) 0;
     }
 
     private String normalizePaymentType(String paymentType) {

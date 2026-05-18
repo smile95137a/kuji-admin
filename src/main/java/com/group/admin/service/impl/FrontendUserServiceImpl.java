@@ -6,6 +6,7 @@ import com.group.admin.enums.UserStatusEnum;
 import com.group.admin.example.UserExample;
 import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.UserMapper;
+import com.group.admin.repository.UserAddressRepository;
 import com.group.admin.req.common.QueryReq;
 import com.group.admin.req.user.CoinAdjustReq;
 import com.group.admin.req.user.FrontendUserCondition;
@@ -29,7 +30,7 @@ import java.util.Map;
 
 /**
  * 前台會員管理服務實作
- * 
+ *
  * @author KUJI System
  * @since 1.0.0
  */
@@ -56,16 +57,17 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         sortMap.put("lastLoginAt", "last_login_at");
         USER_SORT_FIELD_MAP = Collections.unmodifiableMap(sortMap);
     }
-    
+
     private final UserMapper userMapper;
+    private final UserAddressRepository userAddressRepository;
     private final CoinService coinService;
-    
+
     @Override
     public List<FrontendUserListRes> queryUsers(QueryReq<FrontendUserCondition> req) {
         log.info("🔍 查詢前台會員列表: {}", req);
-        
+
         FrontendUserCondition condition = req != null ? req.getCondition() : null;
-        
+
         UserExample example = new UserExample();
 
         if (condition != null && isNotBlank(condition.getKeyword())) {
@@ -86,10 +88,9 @@ public class FrontendUserServiceImpl implements FrontendUserService {
             UserExample.Criteria criteria = example.createCriteria();
             applyCommonFilters(criteria, condition);
         }
-        
-        // 排序
+
         example.setOrderByClause(resolveOrderByClause(req));
-        
+
         List<User> users = userMapper.selectByExample(example);
 
         if (req != null && req.getPage() != null && req.getSize() != null
@@ -105,40 +106,39 @@ public class FrontendUserServiceImpl implements FrontendUserService {
                 users = new ArrayList<>(users.subList(fromIndex, toIndex));
             }
         }
-        
+
         log.info("✅ 查詢成功: 共 {} 筆", users.size());
 
         boolean shouldMaskSensitiveFields = !SecurityUtils.isAdmin();
-        
+
         return users.stream()
                 .map(this::toListRes)
-            .map(res -> applyListRoleMask(res, shouldMaskSensitiveFields))
-            .toList();
+                .map(res -> applyListRoleMask(res, shouldMaskSensitiveFields))
+                .toList();
     }
-    
+
     @Override
     public FrontendUserDetailRes getUserById(String id) {
         log.info("🔍 查詢會員詳情: userId={}", id);
-        
+
         User user = userMapper.selectByPrimaryKey(id);
         if (user == null || UserStatusEnum.DELETED.getCode().equals(user.getStatus())) {
             throw new BusinessException("會員不存在");
         }
-        
+
         boolean shouldMaskSensitiveFields = !SecurityUtils.isAdmin();
-        return applyDetailRoleMask(toDetailRes(user), shouldMaskSensitiveFields);
+        return applyDetailRoleMask(toDetailRes(enrichUserWithAddressSnapshot(user)), shouldMaskSensitiveFields);
     }
-    
+
     @Override
     public FrontendUserDetailRes updateUser(String id, FrontendUserUpdateReq req) {
         log.info("✏️ 更新會員資訊: userId={}, req={}", id, req);
-        
+
         User user = userMapper.selectByPrimaryKey(id);
         if (user == null || UserStatusEnum.DELETED.getCode().equals(user.getStatus())) {
             throw new BusinessException("會員不存在");
         }
-        
-        // 更新欄位（只更新非 null 的欄位）
+
         if (req.getEmail() != null) {
             user.setEmail(req.getEmail());
         }
@@ -184,67 +184,60 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         if (req.getCompanyName() != null) {
             user.setCompanyName(req.getCompanyName());
         }
-        
+
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateByPrimaryKey(user);
-        
+
         log.info("✅ 更新成功");
-        return toDetailRes(user);
+        return toDetailRes(enrichUserWithAddressSnapshot(user));
     }
-    
+
     @Override
     public void deleteUser(String id) {
         log.info("🗑️ 軟刪除會員: userId={}", id);
-        
+
         User user = userMapper.selectByPrimaryKey(id);
         if (user == null) {
             throw new BusinessException("會員不存在");
         }
-        
-        // ✅ 軟刪除：標記為 DELETED
+
         user.setStatus(UserStatusEnum.DELETED.getCode());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateByPrimaryKey(user);
-        
+
         log.info("✅ 軟刪除成功");
     }
-    
+
     @Override
     public void activateUser(String id) {
         updateUserStatus(id, UserStatusEnum.ACTIVE.getCode(), "啟用");
     }
-    
+
     @Override
     public void deactivateUser(String id) {
         updateUserStatus(id, UserStatusEnum.INACTIVE.getCode(), "停用");
     }
-    
+
     @Override
     public void suspendUser(String id) {
         updateUserStatus(id, UserStatusEnum.SUSPENDED.getCode(), "暫停");
     }
-    
-    /**
-     * 更新會員狀態
-     */
+
     private void updateUserStatus(String id, String status, String action) {
         log.info("🔄 {}會員: userId={}, status={}", action, id, status);
-        
+
         User user = userMapper.selectByPrimaryKey(id);
         if (user == null || UserStatusEnum.DELETED.getCode().equals(user.getStatus())) {
             throw new BusinessException("會員不存在");
         }
-        
+
         user.setStatus(status);
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateByPrimaryKey(user);
-        
+
         log.info("✅ {}成功", action);
     }
-    
-    /**
-     * 轉換為 Res
-     */
+
     private FrontendUserListRes toListRes(User user) {
         return FrontendUserListRes.builder()
                 .id(user.getId())
@@ -262,6 +255,33 @@ public class FrontendUserServiceImpl implements FrontendUserService {
                 .build();
     }
 
+    private User enrichUserWithAddressSnapshot(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        boolean hasRecipientSnapshot = isNotBlank(user.getRecipientName())
+                || isNotBlank(user.getRecipientPhone())
+                || isNotBlank(user.getCity())
+                || isNotBlank(user.getDistrict())
+                || isNotBlank(user.getAddressDetail());
+        if (hasRecipientSnapshot) {
+            return user;
+        }
+
+        var defaultAddress = userAddressRepository.selectDefaultByUserId(user.getId());
+        if (defaultAddress == null) {
+            return user;
+        }
+
+        user.setRecipientName(defaultAddress.getRecipientName());
+        user.setRecipientPhone(defaultAddress.getRecipientPhone());
+        user.setCity(defaultAddress.getCity());
+        user.setDistrict(defaultAddress.getDistrict());
+        user.setAddressDetail(defaultAddress.getAddress());
+        return user;
+    }
+
     private FrontendUserDetailRes toDetailRes(User user) {
         return FrontendUserDetailRes.builder()
                 .id(user.getId())
@@ -276,16 +296,83 @@ public class FrontendUserServiceImpl implements FrontendUserService {
                 .statusName(UserStatusEnum.getNameByCode(user.getStatus()))
                 .emailVerified(user.getEmailVerified() != null && user.getEmailVerified() == 1)
                 .phoneNumber(user.getPhoneNumber())
+                .lineId(user.getLineId())
+                .recipientName(user.getRecipientName())
+                .recipientPhone(user.getRecipientPhone())
+                .city(user.getCity())
+                .district(user.getDistrict())
+                .addressDetail(user.getAddressDetail())
+                .address(buildFullAddress(user))
+                .invoiceType(user.getInvoiceType())
+                .invoiceTypeName(resolveInvoiceTypeName(user.getInvoiceType()))
+                .invoiceEmail(user.getInvoiceEmail())
+                .carrierCode(user.getCarrierCode())
+                .taxId(user.getTaxId())
+                .companyName(user.getCompanyName())
+                .invoiceContent(resolveInvoiceContent(user))
+                .failedLoginAttempts(user.getFailedLoginAttempts())
+                .lockedUntil(user.getLockedUntil())
                 .lastLoginAt(user.getLastLoginAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
     }
 
-    /**
-     * 檢查字串是否非空白
-     * 空字串 "" 會被視為 null 處理
-     */
+    private String buildFullAddress(User user) {
+        StringBuilder builder = new StringBuilder();
+        appendIfPresent(builder, user.getCity());
+        appendIfPresent(builder, user.getDistrict());
+        appendIfPresent(builder, user.getAddressDetail());
+        return builder.length() == 0 ? null : builder.toString();
+    }
+
+    private void appendIfPresent(StringBuilder builder, String value) {
+        if (isNotBlank(value)) {
+            builder.append(value.trim());
+        }
+    }
+
+    private String resolveInvoiceTypeName(String invoiceType) {
+        if (!isNotBlank(invoiceType)) {
+            return null;
+        }
+
+        return switch (invoiceType.trim().toUpperCase(Locale.ROOT)) {
+            case "DUPLICATE" -> "二聯式發票";
+            case "TRIPLICATE" -> "三聯式發票";
+            case "CARRIER" -> "手機載具";
+            case "DONATE" -> "捐贈發票";
+            default -> invoiceType;
+        };
+    }
+
+    private String resolveInvoiceContent(User user) {
+        if (!isNotBlank(user.getInvoiceType())) {
+            return null;
+        }
+
+        return switch (user.getInvoiceType().trim().toUpperCase(Locale.ROOT)) {
+            case "DUPLICATE" -> isNotBlank(user.getInvoiceEmail()) ? user.getInvoiceEmail().trim() : null;
+            case "TRIPLICATE" -> buildTriplicateContent(user.getCompanyName(), user.getTaxId());
+            case "CARRIER" -> isNotBlank(user.getCarrierCode()) ? user.getCarrierCode().trim() : null;
+            case "DONATE" -> isNotBlank(user.getInvoiceEmail()) ? user.getInvoiceEmail().trim() : "捐贈";
+            default -> null;
+        };
+    }
+
+    private String buildTriplicateContent(String companyName, String taxId) {
+        boolean hasCompanyName = isNotBlank(companyName);
+        boolean hasTaxId = isNotBlank(taxId);
+
+        if (!hasCompanyName && !hasTaxId) {
+            return null;
+        }
+        if (hasCompanyName && hasTaxId) {
+            return companyName.trim() + " / " + taxId.trim();
+        }
+        return hasCompanyName ? companyName.trim() : taxId.trim();
+    }
+
     private boolean isNotBlank(String str) {
         return str != null && !str.trim().isEmpty();
     }
@@ -390,7 +477,6 @@ public class FrontendUserServiceImpl implements FrontendUserService {
         update.setId(userId);
         update.setFailedLoginAttempts(0);
         userMapper.updateByPrimaryKeySelective(update);
-        // Use full update to clear lockedUntil to null
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         userMapper.updateByPrimaryKey(user);

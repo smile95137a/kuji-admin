@@ -6,15 +6,19 @@ import com.group.admin.example.LogAdminActionExample;
 import com.group.admin.example.LogAuthExample;
 import com.group.admin.mapper.LogAdminActionMapper;
 import com.group.admin.mapper.LogAuthMapper;
+import com.group.admin.res.systemlog.AdminSystemLogItemRes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * 後台系統日誌查詢 API
@@ -97,5 +101,81 @@ public class AdminSystemLogController {
         ex.setOrderByClause("created_at DESC");
         List<LogAdminAction> rows = logAdminActionMapper.selectByExample(ex);
         return ResponseEntity.ok(rows.size() > limit ? rows.subList(0, limit) : rows);
+    }
+
+    /**
+     * 依日期區間查詢所有系統日誌，前端會再依 logType 分頁或篩選。
+     */
+    @GetMapping("/date-range")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "依日期區間查詢系統日誌")
+    public ResponseEntity<List<AdminSystemLogItemRes>> listByDateRange(
+            @RequestParam
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
+            @RequestParam
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end,
+            @RequestParam(defaultValue = "200") int limit) {
+
+        log.info("查詢系統日誌日期區間: start={}, end={}, limit={}", start, end, limit);
+
+        LogAuthExample logAuthExample = new LogAuthExample();
+        logAuthExample.createCriteria()
+                .andCreatedAtGreaterThanOrEqualTo(start)
+                .andCreatedAtLessThanOrEqualTo(end);
+        logAuthExample.setOrderByClause("created_at DESC");
+
+        LogAdminActionExample adminActionExample = new LogAdminActionExample();
+        adminActionExample.createCriteria()
+                .andCreatedAtGreaterThanOrEqualTo(start)
+                .andCreatedAtLessThanOrEqualTo(end);
+        adminActionExample.setOrderByClause("created_at DESC");
+
+        List<AdminSystemLogItemRes> rows = Stream.concat(
+                        logAuthMapper.selectByExample(logAuthExample).stream()
+                                .map(this::toLoginLogItem),
+                        logAdminActionMapper.selectByExample(adminActionExample).stream()
+                                .map(this::toAdminActionLogItem)
+                )
+                .sorted((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()))
+                .limit(Math.max(limit, 0))
+                .toList();
+
+        return ResponseEntity.ok(rows);
+    }
+
+    private AdminSystemLogItemRes toLoginLogItem(LogAuth row) {
+        return AdminSystemLogItemRes.builder()
+                .id(row.getId())
+                .logType("LOGIN")
+                .userId(row.getUserId())
+                .userType(row.getUserType())
+                .email(row.getEmail())
+                .loginMethod(row.getLoginMethod())
+                .result(row.getResult())
+                .errorMessage(row.getErrorMessage())
+                .ip(row.getIp())
+                .userAgent(row.getUserAgent())
+                .createdAt(row.getCreatedAt())
+                .build();
+    }
+
+    private AdminSystemLogItemRes toAdminActionLogItem(LogAdminAction row) {
+        return AdminSystemLogItemRes.builder()
+                .id(row.getId())
+                .logType("ADMIN_ACTION")
+                .adminId(row.getAdminId())
+                .adminEmail(row.getAdminEmail())
+                .adminRole(row.getAdminRole())
+                .targetType(row.getTargetType())
+                .targetId(row.getTargetId())
+                .targetName(row.getTargetName())
+                .action(row.getAction())
+                .beforeSnapshot(row.getBeforeSnapshot())
+                .afterSnapshot(row.getAfterSnapshot())
+                .result(row.getResult())
+                .errorMessage(row.getErrorMessage())
+                .ip(row.getIp())
+                .createdAt(row.getCreatedAt())
+                .build();
     }
 }

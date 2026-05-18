@@ -1247,14 +1247,14 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         newSession.setId(UUID.randomUUID().toString());
         newSession.setLotteryId(lotteryId);
         newSession.setOpenerUserId(userId);
-        newSession.setProtectionDraws(lottery.getProtectionDraws() != null ? lottery.getProtectionDraws() : 0);
+        newSession.setProtectionDraws(resolveFreeDrawLimit(lottery));
         // ?? ????????????????????????????????????????????????????????startProtection ?????
         newSession.setProtectionStartTime(null);
         newSession.setProtectionEndTime(null);
         
         newSession.setOpenerDrawCount(0);
         newSession.setOpenerTotalCost(0L);
-        newSession.setFreeDrawEnabled(lottery.getFreeDrawEnabled() != null ? lottery.getFreeDrawEnabled() : (byte) 0);
+        newSession.setFreeDrawEnabled(resolveSessionFreeDrawEnabled(lottery));
         newSession.setFreeDrawTriggered((byte) 0);
         newSession.setFreeDrawRefundAmount(0L);
         newSession.setStatus("ACTIVE");
@@ -1363,8 +1363,9 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
             return false;
         }
         
-        // ???????????????????????
-        if (session.getFreeDrawEnabled() == null || session.getFreeDrawEnabled() != 1) {
+        Lottery lottery = lotteryMapper.selectByPrimaryKey(session.getLotteryId());
+        boolean freeDrawEnabled = isFreeDrawEnabled(session, lottery);
+        if (!freeDrawEnabled) {
             log.info("Free draw is not enabled for this session");
             return false;
         }
@@ -1377,7 +1378,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         // ??????????????????????????
         Integer openerDrawCount = session.getOpenerDrawCount() != null ? session.getOpenerDrawCount() : 0;
-        Integer protectionDraws = session.getProtectionDraws() != null ? session.getProtectionDraws() : 0;
+        Integer protectionDraws = resolveFreeDrawLimit(session, lottery);
         
         if (openerDrawCount > protectionDraws) {
             log.info("?????????????????? {} > {}", openerDrawCount, protectionDraws);
@@ -1411,7 +1412,6 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
                 );
                 
                 // ??????????????????
-                Lottery lottery = lotteryMapper.selectByPrimaryKey(session.getLotteryId());
                 consumptionRecordService.recordConsumption(
                         session.getOpenerUserId(),
                         "FREE_DRAW_REFUND",
@@ -1786,6 +1786,53 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         }
     }
 
+    private boolean isFreeDrawEnabled(LotterySession session, Lottery lottery) {
+        if (lottery != null) {
+            if (lottery.getFreeDrawEnabled() != null && lottery.getFreeDrawEnabled() == 1) {
+                return true;
+            }
+            Integer threshold = lottery.getFreeDrawThreshold();
+            if (threshold != null && threshold >= 1) {
+                return true;
+            }
+        }
+        return session.getFreeDrawEnabled() != null && session.getFreeDrawEnabled() == 1;
+    }
+
+    private byte resolveSessionFreeDrawEnabled(Lottery lottery) {
+        return isLotteryFreeDrawEnabled(lottery) ? (byte) 1 : (byte) 0;
+    }
+
+    private boolean isLotteryFreeDrawEnabled(Lottery lottery) {
+        if (lottery == null) {
+            return false;
+        }
+        if (lottery.getFreeDrawEnabled() != null && lottery.getFreeDrawEnabled() == 1) {
+            return true;
+        }
+        Integer threshold = lottery.getFreeDrawThreshold();
+        return threshold != null && threshold >= 1;
+    }
+
+    private Integer resolveFreeDrawLimit(Lottery lottery) {
+        if (lottery == null) {
+            return 0;
+        }
+        Integer threshold = lottery.getFreeDrawThreshold();
+        if (threshold != null && threshold >= 1) {
+            return threshold;
+        }
+        return lottery.getProtectionDraws() != null ? lottery.getProtectionDraws() : 0;
+    }
+
+    private Integer resolveFreeDrawLimit(LotterySession session, Lottery lottery) {
+        Integer lotteryLimit = resolveFreeDrawLimit(lottery);
+        if (lotteryLimit != null && lotteryLimit >= 1) {
+            return lotteryLimit;
+        }
+        return session.getProtectionDraws() != null ? session.getProtectionDraws() : 0;
+    }
+
     /**
      * ????????????????????Controller ???? synchronized??
      */
@@ -1886,4 +1933,3 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         }
     }
 }
-

@@ -31,6 +31,8 @@ public class ReportServiceImpl implements ReportService {
 
     private static final String MYSQL_TEXT_COLLATION = "utf8mb4_unicode_ci";
     private static final int MYSQL_TEXT_LENGTH = 64;
+    private static final String BONUS_REPORT_TRANSACTION_TYPES =
+            "'BONUS', 'BONUS_GRANT', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT', 'ADMIN_ADJUST'";
 
     private final JdbcTemplate jdbcTemplate;
     private final ReportSnapshotMapper reportSnapshotMapper;
@@ -510,11 +512,11 @@ public class ReportServiceImpl implements ReportService {
                     COUNT(*) as total_count,
                     COUNT(DISTINCT user_id) as benefit_users
                 FROM wallet_transaction
-                WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
+                WHERE transaction_type IN (%s)
                 AND amount > 0
                 %s
                 AND created_at BETWEEN ? AND ?
-                """.formatted(statusSuccessPredicate);
+                """.formatted(BONUS_REPORT_TRANSACTION_TYPES, statusSuccessPredicate);
 
         List<Object> params = new ArrayList<>();
         params.add(startDate.atStartOfDay());
@@ -542,13 +544,13 @@ public class ReportServiceImpl implements ReportService {
                     COALESCE(SUM(amount), 0) as points,
                     COUNT(*) as count
                 FROM wallet_transaction
-                WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
+                WHERE transaction_type IN (%s)
                 AND amount > 0
                                 %s
                 AND created_at BETWEEN ? AND ?
                 GROUP BY DATE(created_at)
                 ORDER BY date
-                                """.formatted(statusSuccessPredicate);
+                                """.formatted(BONUS_REPORT_TRANSACTION_TYPES, statusSuccessPredicate);
 
         List<BonusReportRes.DailyBonus> dailyDetails = jdbcTemplate.query(dailySql, params.toArray(),
                 (rs, rowNum) -> BonusReportRes.DailyBonus.builder()
@@ -564,18 +566,18 @@ public class ReportServiceImpl implements ReportService {
                     COALESCE(SUM(amount), 0) as total_points,
                     COUNT(*) as count
                 FROM wallet_transaction
-                WHERE transaction_type IN ('BONUS', 'REFERRAL_BONUS', 'PROMOTION', 'ADJUSTMENT')
+                WHERE transaction_type IN (%s)
                 AND amount > 0
                                 %s
                 AND created_at BETWEEN ? AND ?
                 GROUP BY transaction_type
                 ORDER BY total_points DESC
-                                """.formatted(statusSuccessPredicate);
+                                """.formatted(BONUS_REPORT_TRANSACTION_TYPES, statusSuccessPredicate);
 
         List<BonusReportRes.BonusTypeStats> typeStats = jdbcTemplate.query(typeSql, params.toArray(),
                 (rs, rowNum) -> BonusReportRes.BonusTypeStats.builder()
                         .bonusType(rs.getString("bonus_type"))
-                        .typeName(getBonusTypeName(rs.getString("bonus_type")))
+                        .typeName(getResolvedBonusTypeName(rs.getString("bonus_type")))
                         .totalPoints(rs.getBigDecimal("total_points"))
                         .count(rs.getInt("count"))
                         .percentage(currentBonus.compareTo(BigDecimal.ZERO) > 0
@@ -2187,6 +2189,22 @@ return new ArrayList<>(builders.values());
         if (value instanceof Number)
             return ((Number) value).intValue();
         return 0;
+    }
+
+    private String getResolvedBonusTypeName(String bonusType) {
+        if (bonusType == null) {
+            return null;
+        }
+
+        return switch (bonusType) {
+            case "BONUS" -> "一般贈送";
+            case "BONUS_GRANT" -> "紅利贈送";
+            case "REFERRAL_BONUS" -> "推薦獎勵";
+            case "PROMOTION" -> "活動贈送";
+            case "ADJUSTMENT" -> "人工調整";
+            case "ADMIN_ADJUST" -> "後台贈送 / 管理員調整";
+            default -> bonusType;
+        };
     }
 
     private String utf8mb4Text(String expr) {
