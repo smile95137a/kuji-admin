@@ -2,6 +2,13 @@ spring:
   config:
     import: optional:file:./config/application-prod-secrets.yml
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: https://stardo.tw/api/login/oauth2/code/{registrationId}
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:}
     username: ${SPRING_DATASOURCE_USERNAME:}
@@ -21,11 +28,15 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 server:
   port: ${SERVER_PORT:8080}
+
+file:
+  upload:
+    base-url: https://stardo.tw/images
 
 logging:
   level:
@@ -47,7 +58,7 @@ cors:
 
 app:
   base-url: ${APP_BASE_URL:}
-  client-path: ${APP_CLIENT_PATH:/client}
+  client-path: ${APP_CLIENT_PATH:}
   admin-path: ${APP_ADMIN_PATH:/kuji}
 
 google:
@@ -60,6 +71,7 @@ payment:
     gomypay:
       api-url: ${GOMYPAY_API_URL:https://n.gomypay.asia/ShuntClass.aspx}
       shop-id: ${GOMYPAY_SHOP_ID:}
+      transaction-password: ${GOMYPAY_TRANSACTION_PASSWORD:${GOMYPAY_HASH_KEY:}}
       hash-key: ${GOMYPAY_HASH_KEY:}
       hash-iv: ${GOMYPAY_HASH_IV:}
       verify-customer-id: ${GOMYPAY_VERIFY_CUSTOMER_ID:${GOMYPAY_SHOP_ID:}}
@@ -76,4 +88,4 @@ aws:
     region: ap-northeast-1
     access-key: ${AWS_ACCESS_KEY_ID:}
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
-    base-url: https://test-ourkuji.s3.ap-northeast-1.amazonaws.com
+    base-url: https://stardo.tw/images

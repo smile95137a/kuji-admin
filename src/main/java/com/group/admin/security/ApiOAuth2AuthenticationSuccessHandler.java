@@ -1,6 +1,7 @@
 package com.group.admin.security;
 
 import com.group.admin.config.AppUrlProperties;
+import com.group.admin.exception.BusinessException;
 import com.group.admin.res.AuthRes;
 import com.group.admin.service.UserService;
 import jakarta.servlet.ServletException;
@@ -36,8 +37,8 @@ public class ApiOAuth2AuthenticationSuccessHandler implements AuthenticationSucc
         String name = oAuth2User.getAttribute("name");
 
         if (email == null || email.isBlank() || googleId == null || googleId.isBlank()) {
-            log.warn("⚠️ OAuth2 成功回呼缺少必要屬性: email={}, sub={}", email, googleId);
-            redirectFailure(response, "OAUTH2_PROFILE_INVALID", "Google 個人資料不完整");
+            log.warn("OAuth2 profile missing required fields: email={}, sub={}", email, googleId);
+            redirectFailure(response, "OAUTH2_PROFILE_INVALID", "Google 帳號資料不完整，請重新登入");
             return;
         }
 
@@ -50,13 +51,17 @@ public class ApiOAuth2AuthenticationSuccessHandler implements AuthenticationSucc
                     .queryParam("refreshToken", authRes.getRefreshToken())
                     .queryParam("expiresIn", authRes.getExpiresIn())
                     .queryParam("isNewUser", authRes.getIsNewUser())
-                    .build(true)
+                    .build()
+                    .encode()
                     .toUriString();
 
             response.sendRedirect(targetUrl);
+        } catch (BusinessException ex) {
+            log.warn("OAuth2 business error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
+            redirectFailure(response, ex.getErrorCode(), ex.getMessage());
         } catch (Exception ex) {
-            log.error("❌ OAuth2 成功處理失敗", ex);
-            redirectFailure(response, "OAUTH2_LOGIN_FAILED", "Google 登入失敗");
+            log.error("OAuth2 success handler failed", ex);
+            redirectFailure(response, "OAUTH2_LOGIN_FAILED", "Google 登入失敗，請稍後再試");
         }
     }
 
@@ -65,7 +70,8 @@ public class ApiOAuth2AuthenticationSuccessHandler implements AuthenticationSucc
                 .fromHttpUrl(appUrlProperties.getClientOAuth2CallbackUrl())
                 .queryParam("error", code)
                 .queryParam("message", message)
-                .build(true)
+                .build()
+                .encode()
                 .toUriString();
         response.sendRedirect(targetUrl);
     }

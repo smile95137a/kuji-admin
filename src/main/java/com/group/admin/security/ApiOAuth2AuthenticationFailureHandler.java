@@ -24,13 +24,14 @@ public class ApiOAuth2AuthenticationFailureHandler implements AuthenticationFail
     public void onAuthenticationFailure(HttpServletRequest request,
                                         HttpServletResponse response,
                                         AuthenticationException exception) throws IOException, ServletException {
-        log.warn("⚠️ OAuth2 驗證失敗: {}", exception.getMessage());
+        log.warn("OAuth2 authentication failed: {}", exception.getMessage());
 
         String targetUrl = UriComponentsBuilder
                 .fromHttpUrl(appUrlProperties.getClientOAuth2CallbackUrl())
                 .queryParam("error", "OAUTH2_AUTHENTICATION_FAILED")
                 .queryParam("message", exception.getMessage())
-                .build(true)
+                .build()
+                .encode()
                 .toUriString();
 
         response.sendRedirect(targetUrl);

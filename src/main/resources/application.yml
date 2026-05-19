@@ -48,8 +48,7 @@ spring:
               - openid
               - profile
               - email
-            # redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            redirect-uri: "http://localhost:8180/api/login/oauth2/code/{registrationId}"
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: Google
 
 server:
@@ -110,6 +109,7 @@ payment:
     gomypay:
       api-url: https://n.gomypay.asia/TestShuntClass.aspx    # 測試環境；正式: https://n.gomypay.asia/ShuntClass.aspx
       shop-id: ${GOMYPAY_SHOP_ID:TestShopId}              # 商店代號（向 GoMyPay 申請）
+      transaction-password: ${GOMYPAY_TRANSACTION_PASSWORD:${GOMYPAY_HASH_KEY:TestHashKey}}
       hash-key: ${GOMYPAY_HASH_KEY:TestHashKey}           # Hash Key（向 GoMyPay 申請）
       hash-iv: ${GOMYPAY_HASH_IV:TestHashIV}              # Hash IV（向 GoMyPay 申請）
       verify-customer-id: ${GOMYPAY_VERIFY_CUSTOMER_ID:${GOMYPAY_SHOP_ID:TestShopId}}

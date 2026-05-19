@@ -599,7 +599,7 @@ DROP PROCEDURE IF EXISTS AddColIfNotExists;
 -- PHASE 6：初始資料 INSERT（INSERT IGNORE 防重複）
 -- ============================================================
 
--- system_config 預設參數
+-- ㄉㄦ 預設參數
 INSERT IGNORE INTO `system_config` (`id`, `config_key`, `config_value`, `config_type`, `config_group`, `description`) VALUES
   (UUID(), 'protection_initial_minutes',   '5',  'INTEGER', 'DRAW', '保護初始時間（分鐘）'),
   (UUID(), 'protection_extension_minutes', '2',  'INTEGER', 'DRAW', '每次操作延長時間（分鐘）'),
