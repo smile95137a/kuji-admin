@@ -33,6 +33,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         }
 
         validateTypeAndValue(req.getConfigType(), req.getConfigValue());
+        validateBusinessRules(req.getConfigKey(), req.getConfigValue());
 
         LocalDateTime now = LocalDateTime.now();
         SystemConfig entity = new SystemConfig();
@@ -59,6 +60,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         }
 
         validateTypeAndValue(existing.getConfigType(), req.getConfigValue());
+        validateBusinessRules(existing.getConfigKey(), req.getConfigValue());
 
         SystemConfig toUpdate = new SystemConfig();
         toUpdate.setId(id);
@@ -163,6 +165,76 @@ public class SystemConfigServiceImpl implements SystemConfigService {
                 // no-op
             }
             default -> throw new BusinessException("CONFIG_TYPE_INVALID", "configType 只能是 INTEGER / STRING / BOOLEAN");
+        }
+    }
+
+    private void validateBusinessRules(String configKey, String configValue) {
+        if (configKey == null || configValue == null) {
+            return;
+        }
+
+        if (SystemConfigService.KEY_PROTECTION_INITIAL_MINUTES.equals(configKey)) {
+            int initialMinutes = parseRequiredInt(configKey, configValue);
+            if (initialMinutes < 1) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護初始時間至少需為 1 分鐘");
+            }
+
+            int maxMinutes = resolveIntValue(
+                    SystemConfigService.KEY_PROTECTION_MAX_MINUTES,
+                    10,
+                    configKey,
+                    initialMinutes);
+            if (initialMinutes > maxMinutes) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護初始時間不可大於保護最大時間");
+            }
+            return;
+        }
+
+        if (SystemConfigService.KEY_PROTECTION_EXTENSION_MINUTES.equals(configKey)) {
+            int extensionMinutes = parseRequiredInt(configKey, configValue);
+            if (extensionMinutes < 1) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "每次操作延長時間至少需為 1 分鐘");
+            }
+            return;
+        }
+
+        if (SystemConfigService.KEY_PROTECTION_MAX_MINUTES.equals(configKey)) {
+            int maxMinutes = parseRequiredInt(configKey, configValue);
+            if (maxMinutes < 1) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護最大時間至少需為 1 分鐘");
+            }
+
+            int initialMinutes = resolveIntValue(
+                    SystemConfigService.KEY_PROTECTION_INITIAL_MINUTES,
+                    5,
+                    configKey,
+                    maxMinutes);
+            if (maxMinutes < initialMinutes) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護最大時間不可小於保護初始時間");
+            }
+            return;
+        }
+
+        if (SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST.equals(configKey)) {
+            int maxDraws = parseRequiredInt(configKey, configValue);
+            if (maxDraws < 1) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "單次 API 最大抽獎數至少需為 1");
+            }
+        }
+    }
+
+    private int resolveIntValue(String targetKey, int defaultValue, String currentKey, int currentValue) {
+        if (targetKey.equals(currentKey)) {
+            return currentValue;
+        }
+        return getInt(targetKey, defaultValue);
+    }
+
+    private int parseRequiredInt(String configKey, String configValue) {
+        try {
+            return Integer.parseInt(configValue.trim());
+        } catch (NumberFormatException e) {
+            throw new BusinessException("CONFIG_VALUE_INVALID", configKey + " 必須為整數");
         }
     }
 

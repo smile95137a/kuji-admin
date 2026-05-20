@@ -82,7 +82,7 @@ SELECT
     UUID(),
     '類別管理',
     'CATEGORY_MANAGEMENT',
-    '/home/categories',
+    '/home/category',
     @lottery_parent_id,
     NULL,
     4,
@@ -99,7 +99,7 @@ WHERE @lottery_parent_id IS NOT NULL
 
 UPDATE menu
 SET name = '類別管理',
-    path = '/home/categories',
+    path = '/home/category',
     parent_id = @lottery_parent_id,
     order_num = 4,
     is_visible = 1,

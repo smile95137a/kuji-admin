@@ -1,6 +1,8 @@
 package com.group.admin.config;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.boot.CommandLineRunner;
@@ -12,6 +14,7 @@ import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotteryPrize;
+import com.group.admin.entity.LotteryTag;
 import com.group.admin.entity.Menu;
 import com.group.admin.entity.Role;
 import com.group.admin.entity.RoleMenu;
@@ -27,6 +30,7 @@ import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.LotteryMapper;
 import com.group.admin.mapper.LotteryPrizeMapper;
+import com.group.admin.mapper.LotteryTagMapper;
 import com.group.admin.mapper.MenuMapper;
 import com.group.admin.mapper.RoleMapper;
 import com.group.admin.mapper.RoleMenuMapper;
@@ -70,6 +74,17 @@ public class DataInitializer implements CommandLineRunner {
             {"店家績效報表", "STORE_PERFORMANCE_REPORT", "/home/report/store-performance", "9", "STORE_PERF_REPORT"},
             {"獎品出貨報表", "PRIZE_SHIPMENT_REPORT", "/home/report/prize-shipment", "10"}
     };
+    private static final List<String> DEFAULT_LOTTERY_TAGS = Arrays.asList(
+            "熱門",
+            "限定",
+            "新品",
+            "特價",
+            "日系",
+            "限量",
+            "經典",
+            "聯名",
+            "徵貨中",
+            "特別版");
 
     private final RoleMapper roleMapper;
     private final MenuMapper menuMapper;
@@ -82,6 +97,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserMapper userMapper;
     private final LotteryMapper lotteryMapper;
     private final LotteryPrizeMapper lotteryPrizeMapper;
+    private final LotteryTagMapper lotteryTagMapper;
     private final ShippingMethodMapper shippingMethodMapper;
     
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -112,6 +128,7 @@ public class DataInitializer implements CommandLineRunner {
         // 檢查是否已有資料（避免重複初始化）
         if (isDataAlreadyInitialized()) {
             initializeSystemConfigs();
+            ensureDefaultLotteryTags();
             // 補救：若 role_menu 表為空（資料庫已有角色但權限從未初始化），重新執行
             if (isRoleMenuEmpty()) {
                 log.warn("⚠️ role_menu 表為空，執行補救初始化角色權限...");
@@ -140,6 +157,7 @@ public class DataInitializer implements CommandLineRunner {
             initializeLotteries();
             initializeShippingMethods();
             initializeSystemConfigs();
+            ensureDefaultLotteryTags();
             deduplicateMenusByCode();
             rescueMissingReportMenus();
             rescueMissingSystemMenus();
@@ -368,6 +386,7 @@ public class DataInitializer implements CommandLineRunner {
         insertSubMenu(menuIds[6], "跑馬燈管理", "MARQUEE_MANAGE",  "/admin/system/marquee",   2);
         insertSubMenu(menuIds[6], "儲值方案",   "RECHARGE_MANAGE", "/admin/system/recharge",  3);
         insertSubMenu(menuIds[6], "系統公告",   "SYSTEM_NOTICE",   "/admin/system/notices",   4);
+        insertSubMenu(menuIds[6], "系統參數",   "SYSTEM_CONFIG",   "/home/system-config",     5);
 
         log.info("✓ 選單資料初始化完成（30 筆）");
     }
@@ -822,6 +841,7 @@ public class DataInitializer implements CommandLineRunner {
             legacyMenu.setUpdatedAt(LocalDateTime.now());
             menuMapper.updateByPrimaryKeySelective(legacyMenu);
         }
+        deduplicateChildMenusByPath(reportCenterId);
     }
 
     private void rescueMissingSystemMenus() {
@@ -835,6 +855,7 @@ public class DataInitializer implements CommandLineRunner {
             {"跑馬燈管理", "MARQUEE_MANAGE",  "/admin/system/marquee",  "2"},
             {"儲值方案",   "RECHARGE_MANAGE", "/admin/system/recharge", "3"},
             {"系統公告",   "SYSTEM_NOTICE",   "/admin/system/notices",  "4"},
+            {"系統參數",   "SYSTEM_CONFIG",   "/home/system-config",    "5"},
         };
 
         boolean anyAdded = false;
@@ -870,6 +891,66 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
+    private void ensureDefaultLotteryTags() {
+        for (int i = 0; i < DEFAULT_LOTTERY_TAGS.size(); i++) {
+            upsertLotteryTag(DEFAULT_LOTTERY_TAGS.get(i), i + 1);
+        }
+        log.info("商品標籤預設字典已同步: {}", DEFAULT_LOTTERY_TAGS);
+    }
+
+    private void upsertLotteryTag(String name, int displayOrder) {
+        LotteryTag tag = lotteryTagMapper.selectByNameIgnoreCase(name);
+        LocalDateTime now = LocalDateTime.now();
+        if (tag == null) {
+            tag = new LotteryTag();
+            tag.setId(UUID.randomUUID().toString());
+            tag.setName(name);
+            tag.setStatus("ACTIVE");
+            tag.setDisplayOrder(displayOrder);
+            tag.setCreatedAt(now);
+            tag.setUpdatedAt(now);
+            lotteryTagMapper.insert(tag);
+            return;
+        }
+
+        tag.setName(name);
+        tag.setStatus("ACTIVE");
+        tag.setDisplayOrder(displayOrder);
+        tag.setUpdatedAt(now);
+        lotteryTagMapper.updateByPrimaryKeySelective(tag);
+    }
+
+    private void deduplicateChildMenusByPath(String parentId) {
+        if (parentId == null || parentId.isBlank()) {
+            return;
+        }
+
+        MenuExample example = new MenuExample();
+        example.createCriteria().andParentIdEqualTo(parentId);
+        example.setOrderByClause("path ASC, is_visible DESC, updated_at DESC, created_at DESC");
+
+        java.util.Map<String, java.util.List<Menu>> menuGroups = new java.util.LinkedHashMap<>();
+        for (Menu menu : menuMapper.selectByExample(example)) {
+            if (menu.getPath() == null || menu.getPath().isBlank()) {
+                continue;
+            }
+            menuGroups.computeIfAbsent(menu.getPath(), key -> new java.util.ArrayList<>()).add(menu);
+        }
+
+        for (java.util.Map.Entry<String, java.util.List<Menu>> entry : menuGroups.entrySet()) {
+            java.util.List<Menu> menus = entry.getValue();
+            if (menus.size() <= 1) {
+                continue;
+            }
+
+            Menu canonical = menus.get(0);
+            for (int i = 1; i < menus.size(); i++) {
+                mergeMenuIntoCanonical(canonical, menus.get(i));
+            }
+            log.warn("已合併重複子選單: parentId={}, path={}, count={}", parentId, entry.getKey(), menus.size());
+        }
+    }
+
     /**
      * 補救：若商品管理底下沒有「類別管理」，補建選單與角色權限。
      */
@@ -887,7 +968,7 @@ public class DataInitializer implements CommandLineRunner {
                 lotteryManagement.getId(),
                 "類別管理",
                 "CATEGORY_MANAGEMENT",
-                "/home/categories",
+                "/home/category",
                 4);
 
         ensureRoleMenuPermission(ROLE_ADMIN_ID, categoryMenu.getId(), true, true, true);

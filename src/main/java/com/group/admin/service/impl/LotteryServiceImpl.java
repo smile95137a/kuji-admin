@@ -2063,6 +2063,13 @@ public class LotteryServiceImpl implements LotteryService {
         String lotteryId = req.getLotteryId();
         log.info("📝 更新商品與獎品: lotteryId={}, operatorId={}", lotteryId, operatorId);
 
+        Lottery originalLottery = lotteryMapper.selectByPrimaryKey(lotteryId);
+        if (originalLottery == null) {
+            throw new BusinessException("商品不存在: " + lotteryId);
+        }
+        boolean prizeEditableBeforeUpdate = LotteryStatusEnum.DRAFT.getCode().equals(originalLottery.getStatus())
+                || LotteryStatusEnum.OFF_SHELF.getCode().equals(originalLottery.getStatus());
+
         // Step 1: 更新商品（如果有提供 lottery 更新資訊）
         // ⚠️ 使用新版 updateLottery(id, req) 而非舊版，避免已上架商品被誤攔截
         LotteryRes lotteryRes;
@@ -2071,11 +2078,7 @@ public class LotteryServiceImpl implements LotteryService {
             log.info("✅ 商品更新成功: lotteryId={}", lotteryId);
         } else {
             // 沒有提供更新資訊，直接查詢現有資料
-            Lottery lottery = lotteryMapper.selectByPrimaryKey(lotteryId);
-            if (lottery == null) {
-                throw new BusinessException("商品不存在: " + lotteryId);
-            }
-            lotteryRes = convertToResNew(lottery);
+            lotteryRes = convertToResNew(originalLottery);
         }
 
         Lottery currentLottery = lotteryMapper.selectByPrimaryKey(lotteryId);
@@ -2087,8 +2090,7 @@ public class LotteryServiceImpl implements LotteryService {
         List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList = new ArrayList<>();
 
         if (req.getPrizes() != null && !req.getPrizes().isEmpty()) {
-            if (!LotteryStatusEnum.DRAFT.getCode().equals(currentLottery.getStatus())
-                    && !LotteryStatusEnum.OFF_SHELF.getCode().equals(currentLottery.getStatus())) {
+            if (!prizeEditableBeforeUpdate) {
                 throw new BusinessException("商品已上架或不可編輯時，不可直接調整獎品；請先下架後再修改");
             }
 

@@ -9,12 +9,15 @@ import java.util.List;
 public class ImageUrlResolver {
 
     private final String publicBaseUrl;
+    private final String publicKeyPrefix;
     private final String legacyBaseUrl;
 
     public ImageUrlResolver(
             @Value("${aws.s3.base-url:}") String publicBaseUrl,
+            @Value("${aws.s3.key-prefix:}") String publicKeyPrefix,
             @Value("${aws.s3.legacy-base-url:https://test-ourkuji.s3.ap-northeast-1.amazonaws.com}") String legacyBaseUrl) {
         this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
+        this.publicKeyPrefix = trimSlashes(publicKeyPrefix);
         this.legacyBaseUrl = trimTrailingSlash(legacyBaseUrl);
     }
 
@@ -29,7 +32,14 @@ public class ImageUrlResolver {
             return imageUrl;
         }
         if (imageUrl.startsWith(legacyBaseUrl + "/")) {
-            return publicBaseUrl + imageUrl.substring(legacyBaseUrl.length());
+            String relativePath = trimSlashes(imageUrl.substring(legacyBaseUrl.length()));
+            if (relativePath.isBlank()) {
+                return publicBaseUrl;
+            }
+            if (!publicKeyPrefix.isBlank() && !relativePath.startsWith(publicKeyPrefix + "/")) {
+                relativePath = publicKeyPrefix + "/" + relativePath;
+            }
+            return publicBaseUrl + "/" + relativePath;
         }
         return imageUrl;
     }
@@ -46,6 +56,20 @@ public class ImageUrlResolver {
             return "";
         }
         String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
+    }
+
+    private String trimSlashes(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.startsWith("/")) {
+            trimmed = trimmed.substring(1);
+        }
         while (trimmed.endsWith("/")) {
             trimmed = trimmed.substring(0, trimmed.length() - 1);
         }
