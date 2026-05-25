@@ -93,6 +93,8 @@ public class OrderRes {
      * 物流單號
      */
     private String trackingNo;
+
+    private String trackingUrl;
     
     /**
      * 總金額（元）
@@ -113,6 +115,12 @@ public class OrderRes {
      * 付款方式（GOLD/BONUS）
      */
     private String paymentMethod;
+
+    private String virtualAccount;
+
+    private String paymentInfo;
+
+    private String limitDate;
     
     /**
      * 建立時間

@@ -435,6 +435,7 @@ public class CoinServiceImpl implements CoinService {
             case "RECHARGE" -> "儲值";
             case "RECYCLE_BONUS" -> "回收紅利";
             case "REFERRAL_BONUS" -> "推薦獎勵";
+            case "BONUS_GRANT" -> "多抽贈送紅利";
             case "ADMIN_ADJUST" -> "管理員調整";
             case "EXPIRE" -> "點數過期";
             default -> TransactionTypeEnum.getNameByCode(transaction.getTransactionType());

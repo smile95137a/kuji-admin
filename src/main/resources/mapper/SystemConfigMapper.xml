@@ -305,10 +305,10 @@
 
   <update id="updateByPrimaryKeyAndVersion">
     UPDATE system_config
-    SET config_value = #{config.configValue,jdbcType=VARCHAR},
+    SET config_value = #{entity.configValue,jdbcType=VARCHAR},
         version      = version + 1,
         updated_at   = NOW()
-    WHERE id      = #{config.id,jdbcType=VARCHAR}
+    WHERE id      = #{entity.id,jdbcType=VARCHAR}
       AND version = #{version,jdbcType=INTEGER}
   </update>
 

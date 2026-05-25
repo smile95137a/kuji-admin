@@ -45,6 +45,8 @@ public interface LotteryMapper {
 
     List<Lottery> selectScheduledForPromotion();
 
+    List<Lottery> selectExpiredLotteries();
+
     List<Lottery> selectDrawableForStart();
 
     List<java.util.Map<String, Object>> selectPublicList(

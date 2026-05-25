@@ -32,6 +32,12 @@ public class ReferralRecordRes {
      */
     @Schema(description = "被推薦人名稱")
     private String userName;
+
+    /**
+     * 被推薦人顯示名稱
+     */
+    @Schema(description = "被推薦人顯示名稱")
+    private String refereeUsername;
     
     /**
      * 推薦碼 ID
@@ -56,10 +62,34 @@ public class ReferralRecordRes {
      */
     @Schema(description = "店家名稱")
     private String storeName;
+
+    /**
+     * 回饋紅利
+     */
+    @Schema(description = "回饋紅利")
+    private Long rewardBonus;
+
+    /**
+     * 是否已發放獎勵
+     */
+    @Schema(description = "是否已發放獎勵")
+    private Boolean isRewardGiven;
+
+    /**
+     * 獎勵發放時間
+     */
+    @Schema(description = "獎勵發放時間")
+    private LocalDateTime rewardGivenAt;
     
     /**
      * 推薦時間
      */
     @Schema(description = "推薦時間")
     private LocalDateTime referredAt;
+
+    /**
+     * 建立時間
+     */
+    @Schema(description = "建立時間")
+    private LocalDateTime createdAt;
 }

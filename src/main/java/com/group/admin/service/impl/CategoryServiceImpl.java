@@ -130,6 +130,10 @@ public class CategoryServiceImpl implements CategoryService {
                     && !matchesKeyword(theme.getName(), condition.getKeyword())) {
                 continue;
             }
+            if (condition != null && isNotBlank(condition.getName())
+                    && !matchesKeyword(theme.getName(), condition.getName())) {
+                continue;
+            }
 
             List<Lottery> matched = grouped.getOrDefault(theme.getName(), List.of());
             long hotCount = matched.stream()
@@ -197,6 +201,7 @@ public class CategoryServiceImpl implements CategoryService {
         List<CategoryRes> result = tags.stream()
                 .filter(tag -> condition == null || !isNotBlank(condition.getTags()) || tag.getName().equals(condition.getTags()))
                 .filter(tag -> condition == null || !isNotBlank(condition.getKeyword()) || matchesKeyword(tag.getName(), condition.getKeyword()))
+                .filter(tag -> condition == null || !isNotBlank(condition.getName()) || matchesKeyword(tag.getName(), condition.getName()))
                 .map(tag -> CategoryRes.builder()
                         .name(tag.getName())
                         .type("tag")
@@ -212,6 +217,7 @@ public class CategoryServiceImpl implements CategoryService {
         List<CategoryRes> historical = tagCounts.entrySet().stream()
                 .filter(entry -> condition == null || !isNotBlank(condition.getTags()) || entry.getKey().equals(condition.getTags()))
                 .filter(entry -> condition == null || !isNotBlank(condition.getKeyword()) || matchesKeyword(entry.getKey(), condition.getKeyword()))
+                .filter(entry -> condition == null || !isNotBlank(condition.getName()) || matchesKeyword(entry.getKey(), condition.getName()))
                 .filter(entry -> existingResult.stream().noneMatch(r -> entry.getKey().equals(r.getName())))
                 .map(entry -> CategoryRes.builder()
                         .name(entry.getKey())

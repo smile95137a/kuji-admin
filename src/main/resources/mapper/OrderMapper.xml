@@ -22,6 +22,12 @@
     <result column="tracking_no" jdbcType="VARCHAR" property="trackingNo" />
     <result column="tracking_url" jdbcType="VARCHAR" property="trackingUrl" />
     <result column="gomypay_trade_no" jdbcType="VARCHAR" property="gomypayTradeNo" />
+    <result column="gateway_result" jdbcType="VARCHAR" property="gatewayResult" />
+    <result column="gateway_ret_msg" jdbcType="VARCHAR" property="gatewayRetMsg" />
+    <result column="virtual_account" jdbcType="VARCHAR" property="virtualAccount" />
+    <result column="payment_info" jdbcType="VARCHAR" property="paymentInfo" />
+    <result column="limit_date" jdbcType="VARCHAR" property="limitDate" />
+    <result column="gateway_raw_resp" jdbcType="LONGVARCHAR" property="gatewayRawResp" />
     <result column="remark" jdbcType="VARCHAR" property="remark" />
     <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
     <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
@@ -93,7 +99,8 @@
   <sql id="Base_Column_List">
     id, order_number, user_id, store_id, total_items, shipping_method, shipping_method_id, shipping_fee, status, payment_status, payment_method,
     recipient_name, recipient_phone, recipient_address, store_code, store_name, store_address, 
-    tracking_no, tracking_url, gomypay_trade_no, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at,
+    tracking_no, tracking_url, gomypay_trade_no, gateway_result, gateway_ret_msg, virtual_account, payment_info,
+    limit_date, gateway_raw_resp, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at,
     cancelled_by, cancel_reason, preparing_at
   </sql>
   <select id="selectByExample" parameterType="com.group.admin.example.OrderExample" resultMap="BaseResultMap">
@@ -600,6 +607,16 @@
     ORDER BY created_at DESC
   </select>
 
+  <select id="selectByPaymentReference" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM `order`
+    WHERE gomypay_trade_no = #{paymentReference}
+       OR order_number = #{paymentReference}
+       OR gateway_raw_resp LIKE CONCAT('%', #{paymentReference}, '%')
+    ORDER BY created_at DESC
+  </select>
+
   <update id="updatePaymentInit">
     UPDATE `order`
     SET shipping_fee = #{shippingFee},
@@ -607,6 +624,12 @@
         payment_status = #{paymentStatus},
         status = #{status},
         gomypay_trade_no = #{gomypayTradeNo},
+        gateway_result = #{gatewayResult},
+        gateway_ret_msg = #{gatewayRetMsg},
+        virtual_account = #{virtualAccount},
+        payment_info = #{paymentInfo},
+        limit_date = #{limitDate},
+        gateway_raw_resp = #{gatewayRawResp},
         updated_at = NOW()
     WHERE id = #{orderId}
   </update>
@@ -616,6 +639,7 @@
     SET payment_status = 'PAID',
         status = 'PENDING',
         gomypay_trade_no = CASE WHEN #{gomypayTradeNo} IS NULL OR #{gomypayTradeNo} = '' THEN gomypay_trade_no ELSE #{gomypayTradeNo} END,
+        gateway_result = '1',
         updated_at = NOW()
     WHERE id = #{orderId}
   </update>
@@ -625,6 +649,7 @@
     SET payment_status = 'FAILED',
         status = 'PAYMENT_FAILED',
         gomypay_trade_no = CASE WHEN #{gomypayTradeNo} IS NULL OR #{gomypayTradeNo} = '' THEN gomypay_trade_no ELSE #{gomypayTradeNo} END,
+        gateway_ret_msg = CASE WHEN #{remark} IS NULL OR #{remark} = '' THEN gateway_ret_msg ELSE #{remark} END,
         remark = CASE WHEN #{remark} IS NULL OR #{remark} = '' THEN remark ELSE #{remark} END,
         updated_at = NOW()
     WHERE id = #{orderId}

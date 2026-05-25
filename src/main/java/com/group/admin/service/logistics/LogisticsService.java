@@ -9,4 +9,6 @@ public interface LogisticsService {
     ShippingResult queryShipment(String trackingNumber);
 
     List<ConvenienceStore> queryStores(String type, String city, String keyword);
+
+    String createStoreSelectorUrl(String shippingMethodCode, String returnUrl);
 }

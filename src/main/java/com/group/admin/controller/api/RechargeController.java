@@ -60,7 +60,11 @@ public class RechargeController {
     @GetMapping("/history")
     public ResponseEntity<PageResult<RechargeRes>> getMyRechargeHistory(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String paymentStatus,
+            @RequestParam(required = false) String transactionId,
+            @RequestParam(required = false) String createdAtStart,
+            @RequestParam(required = false) String createdAtEnd) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -73,7 +77,8 @@ public class RechargeController {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("🔍 [API] 查詢儲值記錄：userId={}, page={}, size={}", userId, page, size);
         
-        PageResult<RechargeRes> history = rechargeService.getUserRechargeHistory(userId, page, size);
+        PageResult<RechargeRes> history = rechargeService.getUserRechargeHistory(
+                userId, page, size, paymentStatus, transactionId, createdAtStart, createdAtEnd);
         return ResponseEntity.ok(history);
     }
     

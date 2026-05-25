@@ -60,7 +60,10 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal prevRevenue = queryRevenueAmount(previousRange[0], previousRange[1], storeId);
         Integer totalOrders = queryRevenueOrderCount(startDate, endDate, storeId);
         Integer totalDraws = queryRevenueDrawCount(startDate, endDate, storeId);
-        BigDecimal growthRate = calculateGrowthRate(currentRevenue, prevRevenue);
+        // 當期收入為 0（無訂單資料），不顯示成長率（避免誤導性的 -100%）
+        BigDecimal growthRate = currentRevenue.compareTo(BigDecimal.ZERO) == 0
+                ? null
+                : calculateGrowthRate(currentRevenue, prevRevenue);
         BigDecimal avgOrderAmount = totalOrders > 0
                 ? currentRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
@@ -124,6 +127,26 @@ public class ReportServiceImpl implements ReportService {
         }
         Map<String, Object> codeSummary = jdbcTemplate.queryForMap(codeSummarySql, codeSummaryParams.toArray());
 
+        String userReferralSummarySql = """
+                SELECT
+                    COUNT(*) AS total_user_referral_count,
+                    COALESCE(SUM(CASE WHEN rr.referred_at >= ? AND rr.referred_at < ? THEN 1 ELSE 0 END), 0)
+                        AS current_period_user_referral_count
+                FROM referral_record rr
+                JOIN referral_code rc ON %s
+                WHERE 1 = 1
+                """.formatted(utf8mb4Eq("rr.referral_code_id", "rc.id"));
+        List<Object> userReferralSummaryParams = new ArrayList<>();
+        userReferralSummaryParams.add(startDate.atStartOfDay());
+        userReferralSummaryParams.add(endDate.plusDays(1).atStartOfDay());
+        if (storeId != null && !storeId.isBlank()) {
+            userReferralSummarySql += " AND rc.store_id = ?";
+            userReferralSummaryParams.add(storeId);
+        }
+        Map<String, Object> userReferralSummary = jdbcTemplate.queryForMap(
+                userReferralSummarySql,
+                userReferralSummaryParams.toArray());
+
         Integer successfulReferralStoreCount = 0;
         if (hasReferrerStoreIdColumn) {
             String successAllSql = """
@@ -183,53 +206,92 @@ public class ReportServiceImpl implements ReportService {
                     .build());
         }
 
-        List<ReferralReportRes.StoreReferralPerformance> storePerformances = new ArrayList<>();
-        if (hasReferrerStoreIdColumn) {
-            String performanceSql = """
-                    SELECT
-                        s.referrer_store_id,
-                        ref.store_name AS referrer_store_name,
-                        COUNT(*) AS activated_store_count,
-                        MAX(DATE(%s)) AS last_activated_date,
-                        (
-                            SELECT COUNT(*)
-                            FROM referral_code rc
-                                                        WHERE %s
-                        ) AS referral_code_count
-                    FROM store s
-                                        JOIN store ref ON %s
-                    WHERE s.referrer_store_id IS NOT NULL
-                      AND %s >= ?
-                      AND %s < ?
-                                        """.formatted(
-                                        activationColumn,
-                                        utf8mb4Eq("rc.store_id", "s.referrer_store_id"),
-                                        utf8mb4Eq("ref.id", "s.referrer_store_id"),
-                                        activationColumn,
-                                        activationColumn) + activatedPredicate;
-            List<Object> performanceParams = new ArrayList<>();
-            performanceParams.add(startDate.atStartOfDay());
-            performanceParams.add(endDate.plusDays(1).atStartOfDay());
-            if (storeId != null && !storeId.isBlank()) {
-                performanceSql += " AND s.referrer_store_id = ?";
-                performanceParams.add(storeId);
-            }
-            performanceSql += " GROUP BY s.referrer_store_id, ref.store_name ORDER BY activated_store_count DESC, ref.store_name ASC LIMIT 20";
+        LocalDateTime periodStart = startDate.atStartOfDay();
+        LocalDateTime periodEnd = endDate.plusDays(1).atStartOfDay();
+        LocalDateTime weekStart = endDate.minusDays(6).atStartOfDay();
+        LocalDateTime previousWeekStart = endDate.minusDays(13).atStartOfDay();
+        LocalDateTime monthStart = endDate.minusDays(29).atStartOfDay();
+        LocalDateTime previousMonthStart = endDate.minusDays(59).atStartOfDay();
 
-            storePerformances = jdbcTemplate.query(
-                    performanceSql,
-                    performanceParams.toArray(),
-                    (rs, rowNum) -> ReferralReportRes.StoreReferralPerformance.builder()
+        String performanceSql = """
+                SELECT
+                    s.id AS referrer_store_id,
+                    s.store_name AS referrer_store_name,
+                    COUNT(DISTINCT rc.id) AS referral_code_count,
+                    COUNT(rr.id) AS total_referral_count,
+                    COALESCE(SUM(CASE WHEN rr.referred_at >= ? AND rr.referred_at < ? THEN 1 ELSE 0 END), 0)
+                        AS current_period_referral_count,
+                    COALESCE(SUM(CASE WHEN rr.referred_at >= ? AND rr.referred_at < ? THEN 1 ELSE 0 END), 0)
+                        AS weekly_referral_count,
+                    COALESCE(SUM(CASE WHEN rr.referred_at >= ? AND rr.referred_at < ? THEN 1 ELSE 0 END), 0)
+                        AS previous_weekly_referral_count,
+                    COALESCE(SUM(CASE WHEN rr.referred_at >= ? AND rr.referred_at < ? THEN 1 ELSE 0 END), 0)
+                        AS monthly_referral_count,
+                    COALESCE(SUM(CASE WHEN rr.referred_at >= ? AND rr.referred_at < ? THEN 1 ELSE 0 END), 0)
+                        AS previous_monthly_referral_count,
+                    MAX(DATE(rr.referred_at)) AS last_referred_date
+                FROM store s
+                JOIN referral_code rc ON %s
+                LEFT JOIN referral_record rr ON %s
+                WHERE 1 = 1
+                """.formatted(
+                utf8mb4Eq("rc.store_id", "s.id"),
+                utf8mb4Eq("rr.referral_code_id", "rc.id"));
+        List<Object> performanceParams = new ArrayList<>();
+        performanceParams.add(periodStart);
+        performanceParams.add(periodEnd);
+        performanceParams.add(weekStart);
+        performanceParams.add(periodEnd);
+        performanceParams.add(previousWeekStart);
+        performanceParams.add(weekStart);
+        performanceParams.add(monthStart);
+        performanceParams.add(periodEnd);
+        performanceParams.add(previousMonthStart);
+        performanceParams.add(monthStart);
+        if (storeId != null && !storeId.isBlank()) {
+            performanceSql += " AND s.id = ?";
+            performanceParams.add(storeId);
+        }
+        performanceSql += """
+                GROUP BY s.id, s.store_name
+                ORDER BY total_referral_count DESC, current_period_referral_count DESC, s.store_name ASC
+                LIMIT 20
+                """;
+
+        List<ReferralReportRes.StoreReferralPerformance> storePerformances = jdbcTemplate.query(
+                performanceSql,
+                performanceParams.toArray(),
+                (rs, rowNum) -> {
+                    int weeklyReferralCount = rs.getInt("weekly_referral_count");
+                    int previousWeeklyReferralCount = rs.getInt("previous_weekly_referral_count");
+                    int monthlyReferralCount = rs.getInt("monthly_referral_count");
+                    int previousMonthlyReferralCount = rs.getInt("previous_monthly_referral_count");
+                    int currentPeriodReferralCount = rs.getInt("current_period_referral_count");
+                    return ReferralReportRes.StoreReferralPerformance.builder()
                             .referrerStoreId(rs.getString("referrer_store_id"))
                             .referrerStoreName(rs.getString("referrer_store_name"))
                             .referralCodeCount(rs.getInt("referral_code_count"))
-                            .activatedStoreCount(rs.getInt("activated_store_count"))
-                            .lastActivatedDate(rs.getDate("last_activated_date") != null
-                                    ? rs.getDate("last_activated_date").toLocalDate()
+                            .totalReferralCount(rs.getInt("total_referral_count"))
+                            .currentPeriodReferralCount(currentPeriodReferralCount)
+                            .weeklyReferralCount(weeklyReferralCount)
+                            .previousWeeklyReferralCount(previousWeeklyReferralCount)
+                            .weeklyReferralGrowthCount(weeklyReferralCount - previousWeeklyReferralCount)
+                            .weeklyGrowthRate(calculateNullableGrowthRate(
+                                    BigDecimal.valueOf(weeklyReferralCount),
+                                    BigDecimal.valueOf(previousWeeklyReferralCount)))
+                            .monthlyReferralCount(monthlyReferralCount)
+                            .previousMonthlyReferralCount(previousMonthlyReferralCount)
+                            .monthlyReferralGrowthCount(monthlyReferralCount - previousMonthlyReferralCount)
+                            .monthlyGrowthRate(calculateNullableGrowthRate(
+                                    BigDecimal.valueOf(monthlyReferralCount),
+                                    BigDecimal.valueOf(previousMonthlyReferralCount)))
+                            .activatedStoreCount(currentPeriodReferralCount)
+                            .lastActivatedDate(rs.getDate("last_referred_date") != null
+                                    ? rs.getDate("last_referred_date").toLocalDate()
                                     : null)
                             .rank(rowNum + 1)
-                            .build());
-        }
+                            .build();
+                });
 
         return ReferralReportRes.builder()
                 .startDate(startDate)
@@ -237,6 +299,9 @@ public class ReportServiceImpl implements ReportService {
                 .totalReferralCodeCount(toInteger(codeSummary.get("total_code_count")))
                 .activeReferralCodeCount(toInteger(codeSummary.get("active_code_count")))
                 .successfulReferralStoreCount(successfulReferralStoreCount != null ? successfulReferralStoreCount : 0)
+                .totalUserReferralCount(toInteger(userReferralSummary.get("total_user_referral_count")))
+                .currentPeriodUserReferralCount(
+                        toInteger(userReferralSummary.get("current_period_user_referral_count")))
                 .currentPeriodActivatedStoreCount(
                         currentPeriodActivatedStoreCount != null ? currentPeriodActivatedStoreCount : 0)
                 .previousPeriodActivatedStoreCount(
@@ -1249,13 +1314,12 @@ public class ReportServiceImpl implements ReportService {
         String sql = ("""
                 SELECT l.store_id, ABS(SUM(wt.amount)) AS total_revenue
                 FROM wallet_transaction wt
-                JOIN lottery_ticket lt ON %s
                 JOIN lottery l ON %s
                 WHERE wt.transaction_type = 'DRAW'
                 AND wt.created_at BETWEEN ? AND ?
                 """ + (storeId != null ? "AND l.store_id = ? " : "") + """
                 GROUP BY l.store_id
-                """).formatted(utf8mb4Eq("wt.related_id", "lt.id"), utf8mb4Eq("lt.lottery_id", "l.id"));
+                """).formatted(utf8mb4Eq("wt.related_id", "l.id"));
         if (storeId != null)
             params.add(storeId);
 
@@ -1356,26 +1420,44 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.plusDays(1).atStartOfDay();
 
-        String dailySql = """
-                SELECT DATE(lt.drawn_at) AS stat_date,
-                       COUNT(*) AS draw_count,
-                       ABS(COALESCE(SUM(wt.amount), 0)) AS revenue
+        // draw_count: one row per ticket (accurate per-ticket count)
+        String drawCountSql = """
+                SELECT DATE(lt.drawn_at) AS stat_date, COUNT(*) AS draw_count
                 FROM lottery_ticket lt
                 JOIN lottery l ON %s
-                LEFT JOIN wallet_transaction wt ON %s AND wt.transaction_type = 'DRAW'
                 WHERE l.store_id = ? AND lt.drawn_at BETWEEN ? AND ? AND lt.status = 'DRAWN'
                 GROUP BY DATE(lt.drawn_at)
                 ORDER BY stat_date
-                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"), utf8mb4Eq("wt.related_id", "lt.id"));
+                """.formatted(utf8mb4Eq("lt.lottery_id", "l.id"));
 
         Map<LocalDate, StorePerformanceReportRes.DailyStat.DailyStatBuilder> builderMap = new LinkedHashMap<>();
-        jdbcTemplate.query(dailySql, new Object[] { storeId, start, end }, (RowCallbackHandler) rs -> {
+        jdbcTemplate.query(drawCountSql, new Object[] { storeId, start, end }, (RowCallbackHandler) rs -> {
             LocalDate date = rs.getDate("stat_date").toLocalDate();
             builderMap.put(date, StorePerformanceReportRes.DailyStat.builder()
                     .date(date)
                     .drawCount(rs.getInt("draw_count"))
-                    .revenue(rs.getLong("revenue"))
+                    .revenue(0L)
                     .newUsers(0));
+        });
+
+        // revenue: one wallet_transaction per draw session (related_id = lottery.id), must not join lottery_ticket to avoid multiplying
+        String revenueSql = """
+                SELECT DATE(wt.created_at) AS stat_date, ABS(SUM(wt.amount)) AS revenue
+                FROM wallet_transaction wt
+                JOIN lottery l ON %s
+                WHERE wt.transaction_type = 'DRAW' AND l.store_id = ? AND wt.created_at BETWEEN ? AND ?
+                GROUP BY DATE(wt.created_at)
+                """.formatted(utf8mb4Eq("wt.related_id", "l.id"));
+
+        jdbcTemplate.query(revenueSql, new Object[] { storeId, start, end }, (RowCallbackHandler) rs -> {
+            LocalDate date = rs.getDate("stat_date").toLocalDate();
+            long revenue = rs.getLong("revenue");
+            if (builderMap.containsKey(date)) {
+                builderMap.get(date).revenue(revenue);
+            } else {
+                builderMap.put(date, StorePerformanceReportRes.DailyStat.builder()
+                        .date(date).drawCount(0).revenue(revenue).newUsers(0));
+            }
         });
 
         String newUsersSql = """

@@ -13,6 +13,12 @@ import lombok.Data;
 @Data
 @Schema(description = "更新推薦碼請求")
 public class ReferralCodeUpdateReq {
+
+    /**
+     * 指定店家 ID。未傳入時維持原店家；若要更換店家，後端會檢查該店家是否已有推薦碼。
+     */
+    @Schema(description = "指定店家 ID")
+    private String storeId;
     
     /**
      * 描述

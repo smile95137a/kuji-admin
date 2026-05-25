@@ -5,6 +5,7 @@ import com.group.admin.entity.User;
 import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.service.UserTokenBlacklistService;
 import com.group.admin.util.JwtUtil;
@@ -51,6 +52,9 @@ class ApiJwtAuthenticationFilterTest {
     private RoleMapper roleMapper;
 
     @Mock
+    private StoreUserMapper storeUserMapper;
+
+    @Mock
     private UserTokenBlacklistService userTokenBlacklistService;
 
     private ApiJwtAuthenticationFilter filter;
@@ -63,6 +67,7 @@ class ApiJwtAuthenticationFilterTest {
                 adminUserMapper,
                 adminUserRoleMapper,
                 roleMapper,
+                storeUserMapper,
                 userTokenBlacklistService
         );
         SecurityContextHolder.clearContext();

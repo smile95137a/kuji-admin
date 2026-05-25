@@ -17,6 +17,7 @@ import com.group.admin.mapper.UserMapper;
 import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.PageResult;
 import com.group.admin.res.recharge.RechargeRes;
+import com.group.admin.res.wallet.RechargeOrderRes;
 import com.group.admin.service.CoinService;
 import com.group.admin.service.RechargeService;
 import lombok.RequiredArgsConstructor;
@@ -32,31 +33,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * 前台使用者儲值服務實現
- * 
- * @author Kuji Admin
- * @since 2026-02-08
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class RechargeServiceImpl implements RechargeService {
-    
+
+    private static final String PAYMENT_GATEWAY_GOMYPAY = "gomypay";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String STATUS_FAILED = "FAILED";
+
     private final RechargeRecordMapper rechargeRecordMapper;
     private final RechargeOrderMapper rechargeOrderMapper;
     private final RechargePlanMapper rechargePlanMapper;
     private final UserMapper userMapper;
     private final CoinService coinService;
     private final PaymentGatewayClient paymentGatewayClient;
+    private final RechargeStateHelper rechargeStateHelper;
 
     @Value("${wallet.recharge-order.ttl-minutes:30}")
     private long rechargeOrderTtlMinutes;
 
     @Override
-    public com.group.admin.res.wallet.RechargeOrderRes createRechargeOrder(String userId, String planId, String paymentMethod) {
-        log.info("💳 [Recharge] 建立儲值訂單：userId={}, planId={}, paymentMethod={}", userId, planId, paymentMethod);
+    @Transactional(rollbackFor = Exception.class)
+    public RechargeOrderRes createRechargeOrder(String userId, String planId, String paymentMethod) {
+        log.info("[Recharge] 建立儲值訂單 userId={}, planId={}, paymentMethod={}", userId, planId, paymentMethod);
 
         User user = userMapper.selectByPrimaryKey(userId);
         if (user == null) {
@@ -75,6 +77,7 @@ public class RechargeServiceImpl implements RechargeService {
                 .bonusAmount(plan.getBonusCoins())
                 .priceTwd(BigDecimal.valueOf(plan.getAmount()))
                 .status(RechargeOrderStatus.PENDING)
+                .paymentMethod(normalizedPaymentMethod)
                 .buyerName(user.getNickname() != null && !user.getNickname().isBlank() ? user.getNickname() : "KUJI會員")
                 .buyerEmail(user.getEmail())
                 .buyerPhone(user.getPhoneNumber())
@@ -83,221 +86,132 @@ public class RechargeServiceImpl implements RechargeService {
                 .updatedAt(now)
                 .build();
 
-        GatewayInitResult initResult = paymentGatewayClient.charge(order, normalizedPaymentMethod);
-        order.setGatewayProvider(initResult.provider());
-        order.setGatewayOrderId(initResult.gatewayOrderId());
-        order.setGatewayRawResp(initResult.payUrl());
-        rechargeOrderMapper.insert(order);
+        // REQUIRES_NEW：立即提交，確保即使後續 gateway 呼叫失敗，記錄仍可查詢
+        rechargeStateHelper.saveInitialPending(order, buildPendingRecord(order, plan, normalizedPaymentMethod, now));
+
+        GatewayInitResult initResult;
+        try {
+            initResult = paymentGatewayClient.charge(order, normalizedPaymentMethod);
+        } catch (RuntimeException e) {
+            // REQUIRES_NEW：外層事務已不含初始 insert，故此 markFailed 可直接找到記錄並更新
+            rechargeStateHelper.markFailed(order.getId(), null, null, e.getMessage());
+            throw e;
+        }
+
+        applyGatewayInit(order, initResult);
+        syncPendingRecordPaymentInfo(order);
+        // REQUIRES_NEW：更新 gateway 初始化結果
+        rechargeStateHelper.updateGatewayInit(order);
+
+        if (!initResult.success()) {
+            rechargeStateHelper.markFailed(order.getId(),
+                    order.getGatewayOrderId(), order.getGatewayRawResp(), initResult.errorMessage());
+            order.setStatus(RechargeOrderStatus.FAILED);
+        }
 
         return toRechargeOrderRes(order, initResult);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public com.group.admin.res.wallet.RechargeOrderRes getRechargeOrder(String userId, String rechargeOrderId) {
+    public RechargeOrderRes getRechargeOrder(String userId, String rechargeOrderId) {
         RechargeOrder order = rechargeOrderMapper.selectById(rechargeOrderId);
         if (order == null || !userId.equals(order.getUserId())) {
             throw new BusinessException("找不到儲值訂單");
         }
-        return toRechargeOrderRes(order, order.getGatewayRawResp());
+        return toRechargeOrderRes(order, null);
     }
-    
+
     @Override
     public RechargeRes createRechargeRequest(String userId, RechargeReq req) {
-        log.info("💳 [Recharge] 建立儲值請求：userId={}, planId={}, paymentMethod={}", 
-                userId, req.getPlanId(), req.getPaymentMethod());
-        
-        // Step 1: 驗證使用者存在
         User user = userMapper.selectByPrimaryKey(userId);
         if (user == null) {
             throw new BusinessException("使用者不存在");
         }
-        
-        log.info("✅ [Step 1] 使用者驗證通過：userId={}", userId);
-        log.info("   目前金幣：goldCoins={}, bonusCoins={}, totalRecharged={}", 
-                user.getGoldCoins(), user.getBonusCoins(), user.getTotalRecharged());
-        
-        // Step 2: 驗證儲值方案存在且有效
-        RechargePlan plan = rechargePlanMapper.selectByPrimaryKey(req.getPlanId());
-        if (plan == null) {
-            throw new BusinessException("儲值方案不存在");
-        }
-        if (plan.getIsActive() == null || plan.getIsActive() != 1) {
-            throw new BusinessException("儲值方案已禁用");
-        }
+        RechargePlan plan = requireValidPlan(req.getPlanId());
         LocalDateTime now = LocalDateTime.now();
-        if (plan.getStartDate() != null && now.isBefore(plan.getStartDate())) {
-            throw new BusinessException("儲值方案尚未開始");
-        }
-        if (plan.getEndDate() != null && now.isAfter(plan.getEndDate())) {
-            throw new BusinessException("儲值方案已結束");
-        }
-        if (plan.getDeletedAt() != null) {
-            throw new BusinessException("儲值方案已刪除");
-        }
-        
-        log.info("✅ [Step 2] 方案驗證通過：planId={}", req.getPlanId());
-        log.info("   方案名稱：{}", plan.getName());
-        log.info("   金額：{}, 金幣：{}, 紅利：{}", plan.getAmount(), plan.getGoldCoins(), plan.getBonusCoins());
-        
-        // Step 3: 建立 RechargeRecord（✨ 直接設為 COMPLETED，立即完成支付）
+
         RechargeRecord record = new RechargeRecord();
         record.setId(UUID.randomUUID().toString());
         record.setUserId(userId);
-        record.setPlanId(req.getPlanId());
+        record.setPlanId(plan.getId());
         record.setAmount(plan.getAmount());
         record.setGoldCoins(plan.getGoldCoins());
         record.setBonusCoins(plan.getBonusCoins());
         record.setPaymentMethod(req.getPaymentMethod());
-        record.setPaymentStatus("COMPLETED");  // ✨ 直接完成（測試模式）
+        record.setPaymentStatus(STATUS_COMPLETED);
+        record.setPaymentGateway("manual");
         record.setCreatedAt(now);
-        record.setPaidAt(now);  // ✨ 立即設定支付時間
-        record.setTransactionId("TEST-" + UUID.randomUUID().toString().substring(0, 8));  // ✨ 模擬交易 ID
+        record.setPaidAt(now);
+        record.setTransactionId("TEST-" + UUID.randomUUID().toString().substring(0, 8));
         record.setPaymentInfo(req.getRemark());
-        
         rechargeRecordMapper.insert(record);
-        
-        log.info("✅ [Step 3] 儲值記錄已建立：rechargeId={}, status=COMPLETED", record.getId());
-        
-        // Step 4: 透過 CoinService 更新使用者金幣（統一記錄交易流水）
-        log.info("💰 [Step 4] 透過 CoinService 更新金幣...");
-        
-        coinService.addGold(userId, record.getGoldCoins(), "RECHARGE", record.getId(),
-                "儲值：" + plan.getName());
-        
-        if (record.getBonusCoins() != null && record.getBonusCoins() > 0) {
-            coinService.addBonus(userId, record.getBonusCoins(), "RECHARGE", record.getId(),
-                    "儲值紅利：" + plan.getName());
-        }
-        
-        // 更新累計儲值金額（非金幣欄位，直接更新 user 表）
-        User updatedUser = userMapper.selectByPrimaryKey(userId);
-        if (updatedUser != null) {
-            Long totalBefore = updatedUser.getTotalRecharged() != null ? updatedUser.getTotalRecharged() : 0L;
-            updatedUser.setTotalRecharged(totalBefore + record.getAmount());
-            updatedUser.setUpdatedAt(now);
-            userMapper.updateByPrimaryKeySelective(updatedUser);
-        }
-        
-        log.info("✅ [Step 4] 金幣更新完成！goldCoins={}, bonusCoins={}",
-                record.getGoldCoins(), record.getBonusCoins());
-        
-        // 重新查詢驗證
-        User verifyUser = userMapper.selectByPrimaryKey(userId);
-        log.info("🔍 [驗證] 重新查詢使用者金幣：goldCoins={}, bonusCoins={}, totalRecharged={}",
-                verifyUser.getGoldCoins(), verifyUser.getBonusCoins(), verifyUser.getTotalRecharged());
-        
-        log.info("🎉 儲值完成！rechargeId={}, goldCoins={}, bonusCoins={}", 
-                record.getId(), record.getGoldCoins(), record.getBonusCoins());
-        
+
+        creditRechargeCoins(record);
         return RechargeRes.from(record);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
-    public PageResult<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size) {
-        log.info("🔍 [Recharge] 查詢儲值記錄：userId={}, page={}, size={}", userId, page, size);
-        
-        // Step 1: 驗證使用者存在
-        User user = userMapper.selectByPrimaryKey(userId);
-        if (user == null) {
+    public PageResult<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size,
+                                                          String paymentStatus, String transactionId,
+                                                          String createdAtStart, String createdAtEnd) {
+        if (userMapper.selectByPrimaryKey(userId) == null) {
             throw new BusinessException("使用者不存在");
         }
-        
+
         int currentPage = resolvePage(page);
         int pageSize = resolveSize(size);
         int offset = (currentPage - 1) * pageSize;
-
-        long total = rechargeRecordMapper.countByUserId(userId);
+        String normalizedStatus = normalizeStatus(paymentStatus);
+        String normalizedTransactionId = blankToNull(transactionId);
+        String normalizedStart = blankToNull(createdAtStart);
+        String normalizedEnd = blankToNull(createdAtEnd);
+        long total = rechargeRecordMapper.countByUserIdFiltered(
+                userId, normalizedStatus, normalizedTransactionId, normalizedStart, normalizedEnd);
         if (total == 0) {
             return PageResult.empty(currentPage, pageSize);
         }
-
-        List<RechargeRecord> records = rechargeRecordMapper.selectByUserIdPaged(userId, offset, pageSize);
-        return PageResult.of(currentPage, pageSize, total, records.stream()
-                .map(RechargeRes::from)
-                .toList());
+        List<RechargeRecord> records = rechargeRecordMapper.selectByUserIdPagedFiltered(
+                userId, normalizedStatus, normalizedTransactionId, normalizedStart, normalizedEnd, offset, pageSize);
+        return PageResult.of(currentPage, pageSize, total, records.stream().map(RechargeRes::from).toList());
     }
-    
+
     @Override
     public RechargeRes confirmPayment(String rechargeId, String transactionId) {
-        log.info("💰 [Recharge] 確認支付：rechargeId={}, transactionId={}", rechargeId, transactionId);
-        
-        // Step 1: 查詢儲值記錄
         RechargeRecord record = rechargeRecordMapper.selectByPrimaryKey(rechargeId);
         if (record == null) {
-            throw new BusinessException("儲值記錄不存在");
+            throw new BusinessException("儲值紀錄不存在");
         }
-        
-        // Step 2: 驗證狀態為 PENDING
-        if (!"PENDING".equals(record.getPaymentStatus())) {
-            throw new BusinessException("只有待支付的儲值才能確認支付，當前狀態: " + record.getPaymentStatus());
+        if (!STATUS_PENDING.equals(record.getPaymentStatus())) {
+            throw new BusinessException("此儲值紀錄狀態不可確認付款：" + record.getPaymentStatus());
         }
-        
-        LocalDateTime now = LocalDateTime.now();
-        
-        // Step 3: 更新記錄狀態為 COMPLETED
-        record.setPaymentStatus("COMPLETED");
-        record.setPaidAt(now);
-        if (transactionId != null) {
+
+        record.setPaymentStatus(STATUS_COMPLETED);
+        record.setPaidAt(LocalDateTime.now());
+        if (transactionId != null && !transactionId.isBlank()) {
             record.setTransactionId(transactionId);
         }
-        rechargeRecordMapper.updateByPrimaryKey(record);
-        
-        log.info("✅ 儲值記錄已標記為已支付：rechargeId={}", rechargeId);
-        
-        // Step 4: 查詢使用者並更新金幣（樂觀鎖）
-        User user = userMapper.selectByPrimaryKey(record.getUserId());
-        if (user == null) {
-            throw new BusinessException("使用者不存在");
-        }
-        
-        // 透過 CoinService 更新使用者金幣（統一記錄交易流水）
-        coinService.addGold(record.getUserId(), record.getGoldCoins(), "RECHARGE", rechargeId,
-                "儲值：" + record.getPlanId());
-        
-        if (record.getBonusCoins() != null && record.getBonusCoins() > 0) {
-            coinService.addBonus(record.getUserId(), record.getBonusCoins(), "RECHARGE", rechargeId,
-                    "儲值紅利：" + record.getPlanId());
-        }
-        
-        // 更新累計儲值金額（非金幣欄位）
-        Long totalBefore = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
-        user.setTotalRecharged(totalBefore + record.getAmount());
-        user.setUpdatedAt(now);
-        userMapper.updateByPrimaryKeySelective(user);
-        
-        log.info("✅ 使用者金幣已更新：userId={}, +goldCoins={}, +bonusCoins={}", 
-                record.getUserId(), record.getGoldCoins(), record.getBonusCoins());
-        
-        log.info("✅ 交易記錄已建立：userId={}", record.getUserId());
-        
+        rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
+        creditRechargeCoins(record);
         return RechargeRes.from(record);
     }
-    
+
     @Override
     public RechargeRes recordPaymentFailure(String rechargeId, String failReason) {
-        log.warn("❌ [Recharge] 記錄支付失敗：rechargeId={}, reason={}", rechargeId, failReason);
-        
-        // Step 1: 查詢儲值記錄
         RechargeRecord record = rechargeRecordMapper.selectByPrimaryKey(rechargeId);
         if (record == null) {
-            throw new BusinessException("儲值記錄不存在");
+            throw new BusinessException("儲值紀錄不存在");
         }
-        
-        // Step 2: 更新狀態為 FAILED
-        record.setPaymentStatus("FAILED");
+        record.setPaymentStatus(STATUS_FAILED);
         record.setFailReason(failReason);
-        rechargeRecordMapper.updateByPrimaryKey(record);
-        
-        log.info("✅ 支付失敗已記錄：rechargeId={}", rechargeId);
-        
+        rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
         return RechargeRes.from(record);
     }
 
     @Override
     public void handleCallback(GatewayCallbackResult result) {
-        log.info("📥 [Recharge] 支付閘道回調：merchantOrderId={}, success={}", result.merchantOrderId(), result.success());
+        log.info("[Recharge] 收到付款回調 merchantOrderId={}, success={}", result.merchantOrderId(), result.success());
         RechargeOrder order = rechargeOrderMapper.selectById(result.merchantOrderId());
         if (order == null) {
             throw new BusinessException("找不到儲值訂單：" + result.merchantOrderId());
@@ -313,23 +227,18 @@ public class RechargeServiceImpl implements RechargeService {
                     result.paidAt() != null ? result.paidAt() : LocalDateTime.now()
             );
             if (updated == 0) {
-                log.info("ℹ️ [Recharge] 儲值訂單已處理過：{}", order.getId());
+                log.info("[Recharge] 儲值訂單已處理，略過重複 callback：{}", order.getId());
                 return;
             }
 
-            coinService.addGold(order.getUserId(), order.getGoldAmount(), "RECHARGE", order.getId(),
-                    "儲值訂單：" + order.getPlanId());
-            if (order.getBonusAmount() != null && order.getBonusAmount() > 0) {
-                coinService.addBonus(order.getUserId(), order.getBonusAmount(), "RECHARGE", order.getId(),
-                        "儲值紅利：" + order.getPlanId());
-            }
-
-            User user = userMapper.selectByPrimaryKey(order.getUserId());
-            if (user != null) {
-                Long totalBefore = user.getTotalRecharged() != null ? user.getTotalRecharged() : 0L;
-                user.setTotalRecharged(totalBefore + order.getPriceTwd().longValue());
-                user.setUpdatedAt(LocalDateTime.now());
-                userMapper.updateByPrimaryKeySelective(user);
+            RechargeRecord record = rechargeRecordMapper.selectByPrimaryKey(order.getId());
+            if (record != null) {
+                record.setPaymentStatus(STATUS_COMPLETED);
+                record.setTransactionId(result.gatewayOrderId());
+                record.setPaidAt(result.paidAt() != null ? result.paidAt() : LocalDateTime.now());
+                record.setPaymentInfo(result.rawPayload());
+                rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
+                creditRechargeCoins(record);
             }
             return;
         }
@@ -342,7 +251,14 @@ public class RechargeServiceImpl implements RechargeService {
                 result.rawPayload(),
                 null
         );
-        log.warn("⚠️ 支付閘道回報失敗：merchantOrderId={}", result.merchantOrderId());
+        RechargeRecord record = rechargeRecordMapper.selectByPrimaryKey(order.getId());
+        if (record != null) {
+            record.setPaymentStatus(STATUS_FAILED);
+            record.setTransactionId(result.gatewayOrderId());
+            record.setFailReason("GoMyPay 付款失敗");
+            record.setPaymentInfo(result.rawPayload());
+            rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
+        }
     }
 
     @Override
@@ -356,7 +272,7 @@ public class RechargeServiceImpl implements RechargeService {
             throw new BusinessException("儲值方案不存在");
         }
         if (plan.getIsActive() == null || plan.getIsActive() != 1) {
-            throw new BusinessException("儲值方案已禁用");
+            throw new BusinessException("儲值方案尚未啟用");
         }
         LocalDateTime now = LocalDateTime.now();
         if (plan.getStartDate() != null && now.isBefore(plan.getStartDate())) {
@@ -371,25 +287,91 @@ public class RechargeServiceImpl implements RechargeService {
         return plan;
     }
 
-    private com.group.admin.res.wallet.RechargeOrderRes toRechargeOrderRes(RechargeOrder order, GatewayInitResult initResult) {
-        return com.group.admin.res.wallet.RechargeOrderRes.builder()
-                .rechargeOrderId(order.getId())
-                .payUrl(initResult.payUrl())
-                .submitMethod(initResult.submitMethod())
-                .actionUrl(initResult.actionUrl())
-                .formFields(initResult.formFields())
-                .goldAmount(order.getGoldAmount())
-                .bonusAmount(order.getBonusAmount())
-                .priceTwd(order.getPriceTwd())
-                .status(order.getStatus() != null ? order.getStatus().name() : null)
-                .expiredAt(order.getExpiredAt())
-                .build();
+    private RechargeRecord buildPendingRecord(RechargeOrder order, RechargePlan plan, String paymentMethod, LocalDateTime now) {
+        RechargeRecord record = new RechargeRecord();
+        record.setId(order.getId());
+        record.setUserId(order.getUserId());
+        record.setPlanId(plan.getId());
+        record.setAmount(plan.getAmount());
+        record.setGoldCoins(plan.getGoldCoins());
+        record.setBonusCoins(plan.getBonusCoins());
+        record.setPaymentMethod(paymentMethod);
+        record.setPaymentStatus(STATUS_PENDING);
+        record.setPaymentGateway(PAYMENT_GATEWAY_GOMYPAY);
+        record.setCreatedAt(now);
+        return record;
     }
 
-    private com.group.admin.res.wallet.RechargeOrderRes toRechargeOrderRes(RechargeOrder order, String payUrl) {
-        return com.group.admin.res.wallet.RechargeOrderRes.builder()
+    private void applyGatewayInit(RechargeOrder order, GatewayInitResult initResult) {
+        order.setGatewayProvider(initResult.provider());
+        order.setGatewayOrderId(initResult.gatewayOrderId());
+        order.setGatewayResult(initResult.gatewayResult());
+        order.setGatewayRetMsg(initResult.retMsg());
+        order.setVirtualAccount(initResult.virtualAccount());
+        order.setPaymentInfo(initResult.payInfo());
+        order.setLimitDate(initResult.limitDate());
+        order.setGatewayRawResp(initResult.rawPayload());
+    }
+
+    private void syncPendingRecordPaymentInfo(RechargeOrder order) {
+        if (!hasText(order.getVirtualAccount()) && !hasText(order.getPaymentInfo()) && !hasText(order.getLimitDate())) {
+            return;
+        }
+        RechargeRecord record = rechargeRecordMapper.selectByPrimaryKey(order.getId());
+        if (record == null) {
+            return;
+        }
+        record.setTransactionId(order.getGatewayOrderId());
+        record.setPaymentInfo(buildTransferPaymentInfo(order));
+        rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
+    }
+
+    private String buildTransferPaymentInfo(RechargeOrder order) {
+        StringBuilder info = new StringBuilder();
+        if (hasText(order.getVirtualAccount())) {
+            info.append("轉帳帳號：").append(order.getVirtualAccount());
+        }
+        if (hasText(order.getPaymentInfo())) {
+            if (!info.isEmpty()) {
+                info.append("；");
+            }
+            info.append("付款資訊：").append(order.getPaymentInfo());
+        }
+        if (hasText(order.getLimitDate())) {
+            if (!info.isEmpty()) {
+                info.append("；");
+            }
+            info.append("繳費期限：").append(order.getLimitDate());
+        }
+        return info.toString();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private void creditRechargeCoins(RechargeRecord record) {
+        coinService.addGold(record.getUserId(), record.getGoldCoins(), "RECHARGE", record.getId(),
+                "儲值方案 " + record.getPlanId());
+        if (record.getBonusCoins() != null && record.getBonusCoins() > 0) {
+            coinService.addBonus(record.getUserId(), record.getBonusCoins(), "RECHARGE", record.getId(),
+                    "儲值贈送紅利 " + record.getPlanId());
+        }
+    }
+
+    private RechargeOrderRes toRechargeOrderRes(RechargeOrder order, GatewayInitResult initResult) {
+        return RechargeOrderRes.builder()
                 .rechargeOrderId(order.getId())
-                .payUrl(payUrl)
+                .payUrl(initResult != null ? initResult.payUrl() : null)
+                .submitMethod(initResult != null ? initResult.submitMethod() : null)
+                .actionUrl(initResult != null ? initResult.actionUrl() : null)
+                .formFields(initResult != null ? initResult.formFields() : null)
+                .paymentMethod(order.getPaymentMethod())
+                .gatewayResult(order.getGatewayResult())
+                .retMsg(order.getGatewayRetMsg())
+                .virtualAccount(order.getVirtualAccount())
+                .payInfo(order.getPaymentInfo())
+                .limitDate(order.getLimitDate())
                 .goldAmount(order.getGoldAmount())
                 .bonusAmount(order.getBonusAmount())
                 .priceTwd(order.getPriceTwd())
@@ -412,5 +394,17 @@ public class RechargeServiceImpl implements RechargeService {
             return 10;
         }
         return Math.min(size, 100);
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String normalizeStatus(String status) {
+        String normalized = blankToNull(status);
+        if ("CANCELED".equals(normalized)) {
+            return "CANCELLED";
+        }
+        return normalized;
     }
 }

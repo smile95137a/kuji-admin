@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -17,14 +19,19 @@ import java.util.List;
 @Configuration
 public class JacksonDateTimeConfig {
 
+    private static final ZoneId TAIPEI_ZONE = ZoneId.of("Asia/Taipei");
+
     private static final DateTimeFormatter OUTPUT_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private static final List<DateTimeFormatter> INPUT_FORMATTERS = List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS")
     );
 
     @Bean
@@ -54,10 +61,16 @@ public class JacksonDateTimeConfig {
                         }
                     }
 
+                    try {
+                        return OffsetDateTime.parse(value).atZoneSameInstant(TAIPEI_ZONE).toLocalDateTime();
+                    } catch (DateTimeParseException ignored) {
+                        // Continue to throw unified error below.
+                    }
+
                     throw ctxt.weirdStringException(
                             value,
                             LocalDateTime.class,
-                            "Unsupported datetime format. Expected yyyy-MM-dd HH:mm[:ss] or yyyy-MM-dd'T'HH:mm[:ss]"
+                            "Unsupported datetime format. Expected yyyy-MM-dd HH:mm[:ss], yyyy-MM-dd'T'HH:mm[:ss], or ISO-8601 with timezone"
                     );
                 }
             });

@@ -11,8 +11,14 @@
     <result column="price_twd" property="priceTwd" jdbcType="DECIMAL"/>
     <result column="status" property="status" jdbcType="VARCHAR"
             typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+    <result column="payment_method" property="paymentMethod" jdbcType="VARCHAR"/>
     <result column="gateway_provider" property="gatewayProvider" jdbcType="VARCHAR"/>
     <result column="gateway_order_id" property="gatewayOrderId" jdbcType="VARCHAR"/>
+    <result column="gateway_result" property="gatewayResult" jdbcType="VARCHAR"/>
+    <result column="gateway_ret_msg" property="gatewayRetMsg" jdbcType="VARCHAR"/>
+    <result column="virtual_account" property="virtualAccount" jdbcType="VARCHAR"/>
+    <result column="payment_info" property="paymentInfo" jdbcType="VARCHAR"/>
+    <result column="limit_date" property="limitDate" jdbcType="VARCHAR"/>
     <result column="gateway_raw_resp" property="gatewayRawResp" jdbcType="LONGVARCHAR"/>
     <result column="paid_at" property="paidAt" jdbcType="TIMESTAMP"/>
     <result column="expired_at" property="expiredAt" jdbcType="TIMESTAMP"/>
@@ -22,10 +28,12 @@
 
   <insert id="insert" parameterType="com.group.admin.entity.RechargeOrder">
     INSERT INTO recharge_order (id, user_id, plan_id, gold_amount, bonus_amount, price_twd,
-      status, gateway_provider, gateway_order_id, gateway_raw_resp, paid_at, expired_at, created_at, updated_at)
+      status, payment_method, gateway_provider, gateway_order_id, gateway_result, gateway_ret_msg,
+      virtual_account, payment_info, limit_date, gateway_raw_resp, paid_at, expired_at, created_at, updated_at)
     VALUES (#{id}, #{userId}, #{planId}, #{goldAmount}, #{bonusAmount}, #{priceTwd},
-      #{status,typeHandler=org.apache.ibatis.type.EnumTypeHandler},
-      #{gatewayProvider}, #{gatewayOrderId}, #{gatewayRawResp}, #{paidAt}, #{expiredAt},
+      #{status,typeHandler=org.apache.ibatis.type.EnumTypeHandler}, #{paymentMethod},
+      #{gatewayProvider}, #{gatewayOrderId}, #{gatewayResult}, #{gatewayRetMsg},
+      #{virtualAccount}, #{paymentInfo}, #{limitDate}, #{gatewayRawResp}, #{paidAt}, #{expiredAt},
       #{createdAt}, #{updatedAt})
   </insert>
 
@@ -42,16 +50,38 @@
     SET status = #{newStatus,typeHandler=org.apache.ibatis.type.EnumTypeHandler},
         gateway_order_id = #{gatewayOrderId},
         gateway_raw_resp = #{gatewayRawResp},
-        paid_at = #{paidAt}
+        paid_at = #{paidAt},
+        updated_at = NOW()
     WHERE id = #{id}
       AND status = #{expectedStatus,typeHandler=org.apache.ibatis.type.EnumTypeHandler}
   </update>
 
   <update id="updateExpiredOrders">
     UPDATE recharge_order
-    SET status = 'EXPIRED'
+    SET status = 'EXPIRED',
+        updated_at = NOW()
     WHERE status = 'PENDING'
       AND expired_at &lt; #{now}
+  </update>
+
+  <select id="selectExpiredPendingOrders" resultMap="BaseResultMap">
+    SELECT * FROM recharge_order
+    WHERE status = 'PENDING'
+      AND expired_at &lt; #{now}
+  </select>
+
+  <update id="updateGatewayInit">
+    UPDATE recharge_order
+    SET gateway_provider = #{gatewayProvider},
+        gateway_order_id = #{gatewayOrderId},
+        gateway_result = #{gatewayResult},
+        gateway_ret_msg = #{gatewayRetMsg},
+        virtual_account = #{virtualAccount},
+        payment_info = #{paymentInfo},
+        limit_date = #{limitDate},
+        gateway_raw_resp = #{gatewayRawResp},
+        updated_at = NOW()
+    WHERE id = #{id}
   </update>
 
 </mapper>

@@ -142,7 +142,7 @@ public interface LotteryTicketService {
      * @param ticketId 籤位 UUID
      * @return 抽獎結果
      */
-    DrawResult drawByTicketId(String lotteryId, String userId, String ticketId);
+    DrawResult drawByTicketId(String lotteryId, String userId, String ticketId, int drawCount);
 
     /**
      * 隨機抽一個可用籤位

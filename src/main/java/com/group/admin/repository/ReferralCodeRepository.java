@@ -34,12 +34,13 @@ public interface ReferralCodeRepository {
                 s.id        AS storeId,
                 s.store_name AS storeName,
                 COUNT(DISTINCT rr.id) AS totalReferrals,
-                SUM(CASE WHEN rc.is_active = 1 THEN 1 ELSE 0 END) AS activeCodeCount
+                COUNT(DISTINCT CASE WHEN rc.is_active = 1 THEN rc.id END) AS activeCodeCount
             FROM store s
             LEFT JOIN referral_code rc ON rc.store_id = s.id
             LEFT JOIN referral_record rr ON rr.referral_code_id = rc.id
                 <if test="startDate != null and endDate != null">
-                AND rr.referred_at BETWEEN #{startDate} AND #{endDate}
+                AND rr.referred_at >= #{startDate}
+                AND rr.referred_at &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
                 </if>
             WHERE s.status = 'ACTIVE'
             <if test="storeId != null and storeId != ''">

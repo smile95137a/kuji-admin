@@ -267,6 +267,10 @@ public class PrizeBoxServiceImpl implements PrizeBoxService {
                 .andUserIdEqualTo(userId);
         if (status != null && !status.isBlank()) {
             criteria.andStatusEqualTo(status);
+        } else {
+            criteria.andStatusIn(List.of(
+                    PrizeBoxStatusEnum.IN_BOX.getCode(),
+                    PrizeBoxStatusEnum.SHIPPING.getCode()));
         }
         example.setOrderByClause("created_at DESC");
 

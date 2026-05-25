@@ -1,6 +1,7 @@
 package com.group.admin.scheduler;
 
 import com.group.admin.service.EmailService;
+import com.group.admin.service.BannerService;
 import com.group.admin.service.LotteryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 public class ScheduledTasks {
     
     private final EmailService emailService;
+    private final BannerService bannerService;
     private final LotteryService lotteryService;
     
     /**
@@ -49,6 +51,31 @@ public class ScheduledTasks {
             lotteryService.promoteScheduledLotteries();
         } catch (Exception e) {
             log.error("❌ 自動上架任務失敗: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 每 60 秒將活動時間到期的商品自動下架（ON_SHELF + end_time <= NOW → OFF_SHELF）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void autoExpireLotteries() {
+        try {
+            lotteryService.expireEndTimeLotteries();
+        } catch (Exception e) {
+            log.error("❌ 活動到期下架任務失敗: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 每 60 秒自動推進 Banner 狀態（SCHEDULED/PUBLISHED）
+     */
+    @Scheduled(fixedRate = 60000)
+    public void autoSwitchBannerStatus() {
+        try {
+            bannerService.autoPublishBanners();
+            bannerService.autoUnpublishBanners();
+        } catch (Exception e) {
+            log.error("❌ Banner 自動上下架任務失敗: {}", e.getMessage());
         }
     }
 

@@ -38,4 +38,9 @@ public class CategoryCondition extends BaseCondition {
      * 關鍵字搜尋（搜尋主題或標籤）
      */
     private String keyword;
+
+    /**
+     * 名稱模糊搜尋（contains，前端使用 name 欄位時對應此欄位）
+     */
+    private String name;
 }

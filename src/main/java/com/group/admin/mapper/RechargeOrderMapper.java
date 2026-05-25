@@ -19,5 +19,7 @@ public interface RechargeOrderMapper {
                                         @Param("paidAt") LocalDateTime paidAt);
     /** Batch expire: PENDING orders past expired_at → EXPIRED */
     int updateExpiredOrders(@Param("now") LocalDateTime now);
+    List<RechargeOrder> selectExpiredPendingOrders(@Param("now") LocalDateTime now);
+    int updateGatewayInit(RechargeOrder order);
     List<RechargeOrder> selectByUserId(String userId);
 }

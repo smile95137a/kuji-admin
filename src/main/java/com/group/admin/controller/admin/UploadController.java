@@ -78,7 +78,7 @@ public class UploadController {
      * 上傳 Lottery 商品圖片。
      */
     @PostMapping("/lottery")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_OWNER','STORE_EDITOR')")
     @Operation(summary = "上傳 Lottery 商品圖片", description = "上傳 Lottery 商品圖片至 S3")
     public ResponseEntity<Map<String, String>> uploadLotteryImage(
             @RequestParam("file")
@@ -99,7 +99,7 @@ public class UploadController {
      * 上傳 Prize 商品圖片。
      */
     @PostMapping("/prize")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_OWNER','STORE_EDITOR')")
     @Operation(summary = "上傳 Prize 商品圖片", description = "上傳 Prize 商品圖片至 S3")
     public ResponseEntity<Map<String, String>> uploadPrizeImage(
             @RequestParam("file")

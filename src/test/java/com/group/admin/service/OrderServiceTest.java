@@ -1,14 +1,20 @@
 package com.group.admin.service;
 
 import com.group.admin.entity.Order;
+import com.group.admin.entity.OrderItem;
 import com.group.admin.entity.OrderStatusLog;
+import com.group.admin.entity.PrizeBox;
 import com.group.admin.enums.OrderStatusEnum;
+import com.group.admin.enums.PrizeBoxStatusEnum;
 import com.group.admin.exception.BusinessException;
+import com.group.admin.gateway.ShippingPaymentGatewayClient;
 import com.group.admin.mapper.*;
 import com.group.admin.repository.OrderRepository;
+import com.group.admin.req.order.CancelOrderReq;
 import com.group.admin.req.order.OrderShipReq;
 import com.group.admin.req.order.ShipInfoReq;
 import com.group.admin.service.impl.OrderServiceImpl;
+import com.group.admin.service.logistics.LogisticsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -39,8 +46,12 @@ class OrderServiceTest {
     @Mock private LotteryPrizeMapper lotteryPrizeMapper;
     @Mock private StoreMapper storeMapper;
     @Mock private UserMapper userMapper;
+    @Mock private StoreUserMapper storeUserMapper;
+    @Mock private ShippingMethodMapper shippingMethodMapper;
     @Mock private OrderRepository orderRepository;
     @Mock private ConsumptionRecordService consumptionRecordService;
+    @Mock private ShippingPaymentGatewayClient shippingPaymentGatewayClient;
+    @Mock private LogisticsService logisticsService;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -232,5 +243,40 @@ class OrderServiceTest {
         verify(orderMapper).updateByPrimaryKey(argThat(o ->
                 "HOME_DELIVERY".equals(o.getShippingMethod()) &&
                 "王小明".equals(o.getRecipientName())));
+    }
+    @Test
+    @DisplayName("取消訂單時應將賞品盒歸還為 IN_BOX")
+    void cancelOrder_ShouldRestorePrizeBoxToInBox() {
+        Order order = buildOrder(OrderStatusEnum.PREPARING);
+        when(orderMapper.selectByPrimaryKey(ORDER_ID)).thenReturn(order);
+
+        OrderItem item = new OrderItem();
+        item.setOrderId(ORDER_ID);
+        item.setPrizeBoxId("prize-box-001");
+        when(orderItemMapper.selectByExample(any())).thenReturn(List.of(item));
+
+        PrizeBox prizeBox = new PrizeBox();
+        prizeBox.setId("prize-box-001");
+        prizeBox.setStatus(PrizeBoxStatusEnum.SHIPPING.getCode());
+        prizeBox.setOrderId(ORDER_ID);
+        prizeBox.setShippedAt(LocalDateTime.now());
+        when(prizeBoxMapper.selectByPrimaryKey("prize-box-001")).thenReturn(prizeBox);
+
+        CancelOrderReq req = new CancelOrderReq();
+        req.setCancelReason("UAT 取消測試");
+
+        orderService.cancelOrder(ORDER_ID, req, OPERATOR_ID, "ADMIN");
+
+        ArgumentCaptor<PrizeBox> prizeBoxCaptor = ArgumentCaptor.forClass(PrizeBox.class);
+        verify(prizeBoxMapper).updateByPrimaryKey(prizeBoxCaptor.capture());
+
+        PrizeBox restored = prizeBoxCaptor.getValue();
+        assertThat(restored.getStatus()).isEqualTo(PrizeBoxStatusEnum.IN_BOX.getCode());
+        assertThat(restored.getOrderId()).isNull();
+        assertThat(restored.getShippedAt()).isNull();
+        assertThat(restored.getUpdatedAt()).isNotNull();
+
+        verify(orderStatusLogMapper).insert(argThat(log ->
+                OrderStatusEnum.CANCELLED.getCode().equals(log.getToStatus())));
     }
 }

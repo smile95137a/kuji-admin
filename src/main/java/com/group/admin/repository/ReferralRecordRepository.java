@@ -37,7 +37,8 @@ public interface ReferralRecordRepository {
             FROM referral_record rr
             WHERE 1 = 1
             <if test="startDate != null and endDate != null">
-              AND rr.referred_at BETWEEN #{startDate} AND #{endDate}
+              AND rr.referred_at >= #{startDate}
+              AND rr.referred_at &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
             </if>
             <if test="storeId != null and storeId != ''">
               AND rr.store_id = #{storeId}

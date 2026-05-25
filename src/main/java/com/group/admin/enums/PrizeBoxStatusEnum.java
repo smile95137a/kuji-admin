@@ -2,16 +2,11 @@ package com.group.admin.enums;
 
 import lombok.Getter;
 
-/**
- * 賞品盒狀態枚舉
- *
- * @author Kuji Admin
- * @since 2026-01-09
- */
 @Getter
 public enum PrizeBoxStatusEnum implements DisplayableEnum {
 
     IN_BOX("IN_BOX", "在賞品盒中"),
+    SHIPPING("SHIPPING", "配送中"),
     SHIPPED("SHIPPED", "已出貨"),
     RECYCLED("RECYCLED", "已回收");
 
@@ -39,7 +34,7 @@ public enum PrizeBoxStatusEnum implements DisplayableEnum {
                 return status;
             }
         }
-        throw new IllegalArgumentException("無效的賞品盒狀態：" + code);
+        throw new IllegalArgumentException("未知的賞品盒狀態: " + code);
     }
 
     public static String getNameByCode(String code) {

@@ -258,6 +258,37 @@
     order by created_at desc
     limit #{limit} offset #{offset}
   </select>
+
+  <sql id="User_Filter_Where">
+    where user_id = #{userId}
+    <if test="paymentStatus != null and paymentStatus != ''">
+      and payment_status = #{paymentStatus}
+    </if>
+    <if test="transactionId != null and transactionId != ''">
+      and transaction_id like concat('%', #{transactionId}, '%')
+    </if>
+    <if test="createdAtStart != null and createdAtStart != ''">
+      and created_at &gt;= #{createdAtStart}
+    </if>
+    <if test="createdAtEnd != null and createdAtEnd != ''">
+      and created_at &lt; date_add(#{createdAtEnd}, interval 1 day)
+    </if>
+  </sql>
+
+  <select id="countByUserIdFiltered" resultType="java.lang.Long">
+    select count(*)
+    from recharge_record
+    <include refid="User_Filter_Where" />
+  </select>
+
+  <select id="selectByUserIdPagedFiltered" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />
+    from recharge_record
+    <include refid="User_Filter_Where" />
+    order by created_at desc
+    limit #{limit} offset #{offset}
+  </select>
   <update id="updateByExampleSelective" parameterType="map">
     update recharge_record
     <set>

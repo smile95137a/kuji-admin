@@ -49,6 +49,8 @@ public class RechargeRes {
     
     /** 失敗原因（如果支付失敗）*/
     private String failReason;
+
+    private String paymentInfo;
     
     /** 建立時間 */
     private LocalDateTime createdAt;
@@ -75,6 +77,7 @@ public class RechargeRes {
                 .paymentGateway(record.getPaymentGateway())
                 .transactionId(record.getTransactionId())
                 .failReason(record.getFailReason())
+                .paymentInfo(record.getPaymentInfo())
                 .createdAt(record.getCreatedAt())
                 .paidAt(record.getPaidAt())
                 .build();

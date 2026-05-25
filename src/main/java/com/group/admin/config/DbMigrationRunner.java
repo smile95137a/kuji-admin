@@ -26,6 +26,7 @@ public class DbMigrationRunner implements CommandLineRunner {
         apply021();
         apply027();
         apply032();
+        fixShippingProviders();
 
         log.info("✅ DbMigrationRunner 完成");
     }
@@ -94,6 +95,29 @@ public class DbMigrationRunner implements CommandLineRunner {
                 WHERE code = 'SEVEN_ELEVEN' AND tracking_url_template IS NULL
             """);
         }
+    }
+
+    // ==================== fix-shipping-providers ====================
+
+    private void fixShippingProviders() {
+        if (!tableExists("shipping_method")) return;
+        log.info("🔧 [fix] 修正配送方式物流商名稱（移除綠界標示）...");
+        jdbcTemplate.execute("""
+            UPDATE shipping_method
+            SET provider = '統一超商', updated_at = NOW()
+            WHERE code = 'SEVEN_ELEVEN' AND (provider = '綠界' OR provider = '超商')
+        """);
+        jdbcTemplate.execute("""
+            UPDATE shipping_method
+            SET provider = '全家便利商店', updated_at = NOW()
+            WHERE code = 'FAMILY_MART' AND (provider = '綠界' OR provider = '超商')
+        """);
+        jdbcTemplate.execute("""
+            UPDATE shipping_method
+            SET provider = '黑貓宅急便', updated_at = NOW()
+            WHERE code = 'HOME_DELIVERY' AND (provider = '宅配物流' OR provider IS NULL)
+        """);
+        log.info("✅ [fix] 配送方式物流商名稱修正完成");
     }
 
     // ==================== 032-audit-log-system ====================

@@ -701,11 +701,12 @@ public class LotteryServiceImpl implements LotteryService {
     }
 
     /**
-     * 計算獎項總數
+     * 計算獎項總數（排除最後賞，因為最後賞不參與抽獎）
      */
     private int sumQuantityByLotteryId(String lotteryId) {
         List<LotteryPrize> prizes = selectPrizesByLotteryId(lotteryId);
         return prizes.stream()
+                .filter(p -> p.getIsLastPrize() == null || p.getIsLastPrize() != 1) // 最後賞不計入總數
                 .mapToInt(p -> p.getQuantity() == null ? 0 : p.getQuantity())
                 .sum();
     }
@@ -1407,7 +1408,9 @@ public class LotteryServiceImpl implements LotteryService {
         res.setCurrentPrice(lottery.getPricePerDraw()); // ✅ 加上當前價格
         res.setDiscountedPrice(lottery.getDiscountedPrice());
         res.setAutoDiscountEnabled(lottery.getAutoDiscountEnabled() != null && lottery.getAutoDiscountEnabled() == 1);
-        res.setDiscountTriggered(false); // 需要額外計算邏輯
+        res.setDiscountTriggered(lottery.getDiscountedPrice() != null
+                && lottery.getPricePerDraw() != null
+                && lottery.getPricePerDraw().equals(lottery.getDiscountedPrice()));
 
         // 多抽選項
         res.setAllowMultiDraw(lottery.getAllowMultiDraw() != null && lottery.getAllowMultiDraw() == 1);
@@ -1676,7 +1679,10 @@ public class LotteryServiceImpl implements LotteryService {
             }
             return requestDelistStrategy;
         }
-        if ("TRADING_CARD".equals(category) || "GACHA".equals(category)) {
+        if ("TRADING_CARD".equals(category)) {
+            return "ALL_DRAWN";
+        }
+        if ("GACHA".equals(category)) {
             return "ALL_DRAWN";
         }
         if ("CUSTOM_GACHA".equals(category)) {
@@ -1921,6 +1927,10 @@ public class LotteryServiceImpl implements LotteryService {
                 || GameModeEnum.SCRATCH_PLAYER.getCode().equals(reqGameMode)) {
             validateScratchPrizes(reqGameMode, req.getPrizes());
         }
+        validatePrizeConstraintsForCreateRequest(
+            req.getLottery().getCategory(),
+            req.getLottery().getSubCategory(),
+            req.getPrizes());
 
         for (com.group.admin.req.lottery.LotteryPrizeCreateReq prizeReq : req.getPrizes()) {
             // 設定 lotteryId
@@ -2173,6 +2183,7 @@ public class LotteryServiceImpl implements LotteryService {
             }
 
             List<LotteryPrize> allPrizes = getLotteryPrizes(lotteryId);
+            validatePrizeConstraintsForEntities(currentLottery.getCategory(), currentLottery.getSubCategory(), allPrizes);
             syncLotteryMaxDraws(currentLottery, req.getLottery(), allPrizes);
             resetGeneratedTickets(currentLottery, "獎品設定已變更，需重新生成籤位");
 
@@ -2228,12 +2239,14 @@ public class LotteryServiceImpl implements LotteryService {
             LotteryRes lotteryRes,
             List<com.group.admin.res.lottery.LotteryPrizeRes> prizeResList) {
 
-        // 計算統計資訊
+        // 計算統計資訊（排除最後賞，因為最後賞不參與抽獎，不應計入總數與剩餘數）
         int totalPrizeCount = prizeResList.stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getIsLastPrize()))
                 .mapToInt(p -> p.getQuantity() != null ? p.getQuantity() : 0)
                 .sum();
 
         int remainingPrizeCount = prizeResList.stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getIsLastPrize()))
                 .mapToInt(p -> p.getRemaining() != null ? p.getRemaining() : 0)
                 .sum();
 
@@ -2551,6 +2564,100 @@ public class LotteryServiceImpl implements LotteryService {
             throw new BusinessException(
                     "刮刮樂模式：必須且只能設定 1 個大獎，且大獎 quantity 必須為 1。"
                             + "目前大獎筆數=" + grandPrizeItemCount + "，大獎數量=" + grandPrizeTotal + "。");
+        }
+    }
+
+    private void validatePrizeConstraintsForCreateRequest(
+            String category,
+            String subCategory,
+            List<com.group.admin.req.lottery.LotteryPrizeCreateReq> prizes) {
+        if (prizes == null || prizes.isEmpty()) {
+            return;
+        }
+
+        long lastPrizeCount = prizes.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsLastPrize()))
+                .count();
+        if (lastPrizeCount > 1) {
+            throw new BusinessException("最後賞只能有一個");
+        }
+
+        if (lastPrizeCount == 1) {
+            long lastPrizeQuantity = prizes.stream()
+                    .filter(p -> Boolean.TRUE.equals(p.getIsLastPrize()))
+                    .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                    .sum();
+            if (lastPrizeQuantity != 1) {
+                throw new BusinessException("最後賞數量必須固定為 1");
+            }
+        }
+
+        boolean isCustomLotteryMode = "CUSTOM_GACHA".equals(category)
+                && "LOTTERY_MODE".equals(normalizeSubCategory(category, subCategory));
+        if (!isCustomLotteryMode) {
+            return;
+        }
+
+        if (lastPrizeCount > 0) {
+            throw new BusinessException("自製賞抽籤型不支援最後賞");
+        }
+
+        long grandPrizeItemCount = prizes.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsGrandPrize()))
+                .count();
+        long grandPrizeQuantity = prizes.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsGrandPrize()))
+                .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                .sum();
+        if (grandPrizeItemCount != 1 || grandPrizeQuantity != 1) {
+            throw new BusinessException("自製賞抽籤型必須且只能有 1 個大獎，且大獎數量必須為 1");
+        }
+    }
+
+    private void validatePrizeConstraintsForEntities(
+            String category,
+            String subCategory,
+            List<LotteryPrize> prizes) {
+        if (prizes == null || prizes.isEmpty()) {
+            return;
+        }
+
+        long lastPrizeCount = prizes.stream()
+                .filter(p -> p.getIsLastPrize() != null && p.getIsLastPrize() == 1)
+                .count();
+        if (lastPrizeCount > 1) {
+            throw new BusinessException("最後賞只能有一個");
+        }
+
+        if (lastPrizeCount == 1) {
+            long lastPrizeQuantity = prizes.stream()
+                    .filter(p -> p.getIsLastPrize() != null && p.getIsLastPrize() == 1)
+                    .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                    .sum();
+            if (lastPrizeQuantity != 1) {
+                throw new BusinessException("最後賞數量必須固定為 1");
+            }
+        }
+
+        boolean isCustomLotteryMode = "CUSTOM_GACHA".equals(category)
+                && "LOTTERY_MODE".equals(normalizeSubCategory(category, subCategory));
+        if (!isCustomLotteryMode) {
+            return;
+        }
+
+        if (lastPrizeCount > 0) {
+            throw new BusinessException("自製賞抽籤型不支援最後賞");
+        }
+
+        long grandPrizeItemCount = prizes.stream()
+                .filter(p -> p.getIsGrandPrize() != null && p.getIsGrandPrize() == 1)
+                .count();
+        long grandPrizeQuantity = prizes.stream()
+                .filter(p -> p.getIsGrandPrize() != null && p.getIsGrandPrize() == 1)
+                .mapToLong(p -> p.getQuantity() != null ? p.getQuantity() : 0)
+                .sum();
+        if (grandPrizeItemCount != 1 || grandPrizeQuantity != 1) {
+            throw new BusinessException("自製賞抽籤型必須且只能有 1 個大獎，且大獎數量必須為 1");
         }
     }
 
@@ -2894,6 +3001,24 @@ public class LotteryServiceImpl implements LotteryService {
                 log.info("✅ [Scheduled] 商品自動上架：id={}, title={}", l.getId(), l.getTitle());
             } catch (BusinessException e) {
                 log.warn("⚠️ [Scheduled] 商品自動上架失敗：id={}, title={}, reason={}", l.getId(), l.getTitle(), e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void expireEndTimeLotteries() {
+        List<Lottery> list = lotteryMapper.selectExpiredLotteries();
+        for (Lottery l : list) {
+            try {
+                Lottery upd = new Lottery();
+                upd.setId(l.getId());
+                upd.setStatus(LotteryStatusEnum.OFF_SHELF.getCode());
+                upd.setUpdatedAt(LocalDateTime.now());
+                lotteryMapper.updateByPrimaryKeySelective(upd);
+                log.info("⏰ [Scheduled] 活動時間到期自動下架: id={}, title={}", l.getId(), l.getTitle());
+            } catch (Exception e) {
+                log.error("❌ [Scheduled] 活動時間到期下架失敗: id={}, reason={}", l.getId(), e.getMessage());
             }
         }
     }

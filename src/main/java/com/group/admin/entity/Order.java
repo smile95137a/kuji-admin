@@ -43,6 +43,18 @@ public class Order {
 
     private String gomypayTradeNo;
 
+    private String gatewayResult;
+
+    private String gatewayRetMsg;
+
+    private String virtualAccount;
+
+    private String paymentInfo;
+
+    private String limitDate;
+
+    private String gatewayRawResp;
+
     private String remark;
 
     private LocalDateTime createdAt;
@@ -219,6 +231,54 @@ public class Order {
 
     public void setGomypayTradeNo(String gomypayTradeNo) {
         this.gomypayTradeNo = gomypayTradeNo == null ? null : gomypayTradeNo.trim();
+    }
+
+    public String getGatewayResult() {
+        return gatewayResult;
+    }
+
+    public void setGatewayResult(String gatewayResult) {
+        this.gatewayResult = gatewayResult == null ? null : gatewayResult.trim();
+    }
+
+    public String getGatewayRetMsg() {
+        return gatewayRetMsg;
+    }
+
+    public void setGatewayRetMsg(String gatewayRetMsg) {
+        this.gatewayRetMsg = gatewayRetMsg == null ? null : gatewayRetMsg.trim();
+    }
+
+    public String getVirtualAccount() {
+        return virtualAccount;
+    }
+
+    public void setVirtualAccount(String virtualAccount) {
+        this.virtualAccount = virtualAccount == null ? null : virtualAccount.trim();
+    }
+
+    public String getPaymentInfo() {
+        return paymentInfo;
+    }
+
+    public void setPaymentInfo(String paymentInfo) {
+        this.paymentInfo = paymentInfo == null ? null : paymentInfo.trim();
+    }
+
+    public String getLimitDate() {
+        return limitDate;
+    }
+
+    public void setLimitDate(String limitDate) {
+        this.limitDate = limitDate == null ? null : limitDate.trim();
+    }
+
+    public String getGatewayRawResp() {
+        return gatewayRawResp;
+    }
+
+    public void setGatewayRawResp(String gatewayRawResp) {
+        this.gatewayRawResp = gatewayRawResp == null ? null : gatewayRawResp.trim();
     }
 
     public String getRemark() {

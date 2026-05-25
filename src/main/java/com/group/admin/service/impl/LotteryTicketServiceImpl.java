@@ -38,11 +38,13 @@ import com.group.admin.mapper.LotteryTicketMapper;
 import com.group.admin.res.lottery.LotteryTicketRes;
 import com.group.admin.res.lottery.DesignationCheckResponse;
 import com.group.admin.service.ConsumptionRecordService;
+import com.group.admin.service.DrawConfigService;
 import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.PrizeBoxService;
 import com.group.admin.service.SystemConfigService;
 import com.group.admin.service.CoinService;
+import com.group.admin.util.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,6 +75,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
     private final CoinService walletService;
     private final ConsumptionRecordService consumptionRecordService;
     private final SystemConfigService systemConfigService;
+    private final DrawConfigService drawConfigService;
 
     @Lazy
     @Autowired
@@ -675,7 +678,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         // 2. 若非 GACHA，檢查抽獎保護/冷卻 (canDrawNow)，避免短時間內重複抽取
         boolean isGacha = "GACHA".equals(lottery.getCategory());
-        if (!isGacha && !canDrawNow(lotteryId, userId)) {
+        // ADMIN 及本彩券所屬店家的 STORE_OWNER/EDITOR 可繞過保護計時器（測試自家商品時不受限）
+        boolean isStoreOperator = SecurityUtils.isAdmin()
+                || SecurityUtils.canAccessStore(lottery.getStoreId());
+        if (!isGacha && !isStoreOperator && !canDrawNow(lotteryId, userId)) {
             return new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L, 
                     "Draw is blocked until protection ends", false, null, null, null);
         }
@@ -811,10 +817,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         // 檢查並啟動保護機制（protection）
         if (!isGacha && sessionInfo.protectionEndTime() == null) {
-            startProtection(sessionInfo.sessionId(), lotteryId);
+            startProtection(sessionInfo.sessionId(), lotteryId, drawCount);
             log.info("[保護啟動] sessionId={}", sessionInfo.sessionId());
         } else if (!isGacha && sessionInfo.protectionEndTime() != null && sessionInfo.isOpener()) {
-            extendProtection(sessionInfo.sessionId());
+            extendProtection(sessionInfo.sessionId(), drawCount);
         }
         
         String paymentType = resolvePaymentType(lottery);
@@ -902,7 +908,7 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
 
     @Override
     @Transactional
-    public DrawResult drawByTicketId(String lotteryId, String userId, String ticketId) {
+    public DrawResult drawByTicketId(String lotteryId, String userId, String ticketId, int drawCount) {
         log.info("[執行抽籤(依票ID)] lotteryId={}, userId={}, ticketId={}", lotteryId, userId, ticketId);
 
         // 1. 驗證抽獎活動存在與狀態
@@ -916,7 +922,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
 
         // 2. 檢查抽獎保護/冷卻機制（避免短時間重複抽取）
         boolean isGacha = "GACHA".equals(lottery.getCategory());
-        if (!isGacha && !canDrawNow(lotteryId, userId)) {
+        // ADMIN 及本彩券所屬店家的 STORE_OWNER/EDITOR 可繞過保護計時器（測試自家商品時不受限）
+        boolean isStoreOperator = SecurityUtils.isAdmin()
+                || SecurityUtils.canAccessStore(lottery.getStoreId());
+        if (!isGacha && !isStoreOperator && !canDrawNow(lotteryId, userId)) {
             return new DrawResult(false, ticketId, 0, null, null, null, null, null, false, false, 0L,
                     "Draw is blocked until protection ends", false, null, null, null);
         }
@@ -997,10 +1006,10 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
         
         // 檢查並啟動或延長保護機制
         if (!isGacha && sessionInfo.protectionEndTime() == null) {
-            startProtection(sessionInfo.sessionId(), lotteryId);
+            startProtection(sessionInfo.sessionId(), lotteryId, drawCount);
             log.info("[保護啟動] sessionId={}", sessionInfo.sessionId());
         } else if (!isGacha && sessionInfo.protectionEndTime() != null && sessionInfo.isOpener()) {
-            extendProtection(sessionInfo.sessionId());
+            extendProtection(sessionInfo.sessionId(), drawCount);
         }
         
         String paymentType = resolvePaymentType(lottery);
@@ -1735,23 +1744,19 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
      * <p>??session ??protectionStartTime/protectionEndTime ?????????????????????????+ protectionMinutes</p>
      */
     @Transactional
-    public void startProtection(String sessionId, String lotteryId) {
+    public void startProtection(String sessionId, String lotteryId, int drawCount) {
         LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionId);
         if (session == null || session.getProtectionEndTime() != null) {
             return; // ??????????????
         }
-        
-        Integer protectionMinutes = systemConfigService.getInt(
-            SystemConfigService.KEY_PROTECTION_INITIAL_MINUTES,
-            5
-        );
-        
+
+        int protectionSeconds = drawConfigService.resolveProtectionSeconds(drawCount);
         LocalDateTime now = LocalDateTime.now();
         session.setProtectionStartTime(now);
-        session.setProtectionEndTime(now.plusMinutes(protectionMinutes));
+        session.setProtectionEndTime(now.plusSeconds(protectionSeconds));
         session.setUpdatedAt(now);
         lotterySessionMapper.updateByPrimaryKey(session);
-        
+
         log.info("?????????????????: sessionId={}, protectionEnd={}", sessionId, session.getProtectionEndTime());
     }
 
@@ -1759,23 +1764,23 @@ public class LotteryTicketServiceImpl implements LotteryTicketService {
      * ??????????????????????API ????????????????????????????
      */
     @Transactional
-    public void extendProtection(String sessionId) {
+    public void extendProtection(String sessionId, int drawCount) {
         LotterySession session = lotterySessionMapper.selectByPrimaryKey(sessionId);
-        if (session == null || session.getProtectionStartTime() == null || session.getProtectionEndTime() == null) {
+        if (drawCount <= 0 || session == null || session.getProtectionStartTime() == null || session.getProtectionEndTime() == null) {
             return;
         }
 
-        int extensionMinutes = systemConfigService.getInt(
-                SystemConfigService.KEY_PROTECTION_EXTENSION_MINUTES,
-                2
+        int extraSecondsPerDraw = systemConfigService.getInt(
+                SystemConfigService.KEY_DRAW_PROTECTION_EXTRA_SECONDS_PER_DRAW,
+                30
         );
-        int maxMinutes = systemConfigService.getInt(
-                SystemConfigService.KEY_PROTECTION_MAX_MINUTES,
-                10
+        int maxSeconds = systemConfigService.getInt(
+                SystemConfigService.KEY_DRAW_PROTECTION_MAX_SECONDS,
+                600
         );
 
-        LocalDateTime maxEndTime = session.getProtectionStartTime().plusMinutes(maxMinutes);
-        LocalDateTime candidateEndTime = session.getProtectionEndTime().plusMinutes(extensionMinutes);
+        LocalDateTime maxEndTime = session.getProtectionStartTime().plusSeconds(maxSeconds);
+        LocalDateTime candidateEndTime = session.getProtectionEndTime().plusSeconds(extraSecondsPerDraw);
         LocalDateTime newEndTime = candidateEndTime.isAfter(maxEndTime) ? maxEndTime : candidateEndTime;
 
         if (newEndTime.isAfter(session.getProtectionEndTime())) {

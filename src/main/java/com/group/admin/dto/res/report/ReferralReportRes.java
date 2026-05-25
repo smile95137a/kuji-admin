@@ -40,6 +40,16 @@ public class ReferralReportRes {
     private Integer successfulReferralStoreCount;
 
     /**
+     * 使用推薦碼註冊的會員累計數
+     */
+    private Integer totalUserReferralCount;
+
+    /**
+     * 查詢區間內使用推薦碼註冊的會員數
+     */
+    private Integer currentPeriodUserReferralCount;
+
+    /**
      * 本期成功招商店數
      */
     private Integer currentPeriodActivatedStoreCount;
@@ -77,6 +87,16 @@ public class ReferralReportRes {
         private String referrerStoreId;
         private String referrerStoreName;
         private Integer referralCodeCount;
+        private Integer totalReferralCount;
+        private Integer currentPeriodReferralCount;
+        private Integer weeklyReferralCount;
+        private Integer previousWeeklyReferralCount;
+        private Integer weeklyReferralGrowthCount;
+        private BigDecimal weeklyGrowthRate;
+        private Integer monthlyReferralCount;
+        private Integer previousMonthlyReferralCount;
+        private Integer monthlyReferralGrowthCount;
+        private BigDecimal monthlyGrowthRate;
         private Integer activatedStoreCount;
         private LocalDate lastActivatedDate;
         private Integer rank;

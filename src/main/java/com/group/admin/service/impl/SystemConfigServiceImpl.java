@@ -6,6 +6,7 @@ import com.group.admin.mapper.SystemConfigMapper;
 import com.group.admin.req.systemconfig.SystemConfigCreateReq;
 import com.group.admin.req.systemconfig.SystemConfigUpdateReq;
 import com.group.admin.res.systemconfig.SystemConfigRes;
+import com.group.admin.service.DrawBonusTierConfigParser;
 import com.group.admin.service.SystemConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class SystemConfigServiceImpl implements SystemConfigService {
 
     private final SystemConfigMapper systemConfigMapper;
+    private final DrawBonusTierConfigParser drawBonusTierConfigParser;
 
     @Override
     @Transactional
@@ -56,7 +58,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     public SystemConfigRes update(String id, SystemConfigUpdateReq req) {
         SystemConfig existing = systemConfigMapper.selectByPrimaryKey(id);
         if (existing == null) {
-            throw new BusinessException("CONFIG_NOT_FOUND", "找不到系統參數: " + id);
+            throw new BusinessException("CONFIG_NOT_FOUND", "找不到系統設定: " + id);
         }
 
         validateTypeAndValue(existing.getConfigType(), req.getConfigValue());
@@ -71,7 +73,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
         int updated = systemConfigMapper.updateByPrimaryKeyAndVersion(toUpdate, req.getVersion());
         if (updated == 0) {
-            throw new BusinessException("CONFIG_VERSION_CONFLICT", "資料已被其他人更新，請重新整理後再試");
+            throw new BusinessException("CONFIG_VERSION_CONFLICT", "系統設定版本衝突，請重新整理後再試");
         }
 
         SystemConfig latest = systemConfigMapper.selectByPrimaryKey(id);
@@ -83,7 +85,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     public void delete(String id) {
         int deleted = systemConfigMapper.deleteByPrimaryKey(id);
         if (deleted == 0) {
-            throw new BusinessException("CONFIG_NOT_FOUND", "找不到系統參數: " + id);
+            throw new BusinessException("CONFIG_NOT_FOUND", "找不到系統設定: " + id);
         }
     }
 
@@ -107,7 +109,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         try {
             return Integer.parseInt(config.getConfigValue().trim());
         } catch (NumberFormatException e) {
-            log.warn("⚠️ 系統參數 {} 不是有效整數，使用預設值 {}", key, defaultValue);
+            log.warn("系統設定 {} 不是有效整數，改用預設值 {}", key, defaultValue);
             return defaultValue;
         }
     }
@@ -135,7 +137,8 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         if ("false".equals(value) || "0".equals(value) || "no".equals(value)) {
             return false;
         }
-        log.warn("⚠️ 系統參數 {} 不是有效布林值，使用預設值 {}", key, defaultValue);
+
+        log.warn("系統設定 {} 不是有效布林值，改用預設值 {}", key, defaultValue);
         return defaultValue;
     }
 
@@ -147,7 +150,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
                 try {
                     Integer.parseInt(value);
                 } catch (NumberFormatException e) {
-                    throw new BusinessException("CONFIG_VALUE_INVALID", "configValue 必須是整數");
+                    throw new BusinessException("CONFIG_VALUE_INVALID", "configValue 必須為整數");
                 }
             }
             case "BOOLEAN" -> {
@@ -158,13 +161,13 @@ public class SystemConfigServiceImpl implements SystemConfigService {
                         || "0".equals(normalizedValue)
                         || "yes".equals(normalizedValue)
                         || "no".equals(normalizedValue))) {
-                    throw new BusinessException("CONFIG_VALUE_INVALID", "configValue 必須是布林值（true/false/1/0）");
+                    throw new BusinessException("CONFIG_VALUE_INVALID", "configValue 必須為 true/false/1/0/yes/no");
                 }
             }
             case "STRING" -> {
                 // no-op
             }
-            default -> throw new BusinessException("CONFIG_TYPE_INVALID", "configType 只能是 INTEGER / STRING / BOOLEAN");
+            default -> throw new BusinessException("CONFIG_TYPE_INVALID", "configType 只支援 INTEGER / STRING / BOOLEAN");
         }
     }
 
@@ -173,52 +176,87 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             return;
         }
 
-        if (SystemConfigService.KEY_PROTECTION_INITIAL_MINUTES.equals(configKey)) {
+        if (KEY_PROTECTION_INITIAL_MINUTES.equals(configKey)) {
             int initialMinutes = parseRequiredInt(configKey, configValue);
             if (initialMinutes < 1) {
-                throw new BusinessException("CONFIG_VALUE_INVALID", "保護初始時間至少需為 1 分鐘");
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期初始分鐘數至少要 1 分鐘");
             }
 
-            int maxMinutes = resolveIntValue(
-                    SystemConfigService.KEY_PROTECTION_MAX_MINUTES,
-                    10,
-                    configKey,
-                    initialMinutes);
+            int maxMinutes = resolveIntValue(KEY_PROTECTION_MAX_MINUTES, 10, configKey, initialMinutes);
             if (initialMinutes > maxMinutes) {
-                throw new BusinessException("CONFIG_VALUE_INVALID", "保護初始時間不可大於保護最大時間");
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期初始分鐘數不可大於保護期上限分鐘數");
             }
             return;
         }
 
-        if (SystemConfigService.KEY_PROTECTION_EXTENSION_MINUTES.equals(configKey)) {
+        if (KEY_PROTECTION_EXTENSION_MINUTES.equals(configKey)) {
             int extensionMinutes = parseRequiredInt(configKey, configValue);
             if (extensionMinutes < 1) {
-                throw new BusinessException("CONFIG_VALUE_INVALID", "每次操作延長時間至少需為 1 分鐘");
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期每次延長分鐘數至少要 1 分鐘");
             }
             return;
         }
 
-        if (SystemConfigService.KEY_PROTECTION_MAX_MINUTES.equals(configKey)) {
+        if (KEY_PROTECTION_MAX_MINUTES.equals(configKey)) {
             int maxMinutes = parseRequiredInt(configKey, configValue);
             if (maxMinutes < 1) {
-                throw new BusinessException("CONFIG_VALUE_INVALID", "保護最大時間至少需為 1 分鐘");
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期上限分鐘數至少要 1 分鐘");
             }
 
-            int initialMinutes = resolveIntValue(
-                    SystemConfigService.KEY_PROTECTION_INITIAL_MINUTES,
-                    5,
-                    configKey,
-                    maxMinutes);
+            int initialMinutes = resolveIntValue(KEY_PROTECTION_INITIAL_MINUTES, 5, configKey, maxMinutes);
             if (maxMinutes < initialMinutes) {
-                throw new BusinessException("CONFIG_VALUE_INVALID", "保護最大時間不可小於保護初始時間");
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期上限分鐘數不可小於初始分鐘數");
             }
             return;
         }
 
-        if (SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST.equals(configKey)) {
+        if (KEY_DRAW_PROTECTION_BASE_SECONDS.equals(configKey)) {
+            int baseSeconds = parseRequiredInt(configKey, configValue);
+            if (baseSeconds < 1) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "單抽保護秒數至少要 1 秒");
+            }
+
+            int maxSeconds = resolveIntValue(KEY_DRAW_PROTECTION_MAX_SECONDS, 600, configKey, baseSeconds);
+            if (baseSeconds > maxSeconds) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "單抽保護秒數不可大於保護期上限秒數");
+            }
+            return;
+        }
+
+        if (KEY_DRAW_PROTECTION_EXTRA_SECONDS_PER_DRAW.equals(configKey)) {
+            int extraSeconds = parseRequiredInt(configKey, configValue);
+            if (extraSeconds < 0) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "每抽額外保護秒數不可小於 0");
+            }
+            return;
+        }
+
+        if (KEY_DRAW_PROTECTION_MAX_SECONDS.equals(configKey)) {
+            int maxSeconds = parseRequiredInt(configKey, configValue);
+            if (maxSeconds < 1) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期上限秒數至少要 1 秒");
+            }
+
+            int baseSeconds = resolveIntValue(KEY_DRAW_PROTECTION_BASE_SECONDS, 300, configKey, maxSeconds);
+            if (maxSeconds < baseSeconds) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", "保護期上限秒數不可小於單抽保護秒數");
+            }
+            return;
+        }
+
+        if (KEY_DRAW_BONUS_TIERS_JSON.equals(configKey)) {
+            try {
+                drawBonusTierConfigParser.parse(configValue);
+            } catch (IllegalArgumentException ex) {
+                throw new BusinessException("CONFIG_VALUE_INVALID", ex.getMessage());
+            }
+            return;
+        }
+
+        if (KEY_MAX_DRAWS_PER_REQUEST.equals(configKey)) {
             int maxDraws = parseRequiredInt(configKey, configValue);
             if (maxDraws < 1) {
-                throw new BusinessException("CONFIG_VALUE_INVALID", "單次 API 最大抽獎數至少需為 1");
+                throw new BusinessException("CONFIG_VALUE_INVALID", "單次抽獎上限至少要 1 抽");
             }
         }
     }

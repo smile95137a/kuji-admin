@@ -21,8 +21,14 @@ public class RechargeOrder {
     private Long bonusAmount;
     private BigDecimal priceTwd;
     private RechargeOrderStatus status;
+    private String paymentMethod;
     private String gatewayProvider;
     private String gatewayOrderId;
+    private String gatewayResult;
+    private String gatewayRetMsg;
+    private String virtualAccount;
+    private String paymentInfo;
+    private String limitDate;
     private String gatewayRawResp;
     private String buyerName;
     private String buyerEmail;

@@ -29,6 +29,11 @@ public interface LotteryService {
     void promoteScheduledLotteries();
 
     /**
+     * 自動將活動時間到期（end_time <= NOW）的商品下架（OFF_SHELF）
+     */
+    void expireEndTimeLotteries();
+
+    /**
      * DRAWABLE 狀態已移除，保留介面相容性
      */
     void promoteDrawableLotteries();

@@ -6,6 +6,9 @@ import lombok.Data;
 @Data
 @Builder
 public class ShippingInfo {
+    private String shippingMethodCode;
+    private Long amount;
+    private String orderNumber;
     private String recipientName;
     private String recipientPhone;
     private String recipientAddress;

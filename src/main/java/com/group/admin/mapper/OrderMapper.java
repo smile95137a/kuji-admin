@@ -43,12 +43,20 @@ public interface OrderMapper {
 
     List<Order> selectByGomypayTradeNo(@Param("gomypayTradeNo") String gomypayTradeNo);
 
+    List<Order> selectByPaymentReference(@Param("paymentReference") String paymentReference);
+
     int updatePaymentInit(@Param("orderId") String orderId,
                           @Param("shippingFee") Long shippingFee,
                           @Param("paymentMethod") String paymentMethod,
                           @Param("paymentStatus") String paymentStatus,
                           @Param("status") String status,
-                          @Param("gomypayTradeNo") String gomypayTradeNo);
+                          @Param("gomypayTradeNo") String gomypayTradeNo,
+                          @Param("gatewayResult") String gatewayResult,
+                          @Param("gatewayRetMsg") String gatewayRetMsg,
+                          @Param("virtualAccount") String virtualAccount,
+                          @Param("paymentInfo") String paymentInfo,
+                          @Param("limitDate") String limitDate,
+                          @Param("gatewayRawResp") String gatewayRawResp);
 
     int markShippingPaymentSuccess(@Param("orderId") String orderId,
                                    @Param("gomypayTradeNo") String gomypayTradeNo);

@@ -6,13 +6,13 @@ import lombok.Data;
 import java.util.Map;
 
 /**
- * 出貨運費付款初始化結果（含 GoMyPay 付款頁 URL）
+ * 出貨運費付款初始化結果。
  */
 @Data
 @Builder
 public class ShippingPaymentResult {
 
-    /** GoMyPay 付款頁 URL，前端重導至此讓使用者付款 */
+    /** GoMyPay 託管付款頁 URL，信用卡會由前端送出表單導向此頁。 */
     private String payUrl;
 
     private String submitMethod;
@@ -21,12 +21,24 @@ public class ShippingPaymentResult {
 
     private Map<String, String> formFields;
 
-    /** GoMyPay 交易編號（用於後續對帳） */
+    /** GoMyPay 或系統端付款群組交易編號。 */
     private String gatewayTradeNo;
 
-    /** 是否成功建立付款單 */
+    private String gatewayResult;
+
+    private String retMsg;
+
+    private String virtualAccount;
+
+    private String payInfo;
+
+    private String limitDate;
+
+    private String rawPayload;
+
+    /** 是否成功建立付款資訊。 */
     private boolean success;
 
-    /** 失敗訊息（success=false 時才有值） */
+    /** success=false 時的錯誤原因。 */
     private String errorMessage;
 }

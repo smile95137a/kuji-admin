@@ -9,6 +9,7 @@ import com.group.admin.res.lottery.LotteryDetailRes;
 import com.group.admin.res.lottery.LotteryListItemRes;
 import com.group.admin.res.lottery.LotteryPrizeRes;
 import com.group.admin.res.lottery.LotteryRes;
+import com.group.admin.service.DrawConfigService;
 import com.group.admin.service.LotteryService;
 import com.group.admin.service.LotteryTicketService;
 import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
@@ -47,6 +48,7 @@ public class LotteryController {
     private final LotteryService lotteryService;
     private final LotteryMapper lotteryMapper;
     private final LotteryTicketService lotteryTicketService;
+    private final DrawConfigService drawConfigService;
 
     /**
      * 查詢上架中的商品列表（公開，分頁）
@@ -242,6 +244,18 @@ public class LotteryController {
                 .tickets(tickets)
                 .session(sessionInfo)
                 .designatedWinningNumbers(designatedWinningNumbers)
+                .noticeConfig(LotteryDetailRes.NoticeConfigRes.builder()
+                        .bonusTitle(drawConfigService.getNoticeConfig().bonusTitle())
+                        .bonusDescription(drawConfigService.getNoticeConfig().bonusDescription())
+                        .protectionTitle(drawConfigService.getNoticeConfig().protectionTitle())
+                        .protectionDescription(drawConfigService.getNoticeConfig().protectionDescription())
+                        .bonusTiers(drawConfigService.getNoticeConfig().bonusTiers().stream()
+                                .map(tier -> LotteryDetailRes.BonusTierRes.builder()
+                                        .drawCount(tier.drawCount())
+                                        .bonus(tier.bonus())
+                                        .build())
+                                .toList())
+                        .build())
                 .build();
 
         return ResponseEntity.ok(result);

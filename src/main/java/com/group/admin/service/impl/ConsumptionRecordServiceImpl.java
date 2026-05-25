@@ -140,6 +140,7 @@ public class ConsumptionRecordServiceImpl implements ConsumptionRecordService {
         return switch (type) {
             case "DRAW_GOLD" -> "抽獎扣款（金幣）";
             case "DRAW_BONUS" -> "抽獎扣款（紅利）";
+            case "BONUS_GRANT" -> "多抽贈送紅利";
             case "SHIPPING_FEE" -> "配送運費";
             case "FREE_DRAW_REFUND" -> "免單退款";
             default -> type;

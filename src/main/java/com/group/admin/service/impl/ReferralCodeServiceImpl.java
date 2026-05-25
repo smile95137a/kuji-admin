@@ -52,30 +52,40 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     public ReferralCodeRes create(ReferralCodeCreateReq req) {
         log.info("🎫 建立推薦碼: code={}, storeId={}", req.getCode(), req.getStoreId());
         
-        ReferralCode existingCode = referralCodeRepository.selectByCode(req.getCode());
+        String normalizedCode = normalizeCodeOrGenerate(req.getCode());
+        String storeId = normalizeId(req.getStoreId());
+        log.info("建立店家推薦碼 code={}, storeId={}", normalizedCode, storeId);
+
+        if (storeId == null) {
+            throw new BusinessException("請選擇店家");
+        }
+
+        ReferralCode existingCode = referralCodeRepository.selectByCode(normalizedCode);
         if (existingCode != null) {
             throw new BusinessException("推薦碼已存在: " + req.getCode());
         }
-        
-        Store store = storeMapper.selectByPrimaryKey(req.getStoreId());
+
+        Store store = storeMapper.selectByPrimaryKey(storeId);
         if (store == null) {
-            throw new BusinessException("店家不存在: " + req.getStoreId());
+            throw new BusinessException("店家不存在: " + storeId);
         }
+        assertStoreHasNoOtherReferralCode(storeId, null);
         
         ReferralCode referralCode = new ReferralCode();
         referralCode.setId(UUID.randomUUID().toString());
-        referralCode.setCode(req.getCode().toUpperCase());
-        referralCode.setStoreId(req.getStoreId());
+        referralCode.setCode(normalizedCode);
+        referralCode.setStoreId(storeId);
         referralCode.setDescription(req.getDescription());
-        referralCode.setOwnerId(req.getStoreId());
+        referralCode.setOwnerId(storeId);
         referralCode.setOwnerType("STORE");
         referralCode.setIsActive(true);
         referralCode.setUsedCount(0);
         referralCode.setMaxUsage(DEFAULT_MAX_USAGE);
+        referralCode.setRewardGold(0L);
         referralCode.setRewardBonus(DEFAULT_BONUS_PER_USE);
         referralCode.setCreatedAt(LocalDateTime.now());
         referralCode.setUpdatedAt(LocalDateTime.now());
-        
+
         referralCodeMapper.insert(referralCode);
         log.info("✅ 推薦碼建立成功: id={}", referralCode.getId());
         
@@ -91,6 +101,17 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         if (referralCode == null) {
             throw new BusinessException("推薦碼不存在: " + id);
         }
+
+        String requestedStoreId = normalizeId(req.getStoreId());
+        if (requestedStoreId != null && !requestedStoreId.equals(referralCode.getStoreId())) {
+            Store requestedStore = storeMapper.selectByPrimaryKey(requestedStoreId);
+            if (requestedStore == null) {
+                throw new BusinessException("店家不存在: " + requestedStoreId);
+            }
+            referralCode.setStoreId(requestedStoreId);
+            referralCode.setOwnerId(requestedStoreId);
+        }
+        assertStoreHasNoOtherReferralCode(referralCode.getStoreId(), id);
         
         if (req.getDescription() != null) {
             referralCode.setDescription(req.getDescription());
@@ -134,7 +155,11 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public ReferralCodeRes getByCode(String code) {
-        ReferralCode referralCode = referralCodeRepository.selectByCode(code.toUpperCase());
+        String normalizedCode = normalizeCode(code);
+        if (normalizedCode == null) {
+            return null;
+        }
+        ReferralCode referralCode = referralCodeRepository.selectByCode(normalizedCode);
         if (referralCode == null) {
             return null;
         }
@@ -176,7 +201,11 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     @Override
     public boolean validateCode(String code) {
-        ReferralCode referralCode = referralCodeRepository.selectByCode(code.toUpperCase());
+        String normalizedCode = normalizeCode(code);
+        if (normalizedCode == null) {
+            return false;
+        }
+        ReferralCode referralCode = referralCodeRepository.selectByCode(normalizedCode);
         if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
             return false;
         }
@@ -190,33 +219,15 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     @Transactional
     public boolean useCode(String userId, String code) {
         log.info("🎁 使用推薦碼: userId={}, code={}", userId, code);
-        
-        ReferralCode referralCode = referralCodeRepository.selectByCode(code.toUpperCase());
-        if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
-            log.warn("❌ 推薦碼無效或已停用: {}", code);
+
+        try {
+            applyReferral(userId, code);
+            log.info("推薦碼綁定成功: userId={}, code={}", userId, code);
+            return true;
+        } catch (BusinessException e) {
+            log.warn("推薦碼無法使用: userId={}, code={}, reason={}", userId, code, e.getMessage());
             return false;
         }
-        
-        List<ReferralRecord> existingRecords = referralRecordRepository.selectByUserId(userId);
-        if (!existingRecords.isEmpty()) {
-            log.warn("❌ 使用者已使用過推薦碼: userId={}", userId);
-            return false;
-        }
-        
-        ReferralRecord record = new ReferralRecord();
-        record.setId(UUID.randomUUID().toString());
-        record.setUserId(userId);
-        record.setReferralCodeId(referralCode.getId());
-        record.setStoreId(referralCode.getStoreId());
-        record.setUsedCode(code.toUpperCase());
-        record.setReferredAt(LocalDateTime.now());
-        
-        referralRecordMapper.insert(record);
-        
-        referralCodeMapper.incrementUsageCount(referralCode.getId());
-        
-        log.info("✅ 推薦碼使用成功: userId={}, code={}", userId, code);
-        return true;
     }
 
     @Override
@@ -232,8 +243,23 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     @Override
     public com.group.admin.res.referral.ReferralValidateRes validateForRegistration(String code) {
         log.info("🔍 驗證推薦碼 (註冊): code={}", code);
-        boolean valid = validateCode(code);
-        return new com.group.admin.res.referral.ReferralValidateRes(valid, code, null);
+        String normalizedCode = normalizeCode(code);
+        if (normalizedCode == null) {
+            return new com.group.admin.res.referral.ReferralValidateRes(false, code, null);
+        }
+
+        ReferralCode referralCode = referralCodeRepository.selectByCode(normalizedCode);
+        boolean valid = referralCode != null
+                && Boolean.TRUE.equals(referralCode.getIsActive())
+                && (referralCode.getMaxUsage() == null || referralCode.getUsedCount() < referralCode.getMaxUsage());
+
+        String storeName = null;
+        if (valid && referralCode.getStoreId() != null) {
+            Store store = storeMapper.selectByPrimaryKey(referralCode.getStoreId());
+            storeName = store != null ? store.getStoreName() : null;
+        }
+
+        return new com.group.admin.res.referral.ReferralValidateRes(valid, normalizedCode, storeName);
     }
     
     @Override
@@ -286,6 +312,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         referralCode.setOwnerId(userId);
         referralCode.setOwnerType("USER");
         referralCode.setDescription("使用者推薦碼");
+        referralCode.setRewardGold(0L);
         referralCode.setRewardBonus(DEFAULT_BONUS_PER_USE);
         referralCode.setMaxUsage(DEFAULT_MAX_USAGE);
         referralCode.setUsedCount(0);
@@ -303,7 +330,12 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     public ReferralCodeRes validateCodeForUser(String code, String userId) {
         log.info("🔍 驗證推薦碼: code={}, userId={}", code, userId);
 
-        ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
+        String normalizedCode = normalizeCode(code);
+        if (normalizedCode == null) {
+            throw new BusinessException("推薦碼不能為空");
+        }
+
+        ReferralCode referralCode = referralCodeMapper.selectByCode(normalizedCode);
         if (referralCode == null) {
             throw new BusinessException("推薦碼不存在");
         }
@@ -314,7 +346,7 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
             throw new BusinessException("推薦碼已達使用上限");
         }
         // Self-referral check
-        if (userId != null && userId.equals(referralCode.getOwnerId())) {
+        if (isUserOwnedCode(referralCode) && userId != null && userId.equals(referralCode.getOwnerId())) {
             throw new BusinessException("不能使用自己的推薦碼");
         }
 
@@ -328,19 +360,29 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     public void applyReferral(String refereeId, String code) {
         log.info("🎁 套用推薦碼: refereeId={}, code={}", refereeId, code);
 
-        ReferralCode referralCode = referralCodeMapper.selectByCode(code.toUpperCase());
+        String normalizedCode = normalizeCode(code);
+        if (normalizedCode == null) {
+            throw new BusinessException("推薦碼不能為空");
+        }
+
+        ReferralCode referralCode = referralCodeMapper.selectByCode(normalizedCode);
         if (referralCode == null || !Boolean.TRUE.equals(referralCode.getIsActive())) {
             throw new BusinessException("推薦碼無效或已停用");
         }
         if (referralCode.getMaxUsage() != null && referralCode.getUsedCount() >= referralCode.getMaxUsage()) {
             throw new BusinessException("推薦碼已達使用上限");
         }
-        String referrerId = referralCode.getOwnerId();
-        if (refereeId.equals(referrerId)) {
+        boolean userOwnedCode = isUserOwnedCode(referralCode);
+        String referrerId = userOwnedCode ? referralCode.getOwnerId() : null;
+        if (userOwnedCode && refereeId.equals(referrerId)) {
             throw new BusinessException("不能使用自己的推薦碼");
         }
 
         // Check if referee already used a referral code
+        List<ReferralRecord> existingUserRecords = referralRecordRepository.selectByUserId(refereeId);
+        if (!existingUserRecords.isEmpty()) {
+            throw new BusinessException("此使用者已使用過推薦碼");
+        }
         ReferralRecordExample existCheck = new ReferralRecordExample();
         existCheck.createCriteria().andRefereeIdEqualTo(refereeId);
         if (referralRecordMapper.countByExample(existCheck) > 0) {
@@ -356,15 +398,17 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         // Create referral record
         ReferralRecord record = new ReferralRecord();
         record.setId(UUID.randomUUID().toString());
+        record.setUserId(refereeId);
         record.setReferralCodeId(referralCode.getId());
+        record.setReferralCode(normalizedCode);
         record.setReferrerId(referrerId);
         record.setRefereeId(refereeId);
         record.setRefereeUsername(refereeUsername);
-        record.setUsedCode(code.toUpperCase());
+        record.setUsedCode(normalizedCode);
         record.setStoreId(referralCode.getStoreId());
         record.setRewardBonus(bonusAmount);
-        record.setIsRewardGiven(true);
-        record.setRewardGivenAt(LocalDateTime.now());
+        record.setRewardGold(referralCode.getRewardGold() != null ? referralCode.getRewardGold() : 0L);
+        record.setIsRewardGiven(false);
         record.setCreatedAt(LocalDateTime.now());
         record.setReferredAt(LocalDateTime.now());
 
@@ -373,14 +417,32 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
         // Increment usage count
         referralCodeMapper.incrementUsageCount(referralCode.getId());
 
-        // Award bonus to both parties
-        try {
-            walletService.addBonus(referrerId, bonusAmount, "REFERRAL_BONUS",
-                    record.getId(), "推薦獎勵 - 推薦碼: " + code);
-            walletService.addBonus(refereeId, bonusAmount, "REFERRAL_BONUS",
-                    record.getId(), "被推薦獎勵 - 推薦碼: " + code);
-        } catch (Exception e) {
-            log.warn("⚠️ 發放推薦獎勵失敗（錢包可能不存在）: {}", e.getMessage());
+        boolean rewardGiven = false;
+        if (bonusAmount > 0) {
+            try {
+                walletService.addBonus(refereeId, bonusAmount, "REFERRAL_BONUS",
+                        record.getId(), "使用推薦碼獎勵 - 推薦碼: " + normalizedCode);
+                rewardGiven = true;
+            } catch (Exception e) {
+                log.warn("發送被推薦人推薦獎勵失敗: userId={}, error={}", refereeId, e.getMessage());
+            }
+
+            if (userOwnedCode && referrerId != null) {
+                try {
+                    walletService.addBonus(referrerId, bonusAmount, "REFERRAL_BONUS",
+                            record.getId(), "推薦好友獎勵 - 推薦碼: " + normalizedCode);
+                } catch (Exception e) {
+                    log.warn("發送推薦人推薦獎勵失敗: userId={}, error={}", referrerId, e.getMessage());
+                }
+            }
+        }
+
+        if (rewardGiven) {
+            ReferralRecord rewardUpdate = new ReferralRecord();
+            rewardUpdate.setId(record.getId());
+            rewardUpdate.setIsRewardGiven(true);
+            rewardUpdate.setRewardGivenAt(LocalDateTime.now());
+            referralRecordMapper.updateByPrimaryKeySelective(rewardUpdate);
         }
 
         log.info("✅ 推薦碼套用成功: referrer={}, referee={}, bonus={}", referrerId, refereeId, bonusAmount);
@@ -464,6 +526,38 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
 
     // ========== Helper methods ==========
 
+    private String normalizeCode(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            return null;
+        }
+        return code.trim().toUpperCase();
+    }
+
+    private String normalizeCodeOrGenerate(String code) {
+        String normalizedCode = normalizeCode(code);
+        return normalizedCode != null ? normalizedCode : generateUniqueCode();
+    }
+
+    private String normalizeId(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            return null;
+        }
+        return id.trim();
+    }
+
+    private void assertStoreHasNoOtherReferralCode(String storeId, String currentCodeId) {
+        List<ReferralCode> existingStoreCodes = referralCodeRepository.selectByStoreId(storeId);
+        boolean hasOtherCode = existingStoreCodes.stream()
+                .anyMatch(code -> currentCodeId == null || !currentCodeId.equals(code.getId()));
+        if (hasOtherCode) {
+            throw new BusinessException("此店家已有推薦碼，一個店家只能設定一個推薦碼");
+        }
+    }
+
+    private boolean isUserOwnedCode(ReferralCode referralCode) {
+        return referralCode != null && "USER".equalsIgnoreCase(referralCode.getOwnerType());
+    }
+
     private String generateUniqueCode() {
         String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         for (int attempt = 0; attempt < 10; attempt++) {
@@ -496,16 +590,24 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     
     private ReferralRecordRes toReferralRecordRes(ReferralRecord record) {
         ReferralRecordRes res = new ReferralRecordRes();
+        String referredUserId = record.getUserId() != null ? record.getUserId() : record.getRefereeId();
         res.setId(record.getId());
-        res.setUserId(record.getUserId());
+        res.setUserId(referredUserId);
+        res.setRefereeUsername(record.getRefereeUsername());
         res.setReferralCodeId(record.getReferralCodeId());
         res.setUsedCode(record.getUsedCode());
         res.setStoreId(record.getStoreId());
+        res.setRewardBonus(record.getRewardBonus());
+        res.setIsRewardGiven(record.getIsRewardGiven());
+        res.setRewardGivenAt(record.getRewardGivenAt());
         res.setReferredAt(record.getReferredAt());
+        res.setCreatedAt(record.getCreatedAt());
         
-        User user = userMapper.selectByPrimaryKey(record.getUserId());
+        User user = userMapper.selectByPrimaryKey(referredUserId);
         if (user != null) {
             res.setUserName(user.getNickname());
+        } else {
+            res.setUserName(record.getRefereeUsername());
         }
         
         Store store = storeMapper.selectByPrimaryKey(record.getStoreId());
@@ -519,7 +621,33 @@ public class ReferralCodeServiceImpl implements ReferralCodeService {
     @Override
     public List<com.group.admin.res.referral.AdminReferralStatsRes> getReferralStats(com.group.admin.condition.report.ReferralReportCondition condition) {
         log.info("📊 [Referral] 查詢推薦統計：condition={}", condition);
-        // TODO: implement aggregated referral stats via JdbcTemplate
-        return java.util.Collections.emptyList();
+        List<java.util.Map<String, Object>> storeStats = referralCodeRepository.selectStatsByStore(condition);
+        List<java.util.Map<String, Object>> timelineRows = referralRecordRepository.selectTimelineByStore(condition);
+        java.util.Map<String, List<com.group.admin.res.referral.AdminReferralStatsRes.DailyCount>> timelineByStore =
+                timelineRows.stream().collect(Collectors.groupingBy(
+                        row -> String.valueOf(row.get("storeId")),
+                        Collectors.mapping(row -> new com.group.admin.res.referral.AdminReferralStatsRes.DailyCount(
+                                        String.valueOf(row.get("referralDate")),
+                                        toLong(row.get("dailyCount"))),
+                                Collectors.toList())));
+
+        return storeStats.stream()
+                .map(row -> new com.group.admin.res.referral.AdminReferralStatsRes(
+                        String.valueOf(row.get("storeId")),
+                        String.valueOf(row.get("storeName")),
+                        toLong(row.get("totalReferrals")),
+                        toLong(row.get("activeCodeCount")),
+                        timelineByStore.getOrDefault(String.valueOf(row.get("storeId")), List.of())))
+                .collect(Collectors.toList());
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) {
+            return 0L;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.parseLong(String.valueOf(value));
     }
 }

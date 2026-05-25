@@ -6,12 +6,15 @@ import com.group.admin.entity.AdminUser;
 import com.group.admin.entity.AdminUserRole;
 import com.group.admin.entity.Role;
 import com.group.admin.entity.User;
+import com.group.admin.entity.StoreUser;
 import com.group.admin.example.AdminUserExample;
 import com.group.admin.example.AdminUserRoleExample;
+import com.group.admin.example.StoreUserExample;
 import com.group.admin.example.UserExample;
 import com.group.admin.mapper.AdminUserMapper;
 import com.group.admin.mapper.AdminUserRoleMapper;
 import com.group.admin.mapper.RoleMapper;
+import com.group.admin.mapper.StoreUserMapper;
 import com.group.admin.mapper.UserMapper;
 import com.group.admin.result.ApiResponse;
 import com.group.admin.service.UserTokenBlacklistService;
@@ -50,6 +53,7 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
     private final AdminUserMapper adminUserMapper;
     private final AdminUserRoleMapper adminUserRoleMapper;
     private final RoleMapper roleMapper;
+    private final StoreUserMapper storeUserMapper;
     private final UserTokenBlacklistService userTokenBlacklistService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -137,6 +141,14 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
                         roleCode.startsWith("ROLE_") ? roleCode : "ROLE_" + roleCode));
             }
 
+            StoreUserExample storeUserExample = new StoreUserExample();
+            storeUserExample.createCriteria().andAdminUserIdEqualTo(adminUser.getId());
+            List<StoreUser> storeUsers = storeUserMapper.selectByExample(storeUserExample);
+            List<String> storeIds = new ArrayList<>();
+            for (StoreUser su : storeUsers) {
+                storeIds.add(su.getStoreId());
+            }
+
             UserPrincipal principal = UserPrincipal.builder()
                     .userId(adminUser.getId())
                     .username(adminUser.getEmail())
@@ -145,6 +157,7 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
                     .isAdmin(true)
                     .authorities(authorities)
                     .adminUser(adminUser)
+                    .storeIds(storeIds)
                     .build();
 
             UsernamePasswordAuthenticationToken authentication =

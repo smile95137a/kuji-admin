@@ -1,11 +1,25 @@
 package com.group.admin.controller.api;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.group.admin.entity.Lottery;
+import com.group.admin.enums.GameModeEnum;
+import com.group.admin.res.lottery.DesignationCheckResponse;
+import com.group.admin.res.lottery.LotteryTicketRes;
+import com.group.admin.service.CoinService;
+import com.group.admin.service.ConsumptionRecordService;
+import com.group.admin.service.DrawConfigService;
+import com.group.admin.service.LotteryTicketService;
+import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
+import com.group.admin.service.LotteryTicketService.DrawResult;
+import com.group.admin.service.LotteryTicketService.SessionInfo;
+import com.group.admin.service.SystemConfigService;
+import com.group.admin.service.impl.LotteryTicketServiceImpl;
+import com.group.admin.util.SecurityUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,40 +28,30 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.group.admin.entity.Lottery;
-import com.group.admin.enums.GameModeEnum;
-import com.group.admin.res.lottery.DesignationCheckResponse;
-import com.group.admin.res.lottery.LotteryTicketRes;
-import com.group.admin.service.LotteryTicketService;
-import com.group.admin.service.LotteryTicketService.DesignatedWinningNumber;
-import com.group.admin.service.LotteryTicketService.DrawResult;
-import com.group.admin.service.LotteryTicketService.SessionInfo;
-import com.group.admin.service.SystemConfigService;
-import com.group.admin.service.impl.LotteryTicketServiceImpl;
-import com.group.admin.util.SecurityUtils;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
 @RequestMapping("/lottery/draw")
 @RequiredArgsConstructor
-@Tag(name = "前台抽獎", description = "前台刮刮樂與抽選 API")
+@Tag(name = "抽獎流程", description = "抽獎與刮刮樂互動 API")
 public class LotteryDrawController {
 
     private final LotteryTicketService ticketService;
     private final LotteryTicketServiceImpl ticketServiceImpl;
     private final SystemConfigService systemConfigService;
+    private final DrawConfigService drawConfigService;
+    private final CoinService coinService;
+    private final ConsumptionRecordService consumptionRecordService;
 
     @PostMapping("/{lotteryId}/draw")
     @Operation(summary = "執行抽獎")
     public ResponseEntity<?> draw(
-            @Parameter(description = "商品 ID") @PathVariable String lotteryId,
+            @Parameter(description = "抽獎 ID") @PathVariable String lotteryId,
             @RequestBody DrawRequest request) {
 
         String userId = SecurityUtils.getCurrentUserId();
@@ -57,16 +61,17 @@ public class LotteryDrawController {
 
         Integer count = request.getCount();
         if (count == null || count < 1) {
-            return ResponseEntity.badRequest().body("count 不可小於 1");
+            return ResponseEntity.badRequest().body("count 至少要 1");
         }
+
         int maxCount = systemConfigService.getInt(SystemConfigService.KEY_MAX_DRAWS_PER_REQUEST, 10);
         if (count > maxCount) {
-            return ResponseEntity.badRequest().body("單次最多只能抽 " + maxCount + " 張");
+            return ResponseEntity.badRequest().body("單次最多只能抽 " + maxCount + " 次");
         }
 
         Lottery lottery = ticketService.getLottery(lotteryId);
         if (lottery == null) {
-            return ResponseEntity.badRequest().body("找不到商品");
+            return ResponseEntity.badRequest().body("找不到抽獎資料");
         }
 
         String playMode = lottery.getPlayMode();
@@ -77,30 +82,32 @@ public class LotteryDrawController {
         synchronized (lock) {
             if ("GACHA".equals(category)) {
                 List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
+                grantBatchBonusIfEligible(userId, lotteryId, lottery.getTitle(), request.getCount(), results);
                 return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, null));
             }
 
-        SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
-        if (GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
-            DesignationCheckResponse check = ticketService.getDesignationStatus(lotteryId, userId);
-            if (check.isRequired()) {
-                if (check.isOpener()) {
-                    return ResponseEntity.status(202).body(toDesignationRequiredResponse(check));
+            SessionInfo session = ticketService.getOrCreateSession(lotteryId, userId);
+            if (GameModeEnum.SCRATCH_PLAYER.getCode().equals(gameMode)) {
+                DesignationCheckResponse check = ticketService.getDesignationStatus(lotteryId, userId);
+                if (check.isRequired()) {
+                    if (check.isOpener()) {
+                        return ResponseEntity.status(202).body(toDesignationRequiredResponse(check));
+                    }
+                    return ResponseEntity.status(423).body(new DesignationPendingResponse(
+                            true,
+                            true,
+                            check.getMessage() != null ? check.getMessage() : "開局者尚未完成大獎位置指定",
+                            session != null && session.designationDeadline() != null ? session.designationDeadline().toString() : null
+                    ));
                 }
-                return ResponseEntity.status(423).body(new DesignationPendingResponse(
-                        true,
-                        true,
-                        check.getMessage() != null ? check.getMessage() : "請等待開套玩家完成大獎指定",
-                        session != null && session.designationDeadline() != null ? session.designationDeadline().toString() : null
-                ));
             }
-        }
 
-        List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
-        SessionInfo updatedSession = ticketService.getActiveSession(lotteryId, userId);
-        String protectionEndTime = updatedSession != null && updatedSession.protectionEndTime() != null
-                ? updatedSession.protectionEndTime().toString()
-                : null;
+            List<DrawResult> results = executeDraws(lotteryId, userId, request, playMode, category);
+            grantBatchBonusIfEligible(userId, lotteryId, lottery.getTitle(), request.getCount(), results);
+            SessionInfo updatedSession = ticketService.getActiveSession(lotteryId, userId);
+            String protectionEndTime = updatedSession != null && updatedSession.protectionEndTime() != null
+                    ? updatedSession.protectionEndTime().toString()
+                    : null;
 
             return ResponseEntity.ok(new DrawBatchResponse(playMode, gameMode, results, protectionEndTime));
         }
@@ -109,7 +116,7 @@ public class LotteryDrawController {
     @PostMapping("/{lotteryId}/designate")
     @Operation(summary = "指定大獎位置")
     public ResponseEntity<DesignateResponse> designatePrizePositions(
-            @Parameter(description = "商品 ID") @PathVariable String lotteryId,
+            @Parameter(description = "抽獎 ID") @PathVariable String lotteryId,
             @RequestBody DesignateRequest request) {
 
         String userId = SecurityUtils.getCurrentUserId();
@@ -122,15 +129,15 @@ public class LotteryDrawController {
 
         return ResponseEntity.ok(new DesignateResponse(
                 true,
-                "大獎位置指定成功",
+                "指定成功",
                 designatedNumbers
         ));
     }
 
     @GetMapping("/{lotteryId}/tickets")
-    @Operation(summary = "查詢籤位列表")
+    @Operation(summary = "取得票券列表")
     public ResponseEntity<Map<String, Object>> getTickets(
-            @Parameter(description = "商品 ID") @PathVariable String lotteryId) {
+            @Parameter(description = "抽獎 ID") @PathVariable String lotteryId) {
 
         String userId = SecurityUtils.getCurrentUserId();
         List<LotteryTicketRes> tickets = ticketService.getTicketsForFrontend(lotteryId);
@@ -145,24 +152,25 @@ public class LotteryDrawController {
     }
 
     @GetMapping("/{lotteryId}/designation-check")
-    @Operation(summary = "查詢指定狀態")
+    @Operation(summary = "檢查是否需要指定大獎")
     public ResponseEntity<DesignationCheckResponse> getDesignationCheck(
-            @Parameter(description = "商品 ID") @PathVariable String lotteryId) {
+            @Parameter(description = "抽獎 ID") @PathVariable String lotteryId) {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ticketService.getDesignationStatus(lotteryId, userId));
     }
 
     @GetMapping("/{lotteryId}/session")
-    @Operation(summary = "查詢目前場次")
+    @Operation(summary = "取得目前 session")
     public ResponseEntity<SessionResponse> getSession(
-            @Parameter(description = "商品 ID") @PathVariable String lotteryId) {
+            @Parameter(description = "抽獎 ID") @PathVariable String lotteryId) {
 
         String userId = SecurityUtils.getCurrentUserId();
+        boolean canDraw = userId != null && ticketService.canDrawNow(lotteryId, userId);
         SessionInfo session = ticketService.getActiveSession(lotteryId, userId);
         if (session == null) {
             return ResponseEntity.ok(null);
         }
-        return ResponseEntity.ok(SessionResponse.from(session));
+        return ResponseEntity.ok(SessionResponse.from(session, canDraw));
     }
 
     private List<DrawResult> executeDraws(String lotteryId, String userId, DrawRequest request, String playMode, String category) {
@@ -173,9 +181,9 @@ public class LotteryDrawController {
         if (request.getTickets() != null && !request.getTickets().isEmpty()) {
             List<String> tickets = request.getTickets();
             Integer count = request.getCount();
-            if (tickets.size() != count) {
+            if (count == null || tickets.size() != count) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                        "ticket 數量與 count 不一致", false, null, null, null));
+                        "ticket 數量必須與 count 相同", false, null, null, null));
                 return results;
             }
 
@@ -196,9 +204,10 @@ public class LotteryDrawController {
                 return results;
             }
 
-            for (String ticketId : tickets) {
-                DrawResult result = ticketService.drawByTicketId(lotteryId, userId, ticketId);
-                results.add(result);
+            for (int i = 0; i < tickets.size(); i++) {
+                String ticketId = tickets.get(i);
+                int batchCount = i == 0 ? tickets.size() : 0;
+                results.add(ticketService.drawByTicketId(lotteryId, userId, ticketId, batchCount));
             }
             return results;
         }
@@ -206,7 +215,7 @@ public class LotteryDrawController {
         if (request.getTicketNumber() != null) {
             if (request.getCount() != null && request.getCount() > 1) {
                 results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                        "ticketNumber 模式一次只能抽 1 次", false, null, null, null));
+                        "ticketNumber 模式一次只能抽 1 張", false, null, null, null));
                 return results;
             }
             results.add(ticketService.draw(lotteryId, userId, request.getTicketNumber(), 1));
@@ -215,43 +224,72 @@ public class LotteryDrawController {
 
         if (isScratchMode) {
             results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                    "刮刮樂模式必須指定 ticket UUID 或 ticketNumber", false, null, null, null));
+                    "刮刮樂模式請傳 ticket UUID 或 ticketNumber", false, null, null, null));
             return results;
         }
 
         if (isCustomLotteryMode) {
             results.add(new DrawResult(false, null, 0, null, null, null, null, null, false, false, 0L,
-                    "自訂籤筒模式必須指定 ticket UUID 或 ticketNumber", false, null, null, null));
+                    "指定票位模式請傳 ticket UUID 或 ticketNumber", false, null, null, null));
             return results;
         }
 
         for (int i = 0; i < request.getCount(); i++) {
-            results.add(ticketService.draw(lotteryId, userId, null, 1));
+            int batchCount = i == 0 ? request.getCount() : 0;
+            results.add(ticketService.draw(lotteryId, userId, null, batchCount));
         }
         return results;
+    }
+
+    private void grantBatchBonusIfEligible(String userId, String lotteryId, String lotteryTitle, int requestedCount, List<DrawResult> results) {
+        long successCount = results == null ? 0 : results.stream().filter(DrawResult::success).count();
+        if (requestedCount <= 1 || successCount < requestedCount) {
+            return;
+        }
+
+        long bonus = drawConfigService.resolveBonusForDrawCount(requestedCount);
+        if (bonus <= 0) {
+            return;
+        }
+
+        coinService.addBonus(
+                userId,
+                bonus,
+                "BONUS_GRANT",
+                lotteryId,
+                "多抽優惠贈送 - " + lotteryTitle + "（" + requestedCount + " 抽）");
+        consumptionRecordService.recordConsumption(
+                userId,
+                "BONUS_GRANT",
+                lotteryId,
+                lotteryTitle,
+                null,
+                null,
+                0L,
+                bonus,
+                "多抽優惠贈送 - " + lotteryTitle + "（" + requestedCount + " 抽）");
+        log.info("發送多抽紅利成功 userId={}, lotteryId={}, requestedCount={}, successCount={}, bonus={}",
+                userId, lotteryId, requestedCount, successCount, bonus);
     }
 
     private DesignationRequiredResponse toDesignationRequiredResponse(DesignationCheckResponse check) {
         List<GrandPrizeInfo> grandPrizes = check.getGrandPrizes() == null
                 ? List.of()
                 : check.getGrandPrizes().stream()
-                        .map(prize -> new GrandPrizeInfo(
-                                prize.getPrizeId(),
-                                prize.getPrizeName(),
-                                prize.getPrizeLevel(),
-                                1,
-                                prize.getPrizeImageUrl()))
-                        .toList();
+                .map(prize -> new GrandPrizeInfo(
+                        prize.getPrizeId(),
+                        prize.getPrizeName(),
+                        prize.getPrizeLevel(),
+                        1,
+                        prize.getPrizeImageUrl()))
+                .toList();
 
         int requiredCount = check.getRequiredDesignationCount() != null
                 ? check.getRequiredDesignationCount()
                 : grandPrizes.size();
 
         if (!grandPrizes.isEmpty() && requiredCount > grandPrizes.size()) {
-            List<GrandPrizeInfo> expanded = new ArrayList<>();
-            for (GrandPrizeInfo prize : grandPrizes) {
-                expanded.add(prize);
-            }
+            List<GrandPrizeInfo> expanded = new ArrayList<>(grandPrizes);
             while (expanded.size() < requiredCount) {
                 GrandPrizeInfo template = grandPrizes.get(expanded.size() % grandPrizes.size());
                 expanded.add(new GrandPrizeInfo(
@@ -331,9 +369,15 @@ public class LotteryDrawController {
             boolean freeDrawEnabled,
             String status,
             String designationDeadline,
+            boolean canDraw,
+            String cannotDrawReason,
             boolean isDesignationComplete) {
 
         public static SessionResponse from(SessionInfo info) {
+            return from(info, true);
+        }
+
+        public static SessionResponse from(SessionInfo info, boolean canDraw) {
             return new SessionResponse(
                     info.sessionId(),
                     info.isOpener(),
@@ -344,6 +388,8 @@ public class LotteryDrawController {
                     info.freeDrawEnabled(),
                     info.status(),
                     info.designationDeadline() != null ? info.designationDeadline().toString() : null,
+                    canDraw,
+                    canDraw ? null : "Draw is blocked until protection ends",
                     info.playerDesignatedNumbers() != null && !info.playerDesignatedNumbers().isBlank()
             );
         }

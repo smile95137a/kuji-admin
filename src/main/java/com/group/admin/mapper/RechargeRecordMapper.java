@@ -22,9 +22,23 @@ public interface RechargeRecordMapper {
 
     long countByUserId(@Param("userId") String userId);
 
+    long countByUserIdFiltered(@Param("userId") String userId,
+                               @Param("paymentStatus") String paymentStatus,
+                               @Param("transactionId") String transactionId,
+                               @Param("createdAtStart") String createdAtStart,
+                               @Param("createdAtEnd") String createdAtEnd);
+
     List<RechargeRecord> selectByUserIdPaged(@Param("userId") String userId,
                                              @Param("offset") int offset,
                                              @Param("limit") int limit);
+
+    List<RechargeRecord> selectByUserIdPagedFiltered(@Param("userId") String userId,
+                                                     @Param("paymentStatus") String paymentStatus,
+                                                     @Param("transactionId") String transactionId,
+                                                     @Param("createdAtStart") String createdAtStart,
+                                                     @Param("createdAtEnd") String createdAtEnd,
+                                                     @Param("offset") int offset,
+                                                     @Param("limit") int limit);
 
     RechargeRecord selectByPrimaryKey(String id);
 

@@ -39,7 +39,9 @@ public interface RechargeService {
      * @param size 每頁筆數
      * @return 儲值記錄列表
      */
-    PageResult<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size);
+    PageResult<RechargeRes> getUserRechargeHistory(String userId, Integer page, Integer size,
+                                                   String paymentStatus, String transactionId,
+                                                   String createdAtStart, String createdAtEnd);
     
     /**
      * 確認支付（模擬支付網關回調）

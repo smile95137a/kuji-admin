@@ -11,6 +11,7 @@ import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.res.order.StatusLogRes;
 import com.group.admin.service.OrderService;
+import com.group.admin.service.logistics.ShippingResult;
 import com.group.admin.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -96,6 +97,13 @@ public class AdminOrderController {
     /**
      * 訂單出貨（填寫物流單號）
      */
+    @PostMapping("/{orderId}/shipment")
+    public ResponseEntity<ShippingResult> createShipment(@PathVariable String orderId) {
+        String operatorId = SecurityUtils.getCurrentAdminUserId();
+        log.info("?? [Admin] 建立物流單：orderId={}, operator={}", orderId, operatorId);
+        return ResponseEntity.ok(orderService.createShipment(orderId, operatorId));
+    }
+
     @PutMapping("/{orderId}/ship")
     public ResponseEntity<Void> ship(
             @PathVariable String orderId,

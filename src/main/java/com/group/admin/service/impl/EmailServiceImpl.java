@@ -107,6 +107,7 @@ public class EmailServiceImpl implements EmailService {
         String content = mailTemplateService.render("initial-password-email", Map.of(
                 "displayName", displayName,
                 "initialPassword", initialPassword,
+                "loginEmail", to,
                 "loginUrl", appUrlProperties.getAdminLoginUrl()
         ));
 

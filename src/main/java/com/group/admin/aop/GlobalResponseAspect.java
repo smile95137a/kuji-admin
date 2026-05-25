@@ -40,14 +40,22 @@ public class GlobalResponseAspect {
         // 已是 ResponseEntity<ApiResponse>
         // ---------------------------
         if (result instanceof ResponseEntity<?>) {
-            Object body = ((ResponseEntity<?>) result).getBody();
+            ResponseEntity<?> entity = (ResponseEntity<?>) result;
+            Object body = entity.getBody();
 
             // 若裡面已是 ApiResponse，直接返回
             if (body instanceof ApiResponse<?>) {
                 return result;
             }
 
-            // 否則包成 ApiResponse.success()
+            // 非 2xx：保留狀態碼，包成 ApiResponse.error()
+            if (!entity.getStatusCode().is2xxSuccessful()) {
+                String message = body != null ? body.toString() : "Error";
+                return ResponseEntity.status(entity.getStatusCode())
+                        .body(ApiResponse.error(message));
+            }
+
+            // 2xx：包成 ApiResponse.success()
             return ResponseEntity.ok(ApiResponse.success(body));
         }
 

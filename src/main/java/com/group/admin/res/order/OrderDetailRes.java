@@ -119,6 +119,8 @@ public class OrderDetailRes {
      * 物流單號
      */
     private String trackingNo;
+
+    private String trackingUrl;
     
     /**
      * 備註
@@ -164,6 +166,12 @@ public class OrderDetailRes {
      * 付款方式（GOLD/BONUS）
      */
     private String paymentMethod;
+
+    private String virtualAccount;
+
+    private String paymentInfo;
+
+    private String limitDate;
     
     /**
      * 建立時間

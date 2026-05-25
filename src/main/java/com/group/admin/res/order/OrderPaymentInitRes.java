@@ -23,4 +23,9 @@ public class OrderPaymentInitRes {
     private String actionUrl;
     private Map<String, String> formFields;
     private String gatewayTradeNo;
+    private String gatewayResult;
+    private String retMsg;
+    private String virtualAccount;
+    private String payInfo;
+    private String limitDate;
 }

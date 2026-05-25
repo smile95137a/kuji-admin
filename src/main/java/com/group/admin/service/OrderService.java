@@ -12,6 +12,7 @@ import com.group.admin.res.order.OrderDetailRes;
 import com.group.admin.res.order.OrderPaymentInitRes;
 import com.group.admin.res.order.OrderRes;
 import com.group.admin.gateway.ShippingCallbackResult;
+import com.group.admin.service.logistics.ShippingResult;
 
 import java.util.List;
 
@@ -43,6 +44,8 @@ public interface OrderService {
     OrderDetailRes getPlayerOrderById(String orderId, String playerId);
 
     void prepareShipping(String orderId, String operatorId);
+
+    ShippingResult createShipment(String orderId, String operatorId);
 
     void ship(String orderId, OrderShipReq req, String operatorId);
 

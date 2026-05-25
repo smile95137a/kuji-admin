@@ -1051,6 +1051,14 @@
       AND scheduled_at &lt;= NOW()
   </select>
 
+  <select id="selectExpiredLotteries" resultMap="ScheduledLotteryResultMap">
+    SELECT <include refid="Scheduled_Column_List" />
+    FROM lottery
+    WHERE status = 'ON_SHELF'
+      AND end_time IS NOT NULL
+      AND end_time &lt;= NOW()
+  </select>
+
   <select id="selectDrawableForStart" resultMap="ScheduledLotteryResultMap">
     SELECT <include refid="Scheduled_Column_List" />
     FROM lottery

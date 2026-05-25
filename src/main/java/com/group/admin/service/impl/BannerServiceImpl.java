@@ -3,6 +3,7 @@ package com.group.admin.service.impl;
 import com.group.admin.entity.Banner;
 import com.group.admin.entity.Store;
 import com.group.admin.example.BannerExample;
+import com.group.admin.exception.BusinessException;
 import com.group.admin.mapper.BannerMapper;
 import com.group.admin.mapper.StoreMapper;
 import com.group.admin.req.banner.BannerCondition;
@@ -28,6 +29,7 @@ public class BannerServiceImpl implements BannerService {
 
     private static final String STATUS_PUBLISHED = "PUBLISHED";
     private static final String STATUS_UNPUBLISHED = "UNPUBLISHED";
+    private static final String STATUS_SCHEDULED = "SCHEDULED";
 
     private final BannerMapper bannerMapper;
     private final StoreMapper storeMapper;
@@ -87,18 +89,21 @@ public class BannerServiceImpl implements BannerService {
     @Override
     @Transactional
     public BannerRes createBanner(BannerCreateReq req) {
-        validateStoreIfNeeded(req.getStoreId());
+        String normalizedStoreId = trimToNull(req.getStoreId());
+        validateStoreIfNeeded(normalizedStoreId);
+        validateStoreBannerUniqueness(normalizedStoreId, null);
+        validateDisplayTimeRange(req.getStartTime(), req.getEndTime());
 
         Banner banner = new Banner();
         banner.setId(UUID.randomUUID().toString());
-        banner.setStoreId(trimToNull(req.getStoreId()));
+        banner.setStoreId(normalizedStoreId);
         banner.setTitle(req.getTitle());
         banner.setImageUrl(req.getImageUrl());
         banner.setLinkUrl(trimToNull(req.getLinkUrl()));
-        banner.setOrderNum(req.getOrderNum() != null ? req.getOrderNum() : 0);
-        banner.setStatus(normalizeBannerStatus(req.getStatus(), true));
+        banner.setOrderNum(normalizeOrderNum(req.getOrderNum()));
         banner.setStartTime(req.getStartTime());
         banner.setEndTime(req.getEndTime());
+        banner.setStatus(resolveStatusForWrite(req.getStatus(), req.getStartTime(), req.getEndTime()));
         banner.setCreatedAt(LocalDateTime.now());
         banner.setUpdatedAt(LocalDateTime.now());
 
@@ -111,12 +116,14 @@ public class BannerServiceImpl implements BannerService {
     public BannerRes updateBanner(String id, BannerUpdateReq req) {
         Banner banner = bannerMapper.selectByPrimaryKey(id);
         if (banner == null) {
-            throw new RuntimeException("Banner 不存在");
+            throw new BusinessException("Banner 不存在");
         }
 
         if (req.getStoreId() != null) {
-            validateStoreIfNeeded(req.getStoreId());
-            banner.setStoreId(trimToNull(req.getStoreId()));
+            String normalizedStoreId = trimToNull(req.getStoreId());
+            validateStoreIfNeeded(normalizedStoreId);
+            validateStoreBannerUniqueness(normalizedStoreId, id);
+            banner.setStoreId(normalizedStoreId);
         }
         if (req.getTitle() != null) {
             banner.setTitle(req.getTitle());
@@ -128,7 +135,7 @@ public class BannerServiceImpl implements BannerService {
             banner.setLinkUrl(trimToNull(req.getLinkUrl()));
         }
         if (req.getOrderNum() != null) {
-            banner.setOrderNum(req.getOrderNum());
+            banner.setOrderNum(normalizeOrderNum(req.getOrderNum()));
         }
         if (req.getStartTime() != null) {
             banner.setStartTime(req.getStartTime());
@@ -136,8 +143,13 @@ public class BannerServiceImpl implements BannerService {
         if (req.getEndTime() != null) {
             banner.setEndTime(req.getEndTime());
         }
-        if (req.getStatus() != null) {
-            banner.setStatus(normalizeBannerStatus(req.getStatus(), true));
+        validateDisplayTimeRange(banner.getStartTime(), banner.getEndTime());
+        boolean shouldRecalculateStatus = req.getStatus() != null
+                || req.getStartTime() != null
+                || req.getEndTime() != null;
+        if (shouldRecalculateStatus) {
+            String statusInput = req.getStatus() != null ? req.getStatus() : banner.getStatus();
+            banner.setStatus(resolveStatusForWrite(statusInput, banner.getStartTime(), banner.getEndTime()));
         }
         banner.setUpdatedAt(LocalDateTime.now());
 
@@ -150,7 +162,7 @@ public class BannerServiceImpl implements BannerService {
     public void deleteBanner(String id) {
         Banner banner = bannerMapper.selectByPrimaryKey(id);
         if (banner == null) {
-            throw new RuntimeException("Banner 不存在");
+            throw new BusinessException("Banner 不存在");
         }
         bannerMapper.deleteByPrimaryKey(id);
     }
@@ -159,7 +171,7 @@ public class BannerServiceImpl implements BannerService {
     @Transactional
     public BannerRes publishBanner(String id) {
         Banner banner = requireBanner(id);
-        banner.setStatus(STATUS_PUBLISHED);
+        banner.setStatus(resolveStatusForPublishAction(banner));
         banner.setUpdatedAt(LocalDateTime.now());
         bannerMapper.updateByPrimaryKeySelective(banner);
         return convertToRes(banner);
@@ -179,7 +191,7 @@ public class BannerServiceImpl implements BannerService {
     @Transactional
     public BannerRes updateBannerOrder(String id, Integer orderNum) {
         Banner banner = requireBanner(id);
-        banner.setOrderNum(orderNum);
+        banner.setOrderNum(normalizeOrderNum(orderNum));
         banner.setUpdatedAt(LocalDateTime.now());
         bannerMapper.updateByPrimaryKeySelective(banner);
         return convertToRes(banner);
@@ -192,7 +204,7 @@ public class BannerServiceImpl implements BannerService {
             return;
         }
 
-        int order = 1;
+        int order = 0;
         for (String id : ids) {
             if (!isNotBlank(id)) {
                 continue;
@@ -206,6 +218,8 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public List<BannerRes> getCarouselBanners() {
+        autoPublishBanners();
+        autoUnpublishBanners();
         return bannerMapper.selectActiveBanners();
     }
 
@@ -272,14 +286,83 @@ public class BannerServiceImpl implements BannerService {
 
         Store store = storeMapper.selectByPrimaryKey(storeId.trim());
         if (store == null) {
-            throw new RuntimeException("店家不存在");
+            throw new BusinessException("店家不存在");
         }
+    }
+
+    private void validateStoreBannerUniqueness(String storeId, String excludeBannerId) {
+        if (!isNotBlank(storeId)) {
+            return;
+        }
+
+        BannerExample example = new BannerExample();
+        BannerExample.Criteria criteria = example.createCriteria().andStoreIdEqualTo(storeId);
+        if (isNotBlank(excludeBannerId)) {
+            criteria.andIdNotEqualTo(excludeBannerId);
+        }
+
+        long count = bannerMapper.countByExample(example);
+        if (count > 0) {
+            throw new BusinessException("同一店家只能建立一個 Banner");
+        }
+    }
+
+    private void validateDisplayTimeRange(LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime != null && endTime != null && endTime.isBefore(startTime)) {
+            throw new BusinessException("Banner 結束時間不可早於開始時間");
+        }
+    }
+
+    private int normalizeOrderNum(Integer orderNum) {
+        if (orderNum == null) {
+            return 0;
+        }
+        if (orderNum < 0) {
+            throw new BusinessException("Banner 排序不可小於 0");
+        }
+        return orderNum;
+    }
+
+    private String resolveStatusForWrite(String requestedStatus, LocalDateTime startTime, LocalDateTime endTime) {
+        String normalized = normalizeBannerStatus(requestedStatus, true);
+        if (!STATUS_PUBLISHED.equals(normalized)) {
+            return normalized;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (isWithinDisplayWindow(now, startTime, endTime)) {
+            return STATUS_PUBLISHED;
+        }
+        if (startTime != null && startTime.isAfter(now)) {
+            return STATUS_SCHEDULED;
+        }
+        return STATUS_UNPUBLISHED;
+    }
+
+    private String resolveStatusForPublishAction(Banner banner) {
+        LocalDateTime now = LocalDateTime.now();
+        if (isWithinDisplayWindow(now, banner.getStartTime(), banner.getEndTime())) {
+            return STATUS_PUBLISHED;
+        }
+        if (banner.getStartTime() != null && banner.getStartTime().isAfter(now)) {
+            return STATUS_SCHEDULED;
+        }
+        if (banner.getEndTime() != null && banner.getEndTime().isBefore(now)) {
+            throw new BusinessException("顯示時間已結束，無法手動上架 Banner");
+        }
+        throw new BusinessException("目前不在顯示時間區間，無法手動上架 Banner");
+    }
+
+    private boolean isWithinDisplayWindow(LocalDateTime now, LocalDateTime startTime, LocalDateTime endTime) {
+        boolean started = startTime == null || !startTime.isAfter(now);
+        boolean notEnded = endTime == null || !endTime.isBefore(now);
+        return started && notEnded;
     }
 
     private Banner requireBanner(String id) {
         Banner banner = bannerMapper.selectByPrimaryKey(id);
         if (banner == null) {
-            throw new RuntimeException("Banner 不存在");
+            throw new BusinessException("Banner 不存在");
         }
         return banner;
     }

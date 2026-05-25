@@ -33,7 +33,7 @@ public class AdminReferralCodeController {
 
     @PostMapping
     @Operation(summary = "建立推薦碼", description = "為店家建立新的推薦碼（代碼自動生成）")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReferralCodeRes> create(@Valid @RequestBody ReferralCodeCreateReq req) {
         log.info("🎫 建立推薦碼請求: storeId={}", req.getStoreId());
         String storeId = SecurityUtils.getCurrentUserPrimaryStoreId();
@@ -46,7 +46,7 @@ public class AdminReferralCodeController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新推薦碼")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReferralCodeRes> update(
             @PathVariable String id,
             @Valid @RequestBody ReferralCodeUpdateReq req) {
@@ -57,7 +57,7 @@ public class AdminReferralCodeController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除推薦碼")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         log.info("🗑️ 刪除推薦碼請求: id={}", id);
         referralCodeService.delete(id);

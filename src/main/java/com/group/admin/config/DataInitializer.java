@@ -44,14 +44,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 系統初始化數據載入器
+ * 資料初始化器
  * 
- * 功能：
- * 1. 系統首次啟動時自動載入預設資料
+ * 說明：
+ * 1. 首次啟動時自動建立角色、選單、帳號等基礎資料
  * 2. 使用 UUID 作為主鍵策略
- * 3. 包含：角色、選單、權限、測試帳號、測試店家、測試商品
+ * 3. 包含測試用帳號、商店、商品及對應關聯
  * 
- * 執行時機：Spring Boot 啟動完成後自動執行
+ * 注意事項：Spring Boot 啟動時自動執行
  * 
  * @author KUJI System
  * @since 2025-12-18
@@ -64,27 +64,27 @@ public class DataInitializer implements CommandLineRunner {
     private static final String REPORT_PARENT_CODE = "REPORT_CENTER";
     private static final String[][] REPORT_MENU_DEFINITIONS = {
             {"營收報表", "REVENUE_REPORT", "/home/report/revenue", "1"},
-            {"推薦碼報表", "REFERRAL_REPORT", "/home/report/referral", "2"},
+            {"推薦獎金報表", "REFERRAL_REPORT", "/home/report/referral", "2"},
             {"抽獎結果報表", "LOTTERY_RESULT_REPORT", "/home/report/lottery-result", "3", "DRAW_STATISTICS"},
             {"儲值報表", "RECHARGE_REPORT", "/home/report/recharge", "4"},
-            {"贈點報表", "BONUS_REPORT", "/home/report/bonus", "5"},
+            {"紅利報表", "BONUS_REPORT", "/home/report/bonus", "5"},
             {"會員成長報表", "MEMBER_GROWTH_REPORT", "/home/report/member-growth", "6"},
-            {"平台營收總覽", "PLATFORM_REVENUE_REPORT", "/home/report/platform-revenue", "7"},
+            {"平台營收報表", "PLATFORM_REVENUE_REPORT", "/home/report/platform-revenue", "7"},
             {"抽獎銷售報表", "LOTTERY_SALES_REPORT", "/home/report/lottery-sales", "8"},
-            {"店家績效報表", "STORE_PERFORMANCE_REPORT", "/home/report/store-performance", "9", "STORE_PERF_REPORT"},
+            {"店鋪績效報表", "STORE_PERFORMANCE_REPORT", "/home/report/store-performance", "9", "STORE_PERF_REPORT"},
             {"獎品出貨報表", "PRIZE_SHIPMENT_REPORT", "/home/report/prize-shipment", "10"}
     };
     private static final List<String> DEFAULT_LOTTERY_TAGS = Arrays.asList(
             "熱門",
-            "限定",
             "新品",
-            "特價",
-            "日系",
-            "限量",
-            "經典",
-            "聯名",
-            "徵貨中",
-            "特別版");
+            "現貨",
+            "公仔",
+            "模型",
+            "動漫",
+            "盲盒",
+            "一番賞",
+            "周邊",
+            "收藏");
 
     private final RoleMapper roleMapper;
     private final MenuMapper menuMapper;
@@ -102,7 +102,7 @@ public class DataInitializer implements CommandLineRunner {
     
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // UUID 常量（方便後續關聯使用）
+    // UUID 欄位：在初始化時動態生成，非靜態常數
     private String ROLE_ADMIN_ID;
     private String ROLE_STORE_OWNER_ID;
     private String ROLE_STORE_EDITOR_ID;
@@ -122,28 +122,32 @@ public class DataInitializer implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         log.info("========================================");
-        log.info("開始執行系統資料初始化...");
+        log.info("開始執行資料初始化...");
         log.info("========================================");
 
-        // 檢查是否已有資料（避免重複初始化）
+        // 如果資料已初始化，僅執行補資料與校正流程
         if (isDataAlreadyInitialized()) {
             initializeSystemConfigs();
             ensureDefaultLotteryTags();
-            // 補救：若 role_menu 表為空（資料庫已有角色但權限從未初始化），重新執行
+            // 若 role_menu 為空，補建角色選單權限
             if (isRoleMenuEmpty()) {
-                log.warn("⚠️ role_menu 表為空，執行補救初始化角色權限...");
+                log.warn("偵測到 role_menu 為空，開始補建角色選單權限...");
                 loadRoleIdsFromDb();
                 initializeRoleMenuPermissions();
-                log.info("✅ role_menu 補救初始化完成");
+                log.info("role_menu 補建完成");
             }
-            // 補救：若報表子選單未完整初始化，補建缺少的選單
+            // 補齊報表相關選單
             deduplicateMenusByCode();
             rescueMissingReportMenus();
-            // 補救：若系統設定子選單未建立，補建缺少的選單
+            // 補齊系統設定相關選單
             rescueMissingSystemMenus();
-            // 補救：若類別管理選單未建立，補建商品管理底下的入口
+            rescueMissingOperationMenus();
+            rescueMissingWebsiteContentMenus();
+            // 補齊會員管理選單
+            rescueMissingMemberMenus();
+            // 補齊分類管理選單
             rescueMissingCategoryMenu();
-            log.info("系統資料已存在，跳過初始化");
+            log.info("資料初始化檢查完成，已補齊缺漏資料");
             return;
         }
 
@@ -161,10 +165,13 @@ public class DataInitializer implements CommandLineRunner {
             deduplicateMenusByCode();
             rescueMissingReportMenus();
             rescueMissingSystemMenus();
+            rescueMissingOperationMenus();
+            rescueMissingWebsiteContentMenus();
+            rescueMissingMemberMenus();
             rescueMissingCategoryMenu();
             
             log.info("========================================");
-            log.info("系統資料初始化完成！");
+            log.info("資料初始化完成");
             log.info("========================================");
             logDefaultCredentials();
             
@@ -175,14 +182,14 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 初始化運送方式（可重複執行，具 idempotent）
+     * 初始化配送方式（冪等）
      */
     private void initializeShippingMethods() {
-        log.info("初始化運送方式...");
+        log.info("初始化配送方式...");
         insertShippingMethodIfAbsent("HOME_DELIVERY", "宅配到府", "黑貓宅急便", 100, 1);
-        insertShippingMethodIfAbsent("SEVEN_ELEVEN", "7-11 取貨", "綠界", 60, 2);
-        insertShippingMethodIfAbsent("FAMILY_MART", "全家取貨", "綠界", 60, 3);
-        log.info("✓ 運送方式初始化完成");
+        insertShippingMethodIfAbsent("SEVEN_ELEVEN", "7-11 超商取貨", "統一超商", 60, 2);
+        insertShippingMethodIfAbsent("FAMILY_MART", "全家超商取貨", "全家便利商店", 60, 3);
+        log.info("配送方式初始化完成");
     }
 
     private void insertShippingMethodIfAbsent(String code, String name, String provider, long fee, int sortOrder) {
@@ -190,7 +197,7 @@ public class DataInitializer implements CommandLineRunner {
         com.group.admin.example.ShippingMethodExample example = new com.group.admin.example.ShippingMethodExample();
         example.createCriteria().andCodeEqualTo(code);
         if (shippingMethodMapper.countByExample(example) > 0) {
-            log.info("  ℹ️ 運送方式已存在：{}", code);
+            log.info("  已存在，跳過配送方式：{}", code);
             return;
         }
 
@@ -206,19 +213,26 @@ public class DataInitializer implements CommandLineRunner {
         method.setUpdatedAt(LocalDateTime.now());
         
         shippingMethodMapper.insertSelective(method);
-        log.info("  ✓ 建立運送方式：code={}, name={}, fee={}", code, name, fee);
+        log.info("  新增配送方式：code={}, name={}, fee={}", code, name, fee);
     }
 
     /**
-     * 初始化系統參數（可重複執行，具 idempotent）
+     * 新增系統配置如果不存在（冪等）
      */
     private void initializeSystemConfigs() {
         log.info("初始化系統參數...");
-        insertSystemConfigIfAbsent("protection_initial_minutes", "5", "INTEGER", "DRAW", "保護初始時間（分鐘）");
-        insertSystemConfigIfAbsent("protection_extension_minutes", "2", "INTEGER", "DRAW", "每次操作延長時間（分鐘）");
-        insertSystemConfigIfAbsent("protection_max_minutes", "10", "INTEGER", "DRAW", "保護最大時間（分鐘）");
-        insertSystemConfigIfAbsent("max_draws_per_request", "10", "INTEGER", "DRAW", "單次 API 最大抽獎數");
-        log.info("✓ 系統參數初始化完成");
+        // protection_initial_minutes / protection_extension_minutes / protection_max_minutes 已廢棄
+        // 實際保護時間由 draw_protection_base_seconds 等秒數參數控制
+        insertSystemConfigIfAbsent("max_draws_per_request", "10", "INTEGER", "DRAW", "單次 API 最大抽數");
+        insertSystemConfigIfAbsent("draw_protection_base_seconds", "300", "INTEGER", "DRAW", "單抽保護期基礎秒數");
+        insertSystemConfigIfAbsent("draw_protection_extra_seconds_per_draw", "30", "INTEGER", "DRAW", "每次抽獎請求額外增加的保護秒數");
+        insertSystemConfigIfAbsent("draw_protection_max_seconds", "600", "INTEGER", "DRAW", "抽獎保護期最大秒數");
+        insertSystemConfigIfAbsent("draw_bonus_title", "多抽優惠", "STRING", "DRAW", "抽獎頁 BONUS 區塊標題");
+        insertSystemConfigIfAbsent("draw_bonus_description", "現貨在倉，限定帶抽才會贈送。", "STRING", "DRAW", "抽獎頁 BONUS 區塊說明");
+        insertSystemConfigIfAbsent("draw_protection_title", "保護期說明", "STRING", "DRAW", "抽獎頁保護期區塊標題");
+        insertSystemConfigIfAbsent("draw_protection_description", "第一次抽獎保護 300 秒，每次再抽額外延長 30 秒，上限 600 秒。", "STRING", "DRAW", "抽獎頁保護期說明文字");
+        insertSystemConfigIfAbsent("draw_bonus_tiers_json", "3:60\n5:120\n8:180\n10:240", "STRING", "DRAW", "多抽贈送紅利階梯設定（格式：抽數:紅利，每行一組）");
+        log.info("系統參數初始化完成");
     }
 
     private void insertSystemConfigIfAbsent(String key, String value, String type, String group, String description) {
@@ -242,7 +256,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 檢查系統是否已初始化（檢查 role 表是否有資料）
+     * 檢查資料是否已初始化，依據 role 表是否有資料
      */
     private boolean isDataAlreadyInitialized() {
         RoleExample example = new RoleExample();
@@ -251,7 +265,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 檢查 role_menu 表是否為空（用於補救初始化）
+     * 檢查 role_menu 表是否為空（首次執行判斷）
      */
     private boolean isRoleMenuEmpty() {
         RoleMenuExample example = new RoleMenuExample();
@@ -259,7 +273,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 從 DB 讀取角色 ID（補救初始化時使用）
+     * 從 DB 載入角色 ID，用於補救程式重啟時的狀態
      */
     private void loadRoleIdsFromDb() {
         RoleExample ex = new RoleExample();
@@ -274,15 +288,15 @@ public class DataInitializer implements CommandLineRunner {
         ex.createCriteria().andCodeEqualTo("ROLE_STORE_EDITOR");
         roleMapper.selectByExample(ex).stream().findFirst().ifPresent(r -> ROLE_STORE_EDITOR_ID = r.getId());
 
-        log.info("✅ 從 DB 讀取角色 ID: ADMIN={}, STORE_OWNER={}, STORE_EDITOR={}",
+        log.info("從 DB 載入角色 ID: ADMIN={}, STORE_OWNER={}, STORE_EDITOR={}",
                 ROLE_ADMIN_ID, ROLE_STORE_OWNER_ID, ROLE_STORE_EDITOR_ID);
     }
 
     /**
-     * 初始化角色資料
+     * 初始化角色
      */
     private void initializeRoles() {
-        log.info("初始化角色資料...");
+        log.info("初始化角色..");
         
         ROLE_ADMIN_ID = UUID.randomUUID().toString();
         ROLE_STORE_OWNER_ID = UUID.randomUUID().toString();
@@ -293,7 +307,7 @@ public class DataInitializer implements CommandLineRunner {
         adminRole.setId(ROLE_ADMIN_ID);
         adminRole.setName("系統管理員");
         adminRole.setCode("ROLE_ADMIN");
-        adminRole.setDescription("平台最高權限管理者，可管理所有店家與系統設定");
+        adminRole.setDescription("擁有最高權限，可以管理整個後台系統");
         adminRole.setCreatedAt(LocalDateTime.now());
         adminRole.setUpdatedAt(LocalDateTime.now());
         roleMapper.insert(adminRole);
@@ -303,7 +317,7 @@ public class DataInitializer implements CommandLineRunner {
         ownerRole.setId(ROLE_STORE_OWNER_ID);
         ownerRole.setName("店家負責人");
         ownerRole.setCode("ROLE_STORE_OWNER");
-        ownerRole.setDescription("店家主帳號，可管理自己店家的商品、訂單與報表");
+        ownerRole.setDescription("店家負責人，擁有自己店家的完整管理權限");
         ownerRole.setCreatedAt(LocalDateTime.now());
         ownerRole.setUpdatedAt(LocalDateTime.now());
         roleMapper.insert(ownerRole);
@@ -311,30 +325,35 @@ public class DataInitializer implements CommandLineRunner {
         // StoreEditor 角色
         Role editorRole = new Role();
         editorRole.setId(ROLE_STORE_EDITOR_ID);
-        editorRole.setName("店家編輯");
+        editorRole.setName("店家編輯員");
         editorRole.setCode("ROLE_STORE_EDITOR");
-        editorRole.setDescription("店家小編帳號，僅能編輯商品與查看訂單");
+        editorRole.setDescription("店家編輯員，可以管理商品但無刪除權限");
         editorRole.setCreatedAt(LocalDateTime.now());
         editorRole.setUpdatedAt(LocalDateTime.now());
         roleMapper.insert(editorRole);
 
-        log.info("✓ 角色資料初始化完成（3 筆）");
+        log.info("角色初始化完成，共 3 筆");
     }
 
     /**
-     * 初始化選單資料
+     * 初始化選單
      */
     private void initializeMenus() {
-        log.info("初始化選單資料...");
+        log.info("初始化選單...");
         
-        // 第一層選單
-        String[] menuIds = new String[7];
-        String[] menuNames = {"店家管理", "商品管理", "訂單管理", "會員管理", "報表中心", "權限管理", "系統設定"};
-        String[] menuCodes = {"STORE_MANAGEMENT", "LOTTERY_MANAGEMENT", "ORDER_MANAGEMENT", 
-                               "USER_MANAGEMENT", "REPORT_CENTER", "PERMISSION_MANAGEMENT", "SYSTEM_SETTING"};
-        String[] menuPaths = {"/admin/stores", "/admin/lotteries", "/admin/orders", 
-                               "/admin/users", "/admin/reports", "/admin/permissions", "/admin/system"};
-        String[] menuIcons = {"store", "shopping", "receipt", "people", "chart", "security", "setting"};
+        // 建立頂層選單（orderNum 以 10 為間距）
+        // 0:店鋪管理 1:抽獎管理 2:訂單管理 3:會員管理 4:營運工具 5:網站內容管理 6:報表中心 7:系統設定 8:權限管理
+        String[] menuIds = new String[9];
+        String[] menuNames = {"店鋪管理", "抽獎管理", "訂單管理", "會員管理", "營運工具",
+                               "網站內容管理", "報表中心", "系統設定", "權限管理"};
+        String[] menuCodes = {"STORE_MANAGEMENT", "LOTTERY_MANAGEMENT", "ORDER_MANAGEMENT",
+                               "USER_MANAGEMENT", "OPERATION_TOOLS", "WEBSITE_CONTENT_MANAGEMENT",
+                               "REPORT_CENTER", "SYSTEM_SETTING", "PERMISSION_MANAGEMENT"};
+        String[] menuPaths = {"/home/stores", "/home/lottery-with-prizes", "/home/order",
+                               "/home/member/list", "/home/recharge-plan", "/home/banner",
+                               "/home/report", "/home/system-config", "/home/roles"};
+        String[] menuIcons = {"store", "shopping", "receipt", "people", "build", "public", "chart", "setting", "security"};
+        int[]    orderNums = {10, 20, 30, 40, 50, 60, 70, 80, 90};
 
         for (int i = 0; i < menuNames.length; i++) {
             menuIds[i] = UUID.randomUUID().toString();
@@ -345,50 +364,61 @@ public class DataInitializer implements CommandLineRunner {
             menu.setPath(menuPaths[i]);
             menu.setParentId(null);
             menu.setIcon(menuIcons[i]);
-            menu.setOrderNum(i + 1);
+            menu.setOrderNum(orderNums[i]);
             menu.setIsVisible(true);
             menu.setCreatedAt(LocalDateTime.now());
             menu.setUpdatedAt(LocalDateTime.now());
             menuMapper.insert(menu);
         }
 
-        // 第二層選單 - 店家管理
-        insertSubMenu(menuIds[0], "店家列表", "STORE_LIST", "/admin/stores/list", 1);
-        insertSubMenu(menuIds[0], "新增店家", "STORE_CREATE", "/admin/stores/create", 2);
+        // 建立子選單 - 店鋪管理 (index 0)
+        insertSubMenu(menuIds[0], "店鋪列表", "STORE_LIST", "/home/stores", 1);
+        insertSubMenu(menuIds[0], "新增店鋪", "STORE_CREATE", "/home/stores/add", 2);
 
-        // 第二層選單 - 商品管理
-        insertSubMenu(menuIds[1], "商品列表", "LOTTERY_LIST", "/admin/lotteries/list", 1);
-        insertSubMenu(menuIds[1], "新增商品", "LOTTERY_CREATE", "/admin/lotteries/create", 2);
-        insertSubMenu(menuIds[1], "獎品管理", "PRIZE_MANAGEMENT", "/admin/prizes", 3);
+        // 建立子選單 - 抽獎管理 (index 1)
+        insertSubMenu(menuIds[1], "商品與獎品列表", "LOTTERY_LIST", "/home/lottery-with-prizes", 1);
+        insertSubMenu(menuIds[1], "新增抽獎", "LOTTERY_CREATE", "/home/lottery-with-prizes/add", 2);
+        insertSubMenu(menuIds[1], "獎項管理", "PRIZE_MANAGEMENT", "/home/lottery-with-prizes", 3);
+        insertSubMenu(menuIds[1], "分類管理", "CATEGORY_MANAGEMENT", "/home/category", 4);
 
-        // 第二層選單 - 訂單管理
-        insertSubMenu(menuIds[2], "訂單列表", "ORDER_LIST", "/admin/orders/list", 1);
-        insertSubMenu(menuIds[2], "配送管理", "SHIPPING_MANAGEMENT", "/admin/shipping", 2);
+        // 建立子選單 - 訂單管理 (index 2)
+        insertSubMenu(menuIds[2], "訂單列表", "ORDER_LIST", "/home/order", 1);
+        insertSubMenu(menuIds[2], "物流管理", "SHIPPING_MANAGEMENT", "/home/order", 2);
 
-        // 第二層選單 - 報表中心（完整 9 個）
-        insertSubMenu(menuIds[4], "營收報表",     "REVENUE_REPORT",       "/admin/reports/revenue",       1);
-        insertSubMenu(menuIds[4], "抽獎統計",     "DRAW_STATISTICS",      "/admin/reports/draw-stats",    2);
-        insertSubMenu(menuIds[4], "推薦碼報表",   "REFERRAL_REPORT",      "/admin/reports/referral",      3);
-        insertSubMenu(menuIds[4], "儲值報表",     "RECHARGE_REPORT",      "/admin/reports/recharge",      4);
-        insertSubMenu(menuIds[4], "贈送點數報表", "BONUS_REPORT",         "/admin/reports/bonus",         5);
-        insertSubMenu(menuIds[4], "會員成長報表", "MEMBER_GROWTH_REPORT", "/admin/reports/member-growth", 6);
-        insertSubMenu(menuIds[4], "商品銷售排行", "LOTTERY_SALES_REPORT", "/admin/reports/lottery-sales", 7);
-        insertSubMenu(menuIds[4], "店家績效比較", "STORE_PERF_REPORT",    "/admin/reports/store-perf",    8);
-        insertSubMenu(menuIds[4], "獎品出貨報表", "PRIZE_SHIPMENT_REPORT","/admin/reports/prize-shipment",9);
+        // 建立子選單 - 會員管理 (index 3)
+        insertSubMenu(menuIds[3], "前台使用者", "MEMBER_LIST", "/home/member/list", 1);
+        insertSubMenu(menuIds[3], "後台使用者", "ADMIN_USER_LIST", "/home/admin-users", 2);
 
-        // 第二層選單 - 權限管理
-        insertSubMenu(menuIds[5], "角色管理", "ROLE_MANAGEMENT", "/admin/permissions/roles", 1);
-        insertSubMenu(menuIds[5], "選單管理", "MENU_MANAGEMENT", "/admin/permissions/menus", 2);
-        insertSubMenu(menuIds[5], "帳號管理", "ACCOUNT_MANAGEMENT", "/admin/permissions/accounts", 3);
+        // 建立子選單 - 營運工具 (index 4)
+        insertSubMenu(menuIds[4], "儲值方案", "RECHARGE_MANAGE", "/home/recharge-plan", 1);
+        insertSubMenu(menuIds[4], "推薦碼管理", "REFERRAL_CODE_MANAGE", "/home/referral-codes", 2);
 
-        // 第二層選單 - 系統設定
-        insertSubMenu(menuIds[6], "系統日誌",   "SYSTEM_LOG",      "/admin/system/logs",      1);
-        insertSubMenu(menuIds[6], "跑馬燈管理", "MARQUEE_MANAGE",  "/admin/system/marquee",   2);
-        insertSubMenu(menuIds[6], "儲值方案",   "RECHARGE_MANAGE", "/admin/system/recharge",  3);
-        insertSubMenu(menuIds[6], "系統公告",   "SYSTEM_NOTICE",   "/admin/system/notices",   4);
-        insertSubMenu(menuIds[6], "系統參數",   "SYSTEM_CONFIG",   "/home/system-config",     5);
+        // 建立子選單 - 網站內容管理 (index 5)
+        insertSubMenu(menuIds[5], "Banner 管理", "BANNER_MANAGE", "/home/banner", 1);
+        insertSubMenu(menuIds[5], "最新消息", "NEWS_MANAGE", "/home/news", 2);
 
-        log.info("✓ 選單資料初始化完成（30 筆）");
+        // 建立子選單 - 報表中心 (index 6)
+        insertSubMenu(menuIds[6], "營收報表",     "REVENUE_REPORT",       "/home/report/revenue",           1);
+        insertSubMenu(menuIds[6], "抽獎統計",     "DRAW_STATISTICS",      "/home/report/lottery-result",    2);
+        insertSubMenu(menuIds[6], "推薦獎金報表", "REFERRAL_REPORT",      "/home/report/referral",          3);
+        insertSubMenu(menuIds[6], "儲值報表",     "RECHARGE_REPORT",      "/home/report/recharge",          4);
+        insertSubMenu(menuIds[6], "紅利報表",     "BONUS_REPORT",         "/home/report/bonus",             5);
+        insertSubMenu(menuIds[6], "會員成長報表", "MEMBER_GROWTH_REPORT", "/home/report/member-growth",     6);
+        insertSubMenu(menuIds[6], "抽獎銷售報表", "LOTTERY_SALES_REPORT", "/home/report/lottery-sales",     7);
+        insertSubMenu(menuIds[6], "店鋪績效報表", "STORE_PERF_REPORT",    "/home/report/store-performance", 8);
+        insertSubMenu(menuIds[6], "獎品出貨報表", "PRIZE_SHIPMENT_REPORT","/home/report/prize-shipment",    9);
+
+        // 建立子選單 - 系統設定 (index 7)
+        insertSubMenu(menuIds[7], "參數設定",   "SYSTEM_CONFIG",  "/home/system-config",           1);
+        insertSubMenu(menuIds[7], "系統日誌",   "SYSTEM_LOG",     "/home/system-log",              2);
+        insertSubMenu(menuIds[7], "跑馬燈管理", "MARQUEE_MANAGE", "/home/marquee",                 3);
+        insertSubMenu(menuIds[7], "系統公告",   "SYSTEM_NOTICE",  "/home/emergency-announcements", 4);
+
+        // 建立子選單 - 權限管理 (index 8)（僅 Admin 可見）
+        insertSubMenu(menuIds[8], "角色管理", "ROLE_MANAGEMENT", "/home/roles", 1);
+        insertSubMenu(menuIds[8], "選單管理", "MENU_MANAGEMENT", "/home/menus", 2);
+
+        log.info("選單初始化完成");
     }
 
     private void insertSubMenu(String parentId, String name, String code, String path, int orderNum) {
@@ -409,7 +439,7 @@ public class DataInitializer implements CommandLineRunner {
     private Menu ensureReportCenterMenu() {
         Menu reportCenter = findMenuByCodes(REPORT_PARENT_CODE, "report_management");
         if (reportCenter != null) {
-            reportCenter.setName("報表管理");
+            reportCenter.setName("報表中心");
             reportCenter.setCode(REPORT_PARENT_CODE);
             reportCenter.setPath("/home/report");
             reportCenter.setIcon("chart");
@@ -422,7 +452,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Menu menu = new Menu();
         menu.setId(UUID.randomUUID().toString());
-        menu.setName("報表管理");
+        menu.setName("報表中心");
         menu.setCode(REPORT_PARENT_CODE);
         menu.setPath("/home/report");
         menu.setParentId(null);
@@ -444,7 +474,7 @@ public class DataInitializer implements CommandLineRunner {
                 "lottery_management",
                 "product_management");
         if (lotteryManagement == null) {
-            lotteryManagement = findMenuByName("商品管理");
+            lotteryManagement = findMenuByName("抽獎管理");
         }
         if (lotteryManagement == null) {
             lotteryManagement = findTopLevelMenuByPath("/admin/lotteries");
@@ -454,9 +484,9 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         if (lotteryManagement != null) {
-            lotteryManagement.setName("商品管理");
+            lotteryManagement.setName("抽獎管理");
             lotteryManagement.setCode("LOTTERY_MANAGEMENT");
-            lotteryManagement.setPath("/admin/lotteries");
+            lotteryManagement.setPath("/home/lottery-with-prizes");
             lotteryManagement.setIcon("shopping");
             lotteryManagement.setIsVisible(true);
             lotteryManagement.setUpdatedAt(LocalDateTime.now());
@@ -466,9 +496,9 @@ public class DataInitializer implements CommandLineRunner {
 
         Menu menu = new Menu();
         menu.setId(UUID.randomUUID().toString());
-        menu.setName("商品管理");
+        menu.setName("抽獎管理");
         menu.setCode("LOTTERY_MANAGEMENT");
-        menu.setPath("/admin/lotteries");
+        menu.setPath("/home/lottery-with-prizes");
         menu.setParentId(null);
         menu.setIcon("shopping");
         menu.setOrderNum(20);
@@ -476,12 +506,50 @@ public class DataInitializer implements CommandLineRunner {
         menu.setCreatedAt(LocalDateTime.now());
         menu.setUpdatedAt(LocalDateTime.now());
         menuMapper.insert(menu);
-        log.warn("⚠️ 找不到既有商品管理父選單，已自動建立 LOTTERY_MANAGEMENT");
+        log.warn("未找到抽獎管理選單，正在新建 LOTTERY_MANAGEMENT");
+        return menu;
+    }
+
+    private Menu ensureRootMenu(String name, String code, String path, String icon, int orderNum,
+            String roleId, boolean canView, boolean canEdit, boolean canDelete) {
+        Menu menu = findMenuByCode(code);
+        if (menu == null) {
+            menu = findMenuByName(name);
+        }
+        if (menu != null) {
+            menu.setName(name);
+            menu.setCode(code);
+            menu.setPath(path);
+            menu.setIcon(icon);
+            menu.setOrderNum(orderNum);
+            menu.setIsVisible(true);
+            menu.setUpdatedAt(LocalDateTime.now());
+            menuMapper.updateByPrimaryKeySelective(menu);
+        } else {
+            menu = new Menu();
+            menu.setId(UUID.randomUUID().toString());
+            menu.setName(name);
+            menu.setCode(code);
+            menu.setPath(path);
+            menu.setParentId(null);
+            menu.setIcon(icon);
+            menu.setOrderNum(orderNum);
+            menu.setIsVisible(true);
+            menu.setCreatedAt(LocalDateTime.now());
+            menu.setUpdatedAt(LocalDateTime.now());
+            menuMapper.insert(menu);
+        }
+        if (roleId != null) {
+            ensureRoleMenuPermission(roleId, menu.getId(), canView, canEdit, canDelete);
+        }
         return menu;
     }
 
     private Menu upsertSubMenu(String parentId, String name, String code, String path, int orderNum, String... legacyCodes) {
         Menu menu = findMenuByCodes(code, legacyCodes);
+        if (menu == null) {
+            menu = findMenuByName(name);
+        }
         if (menu == null) {
             insertSubMenu(parentId, name, code, path, orderNum);
             return findMenuByCodes(code);
@@ -568,7 +636,7 @@ public class DataInitializer implements CommandLineRunner {
             for (int i = 1; i < menus.size(); i++) {
                 mergeMenuIntoCanonical(canonical, menus.get(i));
             }
-            log.warn("⚠️ 偵測到重複選單代碼，已合併：code={}, count={}", entry.getKey(), menus.size());
+            log.warn("偵測到重複選單，保留最新版本並合併：code={}, count={}", entry.getKey(), menus.size());
         }
     }
 
@@ -658,9 +726,9 @@ public class DataInitializer implements CommandLineRunner {
      * 初始化角色選單權限
      */
     private void initializeRoleMenuPermissions() {
-        log.info("初始化角色權限資料...");
+        log.info("初始化角色選單權限...");
         
-        // Admin 擁有所有選單的完整權限
+        // Admin 角色取得所有選單權限
         MenuExample menuExample = new MenuExample();
         menuExample.createCriteria();
         for (Menu menu : menuMapper.selectByExample(menuExample)) {
@@ -675,7 +743,7 @@ public class DataInitializer implements CommandLineRunner {
             roleMenuMapper.insert(roleMenu);
         }
 
-        // StoreOwner 權限（不含權限管理）
+        // StoreOwner 角色權限設定
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "LOTTERY_MANAGEMENT", true, true, true);
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "LOTTERY_LIST", true, true, true);
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "LOTTERY_CREATE", true, true, false);
@@ -693,14 +761,14 @@ public class DataInitializer implements CommandLineRunner {
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "STORE_PERF_REPORT",    true, false, false);
         assignMenuPermissionByCode(ROLE_STORE_OWNER_ID, "PRIZE_SHIPMENT_REPORT",true, false, false);
 
-        // StoreEditor 權限（僅商品與訂單查看）
+        // StoreEditor 角色權限設定
         assignMenuPermissionByCode(ROLE_STORE_EDITOR_ID, "LOTTERY_MANAGEMENT", true, true, false);
         assignMenuPermissionByCode(ROLE_STORE_EDITOR_ID, "LOTTERY_LIST", true, true, false);
         assignMenuPermissionByCode(ROLE_STORE_EDITOR_ID, "PRIZE_MANAGEMENT", true, true, false);
         assignMenuPermissionByCode(ROLE_STORE_EDITOR_ID, "ORDER_MANAGEMENT", true, false, false);
         assignMenuPermissionByCode(ROLE_STORE_EDITOR_ID, "ORDER_LIST", true, false, false);
 
-        log.info("✓ 角色權限資料初始化完成");
+        log.info("角色選單權限初始化完成");
     }
 
     private void assignMenuPermissionByCode(String roleId, String menuCode, boolean canView, boolean canEdit, boolean canDelete) {
@@ -721,117 +789,63 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 補救：若報表子選單未完整初始化，補建缺少的選單並補充角色權限。
-     * 僅在既有 DB 上執行（避免全新安裝重複初始化）。
+     * 補救報表選單缺失，執行增量補救並重新設定角色選單權限
+     * 直接從 DB 操作，確保冪等性
      */
     private void rescueMissingReportMenus() {
-        if (System.currentTimeMillis() >= 0) {
-            if (ROLE_ADMIN_ID == null || ROLE_STORE_OWNER_ID == null || ROLE_STORE_EDITOR_ID == null) {
-                loadRoleIdsFromDb();
-            }
-
-            Menu reportCenter = ensureReportCenterMenu();
-            ensureRoleMenuPermission(ROLE_ADMIN_ID, reportCenter.getId(), true, true, true);
-            ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, reportCenter.getId(), true, false, false);
-            removeRoleMenuPermission(ROLE_STORE_EDITOR_ID, reportCenter.getId());
-
-            for (String[] definition : REPORT_MENU_DEFINITIONS) {
-                String[] legacyCodes = definition.length > 4
-                        ? new String[] {definition[4]}
-                        : new String[0];
-
-                Menu menu = upsertSubMenu(
-                        reportCenter.getId(),
-                        definition[0],
-                        definition[1],
-                        definition[2],
-                        Integer.parseInt(definition[3]),
-                        legacyCodes);
-
-                ensureRoleMenuPermission(ROLE_ADMIN_ID, menu.getId(), true, true, true);
-
-                boolean ownerCanView = !"MEMBER_GROWTH_REPORT".equals(definition[1])
-                        && !"PLATFORM_REVENUE_REPORT".equals(definition[1]);
-                if (ownerCanView) {
-                    ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, menu.getId(), true, false, false);
-                } else {
-                    removeRoleMenuPermission(ROLE_STORE_OWNER_ID, menu.getId());
-                }
-                removeRoleMenuPermission(ROLE_STORE_EDITOR_ID, menu.getId());
-            }
-            hideLegacyReportMenus(reportCenter.getId());
-
-            log.info("報表選單與角色權限已同步為正式報表設定");
+        if (ROLE_ADMIN_ID == null || ROLE_STORE_OWNER_ID == null || ROLE_STORE_EDITOR_ID == null) {
+            loadRoleIdsFromDb();
+        }
+        Menu reportCenter = ensureRootMenu(
+                "報表中心",
+                "REPORT_CENTER",
+                "/home/report",
+                "TrendCharts",
+                40,
+                ROLE_ADMIN_ID,
+                true,
+                true,
+                true);
+        if (reportCenter == null) {
+            log.warn("無法建立或取得報表中心選單，略過子選單補救");
             return;
         }
-        // 找父選單「報表中心」
-        MenuExample parentEx = new MenuExample();
-        parentEx.createCriteria().andCodeEqualTo("REPORT_CENTER");
-        Menu reportCenter = menuMapper.selectByExample(parentEx).stream().findFirst().orElse(null);
-        if (reportCenter == null) {
-            return; // 連父選單都沒有，等正式初始化來建立
-        }
-
-        // 定義應存在的報表子選單
         String[][] reportMenus = {
-            {"營收報表",     "REVENUE_REPORT",        "/admin/reports/revenue",        "1"},
-            {"抽獎統計",     "DRAW_STATISTICS",       "/admin/reports/draw-stats",     "2"},
-            {"推薦碼報表",   "REFERRAL_REPORT",       "/admin/reports/referral",       "3"},
-            {"儲值報表",     "RECHARGE_REPORT",       "/admin/reports/recharge",       "4"},
-            {"贈送點數報表", "BONUS_REPORT",          "/admin/reports/bonus",          "5"},
-            {"會員成長報表", "MEMBER_GROWTH_REPORT",  "/admin/reports/member-growth",  "6"},
-            {"商品銷售排行", "LOTTERY_SALES_REPORT",  "/admin/reports/lottery-sales",  "7"},
-            {"店家績效比較", "STORE_PERF_REPORT",     "/admin/reports/store-perf",     "8"},
-            {"獎品出貨報表", "PRIZE_SHIPMENT_REPORT", "/admin/reports/prize-shipment", "9"},
+                {"營收報表", "REVENUE_REPORT", "/home/report/revenue", "1"},
+                {"抽獎統計", "DRAW_STATISTICS", "/home/report/lottery-result", "2"},
+                {"推薦獎金報表", "REFERRAL_REPORT", "/home/report/referral", "3"},
+                {"儲值報表", "RECHARGE_REPORT", "/home/report/recharge", "4"},
+                {"紅利報表", "BONUS_REPORT", "/home/report/bonus", "5"},
+                {"會員成長報表", "MEMBER_GROWTH_REPORT", "/home/report/member-growth", "6"},
+                {"一番賞銷售報表", "LOTTERY_SALES_REPORT", "/home/report/lottery-sales", "7"},
+                {"店鋪績效報表", "STORE_PERF_REPORT", "/home/report/store-performance", "8"},
+                {"獎品出貨報表", "PRIZE_SHIPMENT_REPORT", "/home/report/prize-shipment", "9"}
         };
-
         boolean anyAdded = false;
-        if (ROLE_ADMIN_ID == null) loadRoleIdsFromDb();
-
-        for (String[] m : reportMenus) {
-            MenuExample ex = new MenuExample();
-            ex.createCriteria().andCodeEqualTo(m[1]);
-            boolean exists = !menuMapper.selectByExample(ex).isEmpty();
-            if (!exists) {
-                log.warn("⚠️ 補救：缺少報表子選單 [{}]，正在補建...", m[0]);
-                insertSubMenu(reportCenter.getId(), m[0], m[1], m[2], Integer.parseInt(m[3]));
-
-                // 補充 ROLE_ADMIN role_menu（Admin 全選單自動查詢，此處只補 StoreOwner）
-                MenuExample newEx = new MenuExample();
-                newEx.createCriteria().andCodeEqualTo(m[1]);
-                menuMapper.selectByExample(newEx).stream().findFirst().ifPresent(menu -> {
-                    // Admin 加 role_menu
-                    if (ROLE_ADMIN_ID != null) {
-                        RoleMenu rm = new RoleMenu();
-                        rm.setId(UUID.randomUUID().toString());
-                        rm.setRoleId(ROLE_ADMIN_ID);
-                        rm.setMenuId(menu.getId());
-                        rm.setCanView(true); rm.setCanEdit(true); rm.setCanDelete(true);
-                        rm.setCreatedAt(LocalDateTime.now());
-                        roleMenuMapper.insert(rm);
-                    }
-                    // StoreOwner 加 role_menu（MEMBER_GROWTH 僅 Admin 可見，跳過）
-                    if (ROLE_STORE_OWNER_ID != null && !"MEMBER_GROWTH_REPORT".equals(m[1])) {
-                        RoleMenu rm = new RoleMenu();
-                        rm.setId(UUID.randomUUID().toString());
-                        rm.setRoleId(ROLE_STORE_OWNER_ID);
-                        rm.setMenuId(menu.getId());
-                        rm.setCanView(true); rm.setCanEdit(false); rm.setCanDelete(false);
-                        rm.setCreatedAt(LocalDateTime.now());
-                        roleMenuMapper.insert(rm);
-                    }
-                });
-                anyAdded = true;
+        for (String[] menuDef : reportMenus) {
+            Menu menu = upsertSubMenu(
+                    reportCenter.getId(),
+                    menuDef[0],
+                    menuDef[1],
+                    menuDef[2],
+                    Integer.parseInt(menuDef[3]));
+            ensureRoleMenuPermission(ROLE_ADMIN_ID, menu.getId(), true, true, true);
+            boolean ownerCanView = !"MEMBER_GROWTH_REPORT".equals(menuDef[1]);
+            if (ownerCanView) {
+                ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, menu.getId(), true, false, false);
+            } else {
+                removeRoleMenuPermission(ROLE_STORE_OWNER_ID, menu.getId());
             }
+            removeRoleMenuPermission(ROLE_STORE_EDITOR_ID, menu.getId());
+            anyAdded = true;
         }
-
+        hideLegacyReportMenus(reportCenter.getId());
         if (anyAdded) {
-            log.info("✅ 報表子選單補救完成");
+            log.info("報表中心子選單補救完成");
         }
     }
-
     /**
-     * 補救：若系統設定子選單未建立，補建缺少的選單（系統日誌、跑馬燈、儲值方案等）。
+     * 隱藏舊版報表路徑下的重複選單，並依 path 去重。
      */
     private void hideLegacyReportMenus(String reportCenterId) {
         MenuExample legacyEx = new MenuExample();
@@ -844,50 +858,125 @@ public class DataInitializer implements CommandLineRunner {
         deduplicateChildMenusByPath(reportCenterId);
     }
 
+    /**
+     * 補救系統設定選單缺失，補建缺少的選單。
+     */
     private void rescueMissingSystemMenus() {
-        MenuExample parentEx = new MenuExample();
-        parentEx.createCriteria().andCodeEqualTo("SYSTEM_SETTING");
-        Menu systemSetting = menuMapper.selectByExample(parentEx).stream().findFirst().orElse(null);
-        if (systemSetting == null) return;
-
+        if (ROLE_ADMIN_ID == null) {
+            loadRoleIdsFromDb();
+        }
+        Menu systemSetting = ensureRootMenu(
+                "系統設定",
+                "SYSTEM_SETTING",
+                "/home/system-config",
+                "setting",
+                80,
+                ROLE_ADMIN_ID,
+                true,
+                true,
+                true);
+        if (systemSetting == null) {
+            return;
+        }
         String[][] systemMenus = {
-            {"系統日誌",   "SYSTEM_LOG",      "/admin/system/logs",     "1"},
-            {"跑馬燈管理", "MARQUEE_MANAGE",  "/admin/system/marquee",  "2"},
-            {"儲值方案",   "RECHARGE_MANAGE", "/admin/system/recharge", "3"},
-            {"系統公告",   "SYSTEM_NOTICE",   "/admin/system/notices",  "4"},
-            {"系統參數",   "SYSTEM_CONFIG",   "/home/system-config",    "5"},
+                {"參數設定",   "SYSTEM_CONFIG",  "/home/system-config",           "1"},
+                {"系統日誌",   "SYSTEM_LOG",     "/home/system-log",              "2"},
+                {"跑馬燈管理", "MARQUEE_MANAGE", "/home/marquee",                 "3"},
+                {"系統公告",   "SYSTEM_NOTICE",  "/home/emergency-announcements", "4"}
         };
-
         boolean anyAdded = false;
-        if (ROLE_ADMIN_ID == null) loadRoleIdsFromDb();
+        for (String[] menuDef : systemMenus) {
+            Menu menu = upsertSubMenu(
+                    systemSetting.getId(),
+                    menuDef[0],
+                    menuDef[1],
+                    menuDef[2],
+                    Integer.parseInt(menuDef[3]));
+            ensureRoleMenuPermission(ROLE_ADMIN_ID, menu.getId(), true, true, true);
+            anyAdded = true;
+        }
+        if (anyAdded) {
+            log.info("系統設定子選單補救完成");
+        }
+    }
 
-        for (String[] m : systemMenus) {
-            MenuExample ex = new MenuExample();
-            ex.createCriteria().andCodeEqualTo(m[1]);
-            boolean exists = !menuMapper.selectByExample(ex).isEmpty();
-            if (!exists) {
-                log.warn("⚠️ 補救：缺少系統設定子選單 [{}]，正在補建...", m[0]);
-                insertSubMenu(systemSetting.getId(), m[0], m[1], m[2], Integer.parseInt(m[3]));
+    private void rescueMissingOperationMenus() {
+        if (ROLE_ADMIN_ID == null) {
+            loadRoleIdsFromDb();
+        }
 
-                MenuExample newEx = new MenuExample();
-                newEx.createCriteria().andCodeEqualTo(m[1]);
-                menuMapper.selectByExample(newEx).stream().findFirst().ifPresent(menu -> {
-                    if (ROLE_ADMIN_ID != null) {
-                        RoleMenu rm = new RoleMenu();
-                        rm.setId(UUID.randomUUID().toString());
-                        rm.setRoleId(ROLE_ADMIN_ID);
-                        rm.setMenuId(menu.getId());
-                        rm.setCanView(true); rm.setCanEdit(true); rm.setCanDelete(true);
-                        rm.setCreatedAt(LocalDateTime.now());
-                        roleMenuMapper.insert(rm);
-                    }
-                });
-                anyAdded = true;
-            }
+        Menu operationTools = ensureRootMenu(
+                "營運工具",
+                "OPERATION_TOOLS",
+                "/home/recharge-plan",
+                "build",
+                50,
+                ROLE_ADMIN_ID,
+                true,
+                true,
+                true);
+        if (operationTools == null) {
+            return;
+        }
+
+        String[][] operationMenus = {
+                {"儲值方案",   "RECHARGE_MANAGE",      "/home/recharge-plan",  "1"},
+                {"推薦碼管理", "REFERRAL_CODE_MANAGE", "/home/referral-codes", "2"}
+        };
+        boolean anyAdded = false;
+        for (String[] menuDef : operationMenus) {
+            Menu menu = upsertSubMenu(
+                    operationTools.getId(),
+                    menuDef[0],
+                    menuDef[1],
+                    menuDef[2],
+                    Integer.parseInt(menuDef[3]));
+            ensureRoleMenuPermission(ROLE_ADMIN_ID, menu.getId(), true, true, true);
+            anyAdded = true;
         }
 
         if (anyAdded) {
-            log.info("✅ 系統設定子選單補救完成");
+            log.info("營運工具子選單補救完成");
+        }
+    }
+
+    private void rescueMissingWebsiteContentMenus() {
+        if (ROLE_ADMIN_ID == null) {
+            loadRoleIdsFromDb();
+        }
+
+        Menu websiteManagement = ensureRootMenu(
+                "網站內容管理",
+                "WEBSITE_CONTENT_MANAGEMENT",
+                "/home/banner",
+                "public",
+                60,
+                ROLE_ADMIN_ID,
+                true,
+                true,
+                true);
+        if (websiteManagement == null) {
+            return;
+        }
+
+        String[][] websiteMenus = {
+                {"Banner 管理", "BANNER_MANAGE", "/home/banner", "1"},
+                {"最新消息",    "NEWS_MANAGE",   "/home/news",   "2"}
+        };
+        boolean anyAdded = false;
+        for (String[] menuDef : websiteMenus) {
+            Menu menu = upsertSubMenu(
+                    websiteManagement.getId(),
+                    menuDef[0],
+                    menuDef[1],
+                    menuDef[2],
+                    Integer.parseInt(menuDef[3]));
+            ensureRoleMenuPermission(ROLE_ADMIN_ID, menu.getId(), true, true, true);
+            anyAdded = true;
+        }
+
+        if (anyAdded) {
+            log.info("網站內容管理子選單補救完成");
         }
     }
 
@@ -895,7 +984,7 @@ public class DataInitializer implements CommandLineRunner {
         for (int i = 0; i < DEFAULT_LOTTERY_TAGS.size(); i++) {
             upsertLotteryTag(DEFAULT_LOTTERY_TAGS.get(i), i + 1);
         }
-        log.info("商品標籤預設字典已同步: {}", DEFAULT_LOTTERY_TAGS);
+        log.info("抽獎標籤預設資料已同步: {}", DEFAULT_LOTTERY_TAGS);
     }
 
     private void upsertLotteryTag(String name, int displayOrder) {
@@ -947,12 +1036,75 @@ public class DataInitializer implements CommandLineRunner {
             for (int i = 1; i < menus.size(); i++) {
                 mergeMenuIntoCanonical(canonical, menus.get(i));
             }
-            log.warn("已合併重複子選單: parentId={}, path={}, count={}", parentId, entry.getKey(), menus.size());
+            log.warn("偵測到重複子選單，保留最新版本並合併（依路徑）: parentId={}, path={}, count={}", parentId, entry.getKey(), menus.size());
         }
     }
 
     /**
-     * 補救：若商品管理底下沒有「類別管理」，補建選單與角色權限。
+     * 補救會員管理選單：
+     * - 修正 USER_MANAGEMENT 路徑為 /home/member/list
+     * - 補建 MEMBER_LIST（前台使用者）和 ADMIN_USER_LIST（後台使用者）子選單
+     * - 將 ACCOUNT_MANAGEMENT 從 PERMISSION_MANAGEMENT 下隱藏（已移至此處）
+     */
+    private void rescueMissingMemberMenus() {
+        if (ROLE_ADMIN_ID == null || ROLE_STORE_OWNER_ID == null || ROLE_STORE_EDITOR_ID == null) {
+            loadRoleIdsFromDb();
+        }
+
+        // 確保 USER_MANAGEMENT 頂層選單路徑正確
+        Menu userManagement = ensureRootMenu(
+                "會員管理",
+                "USER_MANAGEMENT",
+                "/home/member/list",
+                "people",
+                40,
+                ROLE_ADMIN_ID,
+                true,
+                true,
+                true);
+        if (userManagement == null) {
+            log.warn("無法建立或取得會員管理選單，略過子選單補救");
+            return;
+        }
+
+        // 補建子選單
+        Menu memberList = upsertSubMenu(userManagement.getId(), "前台使用者", "MEMBER_LIST", "/home/member/list", 1);
+        ensureRoleMenuPermission(ROLE_ADMIN_ID, memberList.getId(), true, true, true);
+
+        Menu adminUserList = upsertSubMenu(userManagement.getId(), "後台使用者", "ADMIN_USER_LIST", "/home/admin-users", 2);
+        ensureRoleMenuPermission(ROLE_ADMIN_ID, adminUserList.getId(), true, true, true);
+
+        // 隱藏舊的「會員列表」選單（已由「前台使用者」取代，名稱不同所以 upsert 無法自動合併）
+        MenuExample memberListEx = new MenuExample();
+        memberListEx.createCriteria()
+                .andParentIdEqualTo(userManagement.getId())
+                .andNameEqualTo("會員列表");
+        for (Menu old : menuMapper.selectByExample(memberListEx)) {
+            if (Boolean.TRUE.equals(old.getIsVisible())) {
+                old.setIsVisible(false);
+                old.setUpdatedAt(LocalDateTime.now());
+                menuMapper.updateByPrimaryKeySelective(old);
+                log.info("已隱藏舊會員列表選單：id={}", old.getId());
+            }
+        }
+
+        // 隱藏舊的 ACCOUNT_MANAGEMENT（帳號管理）選單，避免在 PERMISSION_MANAGEMENT 下重複出現
+        MenuExample accExample = new MenuExample();
+        accExample.createCriteria().andCodeEqualTo("ACCOUNT_MANAGEMENT");
+        for (Menu acc : menuMapper.selectByExample(accExample)) {
+            if (Boolean.TRUE.equals(acc.getIsVisible())) {
+                acc.setIsVisible(false);
+                acc.setUpdatedAt(LocalDateTime.now());
+                menuMapper.updateByPrimaryKeySelective(acc);
+                log.info("已隱藏舊帳號管理選單：id={}", acc.getId());
+            }
+        }
+
+        log.info("會員管理選單補救完成");
+    }
+
+    /**
+     * 補救缺失的分類管理選單，若不存在則自動建立並設定角色權限
      */
     private void rescueMissingCategoryMenu() {
         if (ROLE_ADMIN_ID == null || ROLE_STORE_OWNER_ID == null || ROLE_STORE_EDITOR_ID == null) {
@@ -966,7 +1118,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Menu categoryMenu = upsertSubMenu(
                 lotteryManagement.getId(),
-                "類別管理",
+                "分類管理",
                 "CATEGORY_MANAGEMENT",
                 "/home/category",
                 4);
@@ -975,21 +1127,21 @@ public class DataInitializer implements CommandLineRunner {
         ensureRoleMenuPermission(ROLE_STORE_OWNER_ID, categoryMenu.getId(), true, true, false);
         ensureRoleMenuPermission(ROLE_STORE_EDITOR_ID, categoryMenu.getId(), true, true, false);
 
-        log.info("✅ 類別管理選單與角色權限已同步");
+        log.info("分類管理選單補救完成");
     }
 
     /**
-     * 初始化管理者帳號
+     * 初始化管理帳號
      */
     private void initializeAdminUsers() {
-        log.info("初始化管理者帳號...");
+        log.info("初始化管理帳號...");
         
         ADMIN_USER_ID = UUID.randomUUID().toString();
         STORE_OWNER_1_ID = UUID.randomUUID().toString();
         STORE_OWNER_2_ID = UUID.randomUUID().toString();
         STORE_EDITOR_1_ID = UUID.randomUUID().toString();
 
-        // 系統管理員（密碼: admin123）
+        // 系統管理員帳號（密碼: admin123）
         AdminUser admin = new AdminUser();
         admin.setId(ADMIN_USER_ID);
         admin.setUsername("admin@kuji.com");
@@ -1006,61 +1158,61 @@ public class DataInitializer implements CommandLineRunner {
         adminUserMapper.insert(admin);
         assignRole(ADMIN_USER_ID, ROLE_ADMIN_ID);
 
-        // 測試店家負責人 1（密碼: Test1234）
+        // 測試店家負責人1（密碼: Test1234）
         AdminUser owner1 = new AdminUser();
         owner1.setId(STORE_OWNER_1_ID);
         owner1.setUsername("owner@teststore.com");
         owner1.setPassword(passwordEncoder.encode("Test1234"));
         owner1.setEmail("owner@teststore.com");
-        owner1.setDisplayName("測試店家老闆");
+        owner1.setDisplayName("測試店家負責人");
         owner1.setPhone("0911111111");
         owner1.setStatus("ACTIVE");
         owner1.setForceChangePassword(false);
         owner1.setCreatedBy(ADMIN_USER_ID);
-        owner1.setRemark("測試用店家負責人");
+        owner1.setRemark("測試用帳號");
         owner1.setCreatedAt(LocalDateTime.now());
         owner1.setUpdatedAt(LocalDateTime.now());
         owner1.setFailedLoginAttempts(0);
         adminUserMapper.insert(owner1);
         assignRole(STORE_OWNER_1_ID, ROLE_STORE_OWNER_ID);
 
-        // 測試店家負責人 2（密碼: Test1234）
+        // 測試店家負責人2（密碼: Test1234）
         AdminUser owner2 = new AdminUser();
         owner2.setId(STORE_OWNER_2_ID);
         owner2.setUsername("owner2@teststore.com");
         owner2.setPassword(passwordEncoder.encode("Test1234"));
         owner2.setEmail("owner2@teststore.com");
-        owner2.setDisplayName("第二間店家老闆");
+        owner2.setDisplayName("動漫商城負責人");
         owner2.setPhone("0922222222");
         owner2.setStatus("ACTIVE");
         owner2.setForceChangePassword(false);
         owner2.setCreatedBy(ADMIN_USER_ID);
-        owner2.setRemark("測試用店家負責人");
+        owner2.setRemark("測試用帳號");
         owner2.setCreatedAt(LocalDateTime.now());
         owner2.setUpdatedAt(LocalDateTime.now());
         owner2.setFailedLoginAttempts(0);
         adminUserMapper.insert(owner2);
         assignRole(STORE_OWNER_2_ID, ROLE_STORE_OWNER_ID);
 
-        // 測試店家編輯（密碼: Test1234）
+        // 測試店家編輯員（密碼: Test1234）
         AdminUser editor = new AdminUser();
         editor.setId(STORE_EDITOR_1_ID);
         editor.setUsername("editor@teststore.com");
         editor.setPassword(passwordEncoder.encode("Test1234"));
         editor.setEmail("editor@teststore.com");
-        editor.setDisplayName("測試店家小編");
+        editor.setDisplayName("測試店家編輯員");
         editor.setPhone("0933333333");
         editor.setStatus("ACTIVE");
         editor.setForceChangePassword(false);
         editor.setCreatedBy(ADMIN_USER_ID);
-        editor.setRemark("測試用店家編輯人員");
+        editor.setRemark("測試用編輯帳號");
         editor.setCreatedAt(LocalDateTime.now());
         editor.setUpdatedAt(LocalDateTime.now());
         editor.setFailedLoginAttempts(0);
         adminUserMapper.insert(editor);
         assignRole(STORE_EDITOR_1_ID, ROLE_STORE_EDITOR_ID);
 
-        log.info("✓ 管理者帳號初始化完成（4 筆）");
+        log.info("管理帳號初始化完成，共 4 筆");
     }
 
     private void assignRole(String adminUserId, String roleId) {
@@ -1073,10 +1225,10 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 初始化店家資料
+     * 初始化測試商店
      */
     private void initializeStores() {
-        log.info("初始化店家資料...");
+        log.info("初始化測試商店...");
         
         STORE_1_ID = UUID.randomUUID().toString();
         STORE_2_ID = UUID.randomUUID().toString();
@@ -1086,25 +1238,25 @@ public class DataInitializer implements CommandLineRunner {
         store1.setId(STORE_1_ID);
         store1.setOwnerId(STORE_OWNER_1_ID);
         store1.setStoreName("KUJI 測試商店");
-        store1.setShortDescription("最好玩的抽獎商店");
-        store1.setLongDescription("這是一間專門販售各種精美獎品的抽獎商店，歡迎來試手氣！");
+        store1.setShortDescription("一番賞測試商店");
+        store1.setLongDescription("提供精美一番賞商品的測試商店，商品均為限量發售，請把握機會");
         store1.setLogoUrl("https://via.placeholder.com/200");
         store1.setCoverImageUrl("https://via.placeholder.com/1200x400");
         store1.setEmail("owner@teststore.com");
         store1.setPhone("0911111111");
-        store1.setAddress("台北市信義區信義路五段7號");
+        store1.setAddress("台北市信義區信義路五段100號");
         store1.setFacebookUrl("https://facebook.com/kujitest");
         store1.setInstagramUrl("https://instagram.com/kujitest");
         store1.setLineId("@kujitest");
         store1.setBusinessHours("每日 10:00~22:00");
         store1.setStatus("ACTIVE");
-        store1.setRemark("測試用店家");
+        store1.setRemark("測試用商店");
         store1.setCreatedAt(LocalDateTime.now());
         store1.setUpdatedAt(LocalDateTime.now());
         store1.setUpdatedBy(ADMIN_USER_ID);
         storeMapper.insert(store1);
         
-        // 店家使用者關聯
+        // 建立店家用戶關聯
         StoreUser storeUser1 = new StoreUser();
         storeUser1.setId(UUID.randomUUID().toString());
         storeUser1.setStoreId(STORE_1_ID);
@@ -1121,24 +1273,24 @@ public class DataInitializer implements CommandLineRunner {
         storeUser2.setCreatedAt(LocalDateTime.now());
         storeUserMapper.insert(storeUser2);
 
-        // 動漫周邊專賣店
+        // 動漫精品商城
         Store store2 = new Store();
         store2.setId(STORE_2_ID);
         store2.setOwnerId(STORE_OWNER_2_ID);
-        store2.setStoreName("動漫周邊專賣店");
-        store2.setShortDescription("動漫迷必逛的抽獎店");
-        store2.setLongDescription("專營日本動漫周邊、公仔、模型等精品，採用一番賞抽獎機制。");
+        store2.setStoreName("動漫精品商城");
+        store2.setShortDescription("動漫周邊精品商城");
+        store2.setLongDescription("專業動漫周邊精品商城，精選海內外動漫商品，商品定期更新");
         store2.setLogoUrl("https://via.placeholder.com/200");
         store2.setCoverImageUrl("https://via.placeholder.com/1200x400");
         store2.setEmail("owner2@teststore.com");
         store2.setPhone("0922222222");
-        store2.setAddress("台北市中山區南京東路三段168號");
+        store2.setAddress("台北市大安區忠孝東路四段168號");
         store2.setFacebookUrl("https://facebook.com/animestore");
         store2.setInstagramUrl("https://instagram.com/animestore");
         store2.setLineId("@animestore");
         store2.setBusinessHours("每日 11:00~21:00");
         store2.setStatus("ACTIVE");
-        store2.setRemark("測試用店家");
+        store2.setRemark("測試用商店");
         store2.setCreatedAt(LocalDateTime.now());
         store2.setUpdatedAt(LocalDateTime.now());
         store2.setUpdatedBy(ADMIN_USER_ID);
@@ -1152,21 +1304,21 @@ public class DataInitializer implements CommandLineRunner {
         storeUser3.setCreatedAt(LocalDateTime.now());
         storeUserMapper.insert(storeUser3);
 
-        log.info("✓ 店家資料初始化完成（2 筆）");
+        log.info("測試商店初始化完成，共 2 筆");
     }
 
     /**
-     * 初始化測試會員
+     * 初始化測試用戶
      */
     private void initializeTestUsers() {
-        log.info("初始化測試會員...");
+        log.info("初始化測試用戶...");
         
-        // 測試會員 A（密碼: Test1234）
+        // 測試用戶 A（密碼: Test1234）
         User user1 = new User();
         user1.setId(UUID.randomUUID().toString());
         user1.setEmail("user1@test.com");
         user1.setPassword(passwordEncoder.encode("Test1234"));
-        user1.setNickname("測試會員A");
+        user1.setNickname("測試用戶A");
         user1.setAvatar("https://via.placeholder.com/100");
         user1.setProvider("EMAIL");
         user1.setProviderId(null);
@@ -1179,12 +1331,12 @@ public class DataInitializer implements CommandLineRunner {
         user1.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user1);
 
-        // 測試會員 B（密碼: Test1234）
+        // 測試用戶 B（密碼: Test1234）
         User user2 = new User();
         user2.setId(UUID.randomUUID().toString());
         user2.setEmail("user2@test.com");
         user2.setPassword(passwordEncoder.encode("Test1234"));
-        user2.setNickname("測試會員B");
+        user2.setNickname("測試用戶B");
         user2.setAvatar("https://via.placeholder.com/100");
         user2.setProvider("EMAIL");
         user2.setProviderId(null);
@@ -1197,12 +1349,12 @@ public class DataInitializer implements CommandLineRunner {
         user2.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user2);
 
-        // Google 測試會員
+        // Google 測試用戶
         User user3 = new User();
         user3.setId(UUID.randomUUID().toString());
         user3.setEmail("googleuser@gmail.com");
         user3.setPassword(null);
-        user3.setNickname("Google 測試會員");
+        user3.setNickname("Google 測試用戶");
         user3.setAvatar("https://via.placeholder.com/100");
         user3.setProvider("GOOGLE");
         user3.setProviderId("google_oauth_id_12345");
@@ -1215,24 +1367,24 @@ public class DataInitializer implements CommandLineRunner {
         user3.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user3);
 
-        log.info("✓ 測試會員初始化完成（3 筆）");
+        log.info("測試用戶初始化完成，共 3 筆");
     }
 
     /**
-     * 初始化測試抽獎商品與獎品
+     * 初始化測試商品
      */
     private void initializeLotteries() {
-        log.info("初始化抽獎商品...");
+        log.info("初始化測試商品...");
         
         LOTTERY_1_ID = UUID.randomUUID().toString();
         LOTTERY_2_ID = UUID.randomUUID().toString();
 
-        // 鬼滅之刃一番賞
+        // 鬼滅之刃精品一番賞
         Lottery lottery1 = new Lottery();
         lottery1.setId(LOTTERY_1_ID);
         lottery1.setStoreId(STORE_1_ID);
-        lottery1.setTitle("鬼滅之刃一番賞");
-        lottery1.setDescription("超人氣鬼滅之刃一番賞，多款精美公仔等你來抽！");
+        lottery1.setTitle("鬼滅之刃精品一番賞");
+        lottery1.setDescription("超人氣鬼滅之刃精品一番賞，限量發售精美人偶");
         lottery1.setCategory("OFFICIAL_ICHIBAN");
         lottery1.setSubCategory("LOTTERY_MODE");
         lottery1.setStatus("ON_SHELF");
@@ -1256,21 +1408,21 @@ public class DataInitializer implements CommandLineRunner {
         lotteryMapper.insert(lottery1);
 
         // 鬼滅之刃獎品
-        insertPrize(LOTTERY_1_ID, "A", "炭治郎公仔（大）", "約 25cm 高品質公仔", 1, 1, "FIGURE", 1, 0, 0);
-        insertPrize(LOTTERY_1_ID, "B", "禰豆子公仔（大）", "約 25cm 高品質公仔", 1, 1, "FIGURE", 2, 0, 0);
-        insertPrize(LOTTERY_1_ID, "C", "善逸公仔", "約 18cm 精緻公仔", 3, 3, "FIGURE", 3, 0, 0);
-        insertPrize(LOTTERY_1_ID, "D", "伊之助公仔", "約 18cm 精緻公仔", 5, 4, "FIGURE", 4, 0, 0);
-        insertPrize(LOTTERY_1_ID, "E", "壓克力立牌", "隨機角色壓克力立牌", 20, 18, "GOODS", 5, 0, 0);
-        insertPrize(LOTTERY_1_ID, "F", "徽章組", "隨機 3 入徽章組", 30, 25, "GOODS", 6, 0, 0);
-        insertPrize(LOTTERY_1_ID, "G", "貼紙包", "隨機貼紙包", 19, 12, "GOODS", 7, 0, 0);
-        insertPrize(LOTTERY_1_ID, "LAST_PRIZE", "特別版炭治郎公仔", "最後一抽限定公仔", 1, 1, "FIGURE", 8, 1, 0);
+        insertPrize(LOTTERY_1_ID, "A", "竈門炭治郎人偶", "限量25cm 精雕版人偶", 1, 1, "FIGURE", 1, 0, 0);
+        insertPrize(LOTTERY_1_ID, "B", "我妻善逸人偶", "限量25cm 精雕版人偶", 1, 1, "FIGURE", 2, 0, 0);
+        insertPrize(LOTTERY_1_ID, "C", "小芥子立像", "限量18cm 彩繪人偶", 3, 3, "FIGURE", 3, 0, 0);
+        insertPrize(LOTTERY_1_ID, "D", "嘴平伊之助立像", "限量18cm 彩繪人偶", 5, 4, "FIGURE", 4, 0, 0);
+        insertPrize(LOTTERY_1_ID, "E", "精品鑰匙圈", "精品版鑰匙圈", 20, 18, "GOODS", 5, 0, 0);
+        insertPrize(LOTTERY_1_ID, "F", "限定徽章組", "精品 3 件徽章組", 30, 25, "GOODS", 6, 0, 0);
+        insertPrize(LOTTERY_1_ID, "G", "精品抱枕", "精品抱枕套", 19, 12, "GOODS", 7, 0, 0);
+        insertPrize(LOTTERY_1_ID, "LAST_PRIZE", "特製典藏人偶", "超稀有典藏人偶組", 1, 1, "FIGURE", 8, 1, 0);
 
-        // 咒術迴戰刮刮樂
+        // 進擊的巨人紀念賞
         Lottery lottery2 = new Lottery();
         lottery2.setId(LOTTERY_2_ID);
         lottery2.setStoreId(STORE_1_ID);
-        lottery2.setTitle("咒術迴戰刮刮樂");
-        lottery2.setDescription("咒術迴戰限定刮刮樂，每張都有獎！");
+        lottery2.setTitle("進擊的巨人紀念賞");
+        lottery2.setDescription("進擊的巨人限定紀念賞，每日精選商品");
         lottery2.setCategory("OFFICIAL_ICHIBAN");
         lottery2.setSubCategory("SCRATCH_CARD_MODE");
         lottery2.setStatus("ON_SHELF");
@@ -1293,14 +1445,14 @@ public class DataInitializer implements CommandLineRunner {
         lottery2.setUpdatedAt(LocalDateTime.now());
         lotteryMapper.insert(lottery2);
 
-        // 咒術迴戰獎品
-        insertPrize(LOTTERY_2_ID, "A", "五條悟公仔", "約 20cm 公仔", 2, 2, "FIGURE", 1, 0, 1);
-        insertPrize(LOTTERY_2_ID, "B", "虎杖悠仁公仔", "約 18cm 公仔", 5, 5, "FIGURE", 2, 0, 0);
-        insertPrize(LOTTERY_2_ID, "C", "壓克力鑰匙圈", "隨機角色鑰匙圈", 20, 20, "GOODS", 3, 0, 0);
-        insertPrize(LOTTERY_2_ID, "D", "透明資料夾", "隨機角色資料夾", 33, 33, "GOODS", 4, 0, 0);
-        insertPrize(LOTTERY_2_ID, "E", "小貼紙", "隨機小貼紙", 40, 40, "GOODS", 5, 0, 0);
+        // 進擊的巨人獎品
+        insertPrize(LOTTERY_2_ID, "A", "調查兵團人偶", "限量20cm 人偶", 2, 2, "FIGURE", 1, 0, 1);
+        insertPrize(LOTTERY_2_ID, "B", "艾倫鐵質人偶", "限量18cm 人偶", 5, 5, "FIGURE", 2, 0, 0);
+        insertPrize(LOTTERY_2_ID, "C", "精品收藏組", "精品版收藏組", 20, 20, "GOODS", 3, 0, 0);
+        insertPrize(LOTTERY_2_ID, "D", "特製手錶", "精品版手錶", 33, 33, "GOODS", 4, 0, 0);
+        insertPrize(LOTTERY_2_ID, "E", "貼紙組", "精品版貼紙組", 40, 40, "GOODS", 5, 0, 0);
 
-        log.info("✓ 抽獎商品與獎品初始化完成（2 個商品, 13 個獎品）");
+        log.info("測試商品初始化完成，共 2 件商品、13 個獎品");
     }
 
     private void insertPrize(String lotteryId, String level, String name, String description, 
@@ -1325,31 +1477,32 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 記錄預設帳號資訊
+     * 印出預設帳號資訊
      */
     private void logDefaultCredentials() {
         log.info("");
         log.info("========================================");
         log.info("預設測試帳號資訊");
         log.info("========================================");
-        log.info("【後台管理者】");
+        log.info("後台管理員：");
         log.info("  1. Admin: admin@kuji.com / admin123");
         log.info("  2. StoreOwner1: owner@teststore.com / Test1234");
         log.info("  3. StoreOwner2: owner2@teststore.com / Test1234");
         log.info("  4. StoreEditor: editor@teststore.com / Test1234");
         log.info("");
-        log.info("【前台會員】");
-        log.info("  1. user1@test.com / Test1234 (金點 1000, 紅利 500)");
-        log.info("  2. user2@test.com / Test1234 (金點 2500, 紅利 300)");
-        log.info("  3. googleuser@gmail.com (Google 登入, 金點 500, 紅利 100)");
+        log.info("前台測試會員：");
+        log.info("  1. user1@test.com / Test1234 (金幣 1000, 紅利 500)");
+        log.info("  2. user2@test.com / Test1234 (金幣 2500, 紅利 300)");
+        log.info("  3. googleuser@gmail.com (Google 登入, 金幣 500, 紅利 100)");
         log.info("");
-        log.info("【測試店家】");
+        log.info("測試商店：");
         log.info("  1. KUJI 測試商店 (Owner: owner@teststore.com)");
-        log.info("  2. 動漫周邊專賣店 (Owner: owner2@teststore.com)");
+        log.info("  2. 動漫精品商城 (Owner: owner2@teststore.com)");
         log.info("");
-        log.info("【測試商品】");
-        log.info("  1. 鬼滅之刃一番賞 (80 抽, 已上架)");
-        log.info("  2. 咒術迴戰刮刮樂 (100 抽, 已上架)");
+        log.info("測試商品：");
+        log.info("  1. 鬼滅之刃精品一番賞 (80 金幣一抽)");
+        log.info("  2. 進擊的巨人紀念賞 (60 金幣一抽)");
         log.info("========================================");
     }
 }
+

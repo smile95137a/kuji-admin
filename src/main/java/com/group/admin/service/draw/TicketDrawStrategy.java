@@ -38,8 +38,10 @@ public class TicketDrawStrategy implements DrawStrategy {
             List<String> tickets = request.getTickets();
             validateTicketList(tickets, request.getCount());
 
-            for (String ticketId : tickets) {
-                DrawResult r = ticketService.drawByTicketId(lotteryId, userId, ticketId);
+            for (int i = 0; i < tickets.size(); i++) {
+                String ticketId = tickets.get(i);
+                int batchCount = i == 0 ? tickets.size() : 0;
+                DrawResult r = ticketService.drawByTicketId(lotteryId, userId, ticketId, batchCount);
                 results.add(toDrawItemRes(r));
             }
 
@@ -52,7 +54,8 @@ public class TicketDrawStrategy implements DrawStrategy {
             // 隨機抽
             int count = request.getCount() != null ? request.getCount() : 1;
             for (int i = 0; i < count; i++) {
-                DrawResult r = ticketService.draw(lotteryId, userId, null, 1);
+                int batchCount = i == 0 ? count : 0;
+                DrawResult r = ticketService.draw(lotteryId, userId, null, batchCount);
                 results.add(toDrawItemRes(r));
             }
         }
