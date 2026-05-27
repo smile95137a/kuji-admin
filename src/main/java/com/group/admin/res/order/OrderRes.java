@@ -95,6 +95,14 @@ public class OrderRes {
     private String trackingNo;
 
     private String trackingUrl;
+
+    private String logisticsProvider;
+
+    private String logisticsStatusCode;
+
+    private String logisticsStatusName;
+
+    private String logisticsLabelUrl;
     
     /**
      * 總金額（元）

@@ -45,6 +45,8 @@ public interface OrderMapper {
 
     List<Order> selectByPaymentReference(@Param("paymentReference") String paymentReference);
 
+    Order selectByTrackingNo(@Param("trackingNo") String trackingNo);
+
     int updatePaymentInit(@Param("orderId") String orderId,
                           @Param("shippingFee") Long shippingFee,
                           @Param("paymentMethod") String paymentMethod,
@@ -64,4 +66,8 @@ public interface OrderMapper {
     int markShippingPaymentFailed(@Param("orderId") String orderId,
                                   @Param("gomypayTradeNo") String gomypayTradeNo,
                                   @Param("remark") String remark);
+
+    int updateLogisticsStatusByTrackingNo(@Param("trackingNo") String trackingNo,
+                                          @Param("statusCode") String statusCode,
+                                          @Param("statusName") String statusName);
 }

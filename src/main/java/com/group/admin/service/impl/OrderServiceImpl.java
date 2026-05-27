@@ -444,6 +444,11 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatusEnum.SHIPPED.getCode());
         order.setTrackingNo(result.getTrackingNumber());
         order.setTrackingUrl(result.getTrackingUrl());
+        order.setLogisticsProvider(result.getProvider());
+        order.setLogisticsStatusCode(result.getStatusCode());
+        order.setLogisticsStatusName(result.getStatusName());
+        order.setLogisticsLabelUrl(result.getLabelUrl());
+        order.setLogisticsSyncedAt(LocalDateTime.now());
         order.setRemark(reqValue(result.getMessage(), order.getRemark(), result.getProvider()));
         order.setShippedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
@@ -740,7 +745,7 @@ public class OrderServiceImpl implements OrderService {
 
         return switch (shippingMethod.getCode()) {
             case "HOME_DELIVERY" ->
-                    "https://www.t-cat.com.tw/Inquire/TraceDetail.aspx?BillID=" + trackingNo;
+                    "https://www.sf-express.com/tw/tc/dynamic_function/waybill/#search/bill-number/" + trackingNo;
             case "SEVEN_ELEVEN" ->
                     "https://eservice.7-11.com.tw/e-tracking/search.aspx?TBSTKECNO=" + trackingNo;
             case "FAMILY_MART" ->
@@ -1011,6 +1016,10 @@ public class OrderServiceImpl implements OrderService {
                 .storeAddress(order.getStoreAddress())
                 .trackingNo(order.getTrackingNo())
                 .trackingUrl(order.getTrackingUrl())
+                .logisticsProvider(order.getLogisticsProvider())
+                .logisticsStatusCode(order.getLogisticsStatusCode())
+                .logisticsStatusName(order.getLogisticsStatusName())
+                .logisticsLabelUrl(order.getLogisticsLabelUrl())
                 .remark(order.getRemark())
                 .items(items.stream().map(this::convertItemToRes).collect(Collectors.toList()))
                 .statusHistory(logs.stream().map(this::convertLogToRes).collect(Collectors.toList()))
@@ -1055,6 +1064,10 @@ public class OrderServiceImpl implements OrderService {
                 .recipientPhone(order.getRecipientPhone())
                 .trackingNo(order.getTrackingNo())
                 .trackingUrl(order.getTrackingUrl())
+                .logisticsProvider(order.getLogisticsProvider())
+                .logisticsStatusCode(order.getLogisticsStatusCode())
+                .logisticsStatusName(order.getLogisticsStatusName())
+                .logisticsLabelUrl(order.getLogisticsLabelUrl())
                 .totalAmount(order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE)
                 .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : SHIPPING_FEE)
                 .paymentStatus(order.getPaymentStatus())
@@ -1100,7 +1113,7 @@ public class OrderServiceImpl implements OrderService {
     private String getShippingMethodLabel(String method) {
         if (method == null) return null;
         return switch (method) {
-            case "HOME_DELIVERY" -> "\u5b85\u914d";
+            case "HOME_DELIVERY" -> "宅配到府（順豐）";
             case "SEVEN_ELEVEN" -> "7-11 \u8d85\u5546\u53d6\u8ca8";
             case "FAMILY_MART" -> "\u5168\u5bb6\u8d85\u5546\u53d6\u8ca8";
             default -> method;

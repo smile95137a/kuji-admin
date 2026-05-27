@@ -27,6 +27,7 @@ public class DbMigrationRunner implements CommandLineRunner {
         apply027();
         apply032();
         fixShippingProviders();
+        applyLogisticsV2();
 
         log.info("✅ DbMigrationRunner 完成");
     }
@@ -53,7 +54,7 @@ public class DbMigrationRunner implements CommandLineRunner {
 
             jdbcTemplate.execute("""
                 INSERT IGNORE INTO `shipping_method` (`id`, `name`, `code`, `provider`, `fee`, `status`, `sort_order`) VALUES
-                (UUID(), '宅配到府', 'HOME_DELIVERY', '黑貓宅急便', 100, 'ACTIVE', 1),
+                (UUID(), '宅配到府（順豐）', 'HOME_DELIVERY', '順豐速運', 100, 'ACTIVE', 1),
                 (UUID(), '7-11 取貨', 'SEVEN_ELEVEN', '統一速達', 60, 'ACTIVE', 2),
                 (UUID(), '全家取貨', 'FAMILY_MART', '全家物流', 60, 'ACTIVE', 3)
             """);
@@ -86,7 +87,7 @@ public class DbMigrationRunner implements CommandLineRunner {
             // 更新追蹤 URL 模板（僅在值為 null 時更新）
             jdbcTemplate.execute("""
                 UPDATE shipping_method
-                SET tracking_url_template = 'https://www.t-cat.com.tw/Inquire/TraceDetail.aspx?BillID={trackingNo}'
+                SET tracking_url_template = 'https://www.sf-express.com/tw/tc/dynamic_function/waybill/#search/bill-number/{trackingNo}'
                 WHERE code = 'HOME_DELIVERY' AND tracking_url_template IS NULL
             """);
             jdbcTemplate.execute("""
@@ -114,10 +115,38 @@ public class DbMigrationRunner implements CommandLineRunner {
         """);
         jdbcTemplate.execute("""
             UPDATE shipping_method
-            SET provider = '黑貓宅急便', updated_at = NOW()
+            SET provider = '順豐速運', name = '宅配到府（順豐）', updated_at = NOW()
             WHERE code = 'HOME_DELIVERY' AND (provider = '宅配物流' OR provider IS NULL)
         """);
         log.info("✅ [fix] 配送方式物流商名稱修正完成");
+    }
+
+    // ==================== logistics-v2-gomypay-sf ====================
+
+    private void applyLogisticsV2() {
+        addColumnIfNotExists("`order`", "logistics_provider",
+            "VARCHAR(50) NULL COMMENT '物流商代碼'", "tracking_url");
+        addColumnIfNotExists("`order`", "logistics_status_code",
+            "VARCHAR(50) NULL COMMENT '物流狀態代碼'", "logistics_provider");
+        addColumnIfNotExists("`order`", "logistics_status_name",
+            "VARCHAR(100) NULL COMMENT '物流狀態名稱'", "logistics_status_code");
+        addColumnIfNotExists("`order`", "logistics_label_url",
+            "VARCHAR(500) NULL COMMENT '物流標籤或託運單 URL'", "logistics_status_name");
+        addColumnIfNotExists("`order`", "logistics_synced_at",
+            "DATETIME NULL COMMENT '物流狀態最後同步時間'", "logistics_label_url");
+
+        if (!tableExists("shipping_method")) {
+            return;
+        }
+
+        jdbcTemplate.execute("""
+            UPDATE shipping_method
+            SET name = '宅配到府（順豐）',
+                provider = '順豐速運',
+                tracking_url_template = 'https://www.sf-express.com/tw/tc/dynamic_function/waybill/#search/bill-number/{trackingNo}',
+                updated_at = NOW()
+            WHERE code = 'HOME_DELIVERY'
+        """);
     }
 
     // ==================== 032-audit-log-system ====================

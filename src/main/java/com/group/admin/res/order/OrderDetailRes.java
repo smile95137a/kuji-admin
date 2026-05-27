@@ -121,6 +121,14 @@ public class OrderDetailRes {
     private String trackingNo;
 
     private String trackingUrl;
+
+    private String logisticsProvider;
+
+    private String logisticsStatusCode;
+
+    private String logisticsStatusName;
+
+    private String logisticsLabelUrl;
     
     /**
      * 備註

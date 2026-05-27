@@ -1,6 +1,7 @@
 package com.group.admin.service.logistics;
 
 import java.util.List;
+import java.util.Map;
 
 public interface LogisticsService {
 
@@ -11,4 +12,8 @@ public interface LogisticsService {
     List<ConvenienceStore> queryStores(String type, String city, String keyword);
 
     String createStoreSelectorUrl(String shippingMethodCode, String returnUrl);
+
+    default String handleStatusCallback(Map<String, String> params) {
+        return "OK";
+    }
 }

@@ -34,10 +34,12 @@ public class CreateStoreReq {
     @Schema(description = "店家聯絡 Email")
     private String email;
 
-    @Schema(description = "店家聯絡電話")
+    @NotBlank(message = "店家聯絡電話不可為空")
+    @Schema(description = "店家聯絡電話", requiredMode = Schema.RequiredMode.REQUIRED)
     private String phone;
 
-    @Schema(description = "店家地址")
+    @NotBlank(message = "店家地址不可為空")
+    @Schema(description = "店家地址，需包含縣市、行政區與詳細地址", requiredMode = Schema.RequiredMode.REQUIRED)
     private String address;
 
     @Valid

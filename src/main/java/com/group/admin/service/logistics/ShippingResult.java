@@ -16,5 +16,8 @@ public class ShippingResult {
     private String providerOrderNo;
     private String provider;
     private String trackingUrl;
+    private String labelUrl;
+    private String statusCode;
+    private String statusName;
     private String rawPayload;
 }

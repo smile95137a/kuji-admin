@@ -38,6 +38,7 @@ import com.group.admin.res.lottery.LotteryListItemRes;
 import com.group.admin.res.store.StoreDetailRes;
 import com.group.admin.res.store.StoreListItemRes;
 import com.group.admin.res.store.StoreRes;
+import com.group.admin.service.StoreAddressValidator;
 import com.group.admin.service.StoreService;
 import com.group.admin.util.PasswordUtil;
 import com.group.admin.util.SecurityUtils;
@@ -77,6 +78,7 @@ public class StoreServiceImpl implements StoreService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordUtil passwordUtil;
     private final ObjectMapper objectMapper;
+    private final StoreAddressValidator storeAddressValidator;
 
     @Override
     public List<StoreRes> queryStores(QueryReq<StoreCondition> req) {
@@ -195,6 +197,10 @@ public class StoreServiceImpl implements StoreService {
             applyReferralCode(store, normalizedReferralCode);
         }
 
+        if (req.getAddress() != null) {
+            storeAddressValidator.requireValidDistrictAddress(req.getAddress());
+        }
+
         if (req.getStoreName() != null) store.setStoreName(req.getStoreName());
         if (req.getShortDescription() != null) store.setShortDescription(req.getShortDescription());
         if (req.getLongDescription() != null) store.setLongDescription(req.getLongDescription());
@@ -242,6 +248,7 @@ public class StoreServiceImpl implements StoreService {
     @Transactional(rollbackFor = Exception.class)
     public StoreRes createStore(CreateStoreReq req, String operatorId) {
         log.info("🏪 建立店家: storeName={}, operatorId={}", req.getStoreName(), operatorId);
+        storeAddressValidator.requireValidDistrictAddress(req.getAddress());
 
         // Step 1: Create AdminUser (owner)
         AdminUser owner = null;

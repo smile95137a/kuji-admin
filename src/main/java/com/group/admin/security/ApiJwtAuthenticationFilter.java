@@ -45,7 +45,8 @@ public class ApiJwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String FORCE_CHANGE_PASSWORD_MARKER = "FORCE_CHANGE_PASSWORD";
     private static final List<String> PUBLIC_PAYMENT_CALLBACK_PATHS = List.of(
             "/payment/shipping/callback",
-            "/wallet/recharge/callback"
+            "/wallet/recharge/callback",
+            "/logistics/status-callback"
     );
 
     private final JwtUtil jwtUtil;

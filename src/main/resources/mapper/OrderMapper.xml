@@ -21,6 +21,11 @@
     <result column="store_address" jdbcType="VARCHAR" property="storeAddress" />
     <result column="tracking_no" jdbcType="VARCHAR" property="trackingNo" />
     <result column="tracking_url" jdbcType="VARCHAR" property="trackingUrl" />
+    <result column="logistics_provider" jdbcType="VARCHAR" property="logisticsProvider" />
+    <result column="logistics_status_code" jdbcType="VARCHAR" property="logisticsStatusCode" />
+    <result column="logistics_status_name" jdbcType="VARCHAR" property="logisticsStatusName" />
+    <result column="logistics_label_url" jdbcType="VARCHAR" property="logisticsLabelUrl" />
+    <result column="logistics_synced_at" jdbcType="TIMESTAMP" property="logisticsSyncedAt" />
     <result column="gomypay_trade_no" jdbcType="VARCHAR" property="gomypayTradeNo" />
     <result column="gateway_result" jdbcType="VARCHAR" property="gatewayResult" />
     <result column="gateway_ret_msg" jdbcType="VARCHAR" property="gatewayRetMsg" />
@@ -99,7 +104,8 @@
   <sql id="Base_Column_List">
     id, order_number, user_id, store_id, total_items, shipping_method, shipping_method_id, shipping_fee, status, payment_status, payment_method,
     recipient_name, recipient_phone, recipient_address, store_code, store_name, store_address, 
-    tracking_no, tracking_url, gomypay_trade_no, gateway_result, gateway_ret_msg, virtual_account, payment_info,
+    tracking_no, tracking_url, logistics_provider, logistics_status_code, logistics_status_name, logistics_label_url,
+    logistics_synced_at, gomypay_trade_no, gateway_result, gateway_ret_msg, virtual_account, payment_info,
     limit_date, gateway_raw_resp, remark, created_at, updated_at, shipped_at, completed_at, cancelled_at,
     cancelled_by, cancel_reason, preparing_at
   </sql>
@@ -460,6 +466,24 @@
       <if test="trackingNo != null">
         tracking_no = #{trackingNo,jdbcType=VARCHAR},
       </if>
+      <if test="trackingUrl != null">
+        tracking_url = #{trackingUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="logisticsProvider != null">
+        logistics_provider = #{logisticsProvider,jdbcType=VARCHAR},
+      </if>
+      <if test="logisticsStatusCode != null">
+        logistics_status_code = #{logisticsStatusCode,jdbcType=VARCHAR},
+      </if>
+      <if test="logisticsStatusName != null">
+        logistics_status_name = #{logisticsStatusName,jdbcType=VARCHAR},
+      </if>
+      <if test="logisticsLabelUrl != null">
+        logistics_label_url = #{logisticsLabelUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="logisticsSyncedAt != null">
+        logistics_synced_at = #{logisticsSyncedAt,jdbcType=TIMESTAMP},
+      </if>
       <if test="remark != null">
         remark = #{remark,jdbcType=VARCHAR},
       </if>
@@ -653,5 +677,22 @@
         remark = CASE WHEN #{remark} IS NULL OR #{remark} = '' THEN remark ELSE #{remark} END,
         updated_at = NOW()
     WHERE id = #{orderId}
+  </update>
+
+  <select id="selectByTrackingNo" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM `order`
+    WHERE tracking_no = #{trackingNo}
+    LIMIT 1
+  </select>
+
+  <update id="updateLogisticsStatusByTrackingNo">
+    UPDATE `order`
+    SET logistics_status_code = #{statusCode},
+        logistics_status_name = #{statusName},
+        logistics_synced_at = NOW(),
+        updated_at = NOW()
+    WHERE tracking_no = #{trackingNo}
   </update>
 </mapper>

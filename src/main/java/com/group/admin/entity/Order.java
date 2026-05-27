@@ -41,6 +41,16 @@ public class Order {
 
     private String trackingUrl;
 
+    private String logisticsProvider;
+
+    private String logisticsStatusCode;
+
+    private String logisticsStatusName;
+
+    private String logisticsLabelUrl;
+
+    private LocalDateTime logisticsSyncedAt;
+
     private String gomypayTradeNo;
 
     private String gatewayResult;
@@ -223,6 +233,46 @@ public class Order {
 
     public void setTrackingUrl(String trackingUrl) {
         this.trackingUrl = trackingUrl == null ? null : trackingUrl.trim();
+    }
+
+    public String getLogisticsProvider() {
+        return logisticsProvider;
+    }
+
+    public void setLogisticsProvider(String logisticsProvider) {
+        this.logisticsProvider = logisticsProvider == null ? null : logisticsProvider.trim();
+    }
+
+    public String getLogisticsStatusCode() {
+        return logisticsStatusCode;
+    }
+
+    public void setLogisticsStatusCode(String logisticsStatusCode) {
+        this.logisticsStatusCode = logisticsStatusCode == null ? null : logisticsStatusCode.trim();
+    }
+
+    public String getLogisticsStatusName() {
+        return logisticsStatusName;
+    }
+
+    public void setLogisticsStatusName(String logisticsStatusName) {
+        this.logisticsStatusName = logisticsStatusName == null ? null : logisticsStatusName.trim();
+    }
+
+    public String getLogisticsLabelUrl() {
+        return logisticsLabelUrl;
+    }
+
+    public void setLogisticsLabelUrl(String logisticsLabelUrl) {
+        this.logisticsLabelUrl = logisticsLabelUrl == null ? null : logisticsLabelUrl.trim();
+    }
+
+    public LocalDateTime getLogisticsSyncedAt() {
+        return logisticsSyncedAt;
+    }
+
+    public void setLogisticsSyncedAt(LocalDateTime logisticsSyncedAt) {
+        this.logisticsSyncedAt = logisticsSyncedAt;
     }
 
     public String getGomypayTradeNo() {

@@ -186,7 +186,7 @@ public class DataInitializer implements CommandLineRunner {
      */
     private void initializeShippingMethods() {
         log.info("初始化配送方式...");
-        insertShippingMethodIfAbsent("HOME_DELIVERY", "宅配到府", "黑貓宅急便", 100, 1);
+        insertShippingMethodIfAbsent("HOME_DELIVERY", "宅配到府（順豐）", "順豐速運", 100, 1);
         insertShippingMethodIfAbsent("SEVEN_ELEVEN", "7-11 超商取貨", "統一超商", 60, 2);
         insertShippingMethodIfAbsent("FAMILY_MART", "全家超商取貨", "全家便利商店", 60, 3);
         log.info("配送方式初始化完成");

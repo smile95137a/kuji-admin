@@ -43,6 +43,7 @@ import com.group.admin.res.admin.AdminUserRes;
 import com.group.admin.service.AdminAuthService;
 import com.group.admin.service.AdminUserService;
 import com.group.admin.service.EmailService;
+import com.group.admin.service.StoreAddressValidator;
 import com.group.admin.util.PasswordUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -75,6 +76,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final PasswordUtil passwordUtil;
     private final AdminAuthService adminAuthService;
     private final EmailService emailService;
+    private final StoreAddressValidator storeAddressValidator;
 
     /**
      * {@inheritDoc}
@@ -84,6 +86,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     public AdminUserRes createStoreOwner(CreateStoreOwnerReq req) {
         log.info("建立店家負責人帳號：email={}, storeName={}", req.getEmail(), req.getStoreName());
         String currentUserId = adminAuthService.getCurrentUserId();
+        storeAddressValidator.requireValidDistrictAddress(req.getStoreAddress());
 
         // 檢查 Email 是否重複 (使用 Example)
         AdminUserExample emailExample = new AdminUserExample();

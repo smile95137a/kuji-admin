@@ -56,6 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/shipping-methods/**").permitAll()
                         .requestMatchers("/payment/shipping/callback", "/payment/shipping/callback/**").permitAll()
                         .requestMatchers("/wallet/recharge/callback", "/wallet/recharge/callback/**").permitAll()
+                        .requestMatchers("/logistics/status-callback", "/logistics/status-callback/**").permitAll()
                         .requestMatchers("/payment/shipping/result", "/payment/shipping/result/**").permitAll()
                         .requestMatchers("/wallet/recharge/result", "/wallet/recharge/result/**").permitAll()
                         .requestMatchers("/stores/list").permitAll()
