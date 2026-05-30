@@ -17,7 +17,7 @@ spring:
 
   jackson:
     time-zone: Asia/Taipei
-    date-format: yyyy-MM-dd HH:mm:ss
+    date-format: yyyy-MM-dd'T'HH:mm:ss
     default-property-inclusion: non_null  # 排除 null 欄位
 
   # 郵件設定（Gmail SMTP）
@@ -125,3 +125,27 @@ wallet:
     ttl-minutes: 30
   optimistic-lock:
     max-retries: 3
+
+logistics:
+  provider: ${LOGISTICS_PROVIDER:gomypay}
+  gomypay:
+    logistics-api-url: ${GOMYPAY_LOGISTICS_API_URL:https://logistics.gomypay.asia/LogisticsAPI.aspx}
+    status-check-url: ${GOMYPAY_LOGISTICS_STATUS_CHECK_URL:https://logistics.gomypay.asia/LogisticsStatusCheck.aspx}
+    print-url: ${GOMYPAY_LOGISTICS_PRINT_URL:https://logistics.gomypay.asia/LogisticsPrint.aspx}
+    store-selector-url: ${GOMYPAY_LOGISTICS_SELECTOR_URL:https://logistics.gomypay.asia/Logisticstm.aspx}
+    sf-create-api-url: ${GOMYPAY_LOGISTICS_SF_CREATE_API_URL:https://logistics.gomypay.asia/Api/SF/SFCreateAPI.aspx}
+    sf-print-api-url: ${GOMYPAY_LOGISTICS_SF_PRINT_API_URL:https://logistics.gomypay.asia/Api/SF/SFPrintAPI.aspx}
+    sf-track-api-url: ${GOMYPAY_LOGISTICS_SF_TRACK_API_URL:https://logistics.gomypay.asia/Api/SF/SFOrderTrack.aspx}
+    eshop-id: ${GOMYPAY_LOGISTICS_ESHOP_ID:${GOMYPAY_SHOP_ID:}}
+    secret: ${GOMYPAY_LOGISTICS_SECRET:${GOMYPAY_HASH_KEY:}}
+    callback-url: ${GOMYPAY_LOGISTICS_CALLBACK_URL:}
+    sender-name: ${GOMYPAY_LOGISTICS_SENDER_NAME:}
+    sender-mobile: ${GOMYPAY_LOGISTICS_SENDER_MOBILE:}
+    sender-region: ${GOMYPAY_LOGISTICS_SENDER_REGION:TW}
+    sender-zip-code: ${GOMYPAY_LOGISTICS_SENDER_ZIP_CODE:}
+    sender-address: ${GOMYPAY_LOGISTICS_SENDER_ADDRESS:}
+    product-type-id: ${GOMYPAY_LOGISTICS_PRODUCT_TYPE_ID:0015}
+    product-name: ${GOMYPAY_LOGISTICS_PRODUCT_NAME:KUJI獎品}
+    sf-pickup-type: ${GOMYPAY_LOGISTICS_SF_PICKUP_TYPE:0}
+    sf-total-weight: ${GOMYPAY_LOGISTICS_SF_TOTAL_WEIGHT:1}
+    sf-quantity: ${GOMYPAY_LOGISTICS_SF_QUANTITY:1}
