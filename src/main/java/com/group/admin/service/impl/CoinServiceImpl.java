@@ -4,6 +4,7 @@ import com.group.admin.condition.CoinTransactionCondition;
 import com.group.admin.entity.Lottery;
 import com.group.admin.entity.LotterySession;
 import com.group.admin.entity.User;
+import com.group.admin.entity.BusinessEventLog;
 import com.group.admin.entity.WalletTransaction;
 import com.group.admin.enums.CoinTypeEnum;
 import com.group.admin.enums.TransactionTypeEnum;
@@ -18,6 +19,7 @@ import com.group.admin.req.wallet.CoinAdjustReq;
 import com.group.admin.res.PageResult;
 import com.group.admin.res.wallet.CoinTransactionRes;
 import com.group.admin.res.wallet.UserCoinRes;
+import com.group.admin.service.BusinessEventLogService;
 import com.group.admin.service.CoinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +49,7 @@ public class CoinServiceImpl implements CoinService {
     private final UserMapper userMapper;
     private final LotteryMapper lotteryMapper;
     private final LotterySessionMapper lotterySessionMapper;
+    private final BusinessEventLogService businessEventLogService;
 
     @Override
     @Transactional
@@ -123,7 +126,7 @@ public class CoinServiceImpl implements CoinService {
             throw new BusinessException("更新金幣餘額失敗，請稍後再試");
         }
 
-        recordTransaction(
+        String transactionId = recordTransaction(
                 userId,
                 CoinTypeEnum.GOLD.getCode(),
                 transactionType,
@@ -133,6 +136,8 @@ public class CoinServiceImpl implements CoinService {
                 description,
                 null
         );
+        recordWalletEvent(userId, CoinTypeEnum.GOLD.getCode(), transactionType, transactionId,
+                relatedId, description, -amount, currentGold, newBalance);
 
         log.info("扣除金幣完成: newBalance={}", newBalance);
     }
@@ -167,7 +172,7 @@ public class CoinServiceImpl implements CoinService {
             throw new BusinessException("更新金幣餘額失敗，請稍後再試");
         }
 
-        recordTransaction(
+        String transactionId = recordTransaction(
                 userId,
                 CoinTypeEnum.GOLD.getCode(),
                 transactionType,
@@ -177,6 +182,8 @@ public class CoinServiceImpl implements CoinService {
                 description,
                 null
         );
+        recordWalletEvent(userId, CoinTypeEnum.GOLD.getCode(), transactionType, transactionId,
+                relatedId, description, amount, currentGold, newBalance);
 
         log.info("增加金幣完成: newBalance={}", newBalance);
     }
@@ -206,7 +213,7 @@ public class CoinServiceImpl implements CoinService {
             throw new BusinessException("更新紅利餘額失敗，請稍後再試");
         }
 
-        recordTransaction(
+        String transactionId = recordTransaction(
                 userId,
                 CoinTypeEnum.BONUS.getCode(),
                 transactionType,
@@ -216,6 +223,8 @@ public class CoinServiceImpl implements CoinService {
                 description,
                 null
         );
+        recordWalletEvent(userId, CoinTypeEnum.BONUS.getCode(), transactionType, transactionId,
+                relatedId, description, amount, currentBonus, newBalance);
 
         log.info("增加紅利完成: newBalance={}", newBalance);
     }
@@ -249,7 +258,7 @@ public class CoinServiceImpl implements CoinService {
             throw new BusinessException("更新紅利餘額失敗，請稍後再試");
         }
 
-        recordTransaction(
+        String transactionId = recordTransaction(
                 userId,
                 CoinTypeEnum.BONUS.getCode(),
                 transactionType,
@@ -259,6 +268,8 @@ public class CoinServiceImpl implements CoinService {
                 description,
                 null
         );
+        recordWalletEvent(userId, CoinTypeEnum.BONUS.getCode(), transactionType, transactionId,
+                relatedId, description, -amount, currentBonus, newBalance);
 
         log.info("扣除紅利完成: newBalance={}", newBalance);
     }
@@ -370,7 +381,7 @@ public class CoinServiceImpl implements CoinService {
     /**
      * 建立一筆錢包交易流水。
      */
-    private void recordTransaction(String userId, String coinType, String transactionType,
+    private String recordTransaction(String userId, String coinType, String transactionType,
                                    Long amount, Long balanceAfter, String relatedId,
                                    String description, String createdBy) {
         WalletTransaction transaction = new WalletTransaction();
@@ -386,6 +397,48 @@ public class CoinServiceImpl implements CoinService {
         transaction.setCreatedAt(LocalDateTime.now());
 
         walletTransactionMapper.insert(transaction);
+        return transaction.getId();
+    }
+
+    private void recordWalletEvent(String userId, String coinType, String transactionType, String transactionId,
+                                   String relatedId, String description, Long amount,
+                                   Long beforeBalance, Long afterBalance) {
+        businessEventLogService.record(BusinessEventLog.builder()
+                .eventType(BusinessEventLogService.EVENT_WALLET)
+                .action(amount != null && amount >= 0 ? "WALLET_CREDIT" : "WALLET_DEBIT")
+                .result(BusinessEventLogService.RESULT_SUCCESS)
+                .actorType(TransactionTypeEnum.ADMIN_ADJUST.getCode().equals(transactionType) ? "ADMIN" : "SYSTEM")
+                .targetType("WALLET")
+                .targetId(userId)
+                .userId(userId)
+                .walletTransactionId(transactionId)
+                .externalRef(relatedId)
+                .amount(amount)
+                .paymentMethod(coinType)
+                .beforeSnapshot(walletSnapshot(coinType, transactionType, beforeBalance, description))
+                .afterSnapshot(walletSnapshot(coinType, transactionType, afterBalance, description))
+                .build());
+    }
+
+    private String walletSnapshot(String coinType, String transactionType, Long balance, String description) {
+        return "{"
+                + jsonPair("coinType", coinType) + ","
+                + jsonPair("transactionType", transactionType) + ","
+                + "\"balance\":" + (balance != null ? balance : "null") + ","
+                + jsonPair("description", description)
+                + "}";
+    }
+
+    private String jsonPair(String key, String value) {
+        return "\"" + escapeJson(key) + "\":" + (value == null ? "null" : "\"" + escapeJson(value) + "\"");
+    }
+
+    private String escapeJson(String value) {
+        return value == null ? null : value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     /**

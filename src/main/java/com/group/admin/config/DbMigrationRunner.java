@@ -26,6 +26,7 @@ public class DbMigrationRunner implements CommandLineRunner {
         apply021();
         apply027();
         apply032();
+        apply033BusinessEventLog();
         fixShippingProviders();
         applyLogisticsV2();
 
@@ -282,6 +283,58 @@ public class DbMigrationRunner implements CommandLineRunner {
         }
 
         log.info("✅ [032] 稽核日誌表確認完成");
+    }
+
+    // ==================== 033-business-event-log ====================
+
+    private void apply033BusinessEventLog() {
+        if (tableExists("log_business_event")) {
+            return;
+        }
+
+        log.info("🔧 [033] 建立 log_business_event 表...");
+        jdbcTemplate.execute("""
+            CREATE TABLE IF NOT EXISTS `log_business_event` (
+                `id`                    VARCHAR(36)   NOT NULL PRIMARY KEY,
+                `event_type`            VARCHAR(50)   NOT NULL COMMENT 'PAYMENT / LOGISTICS / ORDER_STATUS / WALLET',
+                `action`                VARCHAR(80)   NOT NULL COMMENT '事件動作',
+                `result`                VARCHAR(20)   NOT NULL COMMENT 'SUCCESS / FAILED / PENDING / DUPLICATE / SKIPPED',
+                `actor_type`            VARCHAR(30)   NULL COMMENT 'ADMIN / USER / SYSTEM / CALLBACK',
+                `actor_id`              VARCHAR(36)   NULL COMMENT '操作者 ID',
+                `actor_name`            VARCHAR(200)  NULL COMMENT '操作者名稱快照',
+                `target_type`           VARCHAR(50)   NULL COMMENT 'ORDER / RECHARGE / WALLET / LOGISTICS',
+                `target_id`             VARCHAR(100)  NULL COMMENT '目標 ID',
+                `target_no`             VARCHAR(100)  NULL COMMENT '目標單號',
+                `user_id`               VARCHAR(36)   NULL COMMENT '會員 ID',
+                `order_id`              VARCHAR(36)   NULL COMMENT '訂單 ID',
+                `recharge_id`           VARCHAR(100)  NULL COMMENT '儲值單 ID',
+                `wallet_transaction_id` VARCHAR(36)   NULL COMMENT '錢包交易 ID',
+                `external_provider`     VARCHAR(50)   NULL COMMENT '外部服務商',
+                `external_ref`          VARCHAR(200)  NULL COMMENT '外部交易/物流參考號',
+                `amount`                BIGINT        NULL COMMENT '金額或點數異動量',
+                `payment_method`        VARCHAR(50)   NULL COMMENT '付款方式',
+                `before_status`         VARCHAR(50)   NULL COMMENT '變更前狀態',
+                `after_status`          VARCHAR(50)   NULL COMMENT '變更後狀態',
+                `before_snapshot`       MEDIUMTEXT    NULL COMMENT '操作前快照 JSON',
+                `after_snapshot`        MEDIUMTEXT    NULL COMMENT '操作後快照 JSON',
+                `callback_summary`      MEDIUMTEXT    NULL COMMENT '遮罩後 callback 摘要 JSON',
+                `raw_payload_hash`      VARCHAR(64)   NULL COMMENT '原始 payload SHA-256',
+                `error_message`         VARCHAR(500)  NULL COMMENT '錯誤訊息',
+                `ip`                    VARCHAR(50)   NULL COMMENT '來源 IP',
+                `user_agent`            VARCHAR(500)  NULL COMMENT 'User-Agent',
+                `created_at`            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX `idx_lbe_event_type` (`event_type`),
+                INDEX `idx_lbe_action` (`action`),
+                INDEX `idx_lbe_result` (`result`),
+                INDEX `idx_lbe_actor_id` (`actor_id`),
+                INDEX `idx_lbe_user_id` (`user_id`),
+                INDEX `idx_lbe_order_id` (`order_id`),
+                INDEX `idx_lbe_recharge_id` (`recharge_id`),
+                INDEX `idx_lbe_external_ref` (`external_ref`),
+                INDEX `idx_lbe_created_at` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='業務事件日誌'
+        """);
+        log.info("✅ [033] log_business_event 表建立完成");
     }
 
     // ==================== 工具方法 ====================
