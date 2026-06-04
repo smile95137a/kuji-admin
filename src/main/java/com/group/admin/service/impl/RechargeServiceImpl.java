@@ -1,5 +1,6 @@
 package com.group.admin.service.impl;
 
+import com.group.admin.entity.BusinessEventLog;
 import com.group.admin.entity.RechargeOrder;
 import com.group.admin.entity.RechargePlan;
 import com.group.admin.entity.RechargeRecord;
@@ -18,6 +19,7 @@ import com.group.admin.req.recharge.RechargeReq;
 import com.group.admin.res.PageResult;
 import com.group.admin.res.recharge.RechargeRes;
 import com.group.admin.res.wallet.RechargeOrderRes;
+import com.group.admin.service.BusinessEventLogService;
 import com.group.admin.service.CoinService;
 import com.group.admin.service.RechargeService;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,7 @@ public class RechargeServiceImpl implements RechargeService {
     private final CoinService coinService;
     private final PaymentGatewayClient paymentGatewayClient;
     private final RechargeStateHelper rechargeStateHelper;
+    private final BusinessEventLogService businessEventLogService;
 
     @Value("${wallet.recharge-order.ttl-minutes:30}")
     private long rechargeOrderTtlMinutes;
@@ -88,6 +91,8 @@ public class RechargeServiceImpl implements RechargeService {
 
         // REQUIRES_NEW：立即提交，確保即使後續 gateway 呼叫失敗，記錄仍可查詢
         rechargeStateHelper.saveInitialPending(order, buildPendingRecord(order, plan, normalizedPaymentMethod, now));
+        recordRechargeEvent("RECHARGE_CREATE", BusinessEventLogService.RESULT_PENDING, order,
+                null, RechargeOrderStatus.PENDING.name(), null, null);
 
         GatewayInitResult initResult;
         try {
@@ -95,6 +100,8 @@ public class RechargeServiceImpl implements RechargeService {
         } catch (RuntimeException e) {
             // REQUIRES_NEW：外層事務已不含初始 insert，故此 markFailed 可直接找到記錄並更新
             rechargeStateHelper.markFailed(order.getId(), null, null, e.getMessage());
+            recordRechargeEvent("RECHARGE_GATEWAY_INIT_FAILED", BusinessEventLogService.RESULT_FAILED, order,
+                    RechargeOrderStatus.PENDING.name(), RechargeOrderStatus.FAILED.name(), null, e.getMessage());
             throw e;
         }
 
@@ -107,6 +114,13 @@ public class RechargeServiceImpl implements RechargeService {
             rechargeStateHelper.markFailed(order.getId(),
                     order.getGatewayOrderId(), order.getGatewayRawResp(), initResult.errorMessage());
             order.setStatus(RechargeOrderStatus.FAILED);
+            recordRechargeEvent("RECHARGE_GATEWAY_INIT_FAILED", BusinessEventLogService.RESULT_FAILED, order,
+                    RechargeOrderStatus.PENDING.name(), RechargeOrderStatus.FAILED.name(),
+                    initResult.gatewayOrderId(), initResult.errorMessage());
+        } else {
+            recordRechargeEvent("RECHARGE_GATEWAY_INIT_SUCCESS", BusinessEventLogService.RESULT_PENDING, order,
+                    RechargeOrderStatus.PENDING.name(), RechargeOrderStatus.PENDING.name(),
+                    initResult.gatewayOrderId(), null);
         }
 
         return toRechargeOrderRes(order, initResult);
@@ -228,6 +242,10 @@ public class RechargeServiceImpl implements RechargeService {
             );
             if (updated == 0) {
                 log.info("[Recharge] 儲值訂單已處理，略過重複 callback：{}", order.getId());
+                recordRechargeEvent("RECHARGE_CALLBACK_DUPLICATE", BusinessEventLogService.RESULT_DUPLICATE, order,
+                        order.getStatus() != null ? order.getStatus().name() : null,
+                        order.getStatus() != null ? order.getStatus().name() : null,
+                        result.gatewayOrderId(), null);
                 return;
             }
 
@@ -240,10 +258,13 @@ public class RechargeServiceImpl implements RechargeService {
                 rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
                 creditRechargeCoins(record);
             }
+            recordRechargeEvent("RECHARGE_CALLBACK_SUCCESS", BusinessEventLogService.RESULT_SUCCESS, order,
+                    RechargeOrderStatus.PENDING.name(), RechargeOrderStatus.SUCCESS.name(),
+                    result.gatewayOrderId(), null);
             return;
         }
 
-        rechargeOrderMapper.updateStatusByIdAndExpectStatus(
+        int failedUpdated = rechargeOrderMapper.updateStatusByIdAndExpectStatus(
                 order.getId(),
                 RechargeOrderStatus.FAILED,
                 RechargeOrderStatus.PENDING,
@@ -259,6 +280,14 @@ public class RechargeServiceImpl implements RechargeService {
             record.setPaymentInfo(result.rawPayload());
             rechargeRecordMapper.updateByPrimaryKeyWithBLOBs(record);
         }
+        recordRechargeEvent(
+                failedUpdated == 0 ? "RECHARGE_CALLBACK_DUPLICATE" : "RECHARGE_CALLBACK_FAILED",
+                failedUpdated == 0 ? BusinessEventLogService.RESULT_DUPLICATE : BusinessEventLogService.RESULT_FAILED,
+                order,
+                order.getStatus() != null ? order.getStatus().name() : RechargeOrderStatus.PENDING.name(),
+                failedUpdated == 0 && order.getStatus() != null ? order.getStatus().name() : RechargeOrderStatus.FAILED.name(),
+                result.gatewayOrderId(),
+                "GoMyPay 付款失敗");
     }
 
     @Override
@@ -378,6 +407,33 @@ public class RechargeServiceImpl implements RechargeService {
                 .status(order.getStatus() != null ? order.getStatus().name() : null)
                 .expiredAt(order.getExpiredAt())
                 .build();
+    }
+
+    private void recordRechargeEvent(String action, String result, RechargeOrder order,
+                                     String beforeStatus, String afterStatus,
+                                     String externalRef, String errorMessage) {
+        if (order == null) {
+            return;
+        }
+        businessEventLogService.record(BusinessEventLog.builder()
+                .eventType(BusinessEventLogService.EVENT_PAYMENT)
+                .action(action)
+                .result(result)
+                .actorType("USER")
+                .actorId(order.getUserId())
+                .targetType("RECHARGE")
+                .targetId(order.getId())
+                .targetNo(order.getId())
+                .userId(order.getUserId())
+                .rechargeId(order.getId())
+                .externalProvider(order.getGatewayProvider())
+                .externalRef(externalRef != null ? externalRef : order.getGatewayOrderId())
+                .amount(order.getPriceTwd() != null ? order.getPriceTwd().longValue() : null)
+                .paymentMethod(order.getPaymentMethod())
+                .beforeStatus(beforeStatus)
+                .afterStatus(afterStatus)
+                .errorMessage(errorMessage)
+                .build());
     }
 
     private String generateRechargeOrderId() {

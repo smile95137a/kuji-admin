@@ -33,6 +33,7 @@ import com.group.admin.res.order.OrderRes;
 import com.group.admin.res.order.StatusLogRes;
 import com.group.admin.service.OrderService;
 import com.group.admin.service.ConsumptionRecordService;
+import com.group.admin.service.BusinessEventLogService;
 import com.group.admin.service.logistics.LogisticsService;
 import com.group.admin.service.logistics.ShippingInfo;
 import com.group.admin.service.logistics.ShippingResult;
@@ -73,6 +74,7 @@ public class OrderServiceImpl implements OrderService {
     private final ConsumptionRecordService consumptionRecordService;
     private final ShippingPaymentGatewayClient shippingPaymentGatewayClient;
     private final LogisticsService logisticsService;
+    private final BusinessEventLogService businessEventLogService;
 
     private static final Long SHIPPING_FEE = 60L;
     private static final String PRIZE_BOX_STATUS_IN_BOX = "IN_BOX";
@@ -434,8 +436,17 @@ public class OrderServiceImpl implements OrderService {
                 .storeName(order.getStoreName())
                 .build();
 
-        ShippingResult result = logisticsService.createShipment(orderId, shippingInfo);
+        ShippingResult result;
+        try {
+            result = logisticsService.createShipment(orderId, shippingInfo);
+        } catch (RuntimeException ex) {
+            recordLogisticsEvent(order, "SHIPMENT_CREATE_FAILED", BusinessEventLogService.RESULT_FAILED,
+                    null, ex.getMessage());
+            throw ex;
+        }
         if (!result.isSuccess()) {
+            recordLogisticsEvent(order, "SHIPMENT_CREATE_FAILED", BusinessEventLogService.RESULT_FAILED,
+                    result, reqValue(result.getMessage(), null, "物流單建立失敗"));
             throw new BusinessException(
                     "LOGISTICS_CREATE_FAILED",
                     reqValue(result.getMessage(), null, "物流單建立失敗"));
@@ -458,6 +469,8 @@ public class OrderServiceImpl implements OrderService {
         recordStatusLog(orderId, currentStatus.getCode(), OrderStatusEnum.SHIPPED.getCode(),
                 operatorId, "ADMIN", "物流單建立成功: " + result.getTrackingNumber());
 
+        recordLogisticsEvent(order, "SHIPMENT_CREATE_SUCCESS", BusinessEventLogService.RESULT_SUCCESS,
+                result, null);
         return result;
     }
 
@@ -489,6 +502,14 @@ public class OrderServiceImpl implements OrderService {
         markPrizeBoxesShipped(orderId);
         recordStatusLog(orderId, fromStatus, OrderStatusEnum.SHIPPED.getCode(),
                 operatorId, "ADMIN", "\u624b\u52d5\u8a2d\u5b9a\u7269\u6d41\u55ae\u865f: " + req.getTrackingNo());
+        recordLogisticsEvent(order, "SHIPMENT_MANUAL_SET", BusinessEventLogService.RESULT_SUCCESS,
+                ShippingResult.builder()
+                        .success(true)
+                        .trackingNumber(req.getTrackingNo())
+                        .trackingUrl(order.getTrackingUrl())
+                        .provider(order.getLogisticsProvider())
+                        .build(),
+                null);
         log.info("\u8a02\u55ae\u5df2\u51fa\u8ca8\uff0corderId={}", orderId);
     }
     @Override
@@ -654,12 +675,16 @@ public class OrderServiceImpl implements OrderService {
         }
         if (callbackResult.isSuccess()) {
             for (Order order : orders) {
+                String beforePaymentStatus = order.getPaymentStatus();
                 orderMapper.markShippingPaymentSuccess(order.getId(), null);
                 if (OrderStatusEnum.PAYMENT_PENDING.getCode().equals(order.getStatus())
                         || OrderStatusEnum.PAYMENT_FAILED.getCode().equals(order.getStatus())) {
                     recordStatusLog(order.getId(), order.getStatus(), OrderStatusEnum.PENDING.getCode(),
                             null, "SYSTEM", "GoMyPay \u7269\u6d41\u8cbb\u4ed8\u6b3e\u6210\u529f");
                 }
+                recordShippingPaymentCallbackEvent(order, callbackResult, "SHIPPING_PAYMENT_CALLBACK_SUCCESS",
+                        BusinessEventLogService.RESULT_SUCCESS, beforePaymentStatus, PaymentStatusEnum.PAID.getCode(),
+                        null);
                 log.info("\u7269\u6d41\u8cbb\u4ed8\u6b3e\u6210\u529f\uff0corderId={}, orderNo={}, gatewayOrderId={}",
                         order.getId(), order.getOrderNumber(), callbackResult.getGatewayTradeNo());
             }
@@ -668,11 +693,15 @@ public class OrderServiceImpl implements OrderService {
         String errorMessage = callbackResult.getErrorMessage();
         for (Order order : orders) {
             String fromStatus = order.getStatus();
+            String beforePaymentStatus = order.getPaymentStatus();
             orderMapper.markShippingPaymentFailed(order.getId(), null, errorMessage);
             if (!OrderStatusEnum.PAYMENT_FAILED.getCode().equals(fromStatus)) {
                 recordStatusLog(order.getId(), fromStatus, OrderStatusEnum.PAYMENT_FAILED.getCode(),
                         null, "SYSTEM", "GoMyPay \u7269\u6d41\u8cbb\u4ed8\u6b3e\u5931\u6557");
             }
+            recordShippingPaymentCallbackEvent(order, callbackResult, "SHIPPING_PAYMENT_CALLBACK_FAILED",
+                    BusinessEventLogService.RESULT_FAILED, beforePaymentStatus, PaymentStatusEnum.FAILED.getCode(),
+                    errorMessage);
             log.warn("\u7269\u6d41\u8cbb\u4ed8\u6b3e\u5931\u6557\uff0corderId={}, orderNo={}, reason={}",
                     order.getId(), order.getOrderNumber(), errorMessage);
         }
@@ -789,6 +818,8 @@ public class OrderServiceImpl implements OrderService {
                         paymentResult.getGatewayTradeNo(), paymentResult.getGatewayResult(), paymentResult.getRetMsg(),
                         paymentResult.getVirtualAccount(), paymentResult.getPayInfo(), paymentResult.getLimitDate(),
                         paymentResult.getRawPayload());
+                recordShippingPaymentEvent(order, "SHIPPING_PAYMENT_CREATE", BusinessEventLogService.RESULT_PENDING,
+                        paymentMethod, paymentResult, null);
             }
             return paymentResult;
         }
@@ -804,6 +835,8 @@ public class OrderServiceImpl implements OrderService {
                     paymentResult != null ? paymentResult.getLimitDate() : null,
                     paymentResult != null ? paymentResult.getRawPayload() : null);
             orderMapper.markShippingPaymentFailed(order.getId(), null, failedReason);
+            recordShippingPaymentEvent(order, "SHIPPING_PAYMENT_CREATE_FAILED", BusinessEventLogService.RESULT_FAILED,
+                    paymentMethod, paymentResult, failedReason);
         }
         return ShippingPaymentResult.builder()
                 .success(false)
@@ -978,6 +1011,150 @@ public class OrderServiceImpl implements OrderService {
         statusLog.setCreatedAt(LocalDateTime.now());
 
         orderStatusLogMapper.insert(statusLog);
+        Order order = orderMapper.selectByPrimaryKey(orderId);
+        businessEventLogService.record(BusinessEventLog.builder()
+                .eventType(BusinessEventLogService.EVENT_ORDER_STATUS)
+                .action("ORDER_STATUS_CHANGE")
+                .result(BusinessEventLogService.RESULT_SUCCESS)
+                .actorType(operatorType)
+                .actorId(operatorId)
+                .targetType("ORDER")
+                .targetId(orderId)
+                .targetNo(order != null ? order.getOrderNumber() : null)
+                .userId(order != null ? order.getUserId() : null)
+                .orderId(orderId)
+                .beforeStatus(fromStatus)
+                .afterStatus(toStatus)
+                .afterSnapshot(toJson("remark", remark))
+                .build());
+    }
+
+    private void recordShippingPaymentEvent(Order order, String action, String result,
+                                            String paymentMethod, ShippingPaymentResult paymentResult,
+                                            String errorMessage) {
+        if (order == null) {
+            return;
+        }
+        businessEventLogService.record(BusinessEventLog.builder()
+                .eventType(BusinessEventLogService.EVENT_PAYMENT)
+                .action(action)
+                .result(result)
+                .actorType("USER")
+                .actorId(order.getUserId())
+                .targetType("ORDER")
+                .targetId(order.getId())
+                .targetNo(order.getOrderNumber())
+                .userId(order.getUserId())
+                .orderId(order.getId())
+                .externalProvider("GoMyPay")
+                .externalRef(paymentResult != null ? paymentResult.getGatewayTradeNo() : null)
+                .amount(order.getShippingFee())
+                .paymentMethod(paymentMethod)
+                .beforeStatus(order.getPaymentStatus())
+                .afterStatus(PaymentStatusEnum.PAYMENT_PENDING.getCode())
+                .afterSnapshot(paymentInfoSnapshot(paymentResult))
+                .errorMessage(errorMessage)
+                .build());
+    }
+
+    private void recordShippingPaymentCallbackEvent(Order order, ShippingCallbackResult callbackResult,
+                                                    String action, String result, String beforeStatus,
+                                                    String afterStatus, String errorMessage) {
+        if (order == null) {
+            return;
+        }
+        businessEventLogService.record(BusinessEventLog.builder()
+                .eventType(BusinessEventLogService.EVENT_PAYMENT)
+                .action(action)
+                .result(result)
+                .actorType("CALLBACK")
+                .targetType("ORDER")
+                .targetId(order.getId())
+                .targetNo(order.getOrderNumber())
+                .userId(order.getUserId())
+                .orderId(order.getId())
+                .externalProvider("GoMyPay")
+                .externalRef(callbackResult != null ? reqValue(callbackResult.getGatewayTradeNo(),
+                        callbackResult.getOrderNumber(), null) : null)
+                .amount(order.getShippingFee())
+                .paymentMethod(order.getPaymentMethod())
+                .beforeStatus(beforeStatus)
+                .afterStatus(afterStatus)
+                .errorMessage(errorMessage)
+                .build());
+    }
+
+    private void recordLogisticsEvent(Order order, String action, String result,
+                                      ShippingResult shippingResult, String errorMessage) {
+        if (order == null) {
+            return;
+        }
+        businessEventLogService.record(BusinessEventLog.builder()
+                .eventType(BusinessEventLogService.EVENT_LOGISTICS)
+                .action(action)
+                .result(result)
+                .actorType("SYSTEM")
+                .targetType("ORDER")
+                .targetId(order.getId())
+                .targetNo(order.getOrderNumber())
+                .userId(order.getUserId())
+                .orderId(order.getId())
+                .externalProvider(shippingResult != null ? shippingResult.getProvider() : order.getLogisticsProvider())
+                .externalRef(shippingResult != null ? reqValue(shippingResult.getProviderOrderNo(),
+                        shippingResult.getTrackingNumber(), null) : order.getTrackingNo())
+                .amount(order.getShippingFee())
+                .paymentMethod(order.getShippingMethod())
+                .beforeStatus(order.getStatus())
+                .afterStatus(shippingResult != null ? shippingResult.getStatusCode() : null)
+                .afterSnapshot(logisticsSnapshot(shippingResult))
+                .errorMessage(errorMessage)
+                .build());
+    }
+
+    private String paymentInfoSnapshot(ShippingPaymentResult result) {
+        if (result == null) {
+            return null;
+        }
+        return "{"
+                + jsonPair("gatewayResult", result.getGatewayResult()) + ","
+                + jsonPair("retMsg", result.getRetMsg()) + ","
+                + jsonPair("virtualAccount", result.getVirtualAccount()) + ","
+                + jsonPair("payInfo", result.getPayInfo()) + ","
+                + jsonPair("limitDate", result.getLimitDate())
+                + "}";
+    }
+
+    private String logisticsSnapshot(ShippingResult result) {
+        if (result == null) {
+            return null;
+        }
+        return "{"
+                + jsonPair("trackingNumber", result.getTrackingNumber()) + ","
+                + jsonPair("providerOrderNo", result.getProviderOrderNo()) + ","
+                + jsonPair("provider", result.getProvider()) + ","
+                + jsonPair("statusCode", result.getStatusCode()) + ","
+                + jsonPair("statusName", result.getStatusName()) + ","
+                + jsonPair("labelUrl", result.getLabelUrl())
+                + "}";
+    }
+
+    private String toJson(String key, String value) {
+        if (value == null) {
+            return null;
+        }
+        return "{" + jsonPair(key, value) + "}";
+    }
+
+    private String jsonPair(String key, String value) {
+        return "\"" + escapeJson(key) + "\":" + (value == null ? "null" : "\"" + escapeJson(value) + "\"");
+    }
+
+    private String escapeJson(String value) {
+        return value == null ? null : value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     // ==================== DTO 頧? ====================

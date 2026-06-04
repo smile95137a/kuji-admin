@@ -1,9 +1,11 @@
 package com.group.admin.controller.api;
 
 import com.group.admin.gateway.GatewayCallbackResult;
+import com.group.admin.gateway.GoMyPaySupport;
 import com.group.admin.result.ApiResponse;
 import com.group.admin.res.wallet.RechargeOrderRes;
 import com.group.admin.req.wallet.RechargeReq;
+import com.group.admin.service.BusinessEventLogService;
 import com.group.admin.service.RechargeService;
 import com.group.admin.util.SecurityUtils;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import java.time.LocalDateTime;
 public class WalletRechargeController {
 
     private final RechargeService rechargeService;
+    private final BusinessEventLogService businessEventLogService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<RechargeOrderRes>> createRechargeOrder(
@@ -55,8 +58,50 @@ public class WalletRechargeController {
     @PostMapping("/callback")
     public ResponseEntity<String> gatewayCallback(@RequestParam java.util.Map<String, String> params) {
         log.info("📞 [Callback] POST /wallet/recharge/callback, paramsKeys={}", params.keySet());
-        GatewayCallbackResult result = rechargeService.verifyGatewayCallback(params);
-        rechargeService.handleCallback(result);
+        GatewayCallbackResult result = null;
+        try {
+            result = rechargeService.verifyGatewayCallback(params);
+            rechargeService.handleCallback(result);
+            businessEventLogService.recordCallback(
+                    BusinessEventLogService.EVENT_PAYMENT,
+                    "RECHARGE_CALLBACK_RECEIVED",
+                    result.success() ? BusinessEventLogService.RESULT_SUCCESS : BusinessEventLogService.RESULT_FAILED,
+                    "RECHARGE",
+                    result.merchantOrderId(),
+                    result.merchantOrderId(),
+                    null,
+                    null,
+                    result.merchantOrderId(),
+                    "GOMYPAY",
+                    result.gatewayOrderId(),
+                    result.amountTwd() != null ? result.amountTwd().longValue() : null,
+                    null,
+                    null,
+                    null,
+                    params,
+                    result.success() ? null : "GoMyPay 付款失敗");
+        } catch (RuntimeException ex) {
+            String merchantOrderNo = GoMyPaySupport.firstNonBlank(params, "e_orderno", "Order_No", "orderNo", "MerchantOrderNo");
+            businessEventLogService.recordCallback(
+                    BusinessEventLogService.EVENT_PAYMENT,
+                    "RECHARGE_CALLBACK_INVALID",
+                    BusinessEventLogService.RESULT_FAILED,
+                    "RECHARGE",
+                    merchantOrderNo,
+                    merchantOrderNo,
+                    null,
+                    null,
+                    merchantOrderNo,
+                    "GOMYPAY",
+                    GoMyPaySupport.firstNonBlank(params, "OrderID", "TradeNo", "gatewayTradeNo", "Trade_No"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    params,
+                    ex.getMessage());
+            throw ex;
+        }
         return ResponseEntity.ok("OK");
     }
 }
