@@ -2,6 +2,7 @@ package com.group.admin.controller.api;
 
 import com.group.admin.gateway.ShippingCallbackResult;
 import com.group.admin.gateway.ShippingPaymentGatewayClient;
+import com.group.admin.service.BusinessEventLogService;
 import com.group.admin.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class PaymentCallbackController {
 
     private final ShippingPaymentGatewayClient shippingPaymentGatewayClient;
     private final OrderService orderService;
+    private final BusinessEventLogService businessEventLogService;
 
     @PostMapping("/shipping/callback")
     public ResponseEntity<String> gomypayCallback(@RequestParam Map<String, String> params) {
@@ -38,8 +40,49 @@ public class PaymentCallbackController {
     }
 
     private void handleShippingCallback(Map<String, String> params) {
-        ShippingCallbackResult callbackResult = shippingPaymentGatewayClient.parseCallback(params);
-        orderService.handleShippingPaymentCallback(callbackResult);
+        ShippingCallbackResult callbackResult = null;
+        try {
+            callbackResult = shippingPaymentGatewayClient.parseCallback(params);
+            orderService.handleShippingPaymentCallback(callbackResult);
+            businessEventLogService.recordCallback(
+                    BusinessEventLogService.EVENT_PAYMENT,
+                    "SHIPPING_PAYMENT_CALLBACK_RECEIVED",
+                    callbackResult.isSuccess() ? BusinessEventLogService.RESULT_SUCCESS : BusinessEventLogService.RESULT_FAILED,
+                    "SHIPPING_PAYMENT",
+                    callbackResult.getOrderNumber(),
+                    callbackResult.getOrderNumber(),
+                    null,
+                    null,
+                    null,
+                    "GOMYPAY",
+                    callbackResult.getGatewayTradeNo(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    params,
+                    callbackResult.getErrorMessage());
+        } catch (RuntimeException ex) {
+            businessEventLogService.recordCallback(
+                    BusinessEventLogService.EVENT_PAYMENT,
+                    "SHIPPING_PAYMENT_CALLBACK_INVALID",
+                    BusinessEventLogService.RESULT_FAILED,
+                    "SHIPPING_PAYMENT",
+                    params.get("e_orderno"),
+                    params.get("e_orderno"),
+                    null,
+                    null,
+                    null,
+                    "GOMYPAY",
+                    params.get("OrderID"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    params,
+                    ex.getMessage());
+            throw ex;
+        }
     }
 
     @GetMapping("/shipping/callback/stub")
