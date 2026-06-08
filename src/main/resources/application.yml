@@ -26,6 +26,7 @@ spring:
     port: 587
     username: ${SES_SMTP_USERNAME:}
     password: ${SES_SMTP_PASSWORD:}
+    from: ${MAIL_FROM:system@stardo.tw}
     properties:
       mail:
         smtp:
