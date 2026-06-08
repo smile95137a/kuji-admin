@@ -20,12 +20,12 @@ spring:
     date-format: yyyy-MM-dd'T'HH:mm:ss
     default-property-inclusion: non_null  # 排除 null 欄位
 
-  # 郵件設定（Gmail SMTP）
+  # 郵件設定（Amazon SES SMTP）
   mail:
-    host: smtp.gmail.com
+    host: email-smtp.ap-northeast-1.amazonaws.com
     port: 587
-    username: ${GMAIL_USERNAME:}
-    password: ${GMAIL_APP_PASSWORD:}
+    username: ${SES_SMTP_USERNAME:}
+    password: ${SES_SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
